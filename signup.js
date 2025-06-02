@@ -45,9 +45,9 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
 
   // Step 3: Mark agent ID as used
   const { error: updateError } = await supabase
-    .from('approved_agents')
-    .update({ is_registered: true })
-    .eq('agent_id', agentId)
+  .from('approved_agents')
+  .update({ is_registered: true, email })
+  .eq('agent_id', agentId)
 
   if (updateError) {
     message.textContent = 'Signup complete, but failed to mark Agent ID. Contact admin.'
