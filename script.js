@@ -1,11 +1,3 @@
-console.log("Agent ID entered:", agentId)
-console.log("Checking Supabase for match...")
-const { data, error } = await supabase
-  .from('approved_agents')
-  .select('*')
-  .eq('agent_id', agentId)
-  .eq('is_registered', false)
-  .single()
 
 console.log("Supabase data:", data)
 console.log("Supabase error:", error)
