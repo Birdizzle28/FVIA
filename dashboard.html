@@ -4,56 +4,42 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Agent Dashboard | Family Values Insurance Agency</title>
-  <script type="module" src="dashboard.js"></script>
   <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <script type="module" src="dashboard.js"></script>
 </head>
 <body id="indexbody">
-  <div class="auth-container">
-    <h2>Agent Dashboard</h2>
 
-    <!-- Navigation Tabs -->
-    <nav id="dashboard-nav">
-      <button data-tab="profile-tab">Profile</button>
-      <button data-tab="edit-tab">Edit Profile</button>
-      <button data-tab="lead-form-tab">Submit Lead</button>
-      <button data-tab="request-tab">Lead Requests</button>
-      <button data-tab="leads-tab">My Leads</button>
-      <button data-tab="thread-tab">Thread</button>
-      <button id="logout-btn">Logout</button>
+  <!-- HEADER -->
+  <header class="index-grid-header" style="background-color: #c6a0a4;">
+    <a href="index.html"><img id="headerlogo" src="Pics/img17.png" alt="FVIA Logo" /></a>
+    <p><strong>Family Values Insurance Agency</strong></p>
+    <hr />
+    <nav class="header-flex-container">
+      <a href="#" data-tab="profile-tab">Profile</a>
+      <a href="#" data-tab="lead-tab">Leads</a>
+      <a href="#" data-tab="thread-tab">Thread</a>
+      <a href="#" id="logout-btn">Logout</a>
     </nav>
+    <hr />
+  </header>
 
-    <!-- PROFILE TAB (Main View) -->
+  <!-- MAIN DASHBOARD -->
+  <main class="auth-container">
+
+    <!-- PROFILE TAB -->
     <section id="profile-tab" class="tab-content">
-      <h3>Welcome, <span id="profile-name"></span></h3>
+      <h2>Welcome, <span id="profile-name"></span></h2>
       <p><strong>Email:</strong> <span id="profile-email"></span></p>
       <p><strong>Agent ID:</strong> <span id="profile-agent-id"></span></p>
       <p><strong>Bio:</strong> <span id="profile-bio"></span></p>
       <p><strong>Visible on About Page:</strong> <span id="profile-public-status"></span></p>
     </section>
 
-    <!-- EDIT PROFILE TAB -->
-    <section id="edit-tab" class="tab-content" style="display: none;">
-      <h3>Edit Your Profile</h3>
-      <form id="edit-profile-form">
-        <input type="text" id="edit-first-name" placeholder="First Name" required />
-        <input type="text" id="edit-last-name" placeholder="Last Name" required />
-        <textarea id="edit-bio" placeholder="Your Summary/Bio..."></textarea>
-        <label>
-          <input type="checkbox" id="edit-show-public" />
-          Show on public About page
-        </label>
-        <label>
-          <input type="checkbox" id="edit-show-photo" />
-          Show profile photo publicly
-        </label>
-        <button type="submit">Save Profile</button>
-      </form>
-      <p id="edit-profile-message"></p>
-    </section>
-
-    <!-- LEAD FORM TAB -->
-    <section id="lead-form-tab" class="tab-content" style="display: none;">
-      <h3>Submit New Lead</h3>
+    <!-- LEADS TAB -->
+    <section id="lead-tab" class="tab-content" style="display: none;">
+      <h3>Submit a Lead</h3>
       <form id="lead-form">
         <input type="text" id="lead-first" placeholder="First Name" required />
         <input type="text" id="lead-last" placeholder="Last Name" required />
@@ -72,11 +58,8 @@
         <button type="submit">Submit Lead</button>
       </form>
       <p id="lead-message"></p>
-    </section>
 
-    <!-- LEAD REQUEST TAB -->
-    <section id="request-tab" class="tab-content" style="display: none;">
-      <h3>Request Leads from an Area</h3>
+      <h3>Request Leads</h3>
       <form id="lead-request-form">
         <input type="text" id="request-city" placeholder="City" />
         <input type="text" id="request-zip" placeholder="ZIP Code" />
@@ -93,17 +76,36 @@
       <p id="request-message"></p>
     </section>
 
-    <!-- VIEW LEADS TAB (Placeholder for now) -->
-    <section id="leads-tab" class="tab-content" style="display: none;">
-      <h3>Your Leads</h3>
-      <p>Coming soon: search, filters, and table of your leads</p>
-    </section>
-
-    <!-- THREAD TAB (Placeholder) -->
+    <!-- THREAD TAB -->
     <section id="thread-tab" class="tab-content" style="display: none;">
-      <h3>Team Thread</h3>
-      <p>Coming soon: shared message board for all agents</p>
+      <h3>Agent Thread</h3>
+      <p>Coming soon: agents will post messages here about events, updates, and more.</p>
     </section>
-  </div>
+  </main>
+
+  <!-- FOOTER -->
+  <footer class="index-grid-footer">
+    <img id="footerlogo" src="Pics/img6.png" alt="FVIA Footer Logo" />
+    <hr class="footerhr" />
+    <div id="footercontact">
+      <a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
+        <span class="fa fa-envelope"></span>
+        <span class="contactcontcontacts">fvinsuranceagency@gmail.com</span>
+      </a>
+      <a class="contactcontainer" href="tel:+17316934739">
+        <span class="fa fa-phone"></span>
+        <span class="contactcontcontacts">(731) 693-4739</span>
+      </a>
+    </div>
+    <hr class="footerhr" />
+    <div id="footersocial">
+      <a class="fab fa-facebook-f" href="#"></a>
+      <a class="fab fa-linkedin-in" href="#"></a>
+      <a class="fab fa-instagram" href="#"></a>
+      <a class="fab fa-youtube" href="#"></a>
+      <a class="fab fa-google" href="#"></a>
+    </div>
+    <p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
+  </footer>
 </body>
 </html>
