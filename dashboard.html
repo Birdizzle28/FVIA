@@ -9,57 +9,101 @@
 </head>
 <body id="indexbody">
   <div class="auth-container">
-    <h2 id="greeting">Welcome, Agent</h2>
-    <p><strong>Email:</strong> <span id="agent-email"></span></p>
-    <p><strong>Agent ID:</strong> <span id="agent-id"></span></p>
+    <h2>Agent Dashboard</h2>
 
-    <hr>
+    <!-- Navigation Tabs -->
+    <nav id="dashboard-nav">
+      <button data-tab="profile-tab">Profile</button>
+      <button data-tab="edit-tab">Edit Profile</button>
+      <button data-tab="lead-form-tab">Submit Lead</button>
+      <button data-tab="request-tab">Lead Requests</button>
+      <button data-tab="leads-tab">My Leads</button>
+      <button data-tab="thread-tab">Thread</button>
+      <button id="logout-btn">Logout</button>
+    </nav>
 
-    <h3>Submit New Lead</h3>
-    <form id="lead-form">
-      <input type="text" id="lead-first" placeholder="First Name" required />
-      <input type="text" id="lead-last" placeholder="Last Name" required />
-      <input type="number" id="lead-age" placeholder="Age" required />
-      <input type="text" id="lead-city" placeholder="City" />
-      <input type="text" id="lead-zip" placeholder="ZIP Code" />
-      <input type="tel" id="lead-phone" placeholder="Phone Number" />
-      <select id="lead-type" required>
-        <option value="">Select Lead Type</option>
-        <option value="Facebook">Facebook</option>
-        <option value="Google SEO">Google SEO</option>
-        <option value="Referral">Referral</option>
-        <option value="Walk-in">Walk-in</option>
-        <option value="Other">Other</option>
-      </select>
-      <textarea id="lead-notes" placeholder="Notes (optional)"></textarea>
-      <button type="submit">Submit Lead</button>
-    </form>
+    <!-- PROFILE TAB (Main View) -->
+    <section id="profile-tab" class="tab-content">
+      <h3>Welcome, <span id="profile-name"></span></h3>
+      <p><strong>Email:</strong> <span id="profile-email"></span></p>
+      <p><strong>Agent ID:</strong> <span id="profile-agent-id"></span></p>
+      <p><strong>Bio:</strong> <span id="profile-bio"></span></p>
+      <p><strong>Visible on About Page:</strong> <span id="profile-public-status"></span></p>
+    </section>
 
-    <p id="lead-message"></p>
+    <!-- EDIT PROFILE TAB -->
+    <section id="edit-tab" class="tab-content" style="display: none;">
+      <h3>Edit Your Profile</h3>
+      <form id="edit-profile-form">
+        <input type="text" id="edit-first-name" placeholder="First Name" required />
+        <input type="text" id="edit-last-name" placeholder="Last Name" required />
+        <textarea id="edit-bio" placeholder="Your Summary/Bio..."></textarea>
+        <label>
+          <input type="checkbox" id="edit-show-public" />
+          Show on public About page
+        </label>
+        <label>
+          <input type="checkbox" id="edit-show-photo" />
+          Show profile photo publicly
+        </label>
+        <button type="submit">Save Profile</button>
+      </form>
+      <p id="edit-profile-message"></p>
+    </section>
 
-    <hr>
+    <!-- LEAD FORM TAB -->
+    <section id="lead-form-tab" class="tab-content" style="display: none;">
+      <h3>Submit New Lead</h3>
+      <form id="lead-form">
+        <input type="text" id="lead-first" placeholder="First Name" required />
+        <input type="text" id="lead-last" placeholder="Last Name" required />
+        <input type="number" id="lead-age" placeholder="Age" required />
+        <input type="text" id="lead-city" placeholder="City" />
+        <input type="text" id="lead-zip" placeholder="ZIP Code" />
+        <input type="tel" id="lead-phone" placeholder="Phone Number" />
+        <select id="lead-type" required>
+          <option value="">Select Lead Type</option>
+          <option value="Facebook">Facebook</option>
+          <option value="Google SEO">Google SEO</option>
+          <option value="Referral">Referral</option>
+          <option value="Other">Other</option>
+        </select>
+        <textarea id="lead-notes" placeholder="Notes (optional)"></textarea>
+        <button type="submit">Submit Lead</button>
+      </form>
+      <p id="lead-message"></p>
+    </section>
 
-    <h3>Request Leads from an Area</h3>
-    <form id="lead-request-form">
-      <input type="text" id="request-city" placeholder="City" />
-      <input type="text" id="request-zip" placeholder="ZIP Code" />
-      <select id="request-type">
-        <option value="">Select Lead Type</option>
-        <option value="Facebook">Facebook</option>
-        <option value="Google SEO">Google SEO</option>
-        <option value="Referral">Referral</option>
-        <option value="Walk-in">Walk-in</option>
-        <option value="Other">Other</option>
-      </select>
-      <textarea id="request-notes" placeholder="Notes (optional)"></textarea>
-      <button type="submit">Submit Request</button>
-    </form>
+    <!-- LEAD REQUEST TAB -->
+    <section id="request-tab" class="tab-content" style="display: none;">
+      <h3>Request Leads from an Area</h3>
+      <form id="lead-request-form">
+        <input type="text" id="request-city" placeholder="City" />
+        <input type="text" id="request-zip" placeholder="ZIP Code" />
+        <select id="request-type">
+          <option value="">Select Lead Type</option>
+          <option value="Facebook">Facebook</option>
+          <option value="Google SEO">Google SEO</option>
+          <option value="Referral">Referral</option>
+          <option value="Other">Other</option>
+        </select>
+        <textarea id="request-notes" placeholder="Notes (optional)"></textarea>
+        <button type="submit">Submit Request</button>
+      </form>
+      <p id="request-message"></p>
+    </section>
 
-    <p id="request-message"></p>
+    <!-- VIEW LEADS TAB (Placeholder for now) -->
+    <section id="leads-tab" class="tab-content" style="display: none;">
+      <h3>Your Leads</h3>
+      <p>Coming soon: search, filters, and table of your leads</p>
+    </section>
 
-    <hr>
-
-    <button id="logout-btn">Log Out</button>
+    <!-- THREAD TAB (Placeholder) -->
+    <section id="thread-tab" class="tab-content" style="display: none;">
+      <h3>Team Thread</h3>
+      <p>Coming soon: shared message board for all agents</p>
+    </section>
   </div>
 </body>
 </html>
