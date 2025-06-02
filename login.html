@@ -27,7 +27,10 @@
     <h2>Agent Login</h2>
     <form id="login-form">
       <input type="email" id="email" placeholder="Email" required>
-      <input type="password" id="password" placeholder="Password" required>
+      <div class="password-wrapper">
+  <input type="password" id="password" placeholder="Password" required>
+  <span toggle="#password" class="fa fa-eye toggle-password"></span>
+</div>
       <button type="submit">Login</button>
     </form>
     <p class="switch-auth">Don’t have an account? <a href="signup.html">Sign up</a></p>
