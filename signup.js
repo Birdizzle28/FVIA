@@ -1,3 +1,4 @@
+alert("signup.js is loaded");
 console.log("Agent ID entered:", agentId)
 console.log("Checking Supabase for match...")
 const { data, error } = await supabase
