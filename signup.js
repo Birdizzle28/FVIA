@@ -45,10 +45,13 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
   }
 
   // Create Supabase Auth account
-  const { error: signUpError } = await supabase.auth.signUp({
-    email,
-    password
-  })
+ const { error: signUpError } = await supabase.auth.signUp({
+  email,
+  password,
+  options: {
+    emailRedirectTo: 'https://fv-ia.com/confirmed.html'
+  }
+})
 
   if (signUpError) {
     message.textContent = 'Error signing up: ' + signUpError.message
