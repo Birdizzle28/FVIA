@@ -7,12 +7,9 @@
   <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <script type="module" src="dashboard.js"></script>
 </head>
-<body id="indexbody">
-
-  <!-- HEADER -->
-  <header class="index-grid-header" style="background-color: #c6a0a4;">
+<body id="dashboardbody">
+  <header class="index-grid-header">
     <a href="index.html"><img id="headerlogo" src="Pics/img17.png" alt="FVIA Logo" /></a>
     <p><strong>Family Values Insurance Agency</strong></p>
     <hr />
@@ -25,19 +22,19 @@
     <hr />
   </header>
 
-  <!-- MAIN DASHBOARD -->
   <main class="auth-container">
-
-    <!-- PROFILE TAB -->
     <section id="profile-tab" class="tab-content">
-      <h2>Welcome, <span id="profile-name"></span></h2>
-      <p><strong>Email:</strong> <span id="profile-email"></span></p>
-      <p><strong>Agent ID:</strong> <span id="profile-agent-id"></span></p>
-      <p><strong>Bio:</strong> <span id="profile-bio"></span></p>
-      <p><strong>Visible on About Page:</strong> <span id="profile-public-status"></span></p>
+      <h2>Welcome, <span id="profile-name">[Your Full Name]</span></h2>
+      <div class="profile-photo-placeholder">
+        <img id="profile-photo" src="Pics/profile-placeholder.png" alt="Profile Photo Placeholder">
+      </div>
+      <p class="placeholder-note">(Upload your profile photo in the Edit Profile tab)</p>
+      <p><strong>Email:</strong> <span id="profile-email">your.email@example.com</span></p>
+      <p><strong>Agent ID:</strong> <span id="profile-agent-id">XX-XXXXXXX</span></p>
+      <p><strong>Bio:</strong> <span id="profile-bio" class="placeholder-note">Your bio will appear here once added.</span></p>
+      <p><strong>Visible on About Page:</strong> <span id="profile-public-status" class="placeholder-note">This setting controls if you appear on the About page.</span></p>
     </section>
 
-    <!-- LEADS TAB -->
     <section id="lead-tab" class="tab-content" style="display: none;">
       <h3>Submit a Lead</h3>
       <form id="lead-form">
@@ -76,16 +73,14 @@
       <p id="request-message"></p>
     </section>
 
-    <!-- THREAD TAB -->
     <section id="thread-tab" class="tab-content" style="display: none;">
       <h3>Agent Thread</h3>
       <p>Coming soon: agents will post messages here about events, updates, and more.</p>
     </section>
   </main>
 
-  <!-- FOOTER -->
   <footer class="index-grid-footer">
-    <img id="footerlogo" src="Pics/img6.png" alt="FVIA Footer Logo" />
+    <img id="footerlogo" src="Pics/img17.png" alt="FVIA Footer Logo" />
     <hr class="footerhr" />
     <div id="footercontact">
       <a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
@@ -107,5 +102,7 @@
     </div>
     <p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
   </footer>
+
+  <script src="dashboard.js"></script>
 </body>
 </html>
