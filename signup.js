@@ -1,13 +1,3 @@
-alert("signup.js is loaded");
-console.log("Agent ID entered:", agentId)
-console.log("Checking Supabase for match...")
-const { data, error } = await supabase
-  .from('approved_agents')
-  .select('*')
-  .eq('agent_id', agentId)
-  .eq('is_registered', false)
-  .single()
-
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
 // Replace with your actual Supabase info
@@ -23,7 +13,11 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
   const password = document.getElementById('password').value
   const message = document.getElementById('message')
 
+  alert("Signup form submitted!")
   message.textContent = 'Checking agent ID...'
+
+  console.log("Agent ID entered:", agentId)
+  console.log("Checking Supabase for match...")
 
   // Step 1: Validate agent ID
   const { data, error } = await supabase
