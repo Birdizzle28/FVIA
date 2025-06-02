@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Agent Dashboard | Family Values Insurance Agency</title>
+  <script type="module" src="dashboard.js"></script>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body id="indexbody">
+  <div class="auth-container">
+    <h2 id="greeting">Welcome, Agent</h2>
+    <p><strong>Email:</strong> <span id="agent-email"></span></p>
+    <p><strong>Agent ID:</strong> <span id="agent-id"></span></p>
+
+    <hr>
+
+    <h3>Submit New Lead</h3>
+    <form id="lead-form">
+      <input type="text" id="lead-first" placeholder="First Name" required />
+      <input type="text" id="lead-last" placeholder="Last Name" required />
+      <input type="number" id="lead-age" placeholder="Age" required />
+      <input type="text" id="lead-city" placeholder="City" />
+      <input type="text" id="lead-zip" placeholder="ZIP Code" />
+      <input type="tel" id="lead-phone" placeholder="Phone Number" />
+      <select id="lead-type" required>
+        <option value="">Select Lead Type</option>
+        <option value="Facebook">Facebook</option>
+        <option value="Google SEO">Google SEO</option>
+        <option value="Referral">Referral</option>
+        <option value="Walk-in">Walk-in</option>
+        <option value="Other">Other</option>
+      </select>
+      <textarea id="lead-notes" placeholder="Notes (optional)"></textarea>
+      <button type="submit">Submit Lead</button>
+    </form>
+
+    <p id="lead-message"></p>
+
+    <hr>
+
+    <h3>Request Leads from an Area</h3>
+    <form id="lead-request-form">
+      <input type="text" id="request-city" placeholder="City" />
+      <input type="text" id="request-zip" placeholder="ZIP Code" />
+      <select id="request-type">
+        <option value="">Select Lead Type</option>
+        <option value="Facebook">Facebook</option>
+        <option value="Google SEO">Google SEO</option>
+        <option value="Referral">Referral</option>
+        <option value="Walk-in">Walk-in</option>
+        <option value="Other">Other</option>
+      </select>
+      <textarea id="request-notes" placeholder="Notes (optional)"></textarea>
+      <button type="submit">Submit Request</button>
+    </form>
+
+    <p id="request-message"></p>
+
+    <hr>
+
+    <button id="logout-btn">Log Out</button>
+  </div>
+</body>
+</html>
