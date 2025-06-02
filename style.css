@@ -651,3 +651,85 @@ html, #indexbody {
   cursor: pointer;
   color: #545454;
 }
+/* DASHBOARD NAVIGATION */
+#dashboard-nav {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 20px 0;
+}
+
+#dashboard-nav button,
+.header-flex-container a {
+  padding: 10px 16px;
+  font-weight: bold;
+  border: none;
+  background-color: #915864;
+  color: #fff;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.3s ease;
+  text-decoration: none;
+}
+
+#dashboard-nav button:hover,
+.header-flex-container a:hover {
+  background-color: #5e2a4b;
+}
+
+/* DASHBOARD SECTIONS */
+.tab-content {
+  padding: 20px;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 0 12px rgba(0,0,0,0.1);
+  margin-top: 20px;
+}
+
+/* FORMS */
+form input,
+form select,
+form textarea {
+  width: 100%;
+  padding: 10px;
+  margin-bottom: 12px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  font-size: 1rem;
+}
+
+form button {
+  padding: 10px 20px;
+  background-color: #353468;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+form button:hover {
+  background-color: #0f0a37;
+}
+
+/* MESSAGE FEEDBACK */
+#lead-message,
+#request-message,
+#edit-profile-message {
+  margin-top: 10px;
+  font-weight: bold;
+  color: #5e2a4b;
+}
+
+/* HEADER LOGO HEIGHT */
+#indexbody #headerlogo {
+  max-height: 80px;
+}
+
+/* PROFILE STYLING */
+#profile-tab p {
+  margin: 8px 0;
+  font-size: 1.1rem;
+}
