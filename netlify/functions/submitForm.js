@@ -5,45 +5,38 @@ const supabase = createClient(
   process.env.SUPABASE_ANON_KEY
 );
 
-try {
-  const data = JSON.parse(event.body);
-  const { name, email, phone, message } = data;
+exports.handler = async (event, context) => {
+  if (event.httpMethod !== 'POST') {
+    return {
+      statusCode: 405,
+      body: JSON.stringify({ error: 'Method not allowed' }),
+    };
+  }
 
-  if (!name || !email || !message) {
+  try {
+    const { name, email, phone, message } = JSON.parse(event.body);
+
+    const { data, error } = await supabase
+      .from('submissions')
+      .insert([{ name, email, phone, message }]);
+
+    if (error) {
+      console.error('Supabase insert error:', error.message);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: error.message }),
+      };
+    }
+
+    return {
+      statusCode: 200,
+      body: JSON.stringify({ message: 'Form submitted successfully', data }),
+    };
+  } catch (err) {
+    console.error('Catch block error:', err.message);
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: "Missing required fields" })
+      body: JSON.stringify({ error: 'Invalid request body', details: err.message }),
     };
   }
-
-  const { error } = await supabase
-    .from('submissions')
-    .insert([{
-      name: String(name || '').trim(),
-      email: String(email || '').trim(),
-      phone: String(phone || '').trim(),
-      message: String(message || '').trim()
-    }]);
-
-  if (error) {
-    console.error("Supabase error:", error);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: error.message })
-    };
-  }
-
-  return {
-    statusCode: 200,
-    body: JSON.stringify({ success: true })
-  };
-} catch (err) {
-  console.error("Handler error:", err); // 👈 this will show in Netlify logs
-  return {
-    statusCode: 500,
-    body: JSON.stringify({
-      error: "Server error",
-      details: err.message
-    })
-  };
-}
+};
