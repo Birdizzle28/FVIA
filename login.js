@@ -33,3 +33,12 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
     window.location.href = 'dashboard.html'
   }, 1500)
 })
+// Toggle password visibility (eye icon)
+document.querySelectorAll('.toggle-password').forEach(icon => {
+  icon.addEventListener('click', () => {
+    const input = document.querySelector(icon.getAttribute('toggle'))
+    const type = input.getAttribute('type') === 'password' ? 'text' : 'password'
+    input.setAttribute('type', type)
+    icon.classList.toggle('fa-eye-slash')
+  })
+})
