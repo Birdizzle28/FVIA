@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Redirect
     setTimeout(() => {
       window.location.href = 'dashboard.html';
-    }, 1000);
+    }, 500);
   });
 
   // Toggle password visibility
