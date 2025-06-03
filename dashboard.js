@@ -8,7 +8,33 @@ const supabase = createClient(
 
 document.addEventListener('DOMContentLoaded', async () => {
   const { data: { user }, error } = await supabase.auth.getUser();
+  const isAdmin = user.email === 'fvinsuranceagency@gmail.com' || user.email === '[your mom\'s email]';
 
+if (isAdmin) {
+  // Show the admin-only tab in the nav
+  document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'inline');
+
+  // Load unassigned leads
+  const requestedContainer = document.getElementById('requested-leads-container');
+  const { data: requestedLeads, error } = await supabase
+    .from('leads')
+    .select('*')
+    .is('assigned_to', null);
+
+  if (error) {
+    requestedContainer.innerHTML = '<p>Error loading requested leads.</p>';
+  } else if (requestedLeads.length === 0) {
+    requestedContainer.innerHTML = '<p>No unassigned leads right now.</p>';
+  } else {
+    requestedContainer.innerHTML = requestedLeads.map(lead => `
+      <div class="requested-lead" style="margin-bottom: 15px;">
+        <p><strong>${lead.first_name} ${lead.last_name}</strong> (${lead.lead_type})<br>
+        ${lead.city || ''}, ${lead.zip || ''} | Age: ${lead.age || 'N/A'}</p>
+        <button onclick="assignLead('${lead.id}', '${user.id}')">Assign to Me</button>
+      </div>
+    `).join('');
+  }
+}
   if (error || !user) {
     window.location.href = '/login.html';
     return;
@@ -131,3 +157,20 @@ if (requestForm) {
 }
   }
 });
+// 🧠 Global function so the "Assign to Me" buttons can call it
+window.assignLead = async (leadId, agentId) => {
+  const { error } = await supabase
+    .from('leads')
+    .update({
+      assigned_to: agentId,
+      assigned_at: new Date().toISOString()
+    })
+    .eq('id', leadId);
+
+  if (error) {
+    alert('Error assigning lead: ' + error.message);
+  } else {
+    alert('Lead successfully assigned!');
+    location.reload(); // Refresh to show it's removed from unassigned list
+  }
+};
