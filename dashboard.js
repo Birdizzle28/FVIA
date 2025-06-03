@@ -15,7 +15,6 @@ if (error || !user) {
   document.getElementById('loading-screen').textContent = 'Authentication failed. Please log in again.';
   return;
 }
-  }
 
   const isAdmin = (
     user.email === 'fvinsuranceagency@gmail.com' ||
