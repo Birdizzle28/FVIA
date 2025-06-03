@@ -7,14 +7,14 @@ const supabase = createClient(
 );
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // 🔐 Redirect if not authenticated
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
+  const { data: { user }, error } = await supabase.auth.getUser();
+
+  if (error || !user) {
     window.location.href = '/login.html';
     return;
   }
 
-  // ✅ Tab Switching Logic
+  // ✅ TAB SWITCHING
   const navLinks = document.querySelectorAll('.header-flex-container a[data-tab]');
   const tabSections = document.querySelectorAll('.tab-content');
 
@@ -23,11 +23,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
       const tabId = link.dataset.tab;
 
-      // Hide all tab contents
       tabSections.forEach(section => section.style.display = 'none');
       navLinks.forEach(link => link.classList.remove('active-tab'));
 
-      // Show selected
       const selected = document.getElementById(tabId);
       if (selected) {
         selected.style.display = 'block';
@@ -36,63 +34,61 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Show default tab (Profile)
-  const defaultTab = document.getElementById('profile-tab');
-  if (defaultTab) {
-    defaultTab.style.display = 'block';
-    document.querySelector('[data-tab="profile-tab"]')?.classList.add('active-tab');
-  }
+  // Show default tab
+  document.getElementById('profile-tab').style.display = 'block';
+  document.querySelector('[data-tab="profile-tab"]')?.classList.add('active-tab');
 
-  // ✅ Lead Submission Logic
+  // ✅ LEAD FORM SUBMISSION
   const leadForm = document.getElementById('lead-form');
   if (leadForm) {
     leadForm.addEventListener('submit', async (e) => {
       e.preventDefault();
 
-      const firstName = document.getElementById('lead-first').value.trim();
-      const lastName = document.getElementById('lead-last').value.trim();
-      const age = parseInt(document.getElementById('lead-age').value.trim(), 10);
-      const city = document.getElementById('lead-city').value.trim();
-      const zip = document.getElementById('lead-zip').value.trim();
-      const phone = document.getElementById('lead-phone').value.trim();
-      const leadType = document.getElementById('lead-type').value;
-      const notes = document.getElementById('lead-notes').value.trim();
       const message = document.getElementById('lead-message');
-
       message.textContent = '';
       message.style.color = 'red';
 
-      if (!firstName || !lastName || !age || !leadType) {
-        message.textContent = 'First, last, age, and type are required.';
-        return;
-      }
+      try {
+        const firstName = document.getElementById('lead-first').value.trim();
+        const lastName = document.getElementById('lead-last').value.trim();
+        const age = parseInt(document.getElementById('lead-age').value.trim(), 10);
+        const city = document.getElementById('lead-city').value.trim();
+        const zip = document.getElementById('lead-zip').value.trim();
+        const phone = document.getElementById('lead-phone').value.trim();
+        const leadType = document.getElementById('lead-type').value;
+        const notes = document.getElementById('lead-notes').value.trim();
 
-      const { data: { user }, error: authErr } = await supabase.auth.getUser();
-      if (authErr || !user) {
-        message.textContent = 'User not authenticated.';
-        return;
-      }
+        if (!firstName || !lastName || !age || !leadType) {
+          message.textContent = 'First, last, age, and type are required.';
+          return;
+        }
 
-      const { error } = await supabase
-        .from('leads')
-        .insert([{
-          first_name: firstName,
-          last_name: lastName,
-          age,
-          city,
-          zip,
-          phone,
-          lead_type: leadType,
-          notes,
-          submitted_by: user.id
-        }]);
+        const insertResult = await supabase
+          .from('leads')
+          .insert([{
+            first_name: firstName,
+            last_name: lastName,
+            age,
+            city,
+            zip,
+            phone,
+            lead_type: leadType,
+            notes,
+            submitted_by: user.id,
+            assigned_to: user.id, // 🟢 So they immediately own it
+            assigned_at: new Date().toISOString()
+          }]);
 
-      if (error) {
-        message.textContent = 'Failed to submit lead: ' + error.message;
-      } else {
-        message.style.color = 'green';
-        message.textContent = 'Lead submitted successfully! Awaiting admin assignment.';
-        e.target.reset();
+        if (insertResult.error) {
+          message.textContent = 'Failed to submit lead: ' + insertResult.error.message;
+        } else {
+          message.style.color = 'green';
+          message.textContent = 'Lead submitted successfully!';
+          leadForm.reset();
+        }
+      } catch (err) {
+        message.textContent = 'An unexpected error occurred.';
+        console.error('Lead submit error:', err);
       }
     });
   }
