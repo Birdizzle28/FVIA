@@ -82,6 +82,44 @@ document.querySelectorAll('nav a[data-tab]').forEach(link => {
 // Optional: show the first tab by default
 document.querySelectorAll('.tab-content')[0].style.display = 'block';
 
+// ✅ Step 12: Lead form submission
+const leadForm = document.getElementById('lead-form');
+if (leadForm) {
+  leadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    try {
+      const user = (await supabase.auth.getSession()).data.session.user;
+
+      const leadData = {
+        first_name: document.getElementById('lead-first').value.trim(),
+        last_name: document.getElementById('lead-last').value.trim(),
+        age: parseInt(document.getElementById('lead-age').value),
+        city: document.getElementById('lead-city').value.trim(),
+        zip: document.getElementById('lead-zip').value.trim(),
+        phone: document.getElementById('lead-phone').value.trim(),
+        lead_type: document.getElementById('lead-type').value,
+        notes: document.getElementById('lead-notes').value.trim(),
+        submitted_by: user.id,
+        assigned_to: null,
+        assigned_at: null
+      };
+
+      const { error } = await supabase.from('leads').insert(leadData);
+
+      if (error) {
+        alert("Error submitting lead: " + error.message);
+      } else {
+        alert("Lead submitted successfully!");
+        leadForm.reset();
+      }
+
+    } catch (err) {
+      alert("Unexpected error: " + err.message);
+    }
+  });
+}
+
 /*import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
 
