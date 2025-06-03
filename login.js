@@ -41,9 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Redirect
     setTimeout(() => {
-      const access_token = data.session.access_token;
-const refresh_token = data.session.refresh_token;
-window.location.href = `dashboard.html?access_token=${access_token}&refresh_token=${refresh_token}`;
+      window.location.href = 'dashboard.html';
     }, 500);
   });
 
