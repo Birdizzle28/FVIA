@@ -38,6 +38,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     alert("Step 9: Admin-only elements updated.");
 
+    const loadingScreen = document.getElementById('loading-screen');
+if (loadingScreen) {
+  loadingScreen.style.display = 'none';
+  loadingScreen.style.visibility = 'hidden';
+  loadingScreen.style.opacity = '0';
+  loadingScreen.style.zIndex = '-1';
+}
+alert("Step 10: Loading screen hidden.");
   } catch (err) {
     alert("Step X: Error while checking session: " + err.message);
     document.body.innerHTML = "<h1>Error checking session. Please log in again.</h1>";
