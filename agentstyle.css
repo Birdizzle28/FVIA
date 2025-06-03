@@ -402,3 +402,7 @@
   font-size: 1rem;
   text-align: center;
 }
+
+.admin-only {
+  display: none;
+}
