@@ -117,6 +117,40 @@ if (isAdmin) {
         console.error('Lead submit error:', err);
       }
     });
+    // ✅ REQUESTED LEADS SECTION
+const requestSection = document.getElementById('lead-tab');
+
+const requestedLeadsContainer = document.createElement('div');
+requestedLeadsContainer.id = 'requested-leads-list';
+requestSection.appendChild(requestedLeadsContainer);
+
+// ✅ Fetch unassigned leads
+const { data: unassignedLeads, error: fetchError } = await supabase
+  .from('leads')
+  .select('*')
+  .is('assigned_to', null);
+
+if (fetchError) {
+  requestedLeadsContainer.innerHTML = '<p>Error loading requested leads.</p>';
+} else if (unassignedLeads.length === 0) {
+  requestedLeadsContainer.innerHTML = '<p>No requested leads available right now.</p>';
+} else {
+  // 🧱 Render each unassigned lead
+  requestedLeadsContainer.innerHTML = '<h4>Unassigned Leads:</h4>';
+  unassignedLeads.forEach(lead => {
+    const leadCard = document.createElement('div');
+    leadCard.className = 'requested-lead-card';
+    leadCard.innerHTML = `
+      <p><strong>${lead.first_name} ${lead.last_name}</strong>, Age ${lead.age}</p>
+      <p>Type: ${lead.lead_type}</p>
+      <p>City: ${lead.city} | ZIP: ${lead.zip}</p>
+      <p>Phone: ${lead.phone || 'N/A'}</p>
+      <p>Notes: ${lead.notes || 'None'}</p>
+      <button onclick="assignLead('${lead.id}', '${user.id}')">Assign to Me</button>
+    `;
+    requestedLeadsContainer.appendChild(leadCard);
+  });
+}
     // ✅ REQUEST FORM HANDLING
 const requestForm = document.getElementById('lead-request-form');
 const requestMessage = document.getElementById('request-message');
