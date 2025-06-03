@@ -23,12 +23,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     user.email === 'johnsondemesi@gmail.com'
   );
 
-  // Show/hide admin-only elements
   document.querySelectorAll('.admin-only').forEach(el => {
     el.style.display = isAdmin ? 'inline' : 'none';
   });
 
-  // Setup tab navigation
   const navLinks = document.querySelectorAll('.header-flex-container a[data-tab]');
   const tabSections = document.querySelectorAll('.tab-content');
 
@@ -48,10 +46,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Show profile tab by default
   document.getElementById('profile-tab').style.display = 'block';
 
-  // Handle lead form
   const leadForm = document.getElementById('lead-form');
   leadForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -81,7 +77,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       message.style.color = 'green';
       leadForm.reset();
 
-      // Send email
       emailjs.send('service_ozjnfcd', 'template_diztcbn', {
         first_name: payload.first_name,
         last_name: payload.last_name,
@@ -95,7 +90,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Handle lead request form
   const requestForm = document.getElementById('lead-request-form');
   requestForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -120,7 +114,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Load unassigned leads for admins only
+  // Load requested leads (admins only)
   if (isAdmin) {
     const container = document.getElementById('requested-leads-container');
     const { data: leads, error: loadErr } = await supabase
@@ -128,7 +122,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       .select('*')
       .is('assigned_to', null);
 
-    if (loadErr || !leads.length) {
+    if (loadErr || !leads?.length) {
       container.innerHTML = '<p>No requested leads available.</p>';
     } else {
       leads.forEach(lead => {
@@ -149,6 +143,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (loadingScreen) loadingScreen.style.display = 'none';
 });
 
+// Fallback: always hide the loading screen after 7 seconds no matter what
+setTimeout(() => {
+  const loadingScreen = document.getElementById('loading-screen');
+  if (loadingScreen?.style.display !== 'none') {
+    loadingScreen.style.display = 'none';
+    console.warn('Loading screen hidden by fallback timeout.');
+  }
+}, 7000);
+
+// Global function for admins to assign leads
 window.assignLead = async (leadId, agentId) => {
   const { error } = await supabase
     .from('leads')
