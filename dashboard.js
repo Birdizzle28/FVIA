@@ -1,6 +1,8 @@
 
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
 
+emailjs.init("1F4lpn3PcqgBkk5eF");
 const supabase = createClient(
   'https://ddlbgkolnayqrxslzsxn.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
@@ -61,6 +63,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       message.textContent = 'Lead submitted successfully!';
       message.style.color = 'green';
       leadForm.reset();
+      // EmailJS: Send notification
+emailjs.send('service_ozjnfcd', 'template_diztcbn', {
+  first_name: payload.first_name,
+  last_name: payload.last_name,
+  age: payload.age,
+  city: payload.city,
+  zip: payload.zip,
+  phone: payload.phone,
+  lead_type: payload.lead_type,
+  notes: payload.notes
+}, 'YOUR_PUBLIC_KEY')
+.then(() => {
+  console.log('Email sent!');
+})
+.catch((err) => {
+  console.error('Email failed:', err);
+});
     }
   });
 
