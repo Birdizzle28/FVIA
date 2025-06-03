@@ -59,6 +59,17 @@ document.getElementById('lead-form').addEventListener('submit', async (e) => {
     return;
   }
 
+  // ✅ Get current user ID for RLS enforcement
+  const {
+    data: { user },
+    error: userError
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    message.textContent = 'User not authenticated.';
+    return;
+  }
+
   const { error } = await supabase
     .from('leads')
     .insert([{
@@ -70,6 +81,7 @@ document.getElementById('lead-form').addEventListener('submit', async (e) => {
       phone,
       lead_type: leadType,
       notes,
+      submitted_by: user.id // ✅ Include for RLS policy!
     }]);
 
   if (error) {
