@@ -1,22 +1,20 @@
-// ✅ Import Supabase
+// ✅ Import & Initialize Supabase
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-// ✅ Initialize Supabase
 const supabase = createClient(
   'https://ddlbgkolnayqrxslzsxn.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
 );
 
-// ✅ Auth check + tab logic
 document.addEventListener('DOMContentLoaded', async () => {
-  // 🚨 Redirect if not authenticated
+  // 🔐 Redirect if not authenticated
   const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
     window.location.href = '/login.html';
     return;
   }
 
-  // ✅ Tab Switching
+  // ✅ Tab Switching Logic
   const navLinks = document.querySelectorAll('.header-flex-container a[data-tab]');
   const tabSections = document.querySelectorAll('.tab-content');
 
@@ -25,70 +23,77 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.preventDefault();
       const tabId = link.dataset.tab;
 
-      // Hide all sections
-      tabSections.forEach(sec => sec.style.display = 'none');
+      // Hide all tab contents
+      tabSections.forEach(section => section.style.display = 'none');
       navLinks.forEach(link => link.classList.remove('active-tab'));
 
       // Show selected
-      document.getElementById(tabId).style.display = 'block';
-      link.classList.add('active-tab');
+      const selected = document.getElementById(tabId);
+      if (selected) {
+        selected.style.display = 'block';
+        link.classList.add('active-tab');
+      }
     });
   });
 
-  // Show default tab
-  document.getElementById('profile-tab').style.display = 'block';
-  document.querySelector('[data-tab="profile-tab"]').classList.add('active-tab');
-});
-
-
-// ✅ Lead form submission
-document.getElementById('lead-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
-
-  const firstName = document.getElementById('lead-first').value.trim();
-  const lastName = document.getElementById('lead-last').value.trim();
-  const age = parseInt(document.getElementById('lead-age').value.trim(), 10);
-  const city = document.getElementById('lead-city').value.trim();
-  const zip = document.getElementById('lead-zip').value.trim();
-  const phone = document.getElementById('lead-phone').value.trim();
-  const leadType = document.getElementById('lead-type').value;
-  const notes = document.getElementById('lead-notes').value.trim();
-  const message = document.getElementById('lead-message');
-
-  message.textContent = '';
-  message.style.color = 'red';
-
-  if (!firstName || !lastName || !age || !leadType) {
-    message.textContent = 'First, last, age, and type are required.';
-    return;
+  // Show default tab (Profile)
+  const defaultTab = document.getElementById('profile-tab');
+  if (defaultTab) {
+    defaultTab.style.display = 'block';
+    document.querySelector('[data-tab="profile-tab"]')?.classList.add('active-tab');
   }
 
-  // ✅ Get user info for RLS (submitted_by)
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    message.textContent = 'User not authenticated.';
-    return;
-  }
+  // ✅ Lead Submission Logic
+  const leadForm = document.getElementById('lead-form');
+  if (leadForm) {
+    leadForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
 
-  const { error } = await supabase
-    .from('leads')
-    .insert([{
-      first_name: firstName,
-      last_name: lastName,
-      age,
-      city,
-      zip,
-      phone,
-      lead_type: leadType,
-      notes,
-      submitted_by: user.id
-    }]);
+      const firstName = document.getElementById('lead-first').value.trim();
+      const lastName = document.getElementById('lead-last').value.trim();
+      const age = parseInt(document.getElementById('lead-age').value.trim(), 10);
+      const city = document.getElementById('lead-city').value.trim();
+      const zip = document.getElementById('lead-zip').value.trim();
+      const phone = document.getElementById('lead-phone').value.trim();
+      const leadType = document.getElementById('lead-type').value;
+      const notes = document.getElementById('lead-notes').value.trim();
+      const message = document.getElementById('lead-message');
 
-  if (error) {
-    message.textContent = 'Failed to submit lead: ' + error.message;
-  } else {
-    message.style.color = 'green';
-    message.textContent = 'Lead submitted successfully! Awaiting admin assignment.';
-    e.target.reset();
+      message.textContent = '';
+      message.style.color = 'red';
+
+      if (!firstName || !lastName || !age || !leadType) {
+        message.textContent = 'First, last, age, and type are required.';
+        return;
+      }
+
+      const { data: { user }, error: authErr } = await supabase.auth.getUser();
+      if (authErr || !user) {
+        message.textContent = 'User not authenticated.';
+        return;
+      }
+
+      const { error } = await supabase
+        .from('leads')
+        .insert([{
+          first_name: firstName,
+          last_name: lastName,
+          age,
+          city,
+          zip,
+          phone,
+          lead_type: leadType,
+          notes,
+          submitted_by: user.id
+        }]);
+
+      if (error) {
+        message.textContent = 'Failed to submit lead: ' + error.message;
+      } else {
+        message.style.color = 'green';
+        message.textContent = 'Lead submitted successfully! Awaiting admin assignment.';
+        e.target.reset();
+      }
+    });
   }
 });
