@@ -91,5 +91,43 @@ document.addEventListener('DOMContentLoaded', async () => {
         console.error('Lead submit error:', err);
       }
     });
+    // ✅ REQUEST FORM HANDLING
+const requestForm = document.getElementById('lead-request-form');
+const requestMessage = document.getElementById('request-message');
+
+if (requestForm) {
+  requestForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    requestMessage.textContent = '';
+    requestMessage.style.color = 'red';
+
+    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    if (authError || !user) {
+      requestMessage.textContent = 'User not authenticated.';
+      return;
+    }
+
+    const city = document.getElementById('request-city').value.trim();
+    const zip = document.getElementById('request-zip').value.trim();
+    const leadType = document.getElementById('request-type').value;
+    const notes = document.getElementById('request-notes').value.trim();
+
+    const { error } = await supabase.from('lead_requests').insert([{
+      city,
+      zip,
+      lead_type: leadType,
+      notes,
+      submitted_by: user.id
+    }]);
+
+    if (error) {
+      requestMessage.textContent = 'Failed to submit request: ' + error.message;
+    } else {
+      requestMessage.style.color = 'green';
+      requestMessage.textContent = 'Request submitted successfully!';
+      requestForm.reset();
+    }
+  });
+}
   }
 });
