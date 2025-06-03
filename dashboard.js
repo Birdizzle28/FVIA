@@ -1,39 +1,14 @@
-alert("Step 3: Checking session from dashboard...");
-
-document.addEventListener("DOMContentLoaded", async () => {
-  alert("Step 4: DOM loaded, checking Supabase session...");
-
-  const sessionResult = await supabase.auth.getSession();
-
-  alert("Step 5: Session result: " + JSON.stringify(sessionResult));
-
-  if (!sessionResult.data || !sessionResult.data.session) {
-    document.body.innerHTML = "<h1>Session not found. Please log in again.</h1>";
-    return;
-  }
-
-  const user = sessionResult.data.session.user;
-  alert("Step 6: Logged in as " + user.email);
-});
-
-/*import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
-
-emailjs.init("1F4lpn3PcqgBkk5eF");
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
 const supabase = createClient(
   'https://ddlbgkolnayqrxslzsxn.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
 );
 
-const getUserWithTimeout = (timeout = 5000) => {
-  return Promise.race([
-    supabase.auth.getUser(),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Supabase auth timed out')), timeout)
-    ),
-  ]);
-};
+alert("Step 3: Checking session from dashboard...");
+
+document.addEventListener("DOMContentLoaded", async () => {
+  alert("Step 4: DOM loaded,
 
 document.addEventListener('DOMContentLoaded', async () => {
   const loadingScreen = document.getElementById('loading-screen');
