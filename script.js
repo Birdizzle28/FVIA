@@ -1,4 +1,4 @@
-
+alert("dashboard.js is loading!");
 window.addEventListener("load", () => {
   const slides = document.querySelector(".carousel");
   const thumbWrapper = document.querySelector(".thumbnail-wrapper");
