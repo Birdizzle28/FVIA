@@ -1,3 +1,60 @@
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
+
+emailjs.init("1F4lpn3PcqgBkk5eF");
+
+const supabase = createClient(
+  'https://ddlbgkolnayqrxslzsxn.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
+);
+
+// ⏱ Timeout fallback for auth
+const getUserWithTimeout = (timeout = 5000) => {
+  return Promise.race([
+    supabase.auth.getUser(),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Supabase auth timed out')), timeout)
+    ),
+  ]);
+};
+
+document.addEventListener('DOMContentLoaded', async () => {
+  console.log('Dashboard JS started ✅');
+
+  const loadingScreen = document.getElementById('loading-screen');
+
+  let user, error;
+  try {
+    const result = await getUserWithTimeout();
+    user = result.data.user;
+    error = result.error;
+  } catch (err) {
+    error = err;
+  }
+
+  if (error || !user) {
+    loadingScreen.textContent = 'Authentication failed or timed out.';
+    return;
+  }
+
+  const isAdmin = (
+    user.email === 'fvinsuranceagency@gmail.com' ||
+    user.email === 'johnsondemesi@gmail.com'
+  );
+
+  // Show admin-only items
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = isAdmin ? 'inline' : 'none';
+  });
+
+  // Show profile tab by default
+  document.getElementById('profile-tab').style.display = 'block';
+
+  // Hide loading screen
+  if (loadingScreen) loadingScreen.style.display = 'none';
+});
+
+
 /*import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
 
@@ -180,5 +237,3 @@ window.assignLead = async (leadId, agentId) => {
     location.reload();
   }
 };*/
-
-alert("Dashboard JS loaded!");
