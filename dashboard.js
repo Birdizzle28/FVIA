@@ -191,6 +191,38 @@ if (requestForm) {
 }
   }
 });
+// ✅ Only for Admins: Show unassigned leads and assign buttons
+const { data: profile, error: profileError } = await supabase
+  .from('profiles')
+  .select('is_admin')
+  .eq('id', user.id)
+  .single();
+
+if (!profileError && profile?.is_admin) {
+  const { data: unassignedLeads, error: leadError } = await supabase
+    .from('leads')
+    .select('id, first_name, last_name, lead_type')
+    .is('assigned_to', null);
+
+  if (!leadError && unassignedLeads.length > 0) {
+    const container = document.createElement('div');
+    container.innerHTML = `<h3>Unassigned Leads</h3>`;
+
+    unassignedLeads.forEach(lead => {
+      const div = document.createElement('div');
+      div.style.marginBottom = '15px';
+      div.innerHTML = `
+        <strong>${lead.first_name} ${lead.last_name}</strong> (${lead.lead_type})
+        <br>
+        <input type="text" placeholder="Agent ID" id="agent-${lead.id}" />
+        <button onclick="assignLead(${lead.id}, document.getElementById('agent-${lead.id}').value)">Assign</button>
+      `;
+      container.appendChild(div);
+    });
+
+    document.getElementById('lead-tab').appendChild(container);
+  }
+}
 // 🧠 Global function so the "Assign to Me" buttons can call it
 window.assignLead = async (leadId, agentId) => {
   const { error } = await supabase
@@ -225,3 +257,4 @@ async function assignLead(leadId, agentId) {
     location.reload(); // Optional: refresh to update the UI
   }
 }
+window.assignLead = assignLead;
