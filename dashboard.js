@@ -1,3 +1,5 @@
+alert("Step 1: JS file loaded!");
+
 alert("Step 2: About to check Supabase user.");
 
 const getUserWithTimeout = (timeout = 5000) => {
