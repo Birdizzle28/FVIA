@@ -73,7 +73,7 @@ emailjs.send('service_ozjnfcd', 'template_diztcbn', {
   phone: payload.phone,
   lead_type: payload.lead_type,
   notes: payload.notes
-}, 'YOUR_PUBLIC_KEY')
+})
 .then(() => {
   console.log('Email sent!');
 })
