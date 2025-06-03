@@ -1,53 +1,18 @@
-alert("Step 1: JS file loaded!");
+alert("Step 1: JS is loaded");
 
-alert("Step 2: About to check Supabase user.");
+document.addEventListener("DOMContentLoaded", async () => {
+  alert("Step 2: DOM loaded");
 
-const getUserWithTimeout = (timeout = 5000) => {
-  return Promise.race([
-    supabase.auth.getUser(),
-    new Promise((_, reject) =>
-      setTimeout(() => reject(new Error('Supabase auth timed out')), timeout)
-    ),
-  ]);
-};
+  const session = await supabase.auth.getSession();
+  alert("Step 3: Session check complete");
 
-document.addEventListener('DOMContentLoaded', async () => {
-  const loadingScreen = document.getElementById('loading-screen');
-  alert("Step 2: DOM loaded, checking auth...");
-
-  let user, error;
-  try {
-    const result = await getUserWithTimeout();
-    user = result.data.user;
-    error = result.error;
-  } catch (err) {
-    error = err;
-  }
-
-  if (error || !user) {
-    loadingScreen.textContent = 'Authentication failed or timed out.';
+  if (!session.data.session) {
+    alert("Step 4: No session found");
+    document.body.innerHTML = "<h1>Session not found. Please log in again.</h1>";
     return;
   }
 
-  alert("Step 2: Auth succeeded!");
-
-  // Step 3
-  alert("Step 3: Auth success, checking admin status.");
-
-  const isAdmin = (
-    user.email === 'fvinsuranceagency@gmail.com' ||
-    user.email === 'johnsondemesi@gmail.com'
-  );
-
-  document.querySelectorAll('.admin-only').forEach(el => {
-    el.style.display = isAdmin ? 'inline' : 'none';
-  });
-
-  alert("Step 3: Admin check complete. Hiding loading screen.");
-
-  if (loadingScreen) loadingScreen.style.display = 'none';
-
-  alert("Step 3: Loading screen hidden.");
+  alert("Step 5: Session found! Email: " + session.data.session.user.email);
 });
 
 /*import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
