@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
 
@@ -10,50 +9,49 @@ const supabase = createClient(
 );
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const loadingScreen = document.getElementById('loading-screen');
+
   const { data: { user }, error } = await supabase.auth.getUser();
+
   if (error || !user) {
-  const errorMsg = error?.message || 'No user returned';
-  document.getElementById('loading-screen').textContent = 'Authentication failed. Please log in again.';
-
-  // Show error in red below the loading text
-  const errorNotice = document.createElement('div');
-  errorNotice.style.color = 'red';
-  errorNotice.style.fontWeight = 'bold';
-  errorNotice.style.padding = '20px';
-  errorNotice.textContent = `Supabase auth failed. Error: ${errorMsg}`;
-  document.body.appendChild(errorNotice);
-
-  return;
-}
+    loadingScreen.textContent = 'Authentication failed. Please log in again.';
+    return;
+  }
 
   const isAdmin = (
     user.email === 'fvinsuranceagency@gmail.com' ||
     user.email === 'johnsondemesi@gmail.com'
   );
 
+  // Show/hide admin-only elements
   document.querySelectorAll('.admin-only').forEach(el => {
     el.style.display = isAdmin ? 'inline' : 'none';
   });
 
+  // Setup tab navigation
   const navLinks = document.querySelectorAll('.header-flex-container a[data-tab]');
   const tabSections = document.querySelectorAll('.tab-content');
 
   navLinks.forEach(link => {
-    link.addEventListener('click', e => {
+    link.addEventListener('click', (e) => {
       e.preventDefault();
       const tabId = link.dataset.tab;
+
       tabSections.forEach(section => section.style.display = 'none');
       navLinks.forEach(link => link.classList.remove('active-tab'));
-      const activeSection = document.getElementById(tabId);
-      if (activeSection) {
-        activeSection.style.display = 'block';
+
+      const target = document.getElementById(tabId);
+      if (target) {
+        target.style.display = 'block';
         link.classList.add('active-tab');
       }
     });
   });
 
+  // Show profile tab by default
   document.getElementById('profile-tab').style.display = 'block';
 
+  // Handle lead form
   const leadForm = document.getElementById('lead-form');
   leadForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -83,6 +81,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       message.style.color = 'green';
       leadForm.reset();
 
+      // Send email
       emailjs.send('service_ozjnfcd', 'template_diztcbn', {
         first_name: payload.first_name,
         last_name: payload.last_name,
@@ -92,12 +91,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         phone: payload.phone,
         lead_type: payload.lead_type,
         notes: payload.notes
-      }, '1F4lpn3PcqgBkk5eF')
-      .then(() => console.log('Email sent!'))
-      .catch(err => console.error('Email failed:', err));
+      });
     }
   });
 
+  // Handle lead request form
   const requestForm = document.getElementById('lead-request-form');
   requestForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -122,17 +120,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
+  // Load unassigned leads for admins only
   if (isAdmin) {
-    const requestedLeadsContainer = document.getElementById('requested-leads-container');
-    const { data: unassignedLeads, error: unassignedErr } = await supabase
+    const container = document.getElementById('requested-leads-container');
+    const { data: leads, error: loadErr } = await supabase
       .from('leads')
       .select('*')
       .is('assigned_to', null);
 
-    if (unassignedErr || !unassignedLeads?.length) {
-      requestedLeadsContainer.innerHTML = '<p>No requested leads available.</p>';
+    if (loadErr || !leads.length) {
+      container.innerHTML = '<p>No requested leads available.</p>';
     } else {
-      unassignedLeads.forEach(lead => {
+      leads.forEach(lead => {
         const card = document.createElement('div');
         card.className = 'requested-lead-card';
         card.innerHTML = `
@@ -141,12 +140,13 @@ document.addEventListener('DOMContentLoaded', async () => {
           <p>City: ${lead.city} | ZIP: ${lead.zip}</p>
           <button onclick="assignLead('${lead.id}', '${user.id}')">Assign to Me</button>
         `;
-        requestedLeadsContainer.appendChild(card);
+        container.appendChild(card);
       });
     }
   }
 
-  document.getElementById('loading-screen').style.display = 'none';
+  // Hide loading screen
+  if (loadingScreen) loadingScreen.style.display = 'none';
 });
 
 window.assignLead = async (leadId, agentId) => {
