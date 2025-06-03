@@ -1,5 +1,6 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
+document.getElementById("debug-msg").textContent = "dashboard.js is running...";
 
 emailjs.init("1F4lpn3PcqgBkk5eF");
 
