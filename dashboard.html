@@ -25,12 +25,17 @@
 				<a href="#" data-tab="profile-tab">Profile</a>
 				<a href="#" data-tab="lead-tab">Leads</a>
 				<a href="#" data-tab="thread-tab">Thread</a>
+				<a href="#" data-tab="admin-requested-tab" class="admin-only">Requested Leads</a>
 				<a href="#" id="logout-btn">Logout</a>
 			</nav>
 		</div>
 	</header>
 	
 	<main class="auth-container">
+		<section id="admin-requested-tab" class="tab-content" style="display: none;">
+  <h3>Requested Leads</h3>
+  <div id="requested-leads-container"></div>
+</section>
 		<section id="profile-tab" class="tab-content profile-section">
 
   <div class="profile-picture-wrapper">
