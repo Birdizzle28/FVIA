@@ -1,3 +1,4 @@
+
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
 
@@ -10,11 +11,11 @@ const supabase = createClient(
 
 document.addEventListener('DOMContentLoaded', async () => {
   const { data: { user }, error } = await supabase.auth.getUser();
-if (error || !user) {
-  console.error('Auth failed:', error || 'No user');
-  document.getElementById('loading-screen').textContent = 'Authentication failed. Please log in again.';
-  return;
-}
+  if (error || !user) {
+    console.error('Auth failed:', error || 'No user');
+    document.getElementById('loading-screen').textContent = 'Authentication failed. Please log in again.';
+    return;
+  }
 
   const isAdmin = (
     user.email === 'fvinsuranceagency@gmail.com' ||
@@ -136,11 +137,9 @@ if (error || !user) {
     }
   }
 
-  // â Hide loading screen after everything is ready
   document.getElementById('loading-screen').style.display = 'none';
 });
 
-// Assign lead function
 window.assignLead = async (leadId, agentId) => {
   const { error } = await supabase
     .from('leads')
