@@ -8,13 +8,30 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
 );
 
+// Utility: timeout wrapper for Supabase call
+const getUserWithTimeout = (timeout = 5000) => {
+  return Promise.race([
+    supabase.auth.getUser(),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Supabase auth timed out')), timeout)
+    ),
+  ]);
+};
+
 document.addEventListener('DOMContentLoaded', async () => {
   const loadingScreen = document.getElementById('loading-screen');
 
-  const { data: { user }, error } = await supabase.auth.getUser();
+  let user, error;
+  try {
+    const result = await getUserWithTimeout();
+    user = result.data.user;
+    error = result.error;
+  } catch (err) {
+    error = err;
+  }
 
   if (error || !user) {
-    loadingScreen.textContent = 'Authentication failed. Please log in again.';
+    loadingScreen.textContent = 'Authentication failed or timed out.';
     return;
   }
 
@@ -114,7 +131,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Load requested leads (admins only)
   if (isAdmin) {
     const container = document.getElementById('requested-leads-container');
     const { data: leads, error: loadErr } = await supabase
@@ -143,16 +159,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (loadingScreen) loadingScreen.style.display = 'none';
 });
 
-// Fallback: always hide the loading screen after 7 seconds no matter what
+// Fallback: always hide the loading screen after 7 seconds
 setTimeout(() => {
   const loadingScreen = document.getElementById('loading-screen');
   if (loadingScreen?.style.display !== 'none') {
     loadingScreen.style.display = 'none';
-    console.warn('Loading screen hidden by fallback timeout.');
   }
 }, 7000);
 
-// Global function for admins to assign leads
+// Assign button function
 window.assignLead = async (leadId, agentId) => {
   const { error } = await supabase
     .from('leads')
