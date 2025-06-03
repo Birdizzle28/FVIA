@@ -5,7 +5,7 @@ emailjs.init("1F4lpn3PcqgBkk5eF");
 
 const supabase = createClient(
   'https://ddlbgkolnayqrxslzsxn.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...YOUR_KEY'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
 );
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -15,40 +15,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // Admin Check First
-  const isAdmin = user.email === 'fvinsuranceagency@gmail.com' || user.email === 'johnsondemesi@gmail.com';
-  const adminTabs = document.querySelectorAll('.admin-only');
-  if (!isAdmin) {
-    adminTabs.forEach(el => el.style.display = 'none');
-  } else {
-    adminTabs.forEach(el => el.style.display = 'inline');
-  }
+  const isAdmin = (
+    user.email === 'fvinsuranceagency@gmail.com' ||
+    user.email === 'johnsondemesi@gmail.com'
+  );
 
-  // Nav Tabs
+  // Show/hide admin-only elements
+  document.querySelectorAll('.admin-only').forEach(el => {
+    el.style.display = isAdmin ? 'inline' : 'none';
+  });
+
+  // Handle navigation tab switching
   const navLinks = document.querySelectorAll('.header-flex-container a[data-tab]');
   const tabSections = document.querySelectorAll('.tab-content');
 
   navLinks.forEach(link => {
-    link.addEventListener('click', (e) => {
+    link.addEventListener('click', e => {
       e.preventDefault();
       const tabId = link.dataset.tab;
-
       tabSections.forEach(section => section.style.display = 'none');
       navLinks.forEach(link => link.classList.remove('active-tab'));
-
-      const targetSection = document.getElementById(tabId);
-      if (targetSection) {
-        targetSection.style.display = 'block';
+      const activeSection = document.getElementById(tabId);
+      if (activeSection) {
+        activeSection.style.display = 'block';
         link.classList.add('active-tab');
       }
     });
   });
 
-  // Set default visible tab
-  document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+  // Default to showing Profile tab
   document.getElementById('profile-tab').style.display = 'block';
 
-  // Lead Form Submission
+  // Submit new lead
   const leadForm = document.getElementById('lead-form');
   leadForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -78,6 +76,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       message.style.color = 'green';
       leadForm.reset();
 
+      // EmailJS notification
       emailjs.send('service_ozjnfcd', 'template_diztcbn', {
         first_name: payload.first_name,
         last_name: payload.last_name,
@@ -93,7 +92,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Lead Request Submission
+  // Submit lead request
   const requestForm = document.getElementById('lead-request-form');
   requestForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -118,12 +117,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Show Unassigned Leads for Admin Only
+  // Show requested leads for admins only
   if (isAdmin) {
-    const requestedLeadsContainer = document.createElement('div');
-    requestedLeadsContainer.id = 'requested-leads-list';
-    document.getElementById('admin-requested-tab').appendChild(requestedLeadsContainer);
-
+    const requestedLeadsContainer = document.getElementById('requested-leads-container');
     const { data: unassignedLeads, error: unassignedErr } = await supabase
       .from('leads')
       .select('*')
@@ -147,7 +143,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 });
 
-// Global Assign Function
+// Assign lead to agent
 window.assignLead = async (leadId, agentId) => {
   const { error } = await supabase
     .from('leads')
