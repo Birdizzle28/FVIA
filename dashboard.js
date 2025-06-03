@@ -1,11 +1,11 @@
-
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
 
 emailjs.init("1F4lpn3PcqgBkk5eF");
+
 const supabase = createClient(
   'https://ddlbgkolnayqrxslzsxn.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...YOUR_KEY'
 );
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -15,26 +15,40 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  // Admin Check First
   const isAdmin = user.email === 'fvinsuranceagency@gmail.com' || user.email === 'johnsondemesi@gmail.com';
-
-  if (isAdmin) {
-    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'inline');
+  const adminTabs = document.querySelectorAll('.admin-only');
+  if (!isAdmin) {
+    adminTabs.forEach(el => el.style.display = 'none');
+  } else {
+    adminTabs.forEach(el => el.style.display = 'inline');
   }
 
+  // Nav Tabs
   const navLinks = document.querySelectorAll('.header-flex-container a[data-tab]');
   const tabSections = document.querySelectorAll('.tab-content');
+
   navLinks.forEach(link => {
-    link.addEventListener('click', e => {
+    link.addEventListener('click', (e) => {
       e.preventDefault();
       const tabId = link.dataset.tab;
+
       tabSections.forEach(section => section.style.display = 'none');
       navLinks.forEach(link => link.classList.remove('active-tab'));
-      document.getElementById(tabId).style.display = 'block';
-      link.classList.add('active-tab');
+
+      const targetSection = document.getElementById(tabId);
+      if (targetSection) {
+        targetSection.style.display = 'block';
+        link.classList.add('active-tab');
+      }
     });
   });
+
+  // Set default visible tab
+  document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
   document.getElementById('profile-tab').style.display = 'block';
 
+  // Lead Form Submission
   const leadForm = document.getElementById('lead-form');
   leadForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -63,26 +77,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       message.textContent = 'Lead submitted successfully!';
       message.style.color = 'green';
       leadForm.reset();
-      // EmailJS: Send notification
-emailjs.send('service_ozjnfcd', 'template_diztcbn', {
-  first_name: payload.first_name,
-  last_name: payload.last_name,
-  age: payload.age,
-  city: payload.city,
-  zip: payload.zip,
-  phone: payload.phone,
-  lead_type: payload.lead_type,
-  notes: payload.notes
-}, '1F4lpn3PcqgBkk5eF')
-.then(() => {
-  console.log('Email sent!');
-})
-.catch((err) => {
-  console.error('Email failed:', err);
-});
+
+      emailjs.send('service_ozjnfcd', 'template_diztcbn', {
+        first_name: payload.first_name,
+        last_name: payload.last_name,
+        age: payload.age,
+        city: payload.city,
+        zip: payload.zip,
+        phone: payload.phone,
+        lead_type: payload.lead_type,
+        notes: payload.notes
+      }, '1F4lpn3PcqgBkk5eF')
+      .then(() => console.log('Email sent!'))
+      .catch(err => console.error('Email failed:', err));
     }
   });
 
+  // Lead Request Submission
   const requestForm = document.getElementById('lead-request-form');
   requestForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -107,32 +118,36 @@ emailjs.send('service_ozjnfcd', 'template_diztcbn', {
     }
   });
 
-  const requestedLeadsContainer = document.createElement('div');
-  requestedLeadsContainer.id = 'requested-leads-list';
-  document.getElementById('lead-tab').appendChild(requestedLeadsContainer);
+  // Show Unassigned Leads for Admin Only
+  if (isAdmin) {
+    const requestedLeadsContainer = document.createElement('div');
+    requestedLeadsContainer.id = 'requested-leads-list';
+    document.getElementById('admin-requested-tab').appendChild(requestedLeadsContainer);
 
-  const { data: unassignedLeads, error: unassignedErr } = await supabase
-    .from('leads')
-    .select('*')
-    .is('assigned_to', null);
+    const { data: unassignedLeads, error: unassignedErr } = await supabase
+      .from('leads')
+      .select('*')
+      .is('assigned_to', null);
 
-  if (unassignedErr || !unassignedLeads?.length) {
-    requestedLeadsContainer.innerHTML = '<p>No requested leads available.</p>';
-  } else {
-    unassignedLeads.forEach(lead => {
-      const card = document.createElement('div');
-      card.className = 'requested-lead-card';
-      card.innerHTML = `
-        <p><strong>${lead.first_name} ${lead.last_name}</strong>, Age ${lead.age}</p>
-        <p>Type: ${lead.lead_type}</p>
-        <p>City: ${lead.city} | ZIP: ${lead.zip}</p>
-        <button onclick="assignLead('${lead.id}', '${user.id}')">Assign to Me</button>
-      `;
-      requestedLeadsContainer.appendChild(card);
-    });
+    if (unassignedErr || !unassignedLeads?.length) {
+      requestedLeadsContainer.innerHTML = '<p>No requested leads available.</p>';
+    } else {
+      unassignedLeads.forEach(lead => {
+        const card = document.createElement('div');
+        card.className = 'requested-lead-card';
+        card.innerHTML = `
+          <p><strong>${lead.first_name} ${lead.last_name}</strong>, Age ${lead.age}</p>
+          <p>Type: ${lead.lead_type}</p>
+          <p>City: ${lead.city} | ZIP: ${lead.zip}</p>
+          <button onclick="assignLead('${lead.id}', '${user.id}')">Assign to Me</button>
+        `;
+        requestedLeadsContainer.appendChild(card);
+      });
+    }
   }
 });
 
+// Global Assign Function
 window.assignLead = async (leadId, agentId) => {
   const { error } = await supabase
     .from('leads')
