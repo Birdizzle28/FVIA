@@ -1,4 +1,40 @@
-alert("Step 2: JS is still running");
+alert("Step 2: About to check Supabase user.");
+
+const getUserWithTimeout = (timeout = 5000) => {
+  return Promise.race([
+    supabase.auth.getUser(),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Supabase auth timed out')), timeout)
+    ),
+  ]);
+};
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const loadingScreen = document.getElementById('loading-screen');
+  alert("Step 2: DOM loaded, checking auth...");
+
+  let user, error;
+  try {
+    const result = await getUserWithTimeout();
+    user = result.data.user;
+    error = result.error;
+  } catch (err) {
+    error = err;
+  }
+
+  if (error || !user) {
+    loadingScreen.textContent = 'Authentication failed or timed out.';
+    return;
+  }
+
+  alert("Step 2: Auth succeeded!");
+});
+
+
+
+
+
+/*alert("Step 2: JS is still running");
 
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
@@ -31,6 +67,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadingScreen.textContent = 'Something went wrong.';
   }
 });
+*/
+
+
+
+
+
 
 /*import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
