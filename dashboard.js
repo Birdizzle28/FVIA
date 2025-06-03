@@ -52,6 +52,36 @@ alert("Step 10: Loading screen hidden.");
   }
 });
 
+// ✅ Step 11: Tab switching logic
+document.querySelectorAll('nav a[data-tab]').forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+      tab.style.display = 'none';
+    });
+
+    // Remove active class from all nav links
+    document.querySelectorAll('nav a').forEach(link => {
+      link.classList.remove('active');
+    });
+
+    // Show the selected tab
+    const tabId = link.getAttribute('data-tab');
+    const tab = document.getElementById(tabId);
+    if (tab) {
+      tab.style.display = 'block';
+    }
+
+    // Add active class to clicked nav link
+    link.classList.add('active');
+  });
+});
+
+// Optional: show the first tab by default
+document.querySelectorAll('.tab-content')[0].style.display = 'block';
+
 /*import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
 
