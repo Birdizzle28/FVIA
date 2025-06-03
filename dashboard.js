@@ -10,9 +10,11 @@ const supabase = createClient(
 
 document.addEventListener('DOMContentLoaded', async () => {
   const { data: { user }, error } = await supabase.auth.getUser();
-  if (error || !user) {
-    window.location.href = '/login.html';
-    return;
+if (error || !user) {
+  console.error('Auth failed:', error || 'No user');
+  document.getElementById('loading-screen').textContent = 'Authentication failed. Please log in again.';
+  return;
+}
   }
 
   const isAdmin = (
