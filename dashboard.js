@@ -12,10 +12,19 @@ const supabase = createClient(
 document.addEventListener('DOMContentLoaded', async () => {
   const { data: { user }, error } = await supabase.auth.getUser();
   if (error || !user) {
-    console.error('Auth failed:', error || 'No user');
-    document.getElementById('loading-screen').textContent = 'Authentication failed. Please log in again.';
-    return;
-  }
+  const errorMsg = error?.message || 'No user returned';
+  document.getElementById('loading-screen').textContent = 'Authentication failed. Please log in again.';
+
+  // Show error in red below the loading text
+  const errorNotice = document.createElement('div');
+  errorNotice.style.color = 'red';
+  errorNotice.style.fontWeight = 'bold';
+  errorNotice.style.padding = '20px';
+  errorNotice.textContent = `Supabase auth failed. Error: ${errorMsg}`;
+  document.body.appendChild(errorNotice);
+
+  return;
+}
 
   const isAdmin = (
     user.email === 'fvinsuranceagency@gmail.com' ||
