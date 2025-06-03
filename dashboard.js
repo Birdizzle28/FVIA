@@ -1,6 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
   // Nav tab click handler
-  const tabs = document.querySelectorAll("#dashboard-nav a");
+  const tabs = document.querySelectorAll(".header-flex-container a[data-tab]");
   const tabContents = document.querySelectorAll(".tab-content");
 
   tabs.forEach(tab => {
@@ -26,7 +26,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Default: Show Profile tab
   if (document.getElementById("profile-tab")) {
     document.getElementById("profile-tab").style.display = "block";
-    document.querySelector("#dashboard-nav a[href='#profile-tab']").classList.add("active-tab");
+    document.querySelector(".header-flex-container a[data-tab='profile-tab']").classList.add("active-tab");
   }
 });
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
