@@ -1,4 +1,3 @@
-
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
 const supabase = createClient(
@@ -23,21 +22,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     alert("Step 7: Session found! Email: " + session.user.email);
+
+    // ✅ Step 8: Admin check
+    const user = session.user;
+    const isAdmin =
+      user.email === 'fvinsuranceagency@gmail.com' ||
+      user.email === 'johnsondemesi@gmail.com';
+
+    alert("Step 8: Admin status: " + isAdmin);
+
+    // ✅ Step 9: Show/hide admin-only elements
+    document.querySelectorAll('.admin-only').forEach(el => {
+      el.style.display = isAdmin ? 'inline' : 'none';
+    });
+
+    alert("Step 9: Admin-only elements updated.");
+
   } catch (err) {
     alert("Step X: Error while checking session: " + err.message);
     document.body.innerHTML = "<h1>Error checking session. Please log in again.</h1>";
   }
-});
-// Step 8: Check if user is an admin
-const isAdmin =
-  session.user.email === 'fvinsuranceagency@gmail.com' ||
-  session.user.email === 'johnsondemesi@gmail.com';
-
-alert("Step 8: Admin status: " + isAdmin);
-
-// Step 9: Show admin-only elements if applicable
-document.querySelectorAll('.admin-only').forEach(el => {
-  el.style.display = isAdmin ? 'inline' : 'none';
 });
 
 /*import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
