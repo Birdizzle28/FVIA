@@ -394,4 +394,10 @@
     display: inline-block;
   }
 }
-
+#lead-message {
+  display: block;
+  margin-top: 15px;
+  font-weight: bold;
+  font-size: 1rem;
+  text-align: center;
+}
