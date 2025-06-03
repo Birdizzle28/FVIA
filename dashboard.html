@@ -160,5 +160,14 @@
 
 	<!-- ✅ JavaScript must be loaded as a module for imports to work -->
 	<script type="module" src="dashboard.js"></script>
+	<script type="module">
+  const debugMsg = document.getElementById('debug-msg');
+  if (debugMsg) {
+    debugMsg.textContent = "INLINE TEST: JS is working!";
+    debugMsg.style.color = "blue";
+  } else {
+    alert("Debug message element NOT found.");
+  }
+</script>
 </body>
 </html>
