@@ -1,22 +1,26 @@
 
-console.log("Supabase data:", data)
-console.log("Supabase error:", error)
 window.addEventListener("load", () => {
   const slides = document.querySelector(".carousel");
-  const count = slides.children.length;
   const thumbWrapper = document.querySelector(".thumbnail-wrapper");
-  const pause = 5000;
+  const container = document.querySelector(".carousel-container");
 
+  if (!slides || !thumbWrapper || !container || !slides.children.length) {
+    console.warn("Carousel elements are missing or empty.");
+    return;
+  }
+
+  const count = slides.children.length;
   let idx = 0;
   let pos = 0;
   let width = slides.firstElementChild.offsetWidth;
   let timer;
+  const pause = 5000;
 
-  /*— Build thumbnails —*/
+  // Build thumbnails
   for (let i = 0; i < count; i++) {
     const thumb = document.createElement("img");
     thumb.src = slides.children[i].src;
-    thumb.className = "thumbnail" + (i===0? " active-thumb":"");
+    thumb.className = "thumbnail" + (i === 0 ? " active-thumb" : "");
     thumb.dataset.i = i;
     thumb.addEventListener("click", () => {
       jumpTo(i);
@@ -27,18 +31,17 @@ window.addEventListener("load", () => {
 
   const updateThumbs = () => {
     document.querySelectorAll(".thumbnail").forEach((t, i) => {
-      t.classList.toggle("active-thumb", i===idx);
+      t.classList.toggle("active-thumb", i === idx);
     });
   };
 
-  /*— Slide functions —*/
   const slideNext = () => {
     pos += width;
     slides.style.left = `-${pos}px`;
     slides.style.transition = "left 0.5s";
-    idx = (idx+1)%count;
+    idx = (idx + 1) % count;
 
-    setTimeout(()=>{
+    setTimeout(() => {
       slides.appendChild(slides.firstElementChild);
       slides.style.transition = "none";
       pos -= width;
@@ -52,9 +55,9 @@ window.addEventListener("load", () => {
     slides.insertBefore(slides.lastElementChild, slides.firstElementChild);
     pos += width;
     slides.style.left = `-${pos}px`;
-    idx = (idx-1+count)%count;
+    idx = (idx - 1 + count) % count;
 
-    setTimeout(()=>{
+    setTimeout(() => {
       slides.style.transition = "left 0.5s";
       pos -= width;
       slides.style.left = `-${pos}px`;
@@ -63,9 +66,8 @@ window.addEventListener("load", () => {
   };
 
   const jumpTo = (target) => {
-    if (target===idx) return;
+    if (target === idx) return;
     const diff = (target - idx + count) % count;
-    // Rotate DOM instantly
     for (let i = 0; i < diff; i++) {
       slides.appendChild(slides.firstElementChild);
     }
@@ -76,60 +78,56 @@ window.addEventListener("load", () => {
     updateThumbs();
   };
 
-  /*— Auto & controls —*/
-  const startTimer = () => timer = setInterval(slideNext, pause);
-  const stopTimer  = () => clearInterval(timer);
-  const resetTimer = () => { stopTimer(); startTimer(); };
+  const startTimer = () => (timer = setInterval(slideNext, pause));
+  const stopTimer = () => clearInterval(timer);
+  const resetTimer = () => {
+    stopTimer();
+    startTimer();
+  };
 
-  /*— Arrows —*/
-  const container = document.querySelector(".carousel-container");
-  ["left","right"].forEach(dir => {
+  // Add arrows
+  ["left", "right"].forEach((dir) => {
     const btn = document.createElement("button");
     btn.className = `arrow ${dir}`;
-    btn.innerHTML = dir==="left"? "&#9664;" : "&#9654;";
+    btn.innerHTML = dir === "left" ? "&#9664;" : "&#9654;";
     btn.addEventListener("click", () => {
-      dir==="left"? slidePrev() : slideNext();
+      dir === "left" ? slidePrev() : slideNext();
       resetTimer();
     });
     container.appendChild(btn);
   });
 
-  /*— Pause on hover —*/
+  // Pause on hover
   container.addEventListener("mouseenter", stopTimer);
   container.addEventListener("mouseleave", startTimer);
 
-  /*— Swipe support —*/
-  let startX=0;
-  container.addEventListener("touchstart", e => startX = e.touches[0].clientX);
-  container.addEventListener("touchend", e => {
+  // Swipe support
+  let startX = 0;
+  container.addEventListener("touchstart", (e) => (startX = e.touches[0].clientX));
+  container.addEventListener("touchend", (e) => {
     const dx = e.changedTouches[0].clientX - startX;
     if (Math.abs(dx) > 50) {
-      dx>0? slidePrev() : slideNext();
+      dx > 0 ? slidePrev() : slideNext();
       resetTimer();
     }
   });
 
-  /*— Initialize —*/
+  // Init
   slides.style.left = "0px";
   startTimer();
 
-  // Recalculate width on resize
+  // Resize handling
   window.addEventListener("resize", () => {
     width = slides.firstElementChild.offsetWidth;
   });
 });
 
+// Chat toggle
 const chatBubble = document.getElementById("chat-bubble");
 const chatWindow = document.getElementById("chat-window");
 
-chatBubble.addEventListener("click", () => {
-      chatWindow.style.display = chatWindow.style.display === "none" ? "block" : "none";
-});
-
-
-
-
-
-
-
-
+if (chatBubble && chatWindow) {
+  chatBubble.addEventListener("click", () => {
+    chatWindow.style.display = chatWindow.style.display === "none" ? "block" : "none";
+  });
+}
