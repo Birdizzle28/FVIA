@@ -208,3 +208,20 @@ window.assignLead = async (leadId, agentId) => {
     location.reload(); // Refresh to show it's removed from unassigned list
   }
 };
+// ✅ Assign Lead Function (for Admins Only)
+async function assignLead(leadId, agentId) {
+  const result = await supabase
+    .from('leads')
+    .update({
+      assigned_to: agentId,
+      assigned_at: new Date().toISOString()
+    })
+    .eq('id', leadId);
+
+  if (result.error) {
+    alert('Failed to assign lead: ' + result.error.message);
+  } else {
+    alert('Lead assigned successfully!');
+    location.reload(); // Optional: refresh to update the UI
+  }
+}
