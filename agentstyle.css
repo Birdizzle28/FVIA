@@ -5,6 +5,7 @@
 	background-color: white;
 	margin: 0;
 	background-image: radial-gradient(#915864, #353468);
+	min-height: 80vw;
 }
 .index-grid {
 	margin: 0;
