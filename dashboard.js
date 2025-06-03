@@ -1,6 +1,5 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
-document.getElementById("debug-msg").textContent = "dashboard.js is running...";
 
 emailjs.init("1F4lpn3PcqgBkk5eF");
 
@@ -9,7 +8,6 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
 );
 
-// Utility: timeout wrapper for Supabase call
 const getUserWithTimeout = (timeout = 5000) => {
   return Promise.race([
     supabase.auth.getUser(),
@@ -21,8 +19,11 @@ const getUserWithTimeout = (timeout = 5000) => {
 
 document.addEventListener('DOMContentLoaded', async () => {
   const loadingScreen = document.getElementById('loading-screen');
+  const debugMsg = document.getElementById('debug-msg');
+  if (debugMsg) debugMsg.textContent = "dashboard.js is running...";
 
-  let user, error;
+  let user = null, error = null;
+
   try {
     const result = await getUserWithTimeout();
     user = result.data.user;
@@ -31,31 +32,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     error = err;
   }
 
-  if (error || !user) {
-    loadingScreen.textContent = 'Authentication failed or timed out.';
+  if (!user || error) {
+    if (loadingScreen) loadingScreen.textContent = 'Authentication failed or timed out.';
     return;
   }
 
-  const isAdmin = (
-    user.email === 'fvinsuranceagency@gmail.com' ||
-    user.email === 'johnsondemesi@gmail.com'
-  );
+  const isAdmin = ['fvinsuranceagency@gmail.com', 'johnsondemesi@gmail.com'].includes(user.email);
 
   document.querySelectorAll('.admin-only').forEach(el => {
     el.style.display = isAdmin ? 'inline' : 'none';
   });
 
-  const navLinks = document.querySelectorAll('.header-flex-container a[data-tab]');
-  const tabSections = document.querySelectorAll('.tab-content');
-
-  navLinks.forEach(link => {
-    link.addEventListener('click', (e) => {
+  document.querySelectorAll('.header-flex-container a[data-tab]').forEach(link => {
+    link.addEventListener('click', e => {
       e.preventDefault();
       const tabId = link.dataset.tab;
-
-      tabSections.forEach(section => section.style.display = 'none');
-      navLinks.forEach(link => link.classList.remove('active-tab'));
-
+      document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+      document.querySelectorAll('.header-flex-container a[data-tab]').forEach(l => l.classList.remove('active-tab'));
       const target = document.getElementById(tabId);
       if (target) {
         target.style.display = 'block';
@@ -67,11 +60,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('profile-tab').style.display = 'block';
 
   const leadForm = document.getElementById('lead-form');
-  leadForm?.addEventListener('submit', async (e) => {
+  leadForm?.addEventListener('submit', async e => {
     e.preventDefault();
     const message = document.getElementById('lead-message');
     message.textContent = '';
-
     const payload = {
       first_name: document.getElementById('lead-first').value.trim(),
       last_name: document.getElementById('lead-last').value.trim(),
@@ -94,22 +86,12 @@ document.addEventListener('DOMContentLoaded', async () => {
       message.textContent = 'Lead submitted successfully!';
       message.style.color = 'green';
       leadForm.reset();
-
-      emailjs.send('service_ozjnfcd', 'template_diztcbn', {
-        first_name: payload.first_name,
-        last_name: payload.last_name,
-        age: payload.age,
-        city: payload.city,
-        zip: payload.zip,
-        phone: payload.phone,
-        lead_type: payload.lead_type,
-        notes: payload.notes
-      });
+      emailjs.send('service_ozjnfcd', 'template_diztcbn', payload);
     }
   });
 
   const requestForm = document.getElementById('lead-request-form');
-  requestForm?.addEventListener('submit', async (e) => {
+  requestForm?.addEventListener('submit', async e => {
     e.preventDefault();
     const message = document.getElementById('request-message');
     message.textContent = '';
@@ -156,19 +138,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
 
-  // Hide loading screen
   if (loadingScreen) loadingScreen.style.display = 'none';
 });
 
-// Fallback: always hide the loading screen after 7 seconds
+// Hide the loading screen after 7 seconds max (fallback)
 setTimeout(() => {
-  const loadingScreen = document.getElementById('loading-screen');
-  if (loadingScreen?.style.display !== 'none') {
-    loadingScreen.style.display = 'none';
+  const screen = document.getElementById('loading-screen');
+  if (screen && screen.style.display !== 'none') {
+    screen.style.display = 'none';
   }
 }, 7000);
 
-// Assign button function
+// Assign lead to agent
 window.assignLead = async (leadId, agentId) => {
   const { error } = await supabase
     .from('leads')
