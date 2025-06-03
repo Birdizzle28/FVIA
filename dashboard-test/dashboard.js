@@ -1,4 +1,4 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+/*import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
 
 emailjs.init("1F4lpn3PcqgBkk5eF");
@@ -179,4 +179,6 @@ window.assignLead = async (leadId, agentId) => {
     alert('Lead successfully assigned!');
     location.reload();
   }
-};
+};*/
+
+alert("Dashboard JS loaded!");
