@@ -11,6 +11,7 @@
 <body id="dashboardbody">
 	<div id="loading-screen">Loading dashboard...</div>
 	<div id="debug-msg" style="text-align:center; color: red; font-weight: bold;"></div>
+
 	<header class="index-grid-header">
 		<div id="logofvcontainer">
 			<div id="logodiv">
@@ -21,7 +22,7 @@
 				<p>Insurance Agency</p>
 			</div>
 		</div>
-		
+
 		<div id="navcontainer">
 			<nav class="header-flex-container">
 				<a href="#" data-tab="profile-tab">Profile</a>
@@ -32,63 +33,63 @@
 			</nav>
 		</div>
 	</header>
-	
+
 	<main class="auth-container">
 		<section id="admin-requested-tab" class="tab-content admin-only" style="display: none;">
-  <h3>Requested Leads</h3>
-  <div id="requested-leads-container"></div>
-</section>
+			<h3>Requested Leads</h3>
+			<div id="requested-leads-container"></div>
+		</section>
+
 		<section id="profile-tab" class="tab-content profile-section">
+			<div class="profile-picture-wrapper">
+				<label for="profile-photo-input">
+					<div class="profile-picture-placeholder">
+						<img id="profile-photo" src="Pics/placeholder-user.png" alt="Profile Picture" />
+						<span class="upload-text">Add profile picture</span>
+					</div>
+				</label>
+				<input type="file" id="profile-photo-input" accept="image/*" style="display:none;" />
+			</div>
 
-  <div class="profile-picture-wrapper">
-    <label for="profile-photo-input">
-      <div class="profile-picture-placeholder">
-        <img id="profile-photo" src="Pics/placeholder-user.png" alt="Profile Picture" />
-        <span class="upload-text">Add profile picture</span>
-      </div>
-    </label>
-    <input type="file" id="profile-photo-input" accept="image/*" style="display:none;" />
-  </div>
+			<form id="profile-form">
+				<div class="form-group">
+					<label for="first-name">First Name</label>
+					<input type="text" id="first-name" placeholder="John" />
+				</div>
 
-  <form id="profile-form">
-    <div class="form-group">
-      <label for="first-name">First Name</label>
-      <input type="text" id="first-name" placeholder="John" />
-    </div>
+				<div class="form-group">
+					<label for="last-name">Last Name</label>
+					<input type="text" id="last-name" placeholder="Doe" />
+				</div>
 
-    <div class="form-group">
-      <label for="last-name">Last Name</label>
-      <input type="text" id="last-name" placeholder="Doe" />
-    </div>
+				<div class="form-group">
+					<label for="profile-email">Email</label>
+					<input type="email" id="profile-email" disabled />
+				</div>
 
-    <div class="form-group">
-      <label for="profile-email">Email</label>
-      <input type="email" id="profile-email" disabled />
-    </div>
+				<div class="form-group">
+					<label for="profile-agent-id">Agent ID</label>
+					<input type="text" id="profile-agent-id" disabled />
+				</div>
 
-    <div class="form-group">
-      <label for="profile-agent-id">Agent ID</label>
-      <input type="text" id="profile-agent-id" disabled />
-    </div>
+				<div class="form-group">
+					<label for="profile-bio">Bio</label>
+					<textarea id="profile-bio" placeholder="Tell us about yourself..."></textarea>
+				</div>
 
-    <div class="form-group">
-      <label for="profile-bio">Bio</label>
-      <textarea id="profile-bio" placeholder="Tell us about yourself..."></textarea>
-    </div>
+				<div class="form-group">
+					<label for="profile-public-status">Visible on About Page</label>
+					<select id="profile-public-status">
+						<option value="true">Yes</option>
+						<option value="false">No</option>
+					</select>
+				</div>
 
-    <div class="form-group">
-      <label for="profile-public-status">Visible on About Page</label>
-      <select id="profile-public-status">
-        <option value="true">Yes</option>
-        <option value="false">No</option>
-      </select>
-    </div>
+				<button type="submit">Save Changes</button>
+				<p id="edit-profile-message"></p>
+			</form>
+		</section>
 
-    <button type="submit">Save Changes</button>
-    <p id="edit-profile-message"></p>
-  </form>
-</section>
-		
 		<section id="lead-tab" class="tab-content" style="display: none;">
 			<h3>Submit a Lead</h3>
 			<form id="lead-form">
@@ -109,6 +110,7 @@
 				<button type="submit">Submit Lead</button>
 			</form>
 			<p id="lead-message"></p>
+
 			<h3>Request Leads</h3>
 			<form id="lead-request-form">
 				<input type="text" id="request-city" placeholder="City" />
@@ -125,13 +127,13 @@
 			</form>
 			<p id="request-message"></p>
 		</section>
-		
+
 		<section id="thread-tab" class="tab-content" style="display: none;">
 			<h3>Agent Thread</h3>
 			<p>Coming soon: agents will post messages here about events, updates, and more.</p>
 		</section>
 	</main>
-	
+
 	<footer class="index-grid-footer">
 		<img id="footerlogo" src="Pics/img17.png" alt="FVIA Footer Logo" />
 		<hr class="footerhr" />
@@ -155,7 +157,8 @@
 		</div>
 		<p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
 	</footer>
-	
-	<script src="dashboard.js"></script>
+
+	<!-- ✅ JavaScript must be loaded as a module for imports to work -->
+	<script type="module" src="dashboard.js"></script>
 </body>
 </html>
