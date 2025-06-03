@@ -1,4 +1,3 @@
-alert("dashboard.js is loading!");
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
 
@@ -20,11 +19,8 @@ const getUserWithTimeout = (timeout = 5000) => {
 
 document.addEventListener('DOMContentLoaded', async () => {
   const loadingScreen = document.getElementById('loading-screen');
-  const debugMsg = document.getElementById('debug-msg');
-  if (debugMsg) debugMsg.textContent = "dashboard.js is running...";
 
-  let user = null, error = null;
-
+  let user, error;
   try {
     const result = await getUserWithTimeout();
     user = result.data.user;
@@ -33,23 +29,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     error = err;
   }
 
-  if (!user || error) {
-    if (loadingScreen) loadingScreen.textContent = 'Authentication failed or timed out.';
+  if (error || !user) {
+    loadingScreen.textContent = 'Authentication failed or timed out.';
     return;
   }
 
-  const isAdmin = ['fvinsuranceagency@gmail.com', 'johnsondemesi@gmail.com'].includes(user.email);
+  const isAdmin = (
+    user.email === 'fvinsuranceagency@gmail.com' ||
+    user.email === 'johnsondemesi@gmail.com'
+  );
 
   document.querySelectorAll('.admin-only').forEach(el => {
     el.style.display = isAdmin ? 'inline' : 'none';
   });
 
-  document.querySelectorAll('.header-flex-container a[data-tab]').forEach(link => {
-    link.addEventListener('click', e => {
+  const navLinks = document.querySelectorAll('.header-flex-container a[data-tab]');
+  const tabSections = document.querySelectorAll('.tab-content');
+
+  navLinks.forEach(link => {
+    link.addEventListener('click', (e) => {
       e.preventDefault();
       const tabId = link.dataset.tab;
-      document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
-      document.querySelectorAll('.header-flex-container a[data-tab]').forEach(l => l.classList.remove('active-tab'));
+
+      tabSections.forEach(section => section.style.display = 'none');
+      navLinks.forEach(link => link.classList.remove('active-tab'));
+
       const target = document.getElementById(tabId);
       if (target) {
         target.style.display = 'block';
@@ -61,10 +65,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('profile-tab').style.display = 'block';
 
   const leadForm = document.getElementById('lead-form');
-  leadForm?.addEventListener('submit', async e => {
+  leadForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const message = document.getElementById('lead-message');
     message.textContent = '';
+
     const payload = {
       first_name: document.getElementById('lead-first').value.trim(),
       last_name: document.getElementById('lead-last').value.trim(),
@@ -87,12 +92,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       message.textContent = 'Lead submitted successfully!';
       message.style.color = 'green';
       leadForm.reset();
-      emailjs.send('service_ozjnfcd', 'template_diztcbn', payload);
+
+      emailjs.send('service_ozjnfcd', 'template_diztcbn', {
+        first_name: payload.first_name,
+        last_name: payload.last_name,
+        age: payload.age,
+        city: payload.city,
+        zip: payload.zip,
+        phone: payload.phone,
+        lead_type: payload.lead_type,
+        notes: payload.notes
+      });
     }
   });
 
   const requestForm = document.getElementById('lead-request-form');
-  requestForm?.addEventListener('submit', async e => {
+  requestForm?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const message = document.getElementById('request-message');
     message.textContent = '';
@@ -142,15 +157,13 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (loadingScreen) loadingScreen.style.display = 'none';
 });
 
-// Hide the loading screen after 7 seconds max (fallback)
 setTimeout(() => {
-  const screen = document.getElementById('loading-screen');
-  if (screen && screen.style.display !== 'none') {
-    screen.style.display = 'none';
+  const loadingScreen = document.getElementById('loading-screen');
+  if (loadingScreen?.style.display !== 'none') {
+    loadingScreen.style.display = 'none';
   }
 }, 7000);
 
-// Assign lead to agent
 window.assignLead = async (leadId, agentId) => {
   const { error } = await supabase
     .from('leads')
