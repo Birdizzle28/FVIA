@@ -1,108 +1,154 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Agent Dashboard | Family Values Insurance Agency</title>
-  <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+	<meta charset="UTF-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+	<title>Agent Dashboard | Family Values Insurance Agency</title>
+	<link rel="stylesheet" href="agentstyle.css" />
+	<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 </head>
 <body id="dashboardbody">
-  <header class="index-grid-header">
-    <a href="index.html"><img id="headerlogo" src="Pics/img17.png" alt="FVIA Logo" /></a>
-    <p><strong>Family Values Insurance Agency</strong></p>
-    <hr />
-    <nav class="header-flex-container">
-      <a href="#" data-tab="profile-tab">Profile</a>
-      <a href="#" data-tab="lead-tab">Leads</a>
-      <a href="#" data-tab="thread-tab">Thread</a>
-      <a href="#" id="logout-btn">Logout</a>
-    </nav>
-    <hr />
-  </header>
+	<header class="index-grid-header">
+		<div id="logofvcontainer">
+			<div id="logodiv">
+				<a href="index.html"><img id="headerlogo" src="Pics/img17.png" alt="FVIA Logo" /></a>
+			</div>
+			<div id="fvdiv">
+				<p><strong>Family Values</strong></p>
+				<p>Insurance Agency</p>
+			</div>
+		</div>
+		
+		<div id="navcontainer">
+			<nav class="header-flex-container">
+				<a href="#" data-tab="profile-tab">Profile</a>
+				<a href="#" data-tab="lead-tab">Leads</a>
+				<a href="#" data-tab="thread-tab">Thread</a>
+				<a href="#" id="logout-btn">Logout</a>
+			</nav>
+		</div>
+	</header>
+	
+	<main class="auth-container">
+		<section id="profile-tab" class="tab-content profile-section">
 
-  <main class="auth-container">
-    <section id="profile-tab" class="tab-content">
-      <h2>Welcome, <span id="profile-name">[Your Full Name]</span></h2>
-      <div class="profile-photo-placeholder">
-        <img id="profile-photo" src="Pics/profile-placeholder.png" alt="Profile Photo Placeholder">
+  <div class="profile-picture-wrapper">
+    <label for="profile-photo-input">
+      <div class="profile-picture-placeholder">
+        <img id="profile-photo" src="Pics/placeholder-user.png" alt="Profile Picture" />
+        <span class="upload-text">Add profile picture</span>
       </div>
-      <p class="placeholder-note">(Upload your profile photo in the Edit Profile tab)</p>
-      <p><strong>Email:</strong> <span id="profile-email">your.email@example.com</span></p>
-      <p><strong>Agent ID:</strong> <span id="profile-agent-id">XX-XXXXXXX</span></p>
-      <p><strong>Bio:</strong> <span id="profile-bio" class="placeholder-note">Your bio will appear here once added.</span></p>
-      <p><strong>Visible on About Page:</strong> <span id="profile-public-status" class="placeholder-note">This setting controls if you appear on the About page.</span></p>
-    </section>
+    </label>
+    <input type="file" id="profile-photo-input" accept="image/*" style="display:none;" />
+  </div>
 
-    <section id="lead-tab" class="tab-content" style="display: none;">
-      <h3>Submit a Lead</h3>
-      <form id="lead-form">
-        <input type="text" id="lead-first" placeholder="First Name" required />
-        <input type="text" id="lead-last" placeholder="Last Name" required />
-        <input type="number" id="lead-age" placeholder="Age" required />
-        <input type="text" id="lead-city" placeholder="City" />
-        <input type="text" id="lead-zip" placeholder="ZIP Code" />
-        <input type="tel" id="lead-phone" placeholder="Phone Number" />
-        <select id="lead-type" required>
-          <option value="">Select Lead Type</option>
-          <option value="Facebook">Facebook</option>
-          <option value="Google SEO">Google SEO</option>
-          <option value="Referral">Referral</option>
-          <option value="Other">Other</option>
-        </select>
-        <textarea id="lead-notes" placeholder="Notes (optional)"></textarea>
-        <button type="submit">Submit Lead</button>
-      </form>
-      <p id="lead-message"></p>
-
-      <h3>Request Leads</h3>
-      <form id="lead-request-form">
-        <input type="text" id="request-city" placeholder="City" />
-        <input type="text" id="request-zip" placeholder="ZIP Code" />
-        <select id="request-type">
-          <option value="">Select Lead Type</option>
-          <option value="Facebook">Facebook</option>
-          <option value="Google SEO">Google SEO</option>
-          <option value="Referral">Referral</option>
-          <option value="Other">Other</option>
-        </select>
-        <textarea id="request-notes" placeholder="Notes (optional)"></textarea>
-        <button type="submit">Submit Request</button>
-      </form>
-      <p id="request-message"></p>
-    </section>
-
-    <section id="thread-tab" class="tab-content" style="display: none;">
-      <h3>Agent Thread</h3>
-      <p>Coming soon: agents will post messages here about events, updates, and more.</p>
-    </section>
-  </main>
-
-  <footer class="index-grid-footer">
-    <img id="footerlogo" src="Pics/img17.png" alt="FVIA Footer Logo" />
-    <hr class="footerhr" />
-    <div id="footercontact">
-      <a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
-        <span class="fa fa-envelope"></span>
-        <span class="contactcontcontacts">fvinsuranceagency@gmail.com</span>
-      </a>
-      <a class="contactcontainer" href="tel:+17316934739">
-        <span class="fa fa-phone"></span>
-        <span class="contactcontcontacts">(731) 693-4739</span>
-      </a>
+  <form id="profile-form">
+    <div class="form-group">
+      <label for="first-name">First Name</label>
+      <input type="text" id="first-name" placeholder="John" />
     </div>
-    <hr class="footerhr" />
-    <div id="footersocial">
-      <a class="fab fa-facebook-f" href="#"></a>
-      <a class="fab fa-linkedin-in" href="#"></a>
-      <a class="fab fa-instagram" href="#"></a>
-      <a class="fab fa-youtube" href="#"></a>
-      <a class="fab fa-google" href="#"></a>
-    </div>
-    <p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
-  </footer>
 
-  <script src="dashboard.js"></script>
+    <div class="form-group">
+      <label for="last-name">Last Name</label>
+      <input type="text" id="last-name" placeholder="Doe" />
+    </div>
+
+    <div class="form-group">
+      <label for="profile-email">Email</label>
+      <input type="email" id="profile-email" disabled />
+    </div>
+
+    <div class="form-group">
+      <label for="profile-agent-id">Agent ID</label>
+      <input type="text" id="profile-agent-id" disabled />
+    </div>
+
+    <div class="form-group">
+      <label for="profile-bio">Bio</label>
+      <textarea id="profile-bio" placeholder="Tell us about yourself..."></textarea>
+    </div>
+
+    <div class="form-group">
+      <label for="profile-public-status">Visible on About Page</label>
+      <select id="profile-public-status">
+        <option value="true">Yes</option>
+        <option value="false">No</option>
+      </select>
+    </div>
+
+    <button type="submit">Save Changes</button>
+    <p id="edit-profile-message"></p>
+  </form>
+</section>
+		
+		<section id="lead-tab" class="tab-content" style="display: none;">
+			<h3>Submit a Lead</h3>
+			<form id="lead-form">
+				<input type="text" id="lead-first" placeholder="First Name" required />
+				<input type="text" id="lead-last" placeholder="Last Name" required />
+				<input type="number" id="lead-age" placeholder="Age" required />
+				<input type="text" id="lead-city" placeholder="City" />
+				<input type="text" id="lead-zip" placeholder="ZIP Code" />
+				<input type="tel" id="lead-phone" placeholder="Phone Number" />
+				<select id="lead-type" required>
+					<option value="">Select Lead Type</option>
+					<option value="Facebook">Facebook</option>
+					<option value="Google SEO">Google SEO</option>
+					<option value="Referral">Referral</option>
+					<option value="Other">Other</option>
+				</select>
+				<textarea id="lead-notes" placeholder="Notes (optional)"></textarea>
+				<button type="submit">Submit Lead</button>
+			</form>
+			<p id="lead-message"></p>
+			<h3>Request Leads</h3>
+			<form id="lead-request-form">
+				<input type="text" id="request-city" placeholder="City" />
+				<input type="text" id="request-zip" placeholder="ZIP Code" />
+				<select id="request-type">
+					<option value="">Select Lead Type</option>
+					<option value="Facebook">Facebook</option>
+					<option value="Google SEO">Google SEO</option>
+					<option value="Referral">Referral</option>
+					<option value="Other">Other</option>
+				</select>
+				<textarea id="request-notes" placeholder="Notes (optional)"></textarea>
+				<button type="submit">Submit Request</button>
+			</form>
+			<p id="request-message"></p>
+		</section>
+		
+		<section id="thread-tab" class="tab-content" style="display: none;">
+			<h3>Agent Thread</h3>
+			<p>Coming soon: agents will post messages here about events, updates, and more.</p>
+		</section>
+	</main>
+	
+	<footer class="index-grid-footer">
+		<img id="footerlogo" src="Pics/img17.png" alt="FVIA Footer Logo" />
+		<hr class="footerhr" />
+		<div id="footercontact">
+			<a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
+				<span class="fa fa-envelope"></span>
+				<span class="contactcontcontacts">fvinsuranceagency@gmail.com</span>
+			</a>
+			<a class="contactcontainer" href="tel:+17316934739">
+				<span class="fa fa-phone"></span>
+				<span class="contactcontcontacts">(731) 693-4739</span>
+			</a>
+		</div>
+		<hr class="footerhr" />
+		<div id="footersocial">
+			<a class="fab fa-facebook-f" href="#"></a>
+			<a class="fab fa-linkedin-in" href="#"></a>
+			<a class="fab fa-instagram" href="#"></a>
+			<a class="fab fa-youtube" href="#"></a>
+			<a class="fab fa-google" href="#"></a>
+		</div>
+		<p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
+	</footer>
+	
+	<script src="dashboard.js"></script>
 </body>
 </html>
