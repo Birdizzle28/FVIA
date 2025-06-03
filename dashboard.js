@@ -1,18 +1,19 @@
-alert("Step 1: JS is loaded");
+alert("Step 3: Checking session from dashboard...");
 
 document.addEventListener("DOMContentLoaded", async () => {
-  alert("Step 2: DOM loaded");
+  alert("Step 4: DOM loaded, checking Supabase session...");
 
-  const session = await supabase.auth.getSession();
-  alert("Step 3: Session check complete");
+  const sessionResult = await supabase.auth.getSession();
 
-  if (!session.data.session) {
-    alert("Step 4: No session found");
+  alert("Step 5: Session result: " + JSON.stringify(sessionResult));
+
+  if (!sessionResult.data || !sessionResult.data.session) {
     document.body.innerHTML = "<h1>Session not found. Please log in again.</h1>";
     return;
   }
 
-  alert("Step 5: Session found! Email: " + session.data.session.user.email);
+  const user = sessionResult.data.session.user;
+  alert("Step 6: Logged in as " + user.email);
 });
 
 /*import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
