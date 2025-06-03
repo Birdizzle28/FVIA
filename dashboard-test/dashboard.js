@@ -1,4 +1,4 @@
-alert("JS loaded: Start of dashboard.js");
+alert("Step 2: JS is still running");
 
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
@@ -7,10 +7,28 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...your-full-anon-key...'
 );
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const loadingScreen = document.getElementById('loading-screen');
   if (loadingScreen) {
-    loadingScreen.textContent = "Loading screen is visible";
+    loadingScreen.textContent = "Step 2: DOM loaded.";
+  }
+
+  alert("Step 2: About to call Supabase");
+
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser();
+
+    if (error || !user) {
+      alert("Auth failed or no user");
+      loadingScreen.textContent = 'Authentication failed. Please log in.';
+      return;
+    }
+
+    alert(`User found: ${user.email}`);
+    loadingScreen.textContent = `Welcome, ${user.email}`;
+  } catch (err) {
+    alert("Supabase crashed: " + err.message);
+    loadingScreen.textContent = 'Something went wrong.';
   }
 });
 
