@@ -1,4 +1,4 @@
-alert("Step 3: Checking session from dashboard...");
+
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
 const supabase = createClient(
@@ -27,21 +27,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     alert("Step X: Error while checking session: " + err.message);
     document.body.innerHTML = "<h1>Error checking session. Please log in again.</h1>";
   }
-});
-document.addEventListener("DOMContentLoaded", async () => {
-  alert("Step 4: DOM loaded, checking Supabase session...");
-
-  const sessionResult = await supabase.auth.getSession();
-
-  alert("Step 5: Session result: " + JSON.stringify(sessionResult));
-
-  if (!sessionResult.data || !sessionResult.data.session) {
-    document.body.innerHTML = "<h1>Session not found. Please log in again.</h1>";
-    return;
-  }
-
-  const user = sessionResult.data.session.user;
-  alert("Step 6: Logged in as " + user.email);
 });
 
 /*import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
