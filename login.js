@@ -5,22 +5,7 @@ const supabase = createClient(
   'https://ddlbgkolnayqrxslzsxn.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
 );
-alert("Step 1: JS is loaded");
 
-document.addEventListener("DOMContentLoaded", async () => {
-  alert("Step 2: DOM loaded");
-
-  const session = await supabase.auth.getSession();
-  alert("Step 3: Session check complete");
-
-  if (!session.data.session) {
-    alert("Step 4: No session found");
-    document.body.innerHTML = "<h1>Session not found. Please log in again.</h1>";
-    return;
-  }
-
-  alert("Step 5: Session found! Email: " + session.data.session.user.email);
-});
 
 // Login form logic
 document.addEventListener('DOMContentLoaded', () => {
