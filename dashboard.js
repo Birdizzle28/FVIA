@@ -1,45 +1,43 @@
-// Import Supabase client
+// Supabase init
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-// Initialize Supabase
 const supabase = createClient(
   'https://ddlbgkolnayqrxslzsxn.supabase.co',
-  'your-public-anon-key' // Replace with your actual anon key
+  'your-public-anon-key' // replace this with your actual anon key
 );
 
-// Handle tab switching
+// TAB SWITCHING
 document.addEventListener("DOMContentLoaded", () => {
-  const tabs = document.querySelectorAll(".header-flex-container a[data-tab]");
-  const tabContents = document.querySelectorAll(".tab-content");
+  const navLinks = document.querySelectorAll('.header-flex-container a[data-tab]');
+  const tabSections = document.querySelectorAll('.tab-content');
 
-  tabs.forEach(tab => {
-    tab.addEventListener("click", (e) => {
+  navLinks.forEach(link => {
+    link.addEventListener('click', e => {
       e.preventDefault();
 
-      const targetId = tab.getAttribute("data-tab");
+      // Hide all tabs
+      tabSections.forEach(section => section.style.display = 'none');
 
-      tabContents.forEach(content => content.style.display = "none");
-      tabs.forEach(t => t.classList.remove("active-tab"));
+      // Remove active classes
+      navLinks.forEach(link => link.classList.remove('active-tab'));
 
-      const targetTab = document.getElementById(targetId);
+      // Show selected tab
+      const tabId = link.dataset.tab;
+      const targetTab = document.getElementById(tabId);
       if (targetTab) {
-        targetTab.style.display = "block";
-        tab.classList.add("active-tab");
+        targetTab.style.display = 'block';
+        link.classList.add('active-tab');
       }
     });
   });
 
-  // Default to showing Profile tab
-  const defaultTab = document.querySelector(".header-flex-container a[data-tab='profile-tab']");
-  const profileSection = document.getElementById("profile-tab");
-
-  if (defaultTab && profileSection) {
-    defaultTab.classList.add("active-tab");
-    profileSection.style.display = "block";
-  }
+  // Show default tab (profile)
+  const defaultTab = document.getElementById('profile-tab');
+  if (defaultTab) defaultTab.style.display = 'block';
 });
 
-// Handle lead form submission
+
+// LEAD FORM
 document.getElementById('lead-form').addEventListener('submit', async (e) => {
   e.preventDefault();
 
