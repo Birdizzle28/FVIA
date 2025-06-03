@@ -1,62 +1,47 @@
+// ✅ Import Supabase
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
+// ✅ Initialize Supabase
 const supabase = createClient(
   'https://ddlbgkolnayqrxslzsxn.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
 );
 
-// 🚨 Redirect if not authenticated
+// ✅ Auth check + tab logic
 document.addEventListener('DOMContentLoaded', async () => {
-  const { data: { user } } = await supabase.auth.getUser();
-
-  if (!user) {
-    window.location.href = '/login.html'; // Redirect to login page
+  // 🚨 Redirect if not authenticated
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
+  if (userError || !user) {
+    window.location.href = '/login.html';
     return;
   }
 
-  // (continue your dashboard logic here)
-});
-
-// Supabase init
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-const supabase = createClient(
-  'https://ddlbgkolnayqrxslzsxn.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho' // replace this with your actual anon key
-);
-
-// TAB SWITCHING
-document.addEventListener("DOMContentLoaded", () => {
+  // ✅ Tab Switching
   const navLinks = document.querySelectorAll('.header-flex-container a[data-tab]');
   const tabSections = document.querySelectorAll('.tab-content');
 
   navLinks.forEach(link => {
     link.addEventListener('click', e => {
       e.preventDefault();
+      const tabId = link.dataset.tab;
 
-      // Hide all tabs
-      tabSections.forEach(section => section.style.display = 'none');
-
-      // Remove active classes
+      // Hide all sections
+      tabSections.forEach(sec => sec.style.display = 'none');
       navLinks.forEach(link => link.classList.remove('active-tab'));
 
-      // Show selected tab
-      const tabId = link.dataset.tab;
-      const targetTab = document.getElementById(tabId);
-      if (targetTab) {
-        targetTab.style.display = 'block';
-        link.classList.add('active-tab');
-      }
+      // Show selected
+      document.getElementById(tabId).style.display = 'block';
+      link.classList.add('active-tab');
     });
   });
 
-  // Show default tab (profile)
-  const defaultTab = document.getElementById('profile-tab');
-  if (defaultTab) defaultTab.style.display = 'block';
+  // Show default tab
+  document.getElementById('profile-tab').style.display = 'block';
+  document.querySelector('[data-tab="profile-tab"]').classList.add('active-tab');
 });
 
 
-// LEAD FORM
+// ✅ Lead form submission
 document.getElementById('lead-form').addEventListener('submit', async (e) => {
   e.preventDefault();
 
@@ -78,12 +63,8 @@ document.getElementById('lead-form').addEventListener('submit', async (e) => {
     return;
   }
 
-  // ✅ Get current user ID for RLS enforcement
-  const {
-    data: { user },
-    error: userError
-  } = await supabase.auth.getUser();
-
+  // ✅ Get user info for RLS (submitted_by)
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) {
     message.textContent = 'User not authenticated.';
     return;
@@ -100,7 +81,7 @@ document.getElementById('lead-form').addEventListener('submit', async (e) => {
       phone,
       lead_type: leadType,
       notes,
-      submitted_by: user.id // ✅ Include for RLS policy!
+      submitted_by: user.id
     }]);
 
   if (error) {
