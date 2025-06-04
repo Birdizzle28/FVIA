@@ -133,7 +133,12 @@
         <input type="number" id="lead-age" placeholder="Age" required />
         <input type="text" id="lead-city" placeholder="City" />
         <input type="text" id="lead-zip" placeholder="ZIP Code" />
-        <input type="tel" id="lead-phone" placeholder="Phone Number" />
+        <div id="phone-inputs">
+  <div class="phone-line">
+    <input type="tel" name="lead-phone" placeholder="(123) 456-7890" maxlength="14" required />
+    <button type="button" class="add-phone-btn">+</button>
+  </div>
+</div>
         <select id="lead-type" required>
           <option value="">Select Lead Type</option>
           <option value="Facebook">Facebook</option>
