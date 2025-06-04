@@ -204,7 +204,15 @@
     </div>
     <p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
   </footer>
-
+  <div id="reassign-warning-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+  <div style="background:white; padding:20px; border-radius:10px; max-width:90vw; width:300px; text-align:center;">
+    <p><strong>Warning!</strong> You are about to re-assign one or more leads. Would you still like to submit?</p>
+    <div style="margin-top:20px;">
+      <button id="cancel-reassign-btn" style="margin-right:10px;">Cancel</button>
+      <button id="confirm-reassign-btn">Submit Anyway</button>
+    </div>
+  </div>
+</div>
   <script type="module" src="dashboard.js" defer></script>
 </body>
 </html>
