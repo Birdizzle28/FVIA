@@ -1,6 +1,5 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
 
-// Your Supabase credentials
 const supabaseUrl = 'https://ddlbgkolnayqrxslzsxn.supabase.co'
 const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
 const supabase = createClient(supabaseUrl, supabaseKey)
@@ -18,20 +17,17 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
 
   message.style.color = 'red'
 
-  // Password strength check
   const passwordPattern = /^(?=.*[A-Z])(?=.*\d).{6,}$/
   if (!passwordPattern.test(password)) {
     message.textContent = 'Password must have at least 1 capital letter, 1 number, and be 6+ characters.'
     return
   }
 
-  // Password match check
   if (password !== confirmPassword) {
     message.textContent = 'Passwords do not match.'
     return
   }
 
-  // Check agent ID exists and is not already used
   const { data, error } = await supabase
     .from('approved_agents')
     .select('*')
@@ -44,7 +40,6 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     return
   }
 
-  // Create Supabase Auth account
   const { data: signupData, error: signUpError } = await supabase.auth.signUp({
     email,
     password,
@@ -58,7 +53,6 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     return
   }
 
-  // Update approved_agents with name + email
   const { error: updateError } = await supabase
     .from('approved_agents')
     .update({
@@ -74,22 +68,22 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     return
   }
 
-  // ⬇️ NEW: Save to profiles
+  // ✅ Insert into agents table
   const fullName = `${firstName} ${lastName}`
   const userId = signupData?.user?.id
 
   if (userId) {
-    const { error: profileError } = await supabase
-      .from('profiles')
+    const { error: agentInsertError } = await supabase
+      .from('agents')
       .insert({
         id: userId,
         full_name: fullName,
         agent_id: agentId
       })
 
-    if (profileError) {
+    if (agentInsertError) {
       message.style.color = 'orange'
-      message.textContent = 'Signup complete, but failed to save profile. Contact admin.'
+      message.textContent = 'Signup complete, but failed to save agent profile.'
       return
     }
   }
@@ -98,7 +92,6 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
   message.textContent = 'Sign-up successful! Please check your email to confirm.'
 })
 
-// Toggle password visibility (eye icon)
 document.querySelectorAll('.toggle-password').forEach(icon => {
   icon.addEventListener('click', () => {
     const input = document.querySelector(icon.getAttribute('toggle'))
