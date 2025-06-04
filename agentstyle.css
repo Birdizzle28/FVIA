@@ -429,3 +429,11 @@
 .admin-only {
   display: none;
 }
+#requested-leads-container {
+  max-height: 320px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  padding: 10px;
+  background: #fff;
+  border-radius: 8px;
+}
