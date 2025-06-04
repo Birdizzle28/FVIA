@@ -364,16 +364,22 @@ async function loadLeadsWithFilters() {
     }
     tr.appendChild(checkboxTd);
 
-    const cells = [
-      new Date(lead.created_at).toLocaleDateString(),
-      allAgents.find(a => a.id === lead.agent_id)?.full_name || 'Unassigned',
-      lead.zip || '',
-      lead.city || '',
-      lead.state || '',
-      lead.first_name || '',
-      lead.last_name || '',
-      lead.lead_type || '',
-    ];
+    const agentName = allAgents.find(a => a.id === lead.agent_id)?.full_name || 'Unassigned';
+
+const cells = [
+  new Date(lead.created_at).toLocaleDateString(),           // Submitted
+  agentName,                                                // Agent
+  lead.first_name || '',                                    // First Name
+  lead.last_name || '',                                     // Last Name
+  lead.age || '',                                           // Age
+  (lead.phone || []).join(', '),                            // Phone(s)
+  lead.address || '',                                       // Address
+  lead.city || '',                                          // City
+  lead.state || '',                                         // State
+  lead.zip || '',                                           // ZIP
+  lead.lead_type || '',                                     // Lead Type
+  lead.notes || ''                                          // Notes
+];
 
     cells.forEach(text => {
       const td = document.createElement('td');
