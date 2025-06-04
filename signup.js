@@ -45,13 +45,13 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
   }
 
   // Create Supabase Auth account
- const { error: signUpError } = await supabase.auth.signUp({
-  email,
-  password,
-  options: {
-    emailRedirectTo: 'https://fv-ia.com/confirmed.html'
-  }
-})
+  const { data: signupData, error: signUpError } = await supabase.auth.signUp({
+    email,
+    password,
+    options: {
+      emailRedirectTo: 'https://fv-ia.com/confirmed.html'
+    }
+  })
 
   if (signUpError) {
     message.textContent = 'Error signing up: ' + signUpError.message
@@ -74,10 +74,29 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     return
   }
 
+  // ⬇️ NEW: Save to profiles
+  const fullName = `${firstName} ${lastName}`
+  const userId = signupData?.user?.id
+
+  if (userId) {
+    const { error: profileError } = await supabase
+      .from('profiles')
+      .insert({
+        id: userId,
+        full_name: fullName,
+        agent_id: agentId
+      })
+
+    if (profileError) {
+      message.style.color = 'orange'
+      message.textContent = 'Signup complete, but failed to save profile. Contact admin.'
+      return
+    }
+  }
+
   message.style.color = 'green'
   message.textContent = 'Sign-up successful! Please check your email to confirm.'
 })
-
 
 // Toggle password visibility (eye icon)
 document.querySelectorAll('.toggle-password').forEach(icon => {
