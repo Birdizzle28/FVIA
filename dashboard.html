@@ -33,9 +33,59 @@
 
   <main class="auth-container">
     <section id="admin-requested-tab" class="tab-content admin-only" style="display: none;">
-      <h3>Requested Leads</h3>
-      <div id="requested-leads-container"></div>
-    </section>
+  <h3>Lead Requests</h3>
+  <div id="requested-leads-container" class="scroll-container"></div>
+
+  <hr>
+
+  <h3>All Leads</h3>
+  <!-- Filters -->
+  <div id="lead-filters">
+    <label for="start-date">Start Date:</label>
+    <input type="date" id="start-date">
+    <label for="end-date">End Date:</label>
+    <input type="date" id="end-date">
+    <label for="date-order">Order:</label>
+    <select id="date-order">
+      <option value="desc">Most Recent</option>
+      <option value="asc">Oldest</option>
+    </select>
+
+    <label for="agent-filter">Agent:</label>
+    <select id="agent-filter">
+      <option value="">All Agents</option>
+    </select>
+
+    <input type="text" id="zip-filter" placeholder="ZIP">
+    <input type="text" id="city-filter" placeholder="City">
+    <input type="text" id="state-filter" placeholder="State">
+    <input type="text" id="first-name-filter" placeholder="First Name">
+    <input type="text" id="last-name-filter" placeholder="Last Name">
+    <input type="text" id="lead-type-filter" placeholder="Lead Type">
+    <button id="apply-filters">Apply Filters</button>
+  </div>
+
+  <!-- Leads Table -->
+  <div id="leads-table-container">
+    <table id="leads-table">
+      <thead>
+        <tr>
+          <th>Submitted</th>
+          <th>Agent</th>
+          <th>ZIP</th>
+          <th>City</th>
+          <th>State</th>
+          <th>First</th>
+          <th>Last</th>
+          <th>Type</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Leads load here -->
+      </tbody>
+    </table>
+  </div>
+</section>
 
     <section id="profile-tab" class="tab-content profile-section">
       <div class="profile-picture-wrapper">
