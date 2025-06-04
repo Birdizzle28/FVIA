@@ -154,7 +154,8 @@ if (leadRequestForm) {
         lead_type: document.getElementById('request-type').value,
         requested_count: parseInt(document.getElementById('request-count').value),
         notes: document.getElementById('request-notes').value.trim(),
-        submitted_by: user.id
+        submitted_by: user.id,
+        submitted_by_name: profileData?.full_name || 'Unknown'
       };
 
       const { error } = await supabase.from('lead_requests').insert(requestData);
