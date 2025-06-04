@@ -214,6 +214,30 @@ async function loadRequestedLeads() {
   });
 
   container.innerHTML = leadCards.join('');
+  // Attach click handlers to each assign button
+container.querySelectorAll('.assign-btn').forEach(button => {
+  button.addEventListener('click', async () => {
+    const leadId = button.dataset.id;
+    const agentId = prompt("Enter the Agent's Supabase ID to assign this lead:");
+
+    if (!agentId) {
+      alert("Assignment canceled.");
+      return;
+    }
+
+    const { error } = await supabase
+      .from('lead_requests')
+      .update({ assigned_to: agentId, assigned_at: new Date().toISOString() })
+      .eq('id', leadId);
+
+    if (error) {
+      alert("Error assigning lead: " + error.message);
+    } else {
+      alert("Lead successfully assigned!");
+      await loadRequestedLeads(); // Refresh the list
+    }
+  });
+});
 }
 
 
