@@ -399,18 +399,23 @@ document.getElementById('bulk-assign-btn').addEventListener('click', async () =>
   const agentId = document.getElementById('bulk-assign-agent').value;
   if (!agentId || selectedLeads.size === 0) return alert('Select agent and at least one lead.');
 
-  const updates = Array.from(selectedLeads).map(leadId => ({
-    id: leadId,
-    agent_id: agentId
-  }));
+  // Check if any selected leads are already assigned
+  const { data: selectedData, error } = await supabase
+    .from('leads')
+    .select('id, assigned_to')
+    .in('id', Array.from(selectedLeads));
 
-  const { error } = await supabase.from('leads').upsert(updates, { onConflict: 'id' });
-  if (error) return alert('Failed to assign leads.');
+  if (error) return alert("Error checking selected leads: " + error.message);
 
-  selectedLeads.clear();
-  document.getElementById('selected-count').textContent = '0';
-  document.getElementById('bulk-assign-controls').style.display = 'none';
-  await loadLeadsWithFilters();
+  const hasAssignedLeads = selectedData.some(lead => lead.assigned_to !== null);
+  if (hasAssignedLeads) {
+    // Show warning modal
+    document.getElementById('reassign-warning-modal').style.display = 'flex';
+    return;
+  }
+
+  // No already-assigned leads in selection — assign immediately
+  await assignLeads(agentId);
 });
 
 // ========== INITIAL ADMIN LOAD ==========
@@ -418,3 +423,30 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadAgentsForAdmin();
   await loadLeadsWithFilters();
 });
+// ========== REASSIGN WARNING MODAL BUTTONS ==========
+document.getElementById('cancel-reassign-btn').addEventListener('click', () => {
+  document.getElementById('reassign-warning-modal').style.display = 'none';
+});
+
+document.getElementById('confirm-reassign-btn').addEventListener('click', async () => {
+  const agentId = document.getElementById('bulk-assign-agent').value;
+  if (!agentId) return alert("No agent selected");
+  await assignLeads(agentId);
+});
+async function assignLeads(agentId) {
+  const updates = Array.from(selectedLeads).map(leadId => ({
+    id: leadId,
+    agent_id: agentId,
+    assigned_at: new Date().toISOString()
+  }));
+
+  const { error } = await supabase.from('leads').upsert(updates, { onConflict: 'id' });
+
+  if (error) return alert('Failed to assign leads.');
+
+  selectedLeads.clear();
+  document.getElementById('selected-count').textContent = '0';
+  document.getElementById('bulk-assign-controls').style.display = 'none';
+  document.getElementById('reassign-warning-modal').style.display = 'none';
+  await loadLeadsWithFilters();
+}
