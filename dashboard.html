@@ -39,6 +39,7 @@
   <hr>
 
   <h3>All Leads</h3>
+
   <!-- Filters -->
   <div id="lead-filters">
     <label for="start-date">Start Date:</label>
@@ -56,6 +57,12 @@
       <option value="">All Agents</option>
     </select>
 
+    <select id="assigned-filter">
+      <option value="">Assigned & Unassigned</option>
+      <option value="true">Assigned</option>
+      <option value="false">Unassigned</option>
+    </select>
+
     <input type="text" id="zip-filter" placeholder="ZIP">
     <input type="text" id="city-filter" placeholder="City">
     <input type="text" id="state-filter" placeholder="State">
@@ -70,6 +77,7 @@
     <table id="leads-table">
       <thead>
         <tr>
+          <th>Select</th>
           <th>Submitted</th>
           <th>Agent</th>
           <th>ZIP</th>
@@ -85,8 +93,14 @@
       </tbody>
     </table>
   </div>
-</section>
 
+  <!-- Bulk Assign Controls -->
+  <div id="bulk-assign-controls" style="display: none; margin-top: 10px;">
+    <label for="bulk-assign-agent">Assign <span id="selected-count">0</span> lead(s) to:</label>
+    <select id="bulk-assign-agent"></select>
+    <button id="bulk-assign-btn">Assign</button>
+  </div>
+</section>
     <section id="profile-tab" class="tab-content profile-section">
       <div class="profile-picture-wrapper">
         <label for="profile-photo-input">
