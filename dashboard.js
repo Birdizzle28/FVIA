@@ -329,7 +329,7 @@ async function loadLeadsWithFilters() {
 
   if (start) query = query.gte('created_at', start);
   if (end) query = query.lte('created_at', end);
-  if (agent) query = query.eq('agent_id', agent);
+  if (agent) query = query.eq('assigned_to', agent);
   if (zip) query = query.ilike('zip', `%${zip}%`);
   if (city) query = query.ilike('city', `%${city}%`);
   if (state) query = query.ilike('state', `%${state}%`);
@@ -337,7 +337,7 @@ async function loadLeadsWithFilters() {
   if (last) query = query.ilike('last_name', `%${last}%`);
   if (type) query = query.ilike('lead_type', `%${type}%`);
   if (assignedFilter) {
-    if (assignedFilter === 'true') query = query.neq('agent_id', null);
+    if (assignedFilter === 'true') query = query.neq('assigned_to', null);
     else query = query.is('agent_id', null);
   }
 
