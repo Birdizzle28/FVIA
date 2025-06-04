@@ -155,6 +155,7 @@ if (leadForm) {
         first_name: document.getElementById('lead-first').value.trim(),
         last_name: document.getElementById('lead-last').value.trim(),
         age: parseInt(document.getElementById('lead-age').value),
+        address: document.getElementById('lead-address').value.trim(),
         city: document.getElementById('lead-city').value.trim(),
         zip: document.getElementById('lead-zip').value.trim(),
         phone: Array.from(document.querySelectorAll('input[name="lead-phone"]'))
