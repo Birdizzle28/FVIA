@@ -67,6 +67,50 @@ if (defaultTab) {
     document.body.innerHTML = "<h1>Error checking session. Please log in again.</h1>";
   }
 });
+function formatPhone(input) {
+  input.addEventListener('input', () => {
+    let numbers = input.value.replace(/\D/g, '');
+    let formatted = '';
+
+    if (numbers.length > 0) formatted += '(' + numbers.substring(0, 3);
+    if (numbers.length >= 4) formatted += ') ' + numbers.substring(3, 6);
+    if (numbers.length >= 7) formatted += '-' + numbers.substring(6, 10);
+
+    input.value = formatted;
+  });
+}
+
+function addPhoneInput() {
+  const container = document.getElementById('phone-inputs');
+  const line = document.createElement('div');
+  line.className = 'phone-line';
+
+  const input = document.createElement('input');
+  input.type = 'tel';
+  input.name = 'lead-phone';
+  input.placeholder = '(123) 456-7890';
+  input.maxLength = 14;
+  formatPhone(input);
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = '–';
+  btn.addEventListener('click', () => line.remove());
+
+  line.appendChild(input);
+  line.appendChild(btn);
+  container.appendChild(line);
+}
+
+// Initialize format + add button on page load
+document.querySelectorAll('input[name="lead-phone"]').forEach(formatPhone);
+
+const addBtn = document.querySelector('.add-phone-btn');
+if (addBtn) {
+  addBtn.addEventListener('click', () => {
+    addPhoneInput();
+  });
+}
 
 // ✅ Step 11: Tab switching logic
 document.querySelectorAll('nav a[data-tab]').forEach(link => {
@@ -113,7 +157,9 @@ if (leadForm) {
         age: parseInt(document.getElementById('lead-age').value),
         city: document.getElementById('lead-city').value.trim(),
         zip: document.getElementById('lead-zip').value.trim(),
-        phone: document.getElementById('lead-phone').value.trim(),
+        phone: Array.from(document.querySelectorAll('input[name="lead-phone"]'))
+  .map(input => input.value.trim())
+  .filter(num => num !== ''),
         lead_type: document.getElementById('lead-type').value,
         notes: document.getElementById('lead-notes').value.trim(),
         submitted_by: user.id,
