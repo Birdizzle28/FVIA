@@ -82,7 +82,14 @@ document.querySelectorAll('nav a[data-tab]').forEach(link => {
 });
 
 // Optional: show the first tab by default
-document.querySelectorAll('.tab-content')[0].style.display = 'block';
+document.querySelectorAll('.tab-content').forEach(tab => {
+  tab.style.display = 'none';
+});
+
+const defaultTab = document.getElementById('profile-tab');
+if (defaultTab) {
+  defaultTab.style.display = 'block';
+}
 
 // ✅ Step 12: Lead form submission
 const leadForm = document.getElementById('lead-form');
