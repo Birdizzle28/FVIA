@@ -152,6 +152,7 @@ if (leadRequestForm) {
         city: document.getElementById('request-city').value.trim(),
         zip: document.getElementById('request-zip').value.trim(),
         lead_type: document.getElementById('request-type').value,
+        requested_count: parseInt(document.getElementById('request-count').value),
         notes: document.getElementById('request-notes').value.trim(),
         submitted_by: user.id
       };
