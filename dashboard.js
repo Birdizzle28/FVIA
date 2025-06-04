@@ -436,7 +436,7 @@ document.getElementById('confirm-reassign-btn').addEventListener('click', async 
 async function assignLeads(agentId) {
   const updates = Array.from(selectedLeads).map(leadId => ({
     id: leadId,
-    agent_id: agentId,
+    assigned_to: agentId,
     assigned_at: new Date().toISOString()
   }));
 
