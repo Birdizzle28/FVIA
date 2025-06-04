@@ -119,6 +119,43 @@ if (leadForm) {
     }
   });
 }
+// ✅ Step 13: Lead request form submission
+const leadRequestForm = document.getElementById('lead-request-form');
+const requestMessage = document.getElementById('request-message');
+
+if (leadRequestForm) {
+  leadRequestForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    requestMessage.textContent = "Submitting request...";
+
+    try {
+      const session = await supabase.auth.getSession();
+      const user = session.data.session.user;
+
+      const requestData = {
+        city: document.getElementById('request-city').value.trim(),
+        zip: document.getElementById('request-zip').value.trim(),
+        lead_type: document.getElementById('request-type').value,
+        notes: document.getElementById('request-notes').value.trim(),
+        submitted_by: user.id
+      };
+
+      const { error } = await supabase.from('lead_requests').insert(requestData);
+
+      if (error) {
+        requestMessage.textContent = "Error: " + error.message;
+        requestMessage.style.color = "red";
+      } else {
+        requestMessage.textContent = "Request submitted successfully!";
+        requestMessage.style.color = "green";
+        leadRequestForm.reset();
+      }
+    } catch (err) {
+      requestMessage.textContent = "Unexpected error: " + err.message;
+      requestMessage.style.color = "red";
+    }
+  });
+}
 
 /*import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
