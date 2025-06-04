@@ -241,6 +241,130 @@ async function loadRequestedLeads() {
   });
 }
 
+// ========== ADMIN TAB: Load Agents and Leads ==========
+let allAgents = [];
+let selectedLeads = new Set();
+
+async function loadAgentsForAdmin() {
+  const { data, error } = await supabase.from('agents').select('id, full_name').eq('is_active', true);
+  if (!error && data) {
+    allAgents = data;
+    const dropdowns = [document.getElementById('agent-filter'), document.getElementById('bulk-assign-agent')];
+    dropdowns.forEach(dropdown => {
+      dropdown.innerHTML = '<option value="">All Agents</option>';
+      data.forEach(agent => {
+        const opt = document.createElement('option');
+        opt.value = agent.id;
+        opt.textContent = agent.full_name;
+        dropdown.appendChild(opt.cloneNode(true));
+      });
+    });
+  }
+}
+
+async function loadLeadsWithFilters() {
+  const tbody = document.querySelector('#leads-table tbody');
+  tbody.innerHTML = '';
+
+  let query = supabase.from('leads').select('*');
+
+  const start = document.getElementById('start-date').value;
+  const end = document.getElementById('end-date').value;
+  const order = document.getElementById('date-order').value;
+  const agent = document.getElementById('agent-filter').value;
+  const zip = document.getElementById('zip-filter').value;
+  const city = document.getElementById('city-filter').value;
+  const state = document.getElementById('state-filter').value;
+  const first = document.getElementById('first-name-filter').value;
+  const last = document.getElementById('last-name-filter').value;
+  const type = document.getElementById('lead-type-filter').value;
+  const assignedFilter = document.getElementById('assigned-filter').value;
+
+  if (start) query = query.gte('created_at', start);
+  if (end) query = query.lte('created_at', end);
+  if (agent) query = query.eq('agent_id', agent);
+  if (zip) query = query.ilike('zip', `%${zip}%`);
+  if (city) query = query.ilike('city', `%${city}%`);
+  if (state) query = query.ilike('state', `%${state}%`);
+  if (first) query = query.ilike('first_name', `%${first}%`);
+  if (last) query = query.ilike('last_name', `%${last}%`);
+  if (type) query = query.ilike('lead_type', `%${type}%`);
+  if (assignedFilter) {
+    if (assignedFilter === 'true') query = query.neq('agent_id', null);
+    else query = query.is('agent_id', null);
+  }
+
+  query = query.order('created_at', { ascending: order === 'asc' });
+
+  const { data: leads, error } = await query;
+  if (error) return console.error('Error loading leads:', error);
+
+  leads.forEach(lead => {
+    const tr = document.createElement('tr');
+
+    const checkboxTd = document.createElement('td');
+    if (!lead.agent_id) {
+      const checkbox = document.createElement('input');
+      checkbox.type = 'checkbox';
+      checkbox.dataset.leadId = lead.id;
+      checkbox.addEventListener('change', (e) => {
+        if (e.target.checked) selectedLeads.add(lead.id);
+        else selectedLeads.delete(lead.id);
+        document.getElementById('selected-count').textContent = selectedLeads.size;
+        document.getElementById('bulk-assign-controls').style.display = selectedLeads.size > 0 ? 'block' : 'none';
+      });
+      checkboxTd.appendChild(checkbox);
+    }
+    tr.appendChild(checkboxTd);
+
+    const cells = [
+      new Date(lead.created_at).toLocaleDateString(),
+      allAgents.find(a => a.id === lead.agent_id)?.full_name || 'Unassigned',
+      lead.zip || '',
+      lead.city || '',
+      lead.state || '',
+      lead.first_name || '',
+      lead.last_name || '',
+      lead.lead_type || '',
+    ];
+
+    cells.forEach(text => {
+      const td = document.createElement('td');
+      td.textContent = text;
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
+
+// ========== APPLY FILTERS ==========
+document.getElementById('apply-filters').addEventListener('click', loadLeadsWithFilters);
+
+// ========== BULK ASSIGN ==========
+document.getElementById('bulk-assign-btn').addEventListener('click', async () => {
+  const agentId = document.getElementById('bulk-assign-agent').value;
+  if (!agentId || selectedLeads.size === 0) return alert('Select agent and at least one lead.');
+
+  const updates = Array.from(selectedLeads).map(leadId => ({
+    id: leadId,
+    agent_id: agentId
+  }));
+
+  const { error } = await supabase.from('leads').upsert(updates, { onConflict: 'id' });
+  if (error) return alert('Failed to assign leads.');
+
+  selectedLeads.clear();
+  document.getElementById('selected-count').textContent = '0';
+  document.getElementById('bulk-assign-controls').style.display = 'none';
+  await loadLeadsWithFilters();
+});
+
+// ========== INITIAL ADMIN LOAD ==========
+document.addEventListener('DOMContentLoaded', async () => {
+  await loadAgentsForAdmin();
+  await loadLeadsWithFilters();
+});
 
 /*import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
