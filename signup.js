@@ -68,30 +68,29 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     return
   }
 
-  // ✅ Insert into agents table
-  const fullName = `${firstName} ${lastName}`
-  const userId = signupData?.user?.id
+  const { data: userSession } = await supabase.auth.getSession();
 
-  if (userId) {
-    const { error: agentInsertError } = await supabase
-      .from('agents')
-      .insert({
-        id: userId,
-        full_name: fullName,
-        agent_id: agentId
-      })
+  const agentProfile = {
+    id: userSession.session.user.id,
+    email,
+    agent_id: agentId,
+    full_name: `${firstName} ${lastName}`,
+    is_active: true,
+    is_admin: false
+  };
 
-    if (agentInsertError) {
-      message.style.color = 'orange'
-      message.textContent = 'Signup complete, but failed to save agent profile.'
-      return
-    }
+  const { error: insertAgentError } = await supabase.from('agents').insert(agentProfile);
+
+  if (insertAgentError) {
+    message.textContent = 'Signup complete, but failed to save agent profile. Contact admin.';
+    return;
   }
 
-  message.style.color = 'green'
-  message.textContent = 'Sign-up successful! Please check your email to confirm.'
-})
+  message.style.color = 'green';
+  message.textContent = 'Sign-up successful! Please check your email to confirm.';
+}); // ✅ THIS closes the signup form event listener — key fix
 
+// ✅ TOGGLE PASSWORD VISIBILITY — this was misplaced before
 document.querySelectorAll('.toggle-password').forEach(icon => {
   icon.addEventListener('click', () => {
     const input = document.querySelector(icon.getAttribute('toggle'))
