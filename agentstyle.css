@@ -437,3 +437,35 @@
   background: #fff;
   border-radius: 8px;
 }
+#leads-table-container {
+  max-height: 600px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  margin-top: 20px;
+}
+
+#leads-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+#leads-table th, #leads-table td {
+  border: 1px solid #ccc;
+  padding: 8px;
+  text-align: left;
+  font-size: 0.9em;
+}
+
+#lead-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+#lead-filters input,
+#lead-filters select {
+  padding: 5px;
+  font-size: 0.9em;
+}
+
