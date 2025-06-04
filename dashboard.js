@@ -172,7 +172,7 @@ if (leadRequestForm) {
     }
   });
 }
-// ✅ Step 14: Fetch and display requested leads (admin-only)
+// ✅ Step 15: Display lead requests to admin (no assignment UI)
 async function loadRequestedLeads() {
   const session = await supabase.auth.getSession();
   const user = session.data.session.user;
@@ -181,7 +181,7 @@ async function loadRequestedLeads() {
     user.email === 'fvinsuranceagency@gmail.com' ||
     user.email === 'johnsondemesi@gmail.com';
 
-  if (!isAdmin) return; // Non-admins shouldn't see this
+  if (!isAdmin) return;
 
   const container = document.getElementById('requested-leads-container');
   container.innerHTML = '<p>Loading requested leads...</p>';
@@ -208,38 +208,12 @@ async function loadRequestedLeads() {
         <p><strong>ZIP:</strong> ${lead.zip || 'N/A'}</p>
         <p><strong>Type:</strong> ${lead.lead_type || 'N/A'}</p>
         <p><strong>Notes:</strong> ${lead.notes || 'None'}</p>
-        <button class="assign-btn" data-id="${lead.id}">Assign to Agent</button>
       </div>
     `;
   });
 
   container.innerHTML = leadCards.join('');
-  // Attach click handlers to each assign button
-container.querySelectorAll('.assign-btn').forEach(button => {
-  button.addEventListener('click', async () => {
-    const leadId = button.dataset.id;
-    const agentId = prompt("Enter the Agent's Supabase ID to assign this lead:");
-
-    if (!agentId) {
-      alert("Assignment canceled.");
-      return;
-    }
-
-    const { error } = await supabase
-      .from('lead_requests')
-      .update({ assigned_to: agentId, assigned_at: new Date().toISOString() })
-      .eq('id', leadId);
-
-    if (error) {
-      alert("Error assigning lead: " + error.message);
-    } else {
-      alert("Lead successfully assigned!");
-      await loadRequestedLeads(); // Refresh the list
-    }
-  });
-});
 }
-
 
 
 /*import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
