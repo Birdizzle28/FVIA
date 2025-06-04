@@ -46,6 +46,8 @@ if (loadingScreen) {
   loadingScreen.style.zIndex = '-1';
 }
 alert("Step 10: Loading screen hidden.");
+    // ✅ Only call once inside your main DOMContentLoaded block
+await loadRequestedLeads();
   } catch (err) {
     alert("Step X: Error while checking session: " + err.message);
     document.body.innerHTML = "<h1>Error checking session. Please log in again.</h1>";
@@ -200,7 +202,7 @@ async function loadRequestedLeads() {
   container.innerHTML = leadCards.join('');
 }
 
-document.addEventListener('DOMContentLoaded', loadRequestedLeads);
+
 
 /*import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
