@@ -47,7 +47,21 @@ if (loadingScreen) {
 }
 alert("Step 10: Loading screen hidden.");
     // ✅ Only call once inside your main DOMContentLoaded block
-await loadRequestedLeads();
+// Only preload requested leads, but keep it hidden until tab click
+if (isAdmin) {
+  await loadRequestedLeads();
+  // Ensure it's hidden just in case
+  const adminTab = document.getElementById('admin-requested-tab');
+  if (adminTab) adminTab.style.display = 'none';
+} 
+    document.querySelectorAll('.tab-content').forEach(tab => {
+  tab.style.display = 'none';
+});
+
+const defaultTab = document.getElementById('profile-tab');
+if (defaultTab) {
+  defaultTab.style.display = 'block';
+}
   } catch (err) {
     alert("Step X: Error while checking session: " + err.message);
     document.body.innerHTML = "<h1>Error checking session. Please log in again.</h1>";
@@ -82,14 +96,7 @@ document.querySelectorAll('nav a[data-tab]').forEach(link => {
 });
 
 // Optional: show the first tab by default
-document.querySelectorAll('.tab-content').forEach(tab => {
-  tab.style.display = 'none';
-});
 
-const defaultTab = document.getElementById('profile-tab');
-if (defaultTab) {
-  defaultTab.style.display = 'block';
-}
 
 // ✅ Step 12: Lead form submission
 const leadForm = document.getElementById('lead-form');
