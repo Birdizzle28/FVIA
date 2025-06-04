@@ -5,23 +5,23 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
 );
 
-alert("Step 3: Checking session from dashboard...");
+/*alert("Step 3: Checking session from dashboard...");*/
 
 document.addEventListener("DOMContentLoaded", async () => {
-  alert("Step 4: DOM loaded, checking Supabase session...");
+  /*alert("Step 4: DOM loaded, checking Supabase session...");*/
 
   try {
     const sessionResult = await supabase.auth.getSession();
-    alert("Step 5: Session result received!");
+    /*alert("Step 5: Session result received!");*/
 
     const session = sessionResult.data.session;
     if (!session) {
-      alert("Step 6: No session found");
+      /*alert("Step 6: No session found");*/
       document.body.innerHTML = "<h1>Session not found. Please log in again.</h1>";
       return;
     }
 
-    alert("Step 7: Session found! Email: " + session.user.email);
+   /* alert("Step 7: Session found! Email: " + session.user.email);*/
 
     // ✅ Step 8: Admin check
     const user = session.user;
@@ -29,14 +29,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       user.email === 'fvinsuranceagency@gmail.com' ||
       user.email === 'johnsondemesi@gmail.com';
 
-    alert("Step 8: Admin status: " + isAdmin);
+   /* alert("Step 8: Admin status: " + isAdmin);*/
 
     // ✅ Step 9: Show/hide admin-only elements
     document.querySelectorAll('.admin-only').forEach(el => {
       el.style.display = isAdmin ? 'inline' : 'none';
     });
 
-    alert("Step 9: Admin-only elements updated.");
+   /* alert("Step 9: Admin-only elements updated.");*/
 
     const loadingScreen = document.getElementById('loading-screen');
 if (loadingScreen) {
@@ -45,7 +45,7 @@ if (loadingScreen) {
   loadingScreen.style.opacity = '0';
   loadingScreen.style.zIndex = '-1';
 }
-alert("Step 10: Loading screen hidden.");
+/*alert("Step 10: Loading screen hidden.");*/
     // ✅ Only call once inside your main DOMContentLoaded block
 // Only preload requested leads, but keep it hidden until tab click
 if (isAdmin) {
@@ -364,7 +364,7 @@ async function loadLeadsWithFilters() {
     }
     tr.appendChild(checkboxTd);
 
-    const agentName = allAgents.find(a => a.id === lead.agent_id)?.full_name || 'Unassigned';
+    const agentName = allAgents.find(a => a.id === lead.submitted_to)?.full_name || 'Unassigned';
 
 const cells = [
   new Date(lead.created_at).toLocaleDateString(),           // Submitted
