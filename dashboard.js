@@ -156,6 +156,51 @@ if (leadRequestForm) {
     }
   });
 }
+// ✅ Step 14: Fetch and display requested leads (admin-only)
+async function loadRequestedLeads() {
+  const session = await supabase.auth.getSession();
+  const user = session.data.session.user;
+
+  const isAdmin =
+    user.email === 'fvinsuranceagency@gmail.com' ||
+    user.email === 'johnsondemesi@gmail.com';
+
+  if (!isAdmin) return; // Non-admins shouldn't see this
+
+  const container = document.getElementById('requested-leads-container');
+  container.innerHTML = '<p>Loading requested leads...</p>';
+
+  const { data, error } = await supabase
+    .from('lead_requests')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    container.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    container.innerHTML = '<p>No requested leads found.</p>';
+    return;
+  }
+
+  const leadCards = data.map(lead => {
+    return `
+      <div class="lead-request-card" style="border:1px solid #ccc; padding:10px; margin:10px 0;">
+        <p><strong>City:</strong> ${lead.city || 'N/A'}</p>
+        <p><strong>ZIP:</strong> ${lead.zip || 'N/A'}</p>
+        <p><strong>Type:</strong> ${lead.lead_type || 'N/A'}</p>
+        <p><strong>Notes:</strong> ${lead.notes || 'None'}</p>
+        <button class="assign-btn" data-id="${lead.id}">Assign to Agent</button>
+      </div>
+    `;
+  });
+
+  container.innerHTML = leadCards.join('');
+}
+
+document.addEventListener('DOMContentLoaded', loadRequestedLeads);
 
 /*import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 import emailjs from 'https://cdn.jsdelivr.net/npm/emailjs-com@3.2.0/dist/email.min.js';
