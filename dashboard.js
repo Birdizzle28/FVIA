@@ -203,16 +203,38 @@ async function loadRequestedLeads() {
 
   const leadCards = data.map(lead => {
     return `
-      <div class="lead-request-card" style="border:1px solid #ccc; padding:10px; margin:10px 0;">
+      <div class="lead-request-card" style="border:1px solid #ccc; padding:10px; margin:10px 0; position:relative;">
         <p><strong>City:</strong> ${lead.city || 'N/A'}</p>
         <p><strong>ZIP:</strong> ${lead.zip || 'N/A'}</p>
         <p><strong>Type:</strong> ${lead.lead_type || 'N/A'}</p>
         <p><strong>Notes:</strong> ${lead.notes || 'None'}</p>
+        <button class="delete-request-btn" data-id="${lead.id}" style="position:absolute; top:10px; right:10px;">🗑️</button>
       </div>
     `;
   });
 
   container.innerHTML = leadCards.join('');
+
+  // Add delete functionality
+  document.querySelectorAll('.delete-request-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const leadId = btn.dataset.id;
+      const confirmDelete = confirm("Are you sure you want to delete this request?");
+      if (!confirmDelete) return;
+
+      const { error } = await supabase
+        .from('lead_requests')
+        .delete()
+        .eq('id', leadId);
+
+      if (error) {
+        alert("Error deleting request: " + error.message);
+      } else {
+        alert("Request deleted.");
+        await loadRequestedLeads(); // Refresh list
+      }
+    });
+  });
 }
 
 
