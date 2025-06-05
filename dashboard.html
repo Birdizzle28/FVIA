@@ -649,7 +649,7 @@
       let currentSortColumn = null;
       let currentSortDirection = 'asc';
       
-      document.querySelectorAll('#admin-leads-table th[data-column]').forEach(th => {
+      document.querySelectorAll('#leads-table th[data-column]').forEach(th => {
         th.addEventListener('click', () => {
           const column = th.getAttribute('data-column');
           
@@ -747,6 +747,7 @@
       
       const from = (currentPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
+      const sortBy = document.getElementById('sort-by').value || 'created_at';
       const { data: leads, error, count } = await query
         .order(sortBy, { ascending: order === 'asc' })
         .range(from, to);
