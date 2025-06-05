@@ -8,6 +8,7 @@ const supabase = createClient(
 /*alert("Step 3: Checking session from dashboard...");*/
 
 document.addEventListener("DOMContentLoaded", async () => {
+  alert("✅ DOM fully loaded and JS is running.");
   const loadingScreen = document.getElementById('loading-screen');
   try {
     const sessionResult = await supabase.auth.getSession();
