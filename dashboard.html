@@ -380,10 +380,20 @@ await loadAssignmentHistory();
     return;
   }
 
+  // 🔍 Get full name from agents table
+  const { data: agentData, error: agentErr } = await supabase
+    .from('agents')
+    .select('full_name')
+    .eq('id', userId)
+    .single();
+
+  const fullName = agentData?.full_name || 'Unknown';
+
   const { error } = await supabase.from('lead_requests').insert({
     submitted_by: userId,
-    city: city,
-    zip: zip,
+    submitted_by_name: fullName,
+    city,
+    zip,
     lead_type: type,
     requested_count: count,
     notes
