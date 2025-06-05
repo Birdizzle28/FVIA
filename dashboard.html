@@ -353,7 +353,7 @@
   </div>
   <script type="module">
     alert("✅ Inline script is working.");
-    alert("✅ INLINE SCRIPT EXECUTED");
+    //alert("✅ INLINE SCRIPT EXECUTED");
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
     
     const supabase = createClient(
@@ -362,14 +362,14 @@
     );
     
     document.addEventListener("DOMContentLoaded", async () => {
-      alert("✅ DOM fully loaded and JS is running.");
+      //alert("✅ DOM fully loaded and JS is running.");
       const loadingScreen = document.getElementById('loading-screen');
       
       try {
         alert("🔍 Checking session...");
         const sessionResult = await supabase.auth.getSession();
         const session = sessionResult.data.session;
-        alert("📦 Session result: " + (session ? "Found" : "Missing"));
+        //alert("📦 Session result: " + (session ? "Found" : "Missing"));
         
         if (!session) {
           document.body.innerHTML = "<h1>Session not found. Please log in again.</h1>";
@@ -380,24 +380,24 @@
         const isAdmin =
           user.email === 'fvinsuranceagency@gmail.com' ||
           user.email === 'johnsondemesi@gmail.com';
-          alert("👤 Logged in as: " + user.email + "\nAdmin? " + isAdmin);
+          //alert("👤 Logged in as: " + user.email + "\nAdmin? " + isAdmin);
           
-          // Show/hide admin features
-          document.querySelectorAll('.admin-only').forEach(el => {
-            el.style.display = isAdmin ? 'inline' : 'none';
+        // Show/hide admin features
+        document.querySelectorAll('.admin-only').forEach(el => {
+          el.style.display = isAdmin ? 'inline' : 'none';
         });
         
         // Hide loading screen
         if (loadingScreen) {
-          alert("🧹 Hiding loading screen...");
+          //alert("🧹 Hiding loading screen...");
           loadingScreen.style.display = 'none';
           loadingScreen.style.visibility = 'hidden';
           loadingScreen.style.opacity = '0';
           loadingScreen.style.zIndex = '-1';
         }
         
-        // Show default tabi
-        alert("📑 Hiding all tabs and showing default...");
+        // Show default tab
+        //alert("📑 Hiding all tabs and showing default...");
         document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
         const defaultTab = document.getElementById('profile-tab');
         if (defaultTab) defaultTab.style.display = 'block';
@@ -431,9 +431,10 @@
         alert("❌ Exception caught: " + err.message);
         console.error(err);
       }
+      
       document.getElementById('lead-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        alert("🚨 Submit button clicked");
+        //alert("🚨 Submit button clicked");
         
         try {
           const firstName = document.getElementById('lead-first').value.trim();
@@ -484,6 +485,7 @@
           console.error(err);
         }
       });
+      
       document.getElementById('lead-request-form').addEventListener('submit', async (e) => {
         e.preventDefault();
         alert("📨 Request Leads form submitted");
@@ -526,8 +528,8 @@
           document.getElementById('lead-request-form').reset();
         }
       });
+      
       document.getElementById('phone-inputs').addEventListener('click', (e) => {
-        
         // ADD PHONE
         if (e.target && e.target.classList.contains('add-phone-btn')) {
           const newLine = document.createElement('div');
@@ -544,7 +546,6 @@
           e.target.parentElement.remove();
         }
       });
-      
       // 📞 Auto-format phone number fields as (123) 456-7890
       document.addEventListener('input', (e) => {
         if (e.target.name === 'lead-phone') {
@@ -618,9 +619,9 @@
       });
       // 📍 All 50 U.S. States
       const usStates = [
-      "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY",
-      "LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND",
-      "OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"
+        "AL","AK","AZ","AR","CA","CO","CT","DE","FL","GA","HI","ID","IL","IN","IA","KS","KY",
+        "LA","ME","MD","MA","MI","MN","MS","MO","MT","NE","NV","NH","NJ","NM","NY","NC","ND",
+        "OH","OK","OR","PA","RI","SC","SD","TN","TX","UT","VT","VA","WA","WV","WI","WY"
       ];
       const stateSelect = document.getElementById('lead-state');
       
@@ -748,7 +749,6 @@
       
       const from = (currentPage - 1) * PAGE_SIZE;
       const to = from + PAGE_SIZE - 1;
-      const sortBy = document.getElementById('sort-by').value || 'created_at';
       const { data: leads, error, count } = await query
         .order(sortBy, { ascending: order === 'asc' })
         .range(from, to);
@@ -855,7 +855,7 @@
         
         if (error) {
           alert(`❌ Failed to assign lead ${update.id}: ${error.message}`);
-        return;
+          return;
         }
       }
       
@@ -863,7 +863,7 @@
       document.getElementById('selected-count').textContent = '0';
       document.getElementById('bulk-assign-controls').style.display = 'none';
       document.getElementById('reassign-warning-modal').style.display = 'none';
-
+ 
       await loadLeadsWithFilters();
       await loadAssignmentHistory();
     }
@@ -928,6 +928,6 @@
         tbody.appendChild(tr);
       });
     }
-  </script>
+</script>
 </body>
 </html>
