@@ -458,10 +458,6 @@ document.getElementById('bulk-assign-btn').addEventListener('click', async () =>
 });
 
 // ========== INITIAL ADMIN LOAD ==========
-document.addEventListener('DOMContentLoaded', async () => {
-  await loadAgentsForAdmin();
-  await loadLeadsWithFilters();
-});
 // ========== REASSIGN WARNING MODAL BUTTONS ==========
 document.getElementById('cancel-reassign-btn').addEventListener('click', () => {
   document.getElementById('reassign-warning-modal').style.display = 'none';
