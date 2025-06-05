@@ -439,6 +439,7 @@ document.querySelectorAll('#leads-table thead th').forEach((th, index) => {
     th.dataset.sort = direction;
     sortTableByColumn(index, direction);
   });
+  await loadAssignmentHistory();
 });
 }
 
@@ -580,3 +581,35 @@ document.getElementById('prev-page').addEventListener('click', () => {
     loadLeadsWithFilters();
   }
 });
+async function loadAssignmentHistory() {
+  const { data, error } = await supabase
+    .from('lead_assignments')
+    .select('lead_id, assigned_to, assigned_by, assigned_at')
+    .order('assigned_at', { ascending: false });
+
+  const tableBody = document.querySelector('#assignment-history-table tbody');
+  tableBody.innerHTML = '';
+
+  if (error) {
+    console.error('Error loading assignment history:', error);
+    tableBody.innerHTML = '<tr><td colspan="4">Error loading history</td></tr>';
+    return;
+  }
+
+  for (const row of data) {
+    // Get assigned_to and assigned_by names
+    const [toAgent, fromAgent] = await Promise.all([
+      supabase.from('profiles').select('full_name').eq('id', row.assigned_to).single(),
+      supabase.from('profiles').select('full_name').eq('id', row.assigned_by).single()
+    ]);
+
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${new Date(row.assigned_at).toLocaleString()}</td>
+      <td>${row.lead_id}</td>
+      <td>${toAgent.data?.full_name || 'Unknown'}</td>
+      <td>${fromAgent.data?.full_name || 'Unknown'}</td>
+    `;
+    tableBody.appendChild(tr);
+  }
+}
