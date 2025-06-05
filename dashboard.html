@@ -353,7 +353,7 @@
   </div>
   <script type="module">
     alert("✅ Inline script is working.");
-    //alert("✅ INLINE SCRIPT EXECUTED");
+    alert("✅ INLINE SCRIPT EXECUTED");
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
     
     const supabase = createClient(
@@ -362,14 +362,14 @@
     );
     
     document.addEventListener("DOMContentLoaded", async () => {
-      //alert("✅ DOM fully loaded and JS is running.");
+      alert("✅ DOM fully loaded and JS is running.");
       const loadingScreen = document.getElementById('loading-screen');
       
       try {
         alert("🔍 Checking session...");
         const sessionResult = await supabase.auth.getSession();
         const session = sessionResult.data.session;
-        //alert("📦 Session result: " + (session ? "Found" : "Missing"));
+        alert("📦 Session result: " + (session ? "Found" : "Missing"));
         
         if (!session) {
           document.body.innerHTML = "<h1>Session not found. Please log in again.</h1>";
@@ -380,7 +380,7 @@
         const isAdmin =
           user.email === 'fvinsuranceagency@gmail.com' ||
           user.email === 'johnsondemesi@gmail.com';
-          //alert("👤 Logged in as: " + user.email + "\nAdmin? " + isAdmin);
+          alert("👤 Logged in as: " + user.email + "\nAdmin? " + isAdmin);
           
           // Show/hide admin features
           document.querySelectorAll('.admin-only').forEach(el => {
@@ -389,7 +389,7 @@
         
         // Hide loading screen
         if (loadingScreen) {
-          //alert("🧹 Hiding loading screen...");
+          alert("🧹 Hiding loading screen...");
           loadingScreen.style.display = 'none';
           loadingScreen.style.visibility = 'hidden';
           loadingScreen.style.opacity = '0';
@@ -397,7 +397,7 @@
         }
         
         // Show default tabi
-        //alert("📑 Hiding all tabs and showing default...");
+        alert("📑 Hiding all tabs and showing default...");
         document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
         const defaultTab = document.getElementById('profile-tab');
         if (defaultTab) defaultTab.style.display = 'block';
@@ -433,7 +433,7 @@
       }
       document.getElementById('lead-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        //alert("🚨 Submit button clicked");
+        alert("🚨 Submit button clicked");
         
         try {
           const firstName = document.getElementById('lead-first').value.trim();
@@ -544,6 +544,7 @@
           e.target.parentElement.remove();
         }
       });
+      
       // 📞 Auto-format phone number fields as (123) 456-7890
       document.addEventListener('input', (e) => {
         if (e.target.name === 'lead-phone') {
