@@ -68,6 +68,50 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.error(err);
   }
 });
+function formatPhone(input) {
+  input.addEventListener('input', () => {
+    let numbers = input.value.replace(/\D/g, '');
+    let formatted = '';
+
+    if (numbers.length > 0) formatted += '(' + numbers.substring(0, 3);
+    if (numbers.length >= 4) formatted += ') ' + numbers.substring(3, 6);
+    if (numbers.length >= 7) formatted += '-' + numbers.substring(6, 10);
+
+    input.value = formatted;
+  });
+}
+
+function addPhoneInput() {
+  const container = document.getElementById('phone-inputs');
+  const line = document.createElement('div');
+  line.className = 'phone-line';
+
+  const input = document.createElement('input');
+  input.type = 'tel';
+  input.name = 'lead-phone';
+  input.placeholder = '(123) 456-7890';
+  input.maxLength = 14;
+  formatPhone(input);
+
+  const btn = document.createElement('button');
+  btn.type = 'button';
+  btn.textContent = '–';
+  btn.addEventListener('click', () => line.remove());
+
+  line.appendChild(input);
+  line.appendChild(btn);
+  container.appendChild(line);
+}
+
+// Apply format to existing phone inputs
+document.querySelectorAll('input[name="lead-phone"]').forEach(formatPhone);
+
+const addBtn = document.querySelector('.add-phone-btn');
+if (addBtn) {
+  addBtn.addEventListener('click', () => {
+    addPhoneInput();
+  });
+}
 /*setTimeout(() => {
   const loadingScreen = document.getElementById('loading-screen');
   if (loadingScreen) {
