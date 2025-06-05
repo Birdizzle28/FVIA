@@ -46,7 +46,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
 if (isAdmin) {
   await loadRequestedLeads();
-  await loadAssignmentHistory();
+
+  // Wait for the DOM to settle fully before running history
+  setTimeout(() => {
+    loadAssignmentHistory();
+  }, 100); // 100ms delay
 }
   } catch (err) {
     if (loadingScreen) loadingScreen.style.display = 'none';
