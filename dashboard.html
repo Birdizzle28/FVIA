@@ -293,6 +293,141 @@ document.addEventListener("DOMContentLoaded", async () => {
     console.error(err);
   }
 });
+let allAgents = [];
+let selectedLeads = new Set();
+let currentPage = 1;
+const PAGE_SIZE = 25;
+let rangeStart = null;
+let rangeEnd = null;
+
+flatpickr("#date-range", {
+  mode: "range",
+  dateFormat: "Y-m-d",
+  onChange: function(selectedDates) {
+    rangeStart = selectedDates[0] ? selectedDates[0].toISOString().split('T')[0] : null;
+    rangeEnd = selectedDates[1] ? selectedDates[1].toISOString().split('T')[0] : null;
+    loadLeadsWithFilters();
+  }
+});
+
+async function loadAgentsForAdmin() {
+  const { data, error } = await supabase.from('agents').select('id, full_name').eq('is_active', true);
+  if (!error && data) {
+    allAgents = data;
+
+    const dropdowns = [
+      { el: document.getElementById('agent-filter'), placeholder: 'All Agents' },
+      { el: document.getElementById('bulk-assign-agent'), placeholder: 'Select Agent' }
+    ];
+
+    dropdowns.forEach(({ el, placeholder }) => {
+      el.innerHTML = `<option value="">${placeholder}</option>`;
+      data.forEach(agent => {
+        const opt = document.createElement('option');
+        opt.value = agent.id;
+        opt.textContent = agent.full_name;
+        el.appendChild(opt);
+      });
+
+      new Choices(el, {
+        shouldSort: false,
+        searchEnabled: true,
+        placeholder: true,
+        itemSelectText: '',
+      });
+    });
+  }
+}
+
+async function loadLeadsWithFilters() {
+  const tbody = document.querySelector('#leads-table tbody');
+  tbody.innerHTML = '';
+
+  const order = document.getElementById('date-order').value;
+  const agent = document.getElementById('agent-filter').value;
+  const zip = document.getElementById('zip-filter').value;
+  const city = document.getElementById('city-filter').value;
+  const state = document.getElementById('state-filter').value;
+  const first = document.getElementById('first-name-filter').value;
+  const last = document.getElementById('last-name-filter').value;
+  const type = document.getElementById('lead-type-filter').value;
+  const assignedFilter = document.getElementById('assigned-filter').value;
+
+  let query = supabase.from('leads').select('*', { count: 'exact' });
+
+  if (rangeStart) query = query.gte('created_at', rangeStart);
+  if (rangeEnd) query = query.lte('created_at', rangeEnd);
+  if (agent) query = query.eq('assigned_to', agent);
+  if (zip) query = query.ilike('zip', `%${zip}%`);
+  if (city) query = query.ilike('city', `%${city}%`);
+  if (state) query = query.ilike('state', `%${state}%`);
+  if (first) query = query.ilike('first_name', `%${first}%`);
+  if (last) query = query.ilike('last_name', `%${last}%`);
+  if (type) query = query.ilike('lead_type', `%${type}%`);
+  if (assignedFilter === 'true') query = query.not('assigned_to', 'is', null);
+  if (assignedFilter === 'false') query = query.is('assigned_to', null);
+
+  const from = (currentPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+
+  const { data: leads, error, count } = await query
+    .order('created_at', { ascending: order === 'asc' })
+    .range(from, to);
+
+  if (error) return console.error('Error loading leads:', error);
+
+  const totalPages = Math.ceil(count / PAGE_SIZE);
+  document.getElementById('current-page').textContent = `Page ${currentPage} of ${totalPages}`;
+  document.getElementById('prev-page').disabled = currentPage === 1;
+  document.getElementById('next-page').disabled = currentPage >= totalPages;
+
+  leads.forEach(lead => {
+    const tr = document.createElement('tr');
+
+    const checkboxTd = document.createElement('td');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.dataset.leadId = lead.id;
+
+    checkbox.addEventListener('change', (e) => {
+      if (e.target.checked) {
+        selectedLeads.add(lead.id);
+      } else {
+        selectedLeads.delete(lead.id);
+      }
+      document.getElementById('selected-count').textContent = selectedLeads.size;
+      document.getElementById('bulk-assign-controls').style.display = selectedLeads.size > 0 ? 'block' : 'none';
+    });
+
+    checkboxTd.appendChild(checkbox);
+    tr.appendChild(checkboxTd);
+
+    const agentName = allAgents.find(a => a.id === lead.assigned_to)?.full_name || 'Unassigned';
+
+    const cells = [
+      new Date(lead.created_at).toLocaleDateString(),
+      agentName,
+      lead.first_name || '',
+      lead.last_name || '',
+      lead.age || '',
+      (lead.phone || []).join(', '),
+      lead.address || '',
+      lead.city || '',
+      lead.state || '',
+      lead.zip || '',
+      lead.lead_type || '',
+      lead.notes || ''
+    ];
+
+    cells.forEach(text => {
+      const td = document.createElement('td');
+      td.textContent = text;
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
 </script>
 </body>
 </html>
