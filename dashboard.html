@@ -457,6 +457,14 @@
             return;
           }
           
+          const { data: agentProfile } = await supabase
+            .from('agents')
+            .select('full_name')
+            .eq('id', userId)
+            .single();
+          
+          const submitted_by_name = agentProfile?.full_name || 'Unknown';
+          
           const { error } = await supabase.from('leads').insert({
             first_name: firstName,
             last_name: lastName,
@@ -469,6 +477,7 @@
             notes,
             lead_type: type,
             submitted_by: userId,
+            submitted_by_name, // ✅ This is new
             assigned_to: userId,
             assigned_at: new Date().toISOString()
           });
