@@ -304,6 +304,7 @@ document.querySelectorAll('#admin-filters input, #admin-filters select').forEach
 // ✅ Load agents and leads
 await loadAgentsForAdmin();
 await loadLeadsWithFilters();
+await loadAssignmentHistory();
   } catch (err) {
     if (loadingScreen) loadingScreen.style.display = 'none';
     document.body.innerHTML = "<h1>Error checking session. Please log in again.</h1>";
@@ -482,7 +483,7 @@ document.getElementById('bulk-assign-btn').addEventListener('click', async () =>
 async function assignLeads(agentId) {
   alert("🚀 Starting assignLeads with agentId: " + agentId);
 
-const updates = Array.from(selectedLeads).map(leadId => ({
+  const updates = Array.from(selectedLeads).map(leadId => ({
     id: leadId,
     assigned_to: agentId,
     assigned_at: new Date().toISOString()
@@ -490,23 +491,30 @@ const updates = Array.from(selectedLeads).map(leadId => ({
 
   alert("📦 Updates payload:\n" + JSON.stringify(updates, null, 2));
 
-  const { error } = await supabase.from('leads')
-  .update({ assigned_to: agentId, assigned_at: new Date().toISOString() })
-  .in('id', Array.from(selectedLeads));
+  const { error } = await supabase.from('leads').upsert(updates, { onConflict: 'id' });
+  if (error) return alert('❌ Failed to assign leads.\n' + error.message);
 
-  if (error) {
-    alert("❌ Supabase error: " + error.message);
-    console.error('Supabase upsert error:', error);
-    return;
-  }
+  // ✅ Also insert into assignment_history table
+  const session = await supabase.auth.getSession();
+  const user = session.data.session.user;
 
-  alert("✅ Successfully assigned leads.");
+  const historyEntries = updates.map(update => ({
+    lead_id: update.id,
+    assigned_to: update.assigned_to,
+    assigned_by: user.id,
+    assigned_at: update.assigned_at
+  }));
+
+  const { error: historyError } = await supabase.from('assignment_history').insert(historyEntries);
+  if (historyError) alert("⚠️ Assigned but failed to log history:\n" + historyError.message);
 
   selectedLeads.clear();
   document.getElementById('selected-count').textContent = '0';
   document.getElementById('bulk-assign-controls').style.display = 'none';
   document.getElementById('reassign-warning-modal').style.display = 'none';
+  
   await loadLeadsWithFilters();
+  await loadAssignmentHistory(); // 🆕 reload the table
 }
 document.getElementById('prev-page').addEventListener('click', () => {
   if (currentPage > 1) {
@@ -528,6 +536,48 @@ document.getElementById('submit-anyway-btn').addEventListener('click', () => {
 document.getElementById('cancel-reassign-btn').addEventListener('click', () => {
   document.getElementById('reassign-warning-modal').style.display = 'none';
 });
+async function loadAssignmentHistory() {
+  const tbody = document.querySelector('#assignment-history-table tbody');
+  tbody.innerHTML = '';
+
+  const { data, error } = await supabase
+    .from('assignment_history')
+    .select(`
+      id,
+      assigned_at,
+      lead_id,
+      assigned_to,
+      assigned_by,
+      profiles_assigned_to:assigned_to ( full_name ),
+      profiles_assigned_by:assigned_by ( full_name )
+    `)
+    .order('assigned_at', { ascending: false })
+    .limit(25);
+
+  if (error) {
+    console.error("Failed to load assignment history", error);
+    return;
+  }
+
+  data.forEach(row => {
+    const tr = document.createElement('tr');
+
+    const cells = [
+      new Date(row.assigned_at).toLocaleString(),
+      row.lead_id,
+      row.profiles_assigned_to?.full_name || row.assigned_to,
+      row.profiles_assigned_by?.full_name || row.assigned_by
+    ];
+
+    cells.forEach(text => {
+      const td = document.createElement('td');
+      td.textContent = text;
+      tr.appendChild(td);
+    });
+
+    tbody.appendChild(tr);
+  });
+}
 </script>
 </body>
 </html>
