@@ -67,6 +67,8 @@ if (defaultTab) {
     document.body.innerHTML = "<h1>Error checking session. Please log in again.</h1>";
   }
 });
+let currentPage = 1;
+const PAGE_SIZE = 25;
 let rangeStart = null;
 let rangeEnd = null;
 
@@ -336,7 +338,7 @@ async function loadLeadsWithFilters() {
   const tbody = document.querySelector('#leads-table tbody');
   tbody.innerHTML = '';
 
-  let query = supabase.from('leads').select('*');
+  let query = supabase.from('leads').select('*', { count: 'exact' });
 
   const start = rangeStart;
   const end = rangeEnd;
