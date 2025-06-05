@@ -354,6 +354,10 @@
   
   <!--<script type="module" src="dashboard.js"></script>-->
   <script type="module">
+    
+  </script>
+  <script type="module">
+    alert("✅ Inline script is working.");
     try {
     alert("✅ INLINE SCRIPT EXECUTED");
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
@@ -933,9 +937,6 @@
       alert("💥 Top-level crash: " + fatal.message);
       console.error(fatal);
     }
-  </script>
-  <script type="module">
-    alert("✅ Inline script is working.");
   </script>
 </body>
 </html>
