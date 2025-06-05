@@ -440,22 +440,22 @@ document.getElementById('confirm-reassign-btn').addEventListener('click', async 
   await assignLeads(agentId);
 });
 async function assignLeads(agentId) {
-  
-  const updates = Array.from(selectedLeads).map(leadId => ({
-    id: leadId,
-    assigned_to: agentId,
-    assigned_at: new Date().toISOString()
-  }));
+  const leadIds = Array.from(selectedLeads);
+  alert("Assigning " + leadIds.length + " leads to: " + agentId);
 
-  alert("Assigning " + updates.length + " leads to: " + agentId);
-  
-  const { error } = await supabase.from('leads').upsert(updates, { onConflict: 'id' });
+  const { error } = await supabase
+    .from('leads')
+    .update({
+      assigned_to: agentId,
+      assigned_at: new Date().toISOString()
+    })
+    .in('id', leadIds);
 
   if (error) {
-  console.error('Assign error:', error);
-  alert('Failed to assign leads: ' + error.message);
-  return;
-}
+    console.error('Assign error:', error);
+    alert('Failed to assign leads: ' + error.message);
+    return;
+  }
 
   selectedLeads.clear();
   document.getElementById('selected-count').textContent = '0';
