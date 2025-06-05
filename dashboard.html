@@ -764,6 +764,7 @@
       
       leads.forEach(lead => {
         const tr = document.createElement('tr');
+        const agentName = lead.submitted_by_name || 'Unknown';
         const checkboxTd = document.createElement('td');
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
@@ -782,7 +783,7 @@
         checkboxTd.appendChild(checkbox);
         tr.appendChild(checkboxTd);
         
-        const agentName = allAgents.find(a => a.id === lead.assigned_to)?.full_name || 'Unassigned';
+        const agentName = lead.submitted_by_name || 'Unknown';
         const cells = [
           new Date(lead.created_at).toLocaleDateString(),
           agentName,
