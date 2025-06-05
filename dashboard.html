@@ -125,9 +125,23 @@
     <input type="text" id="lead-type-filter" placeholder="Lead Type">
     <button id="apply-filters">Apply Filters</button>
     <button id="reset-filters">Reset Filters</button>
-  </div>
 
-  <!-- Leads Table -->
+    <select id="sort-by" style="display: none;">
+  <option value="first_name">first_name</option>
+  <option value="last_name">last_name</option>
+  <option value="age">age</option>
+  <option value="phone">phone</option>
+  <option value="address">address</option>
+  <option value="city">city</option>
+  <option value="state">state</option>
+  <option value="zip">zip</option>
+  <option value="lead_type">lead_type</option>
+  <option value="submitted_by_name">submitted_by_name</option>
+  <option value="notes">notes</option>
+  <option value="created_at">created_at</option>
+</select>
+  </div>
+      <!-- Leads Table -->
   <div id="leads-table-container">
     <table id="leads-table">
       <thead>
@@ -639,18 +653,22 @@ document.getElementById('reset-filters').addEventListener('click', () => {
   });
   loadLeadsWithFilters();
 });
-  // 🧮 Sorting
-document.querySelectorAll('.admin-table-container th').forEach(header => {
-  header.addEventListener('click', () => {
-    const sortBy = header.getAttribute('data-column');
-    const currentOrder = header.getAttribute('data-order') || 'asc';
-    const newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
-    
-    header.setAttribute('data-order', newOrder);
+ let currentSortColumn = null;
+let currentSortDirection = 'asc';
 
-    // 🔁 Update global sort filters
-    document.getElementById('sort-by').value = sortBy;
-    document.getElementById('sort-order').value = newOrder;
+document.querySelectorAll('#admin-leads-table th[data-column]').forEach(th => {
+  th.addEventListener('click', () => {
+    const column = th.getAttribute('data-column');
+
+    if (currentSortColumn === column) {
+      currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      currentSortColumn = column;
+      currentSortDirection = 'asc';
+    }
+
+    document.getElementById('sort-by').value = column;
+    document.getElementById('date-order').value = currentSortDirection;
 
     loadLeadsWithFilters();
   });
@@ -712,6 +730,7 @@ async function loadLeadsWithFilters() {
   tbody.innerHTML = '';
 
   const order = document.getElementById('date-order').value;
+  const sortBy = document.getElementById('sort-by')?.value || 'created_at';
   const agent = document.getElementById('agent-filter').value;
   const zip = document.getElementById('zip-filter').value;
   const city = document.getElementById('city-filter').value;
@@ -739,8 +758,8 @@ async function loadLeadsWithFilters() {
   const to = from + PAGE_SIZE - 1;
 
   const { data: leads, error, count } = await query
-    .order('created_at', { ascending: order === 'asc' })
-    .range(from, to);
+  .order(sortBy, { ascending: order === 'asc' })
+  .range(from, to);
 
   if (error) return console.error('Error loading leads:', error);
 
