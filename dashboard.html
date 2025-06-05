@@ -359,7 +359,7 @@
   <script type="module">
     alert("✅ Inline script is working.");
     try {
-    alert("✅ INLINE SCRIPT EXECUTED");
+    //alert("✅ INLINE SCRIPT EXECUTED");
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
     
     const supabase = createClient(
@@ -368,14 +368,14 @@
     );
     
     document.addEventListener("DOMContentLoaded", async () => {
-      alert("✅ DOM fully loaded and JS is running.");
+      //alert("✅ DOM fully loaded and JS is running.");
       const loadingScreen = document.getElementById('loading-screen');
       
       try {
         alert("🔍 Checking session...");
         const sessionResult = await supabase.auth.getSession();
         const session = sessionResult.data.session;
-        alert("📦 Session result: " + (session ? "Found" : "Missing"));
+        //alert("📦 Session result: " + (session ? "Found" : "Missing"));
         
         if (!session) {
           document.body.innerHTML = "<h1>Session not found. Please log in again.</h1>";
@@ -386,7 +386,7 @@
         const isAdmin =
           user.email === 'fvinsuranceagency@gmail.com' ||
           user.email === 'johnsondemesi@gmail.com';
-          alert("👤 Logged in as: " + user.email + "\nAdmin? " + isAdmin);
+          //alert("👤 Logged in as: " + user.email + "\nAdmin? " + isAdmin);
           
           // Show/hide admin features
           document.querySelectorAll('.admin-only').forEach(el => {
@@ -395,7 +395,7 @@
         
         // Hide loading screen
         if (loadingScreen) {
-          alert("🧹 Hiding loading screen...");
+          //alert("🧹 Hiding loading screen...");
           loadingScreen.style.display = 'none';
           loadingScreen.style.visibility = 'hidden';
           loadingScreen.style.opacity = '0';
@@ -403,7 +403,7 @@
         }
         
         // Show default tabi
-        alert("📑 Hiding all tabs and showing default...");
+        //alert("📑 Hiding all tabs and showing default...");
         document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
         const defaultTab = document.getElementById('profile-tab');
         if (defaultTab) defaultTab.style.display = 'block';
@@ -439,7 +439,7 @@
       }
       document.getElementById('lead-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        alert("🚨 Submit button clicked");
+        //alert("🚨 Submit button clicked");
         
         try {
           const firstName = document.getElementById('lead-first').value.trim();
@@ -491,8 +491,8 @@
         }
       });
       document.getElementById('lead-request-form').addEventListener('submit', async (e) => {
-        e.preventDefault(); // 🚫 Stop page from reloading
-        /*alert("📨 Request Leads form submitted");*/
+        e.preventDefault();
+        alert("📨 Request Leads form submitted");
         const city = document.getElementById('request-city').value.trim();
         const zip = document.getElementById('request-zip').value.trim();
         const type = document.getElementById('request-type').value;
@@ -720,7 +720,7 @@
     new Choices('#state-filter', { searchEnabled: true, itemSelectText: '' });
     
     document.getElementById('bulk-assign-agent').addEventListener('change', (e) => {
-      /*alert("🔄 Agent selected: " + e.target.value);*/
+      //alert("🔄 Agent selected: " + e.target.value);
     });
     
     async function loadLeadsWithFilters() {
@@ -813,7 +813,7 @@
     
     // Assign button handler
     document.getElementById('bulk-assign-btn').addEventListener('click', async () => {
-      /*alert("🟡 Assign button clicked");*/
+      //alert("🟡 Assign button clicked");
       const selected = [...selectedLeads];
       if (selected.length === 0) {
         alert("⚠️ No leads selected");
@@ -827,7 +827,7 @@
       );
       
       if (reassigned) {
-        /*alert("⚠️ Some leads are already assigned");*/
+        //alert("⚠️ Some leads are already assigned");
         document.getElementById('reassign-warning-modal').style.display = 'block';
       } else {
         const agentId = document.getElementById('bulk-assign-agent').value;
@@ -842,7 +842,7 @@
     
     // Assign leads function
     async function assignLeads(agentId) {
-      /*alert("🚀 Starting assignLeads with agentId: " + agentId);*/
+      //alert("🚀 Starting assignLeads with agentId: " + agentId);
       const updates = Array.from(selectedLeads).map(leadId => ({
         id: leadId,
         assigned_to: agentId,
