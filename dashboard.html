@@ -286,6 +286,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (defaultTab) defaultTab.style.display = 'block';
 
     alert("✅ Dashboard setup done.");
+    // ✅ Fix tab switching
+document.querySelectorAll('nav a[data-tab]').forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+    document.querySelectorAll('nav a').forEach(link => link.classList.remove('active'));
+    const tabId = link.getAttribute('data-tab');
+    const tab = document.getElementById(tabId);
+    if (tab) tab.style.display = 'block';
+    link.classList.add('active');
+  });
+});
+
+// ✅ Load agents and leads
+await loadAgentsForAdmin();
+await loadLeadsWithFilters();
   } catch (err) {
     if (loadingScreen) loadingScreen.style.display = 'none';
     document.body.innerHTML = "<h1>Error checking session. Please log in again.</h1>";
