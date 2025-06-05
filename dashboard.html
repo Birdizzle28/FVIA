@@ -331,9 +331,7 @@ await loadAssignmentHistory();
     .filter(num => num.length > 0);
 
   // 🧠 Get agent ID from profile info or session
-  const { data: { session } } = await supabase.auth.getSession();
-  const userId = session?.user?.id;
-
+  const userId = session.user.id;
   if (!userId) {
     alert('❌ Not logged in.');
     return;
