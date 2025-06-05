@@ -881,37 +881,39 @@
     
     async function loadAssignmentHistory() {
       const tbody = document.querySelector('#assignment-history-table tbody');
-      tbody.innerHTML = '';
+      tbody.innerHTML = 'Loading...';
+    
       const { data, error } = await supabase
-        .from('assignment_history')
-        .select(`
-          id,
-          assigned_at,
-          lead_id,
-          assigned_to,
-          assigned_by,
-          profiles_assigned_to:assigned_to ( full_name ),
-          profiles_assigned_by:assigned_by ( full_name )
-        `)
-        .order('assigned_at', { ascending: false })
-        .limit(25);
+        .from('lead_assignments')
+        .select('id, lead_id, assigned_to_name, assigned_by_name, assigned_at')
+        .order('assigned_at', { ascending: false });
+    
       if (error) {
-        console.error("Failed to load assignment history", error);
+        console.error('Error loading assignment history:', error);
+        tbody.innerHTML = '<tr><td colspan="4">Error loading history</td></tr>';
         return;
       }
-      data.forEach(row => {
+    
+      if (!data.length) {
+        tbody.innerHTML = '<tr><td colspan="4">No assignment history found</td></tr>';
+        return;
+      }
+    
+      tbody.innerHTML = ''; // Clear loading message
+      data.forEach(entry => {
         const tr = document.createElement('tr');
-        const cells = [
-          new Date(row.assigned_at).toLocaleString(),
-          row.lead_id,
-          row.profiles_assigned_to?.full_name || row.assigned_to,
-          row.profiles_assigned_by?.full_name || row.assigned_by
-        ];
-        cells.forEach(text => {
+    
+        const date = new Date(entry.assigned_at).toLocaleString();
+        const leadId = entry.lead_id || 'Unknown';
+        const assignedTo = entry.assigned_to_name || 'Unknown';
+        const assignedBy = entry.assigned_by_name || 'Unknown';
+    
+        [date, leadId, assignedTo, assignedBy].forEach(text => {
           const td = document.createElement('td');
           td.textContent = text;
           tr.appendChild(td);
         });
+    
         tbody.appendChild(tr);
       });
     }
