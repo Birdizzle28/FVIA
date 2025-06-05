@@ -361,6 +361,17 @@ await loadAssignmentHistory();
   }
 });
 });
+document.getElementById('phone-inputs').addEventListener('click', (e) => {
+  if (e.target.classList.contains('add-phone-btn')) {
+    const newLine = document.createElement('div');
+    newLine.className = 'phone-line';
+    newLine.innerHTML = `
+      <input type="tel" name="lead-phone" placeholder="(123) 456-7890" maxlength="14" required />
+      <button type="button" class="add-phone-btn">+</button>
+    `;
+    document.getElementById('phone-inputs').appendChild(newLine);
+  }
+});
 let allAgents = [];
 let selectedLeads = new Set();
 let currentPage = 1;
