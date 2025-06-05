@@ -647,6 +647,8 @@ async function loadAgentsForAdmin() {
     });
   }
 }
+new Choices('#state-filter', { searchEnabled: true, itemSelectText: '' });
+    
 document.getElementById('bulk-assign-agent').addEventListener('change', (e) => {
   alert("🔄 Agent selected: " + e.target.value);
 });
