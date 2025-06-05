@@ -638,6 +638,22 @@ document.getElementById('reset-filters').addEventListener('click', () => {
   });
   loadLeadsWithFilters();
 });
+  // 🧮 Sorting
+document.querySelectorAll('.admin-table-container th').forEach(header => {
+  header.addEventListener('click', () => {
+    const sortBy = header.getAttribute('data-column');
+    const currentOrder = header.getAttribute('data-order') || 'asc';
+    const newOrder = currentOrder === 'asc' ? 'desc' : 'asc';
+    
+    header.setAttribute('data-order', newOrder);
+
+    // 🔁 Update global sort filters
+    document.getElementById('sort-by').value = sortBy;
+    document.getElementById('sort-order').value = newOrder;
+
+    loadLeadsWithFilters();
+  });
+});
 });
 
 let allAgents = [];
