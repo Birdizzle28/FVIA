@@ -468,4 +468,9 @@ font-family: Bellota Text;
   padding: 5px;
   font-size: 0.9em;
 }
-
+#leads-table thead th {
+  position: sticky;
+  top: 0;
+  background: white;
+  z-index: 1;
+}
