@@ -361,14 +361,20 @@ await loadAssignmentHistory();
   }
 });
   document.getElementById('phone-inputs').addEventListener('click', (e) => {
+  // ADD PHONE
   if (e.target && e.target.classList.contains('add-phone-btn')) {
     const newLine = document.createElement('div');
     newLine.className = 'phone-line';
     newLine.innerHTML = `
       <input type="tel" name="lead-phone" placeholder="(123) 456-7890" maxlength="14" required />
-      <button type="button" class="add-phone-btn">+</button>
+      <button type="button" class="remove-phone-btn">−</button>
     `;
     document.getElementById('phone-inputs').appendChild(newLine);
+  }
+
+  // REMOVE PHONE
+  if (e.target && e.target.classList.contains('remove-phone-btn')) {
+    e.target.parentElement.remove();
   }
 });
 });
