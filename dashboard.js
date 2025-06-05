@@ -488,15 +488,47 @@ document.getElementById('confirm-reassign-btn').addEventListener('click', async 
 });
 async function assignLeads(agentId) {
   const leadIds = Array.from(selectedLeads);
+  const session = await supabase.auth.getSession();
+  const adminId = session.data.session.user.id;
+
   alert("Assigning " + leadIds.length + " leads to: " + agentId);
+
+  const updates = {
+    assigned_to: agentId,
+    assigned_at: new Date().toISOString()
+  };
 
   const { error } = await supabase
     .from('leads')
-    .update({
-      assigned_to: agentId,
-      assigned_at: new Date().toISOString()
-    })
+    .update(updates)
     .in('id', leadIds);
+
+  if (error) {
+    console.error('Assign error:', error);
+    alert('Failed to assign leads: ' + error.message);
+    return;
+  }
+
+  // ✅ Log assignment history
+  const logs = leadIds.map(leadId => ({
+    lead_id: leadId,
+    assigned_to: agentId,
+    assigned_by: adminId,
+    assigned_at: new Date().toISOString()
+  }));
+
+  const { error: logError } = await supabase.from('lead_assignments').insert(logs);
+  if (logError) {
+    console.error('Audit trail error:', logError);
+    alert('Leads assigned, but logging failed.');
+  }
+
+  selectedLeads.clear();
+  document.getElementById('selected-count').textContent = '0';
+  document.getElementById('bulk-assign-controls').style.display = 'none';
+  document.getElementById('reassign-warning-modal').style.display = 'none';
+  await loadLeadsWithFilters();
+}
 
   if (error) {
     console.error('Assign error:', error);
