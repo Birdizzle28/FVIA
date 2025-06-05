@@ -446,6 +446,43 @@ async function loadLeadsWithFilters() {
     tbody.appendChild(tr);
   });
 }
+document.getElementById('prev-page').addEventListener('click', () => {
+  if (currentPage > 1) {
+    currentPage--;
+    loadLeadsWithFilters();
+  }
+});
+
+document.getElementById('next-page').addEventListener('click', () => {
+  currentPage++;
+  loadLeadsWithFilters();
+});
+
+document.getElementById('assign-leads-btn').addEventListener('click', () => {
+  const selectedAgentId = document.getElementById('bulk-assign-agent').value;
+  if (!selectedAgentId || selectedLeads.size === 0) return;
+
+  const selectedLeadIds = Array.from(selectedLeads);
+  const reassigned = selectedLeadIds.some(id => {
+    const row = document.querySelector(`input[data-lead-id="${id}"]`).closest('tr');
+    return row && !row.children[1].textContent.includes('Unassigned');
+  });
+
+  if (reassigned) {
+    document.getElementById('reassign-warning-modal').style.display = 'block';
+  } else {
+    assignLeads(selectedAgentId);
+  }
+});
+
+document.getElementById('submit-anyway-btn').addEventListener('click', () => {
+  const agentId = document.getElementById('bulk-assign-agent').value;
+  assignLeads(agentId);
+});
+
+document.getElementById('cancel-reassign-btn').addEventListener('click', () => {
+  document.getElementById('reassign-warning-modal').style.display = 'none';
+});
 </script>
 </body>
 </html>
