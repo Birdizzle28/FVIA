@@ -440,13 +440,15 @@ document.getElementById('confirm-reassign-btn').addEventListener('click', async 
   await assignLeads(agentId);
 });
 async function assignLeads(agentId) {
-  alert("Assigning " + updates.length + " leads to: " + agentId);
+  
   const updates = Array.from(selectedLeads).map(leadId => ({
     id: leadId,
     assigned_to: agentId,
     assigned_at: new Date().toISOString()
   }));
 
+  alert("Assigning " + updates.length + " leads to: " + agentId);
+  
   const { error } = await supabase.from('leads').upsert(updates, { onConflict: 'id' });
 
   if (error) {
