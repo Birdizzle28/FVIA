@@ -353,7 +353,6 @@
   </div>
   <script type="module">
     alert("✅ Inline script is working.");
-    try {
     //alert("✅ INLINE SCRIPT EXECUTED");
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
     
@@ -927,10 +926,6 @@
         
         tbody.appendChild(tr);
       });
-    }
-    } catch (fatal) {
-      alert("💥 Top-level crash: " + fatal.message);
-      console.error(fatal);
     }
   </script>
 </body>
