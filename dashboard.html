@@ -304,53 +304,9 @@ document.querySelectorAll('#admin-filters input, #admin-filters select').forEach
 // ✅ Load agents and leads
 await loadAgentsForAdmin();
 await loadLeadsWithFilters();
+await loadLeadRequests();
 await loadAssignmentHistory();
-    async function loadLeadRequests() {
-  const container = document.getElementById('requested-leads-container');
-  if (!container) return;
-
-  container.innerHTML = "<p>Loading lead requests...</p>";
-
-  const { data, error } = await supabase
-    .from('lead_requests')
-    .select(`
-      id,
-      city,
-      zip,
-      lead_type,
-      count,
-      notes,
-      created_at,
-      requested_by:requested_by(full_name, email)
-    `)
-    .order('created_at', { ascending: false });
-
-  if (error) {
-    console.error("❌ Failed to load lead requests:", error.message);
-    container.innerHTML = "<p>Error loading requests.</p>";
-    return;
-  }
-
-  if (!data || data.length === 0) {
-    container.innerHTML = "<p>No lead requests found.</p>";
-    return;
-  }
-
-  const html = data.map(req => `
-    <div class="lead-request-box">
-      <strong>Requested by:</strong> ${req.requested_by?.full_name || 'Unknown'} (${req.requested_by?.email || 'N/A'})<br>
-      <strong>City:</strong> ${req.city || 'N/A'}<br>
-      <strong>ZIP:</strong> ${req.zip || 'N/A'}<br>
-      <strong>Lead Type:</strong> ${req.lead_type || 'N/A'}<br>
-      <strong>How many:</strong> ${req.count || 'N/A'}<br>
-      <strong>Notes:</strong> ${req.notes || 'None'}<br>
-      <em>Submitted: ${new Date(req.created_at).toLocaleString()}</em>
-      <hr>
-    </div>
-  `).join('');
-
-  container.innerHTML = html;
-}
+    
   } catch (err) {
     if (loadingScreen) loadingScreen.style.display = 'none';
     document.body.innerHTML = "<h1>Error checking session. Please log in again.</h1>";
@@ -470,6 +426,52 @@ document.addEventListener('input', (e) => {
     }
   }
 });
+  async function loadLeadRequests() {
+  const container = document.getElementById('requested-leads-container');
+  if (!container) return;
+
+  container.innerHTML = "<p>Loading lead requests...</p>";
+
+  const { data, error } = await supabase
+    .from('lead_requests')
+    .select(`
+      id,
+      city,
+      zip,
+      lead_type,
+      count,
+      notes,
+      created_at,
+      requested_by:requested_by(full_name, email)
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error("❌ Failed to load lead requests:", error.message);
+    container.innerHTML = "<p>Error loading requests.</p>";
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    container.innerHTML = "<p>No lead requests found.</p>";
+    return;
+  }
+
+  const html = data.map(req => `
+    <div class="lead-request-box">
+      <strong>Requested by:</strong> ${req.requested_by?.full_name || 'Unknown'} (${req.requested_by?.email || 'N/A'})<br>
+      <strong>City:</strong> ${req.city || 'N/A'}<br>
+      <strong>ZIP:</strong> ${req.zip || 'N/A'}<br>
+      <strong>Lead Type:</strong> ${req.lead_type || 'N/A'}<br>
+      <strong>How many:</strong> ${req.count || 'N/A'}<br>
+      <strong>Notes:</strong> ${req.notes || 'None'}<br>
+      <em>Submitted: ${new Date(req.created_at).toLocaleString()}</em>
+      <hr>
+    </div>
+  `).join('');
+
+  container.innerHTML = html;
+}
 });
 
 let allAgents = [];
