@@ -398,8 +398,10 @@ const cells = [
 }
 
 // ========== APPLY FILTERS ==========
-document.getElementById('apply-filters').addEventListener('click', loadLeadsWithFilters);
-document.getElementById('assigned-filter').addEventListener('change', loadLeadsWithFilters);
+// Auto-refresh filters when any filter input changes
+document.querySelectorAll('#admin-filters input, #admin-filters select').forEach(el => {
+  el.addEventListener('change', loadLeadsWithFilters);
+});
 // ========== BULK ASSIGN ==========
 document.getElementById('bulk-assign-btn').addEventListener('click', async () => {
   const agentId = document.getElementById('bulk-assign-agent').value;
