@@ -440,6 +440,7 @@ document.getElementById('confirm-reassign-btn').addEventListener('click', async 
   await assignLeads(agentId);
 });
 async function assignLeads(agentId) {
+  alert("Assigning " + updates.length + " leads to: " + agentId);
   const updates = Array.from(selectedLeads).map(leadId => ({
     id: leadId,
     assigned_to: agentId,
@@ -448,7 +449,11 @@ async function assignLeads(agentId) {
 
   const { error } = await supabase.from('leads').upsert(updates, { onConflict: 'id' });
 
-  if (error) return alert('Failed to assign leads.');
+  if (error) {
+  console.error('Assign error:', error);
+  alert('Failed to assign leads: ' + error.message);
+  return;
+}
 
   selectedLeads.clear();
   document.getElementById('selected-count').textContent = '0';
