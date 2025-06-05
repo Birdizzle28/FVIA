@@ -43,8 +43,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Admin load
     await loadAgentsForAdmin();
     await loadLeadsWithFilters();
-    if (isAdmin) await loadRequestedLeads();
 
+if (isAdmin) {
+  await loadRequestedLeads();
+  await loadAssignmentHistory();
+}
   } catch (err) {
     if (loadingScreen) loadingScreen.style.display = 'none';
     document.body.innerHTML = "<h1>Error checking session. Please log in again.</h1>";
@@ -425,7 +428,6 @@ document.querySelectorAll('#leads-table thead th').forEach((th, index) => {
   });
   
 });
-  await loadAssignmentHistory();
 }
 
 // ========== APPLY FILTERS ==========
