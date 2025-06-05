@@ -356,7 +356,9 @@ async function loadAgentsForAdmin() {
     });
   }
 }
-
+document.getElementById('bulk-assign-agent').addEventListener('change', (e) => {
+  alert("🔄 Agent selected: " + e.target.value);
+});
 async function loadLeadsWithFilters() {
   const tbody = document.querySelector('#leads-table tbody');
   tbody.innerHTML = '';
@@ -480,7 +482,7 @@ document.getElementById('bulk-assign-btn').addEventListener('click', async () =>
 async function assignLeads(agentId) {
   alert("🚀 Starting assignLeads with agentId: " + agentId);
 
-  const updates = Array.from(selectedLeads).map(leadId => ({
+const updates = Array.from(selectedLeads).map(leadId => ({
     id: leadId,
     assigned_to: agentId,
     assigned_at: new Date().toISOString()
