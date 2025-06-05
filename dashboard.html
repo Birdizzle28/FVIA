@@ -380,8 +380,8 @@ await loadAssignmentHistory();
 
   const { error } = await supabase.from('lead_requests').insert({
     submitted_by: userId,
-    request_city: city,
-    request_zip: zip,
+    city: city,
+    zip: zip,
     lead_type: type,
     requested_count: count,
     notes
