@@ -418,6 +418,15 @@ const cells = [
 
     tbody.appendChild(tr);
   });
+  // Add sortable header listeners (only once after table is filled)
+document.querySelectorAll('#leads-table thead th').forEach((th, index) => {
+  th.style.cursor = 'pointer';
+  th.addEventListener('click', () => {
+    const direction = th.dataset.sort === 'asc' ? 'desc' : 'asc';
+    th.dataset.sort = direction;
+    sortTableByColumn(index, direction);
+  });
+});
 }
 
 // ========== APPLY FILTERS ==========
