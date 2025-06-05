@@ -625,6 +625,19 @@ usStates.forEach(state => {
 
 // 🎯 Make it a Choices.js dropdown
 new Choices('#lead-state', { searchEnabled: true, itemSelectText: '' });
+  // 🟩 Apply Filters Button
+document.getElementById('apply-filters').addEventListener('click', () => {
+  loadLeadsWithFilters();
+});
+
+// 🟥 Reset Filters Button
+document.getElementById('reset-filters').addEventListener('click', () => {
+  document.querySelectorAll('#admin-filters input, #admin-filters select').forEach(el => {
+    if (el.tagName === 'SELECT') el.selectedIndex = 0;
+    else el.value = '';
+  });
+  loadLeadsWithFilters();
+});
 });
 
 let allAgents = [];
