@@ -441,7 +441,19 @@ font-family: Bellota Text;
   max-height: 600px;
   overflow-y: auto;
   border: 1px solid #ccc;
-  margin-top: 20px;
+}
+
+#leads-table-container table {
+  border-collapse: collapse;
+  width: 100%;
+}
+
+#leads-table-container thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f4f4f4;
+  z-index: 1;
+  cursor: pointer; /* Also for sorting UX */
 }
 
 #leads-table {
