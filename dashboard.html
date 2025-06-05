@@ -833,35 +833,56 @@
     });
     
     // Assign leads function
-    async function assignLeads(agentId) {
-      const updates = Array.from(selectedLeads).map(leadId => ({
-        id: leadId,
-        assigned_to: agentId,
-        assigned_at: new Date().toISOString()
-      }));
-    
-      const { error } = await supabase.from('leads').upsert(updates, { onConflict: 'id' });
-      if (error) return alert('Failed to assign leads.');
-    
-      // ✍️ Log the assignments
-      const { data: sessionData } = await supabase.auth.getSession();
-      const assignedBy = sessionData?.session?.user?.id;
-    
-      const assignmentLogs = updates.map(update => ({
-        lead_id: update.id,
-        assigned_to: update.assigned_to,
-        assigned_by: assignedBy,
-        assigned_at: update.assigned_at
-      }));
-    
-      await supabase.from('lead_assignments').insert(assignmentLogs);
-    
-      selectedLeads.clear();
-      document.getElementById('selected-count').textContent = '0';
-      document.getElementById('bulk-assign-controls').style.display = 'none';
-      document.getElementById('reassign-warning-modal').style.display = 'none';
-      await loadLeadsWithFilters();
-    }
+       async function assignLeads(agentId) {
+          if (!agentId || selectedLeads.size === 0) {
+            alert("Please select leads and an agent.");
+            return;
+          }
+        
+          const selectedLeadIds = Array.from(selectedLeads);
+          const now = new Date().toISOString();
+        
+          const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+          const currentUserId = session?.user?.id;
+          if (!currentUserId) {
+            alert("User session missing.");
+            return;
+          }
+        
+          // 1. Update leads table
+          const { error: leadError } = await supabase
+            .from('leads')
+            .update({
+              assigned_to: agentId,
+              assigned_at: now
+            })
+            .in('id', selectedLeadIds);
+        
+          if (leadError) {
+            alert("❌ Failed to assign leads: " + leadError.message);
+            return;
+          }
+        
+          // 2. Insert into assignment history
+          const logs = selectedLeadIds.map(leadId => ({
+            lead_id: leadId,
+            assigned_to: agentId,
+            assigned_by: currentUserId,
+            assigned_at: now
+          }));
+        
+          const { error: logError } = await supabase.from('lead_assignments').insert(logs);
+          if (logError) {
+            alert("⚠️ Assigned, but failed to log history: " + logError.message);
+          }
+        
+          alert("✅ Lead(s) successfully assigned.");
+          selectedLeads.clear();
+          document.getElementById('selected-count').textContent = '0';
+          document.getElementById('bulk-assign-controls').style.display = 'none';
+          await loadLeadsWithFilters();
+          await loadAssignmentHistory();
+        }
     
     document.getElementById('prev-page').addEventListener('click', () => {
       if (currentPage > 1) {
@@ -887,35 +908,29 @@
     
       const { data, error } = await supabase
         .from('lead_assignments')
-        .select('*')
+        .select('assigned_at, lead_id, assigned_to, assigned_by')
         .order('assigned_at', { ascending: false });
     
       if (error) {
-        console.error('Error loading assignment history:', error);
-        tbody.innerHTML = '<tr><td colspan="4">Error loading history</td></tr>';
+        console.error("Error loading history:", error);
+        tbody.innerHTML = '<tr><td colspan="4">Error loading history.</td></tr>';
         return;
       }
     
-      if (!data.length) {
-        tbody.innerHTML = '<tr><td colspan="4">No assignment history found</td></tr>';
+      if (!data || data.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="4">No assignment history yet.</td></tr>';
         return;
       }
     
-      tbody.innerHTML = ''; // Clear loading message
+      tbody.innerHTML = '';
       data.forEach(entry => {
         const tr = document.createElement('tr');
-    
-        const date = new Date(entry.assigned_at).toLocaleString();
-        const leadId = entry.lead_id || 'Unknown';
-        const assignedTo = entry.assigned_to_name || 'Unknown';
-        const assignedBy = entry.assigned_by_name || 'Unknown';
-    
-        [date, leadId, assignedTo, assignedBy].forEach(text => {
-          const td = document.createElement('td');
-          td.textContent = text;
-          tr.appendChild(td);
-        });
-    
+        tr.innerHTML = `
+          <td>${new Date(entry.assigned_at).toLocaleString()}</td>
+          <td>${entry.lead_id}</td>
+          <td>${entry.assigned_to}</td>
+          <td>${entry.assigned_by}</td>
+        `;
         tbody.appendChild(tr);
       });
     }
