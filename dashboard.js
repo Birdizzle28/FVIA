@@ -503,3 +503,24 @@ document.getElementById('reset-filters').addEventListener('click', () => {
   });
   loadLeadsWithFilters();
 });
+
+function sortTableByColumn(columnIndex, direction = 'asc') {
+  const tbody = document.querySelector('#leads-table tbody');
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+
+  const sortedRows = rows.sort((a, b) => {
+    const aText = a.children[columnIndex].textContent.trim().toLowerCase();
+    const bText = b.children[columnIndex].textContent.trim().toLowerCase();
+
+    if (!isNaN(aText) && !isNaN(bText)) {
+      return direction === 'asc' ? aText - bText : bText - aText;
+    }
+
+    return direction === 'asc'
+      ? aText.localeCompare(bText)
+      : bText.localeCompare(aText);
+  });
+
+  tbody.innerHTML = '';
+  sortedRows.forEach(row => tbody.appendChild(row));
+}
