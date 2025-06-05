@@ -425,7 +425,7 @@ await loadAssignmentHistory();
   const type = document.getElementById('request-type').value;
   const count = parseInt(document.getElementById('request-count').value);
   const notes = document.getElementById('request-notes').value.trim();
-
+  const state = document.getElementById('request-state').value;
   const { data: { session } } = await supabase.auth.getSession();
   const userId = session?.user?.id;
 
@@ -447,6 +447,7 @@ await loadAssignmentHistory();
     submitted_by: userId,
     submitted_by_name: fullName,
     city,
+    state,
     zip,
     lead_type: type,
     requested_count: count,
@@ -520,6 +521,12 @@ document.addEventListener('input', (e) => {
 
   container.innerHTML = html || '<p>No lead requests found.</p>';
 }
+  new Choices('#request-state', {
+  removeItemButton: false,
+  searchEnabled: true,
+  placeholder: true,
+  shouldSort: false,
+});
 });
 
 let allAgents = [];
