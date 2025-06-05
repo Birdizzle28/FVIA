@@ -465,3 +465,9 @@ async function assignLeads(agentId) {
   document.getElementById('reassign-warning-modal').style.display = 'none';
   await loadLeadsWithFilters();
 }
+document.getElementById('reset-filters').addEventListener('click', () => {
+  document.querySelectorAll('#admin-filters input, #admin-filters select').forEach(el => {
+    el.value = '';
+  });
+  loadLeadsWithFilters();
+});
