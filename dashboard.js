@@ -439,8 +439,9 @@ document.querySelectorAll('#leads-table thead th').forEach((th, index) => {
     th.dataset.sort = direction;
     sortTableByColumn(index, direction);
   });
-  await loadAssignmentHistory();
+  
 });
+  await loadAssignmentHistory();
 }
 
 // ========== APPLY FILTERS ==========
