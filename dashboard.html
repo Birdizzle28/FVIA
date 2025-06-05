@@ -298,7 +298,9 @@ document.querySelectorAll('nav a[data-tab]').forEach(link => {
     link.classList.add('active');
   });
 });
-
+document.querySelectorAll('#admin-filters input, #admin-filters select').forEach(el => {
+  el.addEventListener('change', loadLeadsWithFilters);
+});
 // ✅ Load agents and leads
 await loadAgentsForAdmin();
 await loadLeadsWithFilters();
