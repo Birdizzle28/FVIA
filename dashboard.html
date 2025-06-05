@@ -478,15 +478,25 @@ document.getElementById('bulk-assign-btn').addEventListener('click', async () =>
 
 // Assign leads function
 async function assignLeads(agentId) {
+  alert("🚀 Starting assignLeads with agentId: " + agentId);
+
   const updates = Array.from(selectedLeads).map(leadId => ({
     id: leadId,
     assigned_to: agentId,
     assigned_at: new Date().toISOString()
   }));
 
+  alert("📦 Updates payload:\n" + JSON.stringify(updates, null, 2));
+
   const { error } = await supabase.from('leads').upsert(updates, { onConflict: 'id' });
 
-  if (error) return alert('❌ Failed to assign leads.');
+  if (error) {
+    alert("❌ Supabase error: " + error.message);
+    console.error('Supabase upsert error:', error);
+    return;
+  }
+
+  alert("✅ Successfully assigned leads.");
 
   selectedLeads.clear();
   document.getElementById('selected-count').textContent = '0';
