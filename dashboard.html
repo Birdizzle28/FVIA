@@ -234,8 +234,86 @@
   </div>
 </div>
   <script type="module" src="dashboard.js"></script>
-  <script>
-  alert("✅ INLINE JS IS WORKING.");
+  <script type="module">
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+
+const supabase = createClient(
+  'https://ddlbgkolnayqrxslzsxn.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
+);
+
+document.addEventListener("DOMContentLoaded", async () => {
+  alert("✅ DOM fully loaded and JS is running.");
+
+  const loadingScreen = document.getElementById('loading-screen');
+
+  try {
+    alert("🔍 Checking session...");
+    const sessionResult = await supabase.auth.getSession();
+    const session = sessionResult.data.session;
+
+    alert("📦 Session result: " + (session ? "Found" : "Missing"));
+
+    if (!session) {
+      document.body.innerHTML = "<h1>Error checking session. Please log in again.</h1>";
+      return;
+    }
+
+    const user = session.user;
+    const isAdmin =
+      user.email === 'fvinsuranceagency@gmail.com' ||
+      user.email === 'johnsondemesi@gmail.com';
+
+    alert("👤 Logged in as: " + user.email + "\nAdmin? " + isAdmin);
+
+    document.querySelectorAll('.admin-only').forEach(el => {
+      el.style.display = isAdmin ? 'inline' : 'none';
+    });
+
+    if (loadingScreen) {
+      alert("🧹 Hiding loading screen...");
+      loadingScreen.style.display = 'none';
+      loadingScreen.style.visibility = 'hidden';
+      loadingScreen.style.opacity = '0';
+      loadingScreen.style.zIndex = '-1';
+    }
+
+    alert("🗂️ Hiding all tabs and showing default...");
+    document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+    const defaultTab = document.getElementById('profile-tab');
+    if (defaultTab) defaultTab.style.display = 'block';
+
+    // Only uncomment the next 3 once these functions are guaranteed defined
+    // alert("📥 Loading agents...");
+    // await loadAgentsForAdmin();
+
+    // alert("📥 Loading leads...");
+    // await loadLeadsWithFilters();
+
+    // if (isAdmin) {
+    //   alert("📥 Loading requested leads...");
+    //   await loadRequestedLeads();
+
+    //   setTimeout(() => {
+    //     alert("📖 Loading assignment history...");
+    //     loadAssignmentHistory();
+    //   }, 100);
+    // }
+
+    alert("✅ Dashboard setup done.");
+  } catch (err) {
+    if (loadingScreen) {
+      loadingScreen.style.display = 'none';
+      loadingScreen.style.visibility = 'hidden';
+      loadingScreen.style.opacity = '0';
+      loadingScreen.style.zIndex = '-1';
+    }
+
+    alert("❌ Exception caught: " + err.message);
+    document.body.innerHTML = "<h1>Error checking session. Please log in again.</h1>";
+    console.error(err);
+  }
+});
 </script>
 </body>
 </html>
