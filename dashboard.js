@@ -369,12 +369,21 @@ async function loadLeadsWithFilters() {
 }
   }
 
-  query = query.order('created_at', { ascending: order === 'asc' });
   const from = (currentPage - 1) * PAGE_SIZE;
 const to = from + PAGE_SIZE - 1;
-query = query.range(from, to);
-  const { data: leads, error } = await query;
+
+const { data: leads, error, count } = await supabase
+  .from('leads')
+  .select('*', { count: 'exact' })
+  .order('created_at', { ascending: order === 'asc' })
+  .range(from, to);
+  
   if (error) return console.error('Error loading leads:', error);
+
+const totalPages = Math.ceil(count / PAGE_SIZE);
+document.getElementById('current-page').textContent = `Page ${currentPage} of ${totalPages}`;
+document.getElementById('prev-page').disabled = currentPage === 1;
+document.getElementById('next-page').disabled = currentPage >= totalPages;
 
   leads.forEach(lead => {
     const tr = document.createElement('tr');
@@ -528,3 +537,14 @@ function sortTableByColumn(columnIndex, direction = 'asc') {
   tbody.innerHTML = '';
   sortedRows.forEach(row => tbody.appendChild(row));
 }
+document.getElementById('next-page').addEventListener('click', () => {
+  currentPage++;
+  loadLeadsWithFilters();
+});
+
+document.getElementById('prev-page').addEventListener('click', () => {
+  if (currentPage > 1) {
+    currentPage--;
+    loadLeadsWithFilters();
+  }
+});
