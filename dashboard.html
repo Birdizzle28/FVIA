@@ -411,6 +411,19 @@ await loadAssignmentHistory();
     e.target.parentElement.remove();
   }
 });
+  // 📞 Auto-format phone number fields as (123) 456-7890
+document.addEventListener('input', (e) => {
+  if (e.target.name === 'lead-phone') {
+    let input = e.target.value.replace(/\D/g, '').slice(0, 10);
+    if (input.length >= 6) {
+      e.target.value = `(${input.slice(0,3)}) ${input.slice(3,6)}-${input.slice(6)}`;
+    } else if (input.length >= 3) {
+      e.target.value = `(${input.slice(0,3)}) ${input.slice(3)}`;
+    } else {
+      e.target.value = input;
+    }
+  }
+});
 });
 
 let allAgents = [];
