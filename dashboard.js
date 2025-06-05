@@ -370,7 +370,9 @@ async function loadLeadsWithFilters() {
   }
 
   query = query.order('created_at', { ascending: order === 'asc' });
-
+  const from = (currentPage - 1) * PAGE_SIZE;
+const to = from + PAGE_SIZE - 1;
+query = query.range(from, to);
   const { data: leads, error } = await query;
   if (error) return console.error('Error loading leads:', error);
 
