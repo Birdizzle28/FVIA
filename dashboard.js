@@ -296,16 +296,27 @@ async function loadAgentsForAdmin() {
   const { data, error } = await supabase.from('agents').select('id, full_name').eq('is_active', true);
   if (!error && data) {
     allAgents = data;
-    const dropdowns = [document.getElementById('agent-filter'), document.getElementById('bulk-assign-agent')];
-    dropdowns.forEach(dropdown => {
-      dropdown.innerHTML = '<option value="">All Agents</option>';
-      data.forEach(agent => {
-        const opt = document.createElement('option');
-        opt.value = agent.id;
-        opt.textContent = agent.full_name;
-        dropdown.appendChild(opt.cloneNode(true));
-      });
-    });
+    const dropdowns = [
+  { el: document.getElementById('agent-filter'), placeholder: 'All Agents' },
+  { el: document.getElementById('bulk-assign-agent'), placeholder: 'Select Agent' }
+];
+
+dropdowns.forEach(({ el, placeholder }) => {
+  el.innerHTML = `<option value="">${placeholder}</option>`;
+  data.forEach(agent => {
+    const opt = document.createElement('option');
+    opt.value = agent.id;
+    opt.textContent = agent.full_name;
+    el.appendChild(opt);
+  });
+
+  new Choices(el, {
+    shouldSort: false,
+    searchEnabled: true,
+    placeholder: true,
+    itemSelectText: '',
+  });
+});
   }
 }
 
