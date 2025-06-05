@@ -67,6 +67,18 @@ if (defaultTab) {
     document.body.innerHTML = "<h1>Error checking session. Please log in again.</h1>";
   }
 });
+let rangeStart = null;
+let rangeEnd = null;
+
+flatpickr("#date-range", {
+  mode: "range",
+  dateFormat: "Y-m-d",
+  onChange: function(selectedDates) {
+    rangeStart = selectedDates[0] ? selectedDates[0].toISOString().split('T')[0] : null;
+    rangeEnd = selectedDates[1] ? selectedDates[1].toISOString().split('T')[0] : null;
+    loadLeadsWithFilters();
+  }
+});
 function formatPhone(input) {
   input.addEventListener('input', () => {
     let numbers = input.value.replace(/\D/g, '');
@@ -326,8 +338,8 @@ async function loadLeadsWithFilters() {
 
   let query = supabase.from('leads').select('*');
 
-  const start = document.getElementById('start-date').value;
-  const end = document.getElementById('end-date').value;
+  const start = rangeStart;
+  const end = rangeEnd;
   const order = document.getElementById('date-order').value;
   const agent = document.getElementById('agent-filter').value;
   const zip = document.getElementById('zip-filter').value;
