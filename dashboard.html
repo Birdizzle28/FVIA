@@ -507,19 +507,40 @@ document.addEventListener('input', (e) => {
   }
 
   const html = data.map(req => `
-    <div class="lead-request-box">
-      <strong>Requested By:</strong> ${req.submitted_by_name || 'Unknown'}<br>
-      <strong>City:</strong> ${req.city || 'N/A'}<br>
-      <strong>ZIP:</strong> ${req.zip || 'N/A'}<br>
-      <strong>Lead Type:</strong> ${req.lead_type || 'N/A'}<br>
-      <strong>How many:</strong> ${req.requested_count || 'N/A'}<br>
-      <strong>Notes:</strong> ${req.notes || 'None'}<br>
-      <em>Submitted: ${new Date(req.created_at).toLocaleString()}</em>
-      <hr>
-    </div>
-  `).join('');
-
+  <div class="lead-request-box" data-request-id="${req.id}">
+    <strong>Requested By:</strong> ${req.submitted_by_name || 'Unknown'}<br>
+    <strong>City:</strong> ${req.city || 'N/A'}<br>
+    <strong>ZIP:</strong> ${req.zip || 'N/A'}<br>
+    <strong>State:</strong> ${req.state || 'N/A'}<br>
+    <strong>Lead Type:</strong> ${req.lead_type || 'N/A'}<br>
+    <strong>How many:</strong> ${req.requested_count || 'N/A'}<br>
+    <strong>Notes:</strong> ${req.notes || 'None'}<br>
+    <em>Submitted: ${new Date(req.created_at).toLocaleString()}</em><br>
+    <button class="delete-request-btn">Delete</button>
+    <hr>
+  </div>
+`).join('');
+    
   container.innerHTML = html || '<p>No lead requests found.</p>';
+    document.querySelectorAll('.delete-request-btn').forEach(btn => {
+  btn.addEventListener('click', async (e) => {
+    const parentBox = e.target.closest('.lead-request-box');
+    const requestId = parentBox.getAttribute('data-request-id');
+
+    const confirmed = confirm('Are you sure you want to delete this request?');
+    if (!confirmed) return;
+
+    const { error } = await supabase.from('lead_requests').delete().eq('id', requestId);
+
+    if (error) {
+      alert('❌ Failed to delete request.');
+      console.error(error);
+    } else {
+      parentBox.remove();
+      alert('✅ Request deleted.');
+    }
+  });
+});
 }
   new Choices('#request-state', {
   removeItemButton: false,
