@@ -489,12 +489,11 @@ async function assignLeads(agentId) {
     assigned_at: new Date().toISOString()
   }));
 
-  alert("📦 Updates payload:\n" + JSON.stringify(updates, null, 2));
-
   const { error } = await supabase.from('leads').upsert(updates, { onConflict: 'id' });
   if (error) return alert('❌ Failed to assign leads.\n' + error.message);
 
-  // ✅ Also insert into assignment_history table
+  // TEMP: Commenting out history insert for debugging
+  /*
   const session = await supabase.auth.getSession();
   const user = session.data.session.user;
 
@@ -507,14 +506,15 @@ async function assignLeads(agentId) {
 
   const { error: historyError } = await supabase.from('assignment_history').insert(historyEntries);
   if (historyError) alert("⚠️ Assigned but failed to log history:\n" + historyError.message);
+  */
 
   selectedLeads.clear();
   document.getElementById('selected-count').textContent = '0';
   document.getElementById('bulk-assign-controls').style.display = 'none';
   document.getElementById('reassign-warning-modal').style.display = 'none';
-  
+
   await loadLeadsWithFilters();
-  await loadAssignmentHistory(); // 🆕 reload the table
+  await loadAssignmentHistory(); // keep this here — safe to try
 }
 document.getElementById('prev-page').addEventListener('click', () => {
   if (currentPage > 1) {
