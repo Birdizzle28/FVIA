@@ -421,53 +421,59 @@ await loadAssignmentHistory();
     alert("❌ Exception caught: " + err.message);
     console.error(err);
   }
-  document.getElementById('lead-form').addEventListener('submit', async (e) => {
-  e.preventDefault(); // ⛔ Prevents the page reload
+document.getElementById('lead-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
   alert("🚨 Submit button clicked");
-  // 💡 Grab the form values
-  const firstName = document.getElementById('lead-first').value.trim();
-  const lastName = document.getElementById('lead-last').value.trim();
-  const age = parseInt(document.getElementById('lead-age').value);
-  const address = document.getElementById('lead-address').value.trim();
-  const city = document.getElementById('lead-city').value.trim();
-  const state = document.getElementById('lead-state').value.trim();
-  const zip = document.getElementById('lead-zip').value.trim();
-  const notes = document.getElementById('lead-notes').value.trim();
-  const type = document.getElementById('lead-type').value;
 
-  const phoneInputs = document.querySelectorAll('#phone-inputs input[name="lead-phone"]');
-  const phones = Array.from(phoneInputs)
-    .map(input => input.value.trim())
-    .filter(num => num.length > 0);
+  try {
+    const firstName = document.getElementById('lead-first').value.trim();
+    const lastName = document.getElementById('lead-last').value.trim();
+    const age = parseInt(document.getElementById('lead-age').value);
+    const address = document.getElementById('lead-address').value.trim();
+    const city = document.getElementById('lead-city').value.trim();
+    const state = document.getElementById('lead-state').value; // changed for <select>
+    const zip = document.getElementById('lead-zip').value.trim();
+    const notes = document.getElementById('lead-notes').value.trim();
+    const type = document.getElementById('lead-type').value;
 
-  // 🧠 Get agent ID from profile info or session
-  const userId = session.user.id;
-  if (!userId) {
-    alert('❌ Not logged in.');
-    return;
-  }
+    const phoneInputs = document.querySelectorAll('#phone-inputs input[name="lead-phone"]');
+    const phones = Array.from(phoneInputs)
+      .map(input => input.value.trim())
+      .filter(num => num.length > 0);
 
-  const { error } = await supabase.from('leads').insert({
-    first_name: firstName,
-    last_name: lastName,
-    age,
-    address,
-    city,
-    state,
-    zip,
-    phone: phones,
-    notes,
-    lead_type: type,
-    submitted_by: userId,
-    assigned_to: userId,
-    assigned_at: new Date().toISOString()
-  });
+    const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+    const userId = session?.user?.id;
 
-  if (error) {
-    alert('❌ Failed to submit lead: ' + error.message);
-  } else {
-    alert('✅ Lead submitted successfully!');
-    document.getElementById('lead-form').reset();
+    if (!userId) {
+      alert('❌ Not logged in.');
+      return;
+    }
+
+    const { error } = await supabase.from('leads').insert({
+      first_name: firstName,
+      last_name: lastName,
+      age,
+      address,
+      city,
+      state,
+      zip,
+      phone: phones,
+      notes,
+      lead_type: type,
+      submitted_by: userId,
+      assigned_to: userId,
+      assigned_at: new Date().toISOString()
+    });
+
+    if (error) {
+      alert('❌ Supabase insert error: ' + error.message);
+    } else {
+      alert('✅ Lead submitted successfully!');
+      document.getElementById('lead-form').reset();
+    }
+  } catch (err) {
+    alert('❌ JS Error: ' + err.message);
+    console.error(err);
   }
 });
   document.getElementById('lead-request-form').addEventListener('submit', async (e) => {
