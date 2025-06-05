@@ -313,7 +313,7 @@ await loadAssignmentHistory();
   }
   document.getElementById('lead-form').addEventListener('submit', async (e) => {
   e.preventDefault(); // ⛔ Prevents the page reload
-
+  alert("🚨 Submit button clicked");
   // 💡 Grab the form values
   const firstName = document.getElementById('lead-first').value.trim();
   const lastName = document.getElementById('lead-last').value.trim();
