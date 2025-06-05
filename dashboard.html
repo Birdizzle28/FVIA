@@ -489,24 +489,20 @@ async function assignLeads(agentId) {
     assigned_at: new Date().toISOString()
   }));
 
-  const { error } = await supabase.from('leads').upsert(updates, { onConflict: 'id' });
-  if (error) return alert('❌ Failed to assign leads.\n' + error.message);
+  for (const update of updates) {
+    const { error } = await supabase
+      .from('leads')
+      .update({
+        assigned_to: update.assigned_to,
+        assigned_at: update.assigned_at
+      })
+      .eq('id', update.id);
 
-  // TEMP: Commenting out history insert for debugging
-  /*
-  const session = await supabase.auth.getSession();
-  const user = session.data.session.user;
-
-  const historyEntries = updates.map(update => ({
-    lead_id: update.id,
-    assigned_to: update.assigned_to,
-    assigned_by: user.id,
-    assigned_at: update.assigned_at
-  }));
-
-  const { error: historyError } = await supabase.from('assignment_history').insert(historyEntries);
-  if (historyError) alert("⚠️ Assigned but failed to log history:\n" + historyError.message);
-  */
+    if (error) {
+      alert(`❌ Failed to assign lead ${update.id}: ${error.message}`);
+      return;
+    }
+  }
 
   selectedLeads.clear();
   document.getElementById('selected-count').textContent = '0';
@@ -514,7 +510,7 @@ async function assignLeads(agentId) {
   document.getElementById('reassign-warning-modal').style.display = 'none';
 
   await loadLeadsWithFilters();
-  await loadAssignmentHistory(); // keep this here — safe to try
+  await loadAssignmentHistory();
 }
 document.getElementById('prev-page').addEventListener('click', () => {
   if (currentPage > 1) {
