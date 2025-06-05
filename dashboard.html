@@ -354,6 +354,8 @@
   
   <!--<script type="module" src="dashboard.js"></script>-->
   <script type="module">
+    try {
+    alert("✅ INLINE SCRIPT EXECUTED");
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
     
     const supabase = createClient(
@@ -396,7 +398,7 @@
           loadingScreen.style.zIndex = '-1';
         }
         
-        // Show default tab
+        // Show default tabi
         alert("📑 Hiding all tabs and showing default...");
         document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
         const defaultTab = document.getElementById('profile-tab');
@@ -927,6 +929,11 @@
         tbody.appendChild(tr);
       });
     }
+    } catch (fatal) {
+      alert("💥 Top-level crash: " + fatal.message);
+      console.error(fatal);
+    }
+
   </script>
 </body>
 </html>
