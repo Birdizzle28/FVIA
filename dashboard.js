@@ -1,20 +1,23 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm'
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
 const supabase = createClient(
   'https://ddlbgkolnayqrxslzsxn.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
 );
 
-/*alert("Step 3: Checking session from dashboard...");*/
+let currentPage = 1;
+const PAGE_SIZE = 25;
+let rangeStart = null;
+let rangeEnd = null;
+let allAgents = [];
+let selectedLeads = new Set();
+
 document.addEventListener("DOMContentLoaded", async () => {
-  alert("✅ DOM fully loaded and JS is running.");
   const loadingScreen = document.getElementById('loading-screen');
 
   try {
-    alert("🔍 Checking session...");
     const sessionResult = await supabase.auth.getSession();
     const session = sessionResult.data.session;
-    alert("📦 Session result: " + (session ? "Found" : "Missing"));
 
     if (!session) {
       document.body.innerHTML = "<h1>Session not found. Please log in again.</h1>";
@@ -26,61 +29,71 @@ document.addEventListener("DOMContentLoaded", async () => {
       user.email === 'fvinsuranceagency@gmail.com' ||
       user.email === 'johnsondemesi@gmail.com';
 
-    alert("👤 Logged in as: " + user.email + "\nAdmin? " + isAdmin);
-
     document.querySelectorAll('.admin-only').forEach(el => {
       el.style.display = isAdmin ? 'inline' : 'none';
     });
 
     if (loadingScreen) {
-      alert("🧹 Hiding loading screen...");
       loadingScreen.style.display = 'none';
       loadingScreen.style.visibility = 'hidden';
       loadingScreen.style.opacity = '0';
       loadingScreen.style.zIndex = '-1';
     }
 
-    alert("🗂️ Hiding all tabs and showing default...");
     document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
     const defaultTab = document.getElementById('profile-tab');
     if (defaultTab) defaultTab.style.display = 'block';
 
-    alert("📥 Loading agents...");
     await loadAgentsForAdmin();
-    alert("📥 Loading leads...");
     await loadLeadsWithFilters();
 
     if (isAdmin) {
-      alert("📥 Loading requested leads...");
       await loadRequestedLeads();
-
       setTimeout(() => {
-        alert("📖 Loading assignment history...");
         loadAssignmentHistory();
       }, 100);
     }
 
-    alert("✅ Dashboard finished loading.");
   } catch (err) {
     if (loadingScreen) loadingScreen.style.display = 'none';
     document.body.innerHTML = "<h1>Error checking session. Please log in again.</h1>";
-    alert("❌ Exception caught: " + err.message);
     console.error(err);
   }
 });
+
+// Fallback in case loading screen doesn't hide
+setTimeout(() => {
+  const loadingScreen = document.getElementById('loading-screen');
+  if (loadingScreen) {
+    loadingScreen.style.display = 'none';
+    loadingScreen.style.visibility = 'hidden';
+    loadingScreen.style.opacity = '0';
+    loadingScreen.style.zIndex = '-1';
+  }
+}, 8000);
+
+// ========== Flatpickr for Date Range ==========
+flatpickr("#date-range", {
+  mode: "range",
+  dateFormat: "Y-m-d",
+  onChange: function (selectedDates) {
+    rangeStart = selectedDates[0]?.toISOString().split('T')[0] || null;
+    rangeEnd = selectedDates[1]?.toISOString().split('T')[0] || null;
+    loadLeadsWithFilters();
+  }
+});
+
+// ========== Phone Number Input Setup ==========
 function formatPhone(input) {
   input.addEventListener('input', () => {
     let numbers = input.value.replace(/\D/g, '');
     let formatted = '';
-
     if (numbers.length > 0) formatted += '(' + numbers.substring(0, 3);
     if (numbers.length >= 4) formatted += ') ' + numbers.substring(3, 6);
     if (numbers.length >= 7) formatted += '-' + numbers.substring(6, 10);
-
     input.value = formatted;
   });
 }
-
 function addPhoneInput() {
   const container = document.getElementById('phone-inputs');
   const line = document.createElement('div');
@@ -103,15 +116,93 @@ function addPhoneInput() {
   container.appendChild(line);
 }
 
-// Apply format to existing phone inputs
 document.querySelectorAll('input[name="lead-phone"]').forEach(formatPhone);
-
 const addBtn = document.querySelector('.add-phone-btn');
-if (addBtn) {
-  addBtn.addEventListener('click', () => {
-    addPhoneInput();
+if (addBtn) addBtn.addEventListener('click', addPhoneInput);
+
+// ========== Tab Switching ==========
+document.querySelectorAll('nav a[data-tab]').forEach(link => {
+  link.addEventListener('click', e => {
+    e.preventDefault();
+    document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+    document.querySelectorAll('nav a').forEach(link => link.classList.remove('active'));
+    const tabId = link.getAttribute('data-tab');
+    const tab = document.getElementById(tabId);
+    if (tab) tab.style.display = 'block';
+    link.classList.add('active');
+  });
+});
+
+// ========== Lead Form ==========
+const leadForm = document.getElementById('lead-form');
+if (leadForm) {
+  leadForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const user = (await supabase.auth.getSession()).data.session.user;
+      const leadData = {
+        first_name: document.getElementById('lead-first').value.trim(),
+        last_name: document.getElementById('lead-last').value.trim(),
+        age: parseInt(document.getElementById('lead-age').value),
+        address: document.getElementById('lead-address').value.trim(),
+        city: document.getElementById('lead-city').value.trim(),
+        zip: document.getElementById('lead-zip').value.trim(),
+        phone: Array.from(document.querySelectorAll('input[name="lead-phone"]')).map(input => input.value.trim()).filter(Boolean),
+        lead_type: document.getElementById('lead-type').value,
+        notes: document.getElementById('lead-notes').value.trim(),
+        submitted_by: user.id,
+        assigned_to: user.id,
+        assigned_at: new Date().toISOString(),
+      };
+      const { error } = await supabase.from('leads').insert(leadData);
+      if (error) alert("Error submitting lead: " + error.message);
+      else {
+        alert("Lead submitted successfully!");
+        leadForm.reset();
+      }
+    } catch (err) {
+      alert("Unexpected error: " + err.message);
+    }
   });
 }
+
+// ========== Lead Request Form ==========
+const leadRequestForm = document.getElementById('lead-request-form');
+const requestMessage = document.getElementById('request-message');
+
+if (leadRequestForm) {
+  leadRequestForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    requestMessage.textContent = "Submitting request...";
+    try {
+      const session = await supabase.auth.getSession();
+      const user = session.data.session.user;
+      const requestData = {
+        city: document.getElementById('request-city').value.trim(),
+        zip: document.getElementById('request-zip').value.trim(),
+        lead_type: document.getElementById('request-type').value,
+        requested_count: parseInt(document.getElementById('request-count').value),
+        notes: document.getElementById('request-notes').value.trim(),
+        submitted_by: user.id,
+        submitted_by_name: profileData?.full_name || 'Unknown'
+      };
+      const { error } = await supabase.from('lead_requests').insert(requestData);
+      if (error) {
+        requestMessage.textContent = "Error: " + error.message;
+        requestMessage.style.color = "red";
+      } else {
+        requestMessage.textContent = "Request submitted successfully!";
+        requestMessage.style.color = "green";
+        leadRequestForm.reset();
+      }
+    } catch (err) {
+      requestMessage.textContent = "Unexpected error: " + err.message;
+      requestMessage.style.color = "red";
+    }
+  });
+}
+
+// Next part includes `loadRequestedLeads`, `loadAgentsForAdmin`, `loadLeadsWithFilters`, `assignLeads`, filters, pagination, and audit log logic — I'll send that immediately next in a second message to avoid truncation.
 /*setTimeout(() => {
   const loadingScreen = document.getElementById('loading-screen');
   if (loadingScreen) {
