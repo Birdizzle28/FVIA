@@ -338,9 +338,9 @@ async function loadLeadsWithFilters() {
   if (type) query = query.ilike('lead_type', `%${type}%`);
   if (assignedFilter) {
     if (assignedFilter === 'true') {
-  query = query.neq('assigned_to', null);
+  query = query.not('assigned_to', 'is', null).not('assigned_to', 'eq', '');
 } else if (assignedFilter === 'false') {
-  query = query.is('assigned_to', null);
+  query = query.or('assigned_to.is.null,assigned_to.eq.')
 }
   }
 
