@@ -350,19 +350,22 @@ async function loadLeadsWithFilters() {
     const tr = document.createElement('tr');
 
     const checkboxTd = document.createElement('td');
-    if (!lead.assigned_to) {
-      const checkbox = document.createElement('input');
-      checkbox.type = 'checkbox';
-      checkbox.dataset.leadId = lead.id;
-      checkbox.addEventListener('change', (e) => {
-        if (e.target.checked) selectedLeads.add(lead.id);
-        else selectedLeads.delete(lead.id);
-        document.getElementById('selected-count').textContent = selectedLeads.size;
-        document.getElementById('bulk-assign-controls').style.display = selectedLeads.size > 0 ? 'block' : 'none';
-      });
-      checkboxTd.appendChild(checkbox);
-    }
-    tr.appendChild(checkboxTd);
+const checkbox = document.createElement('input');
+checkbox.type = 'checkbox';
+checkbox.dataset.leadId = lead.id;
+
+checkbox.addEventListener('change', (e) => {
+  if (e.target.checked) {
+    selectedLeads.add(lead.id);
+  } else {
+    selectedLeads.delete(lead.id);
+  }
+  document.getElementById('selected-count').textContent = selectedLeads.size;
+  document.getElementById('bulk-assign-controls').style.display = selectedLeads.size > 0 ? 'block' : 'none';
+});
+
+checkboxTd.appendChild(checkbox);
+tr.appendChild(checkboxTd);
 
     const agentName = allAgents.find(a => a.id === lead.assigned_to)?.full_name || 'Unassigned';
 
