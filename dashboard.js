@@ -337,8 +337,11 @@ async function loadLeadsWithFilters() {
   if (last) query = query.ilike('last_name', `%${last}%`);
   if (type) query = query.ilike('lead_type', `%${type}%`);
   if (assignedFilter) {
-    if (assignedFilter === 'true') query = query.neq('assigned_to', null);
-    else query = query.is('assigned_to', null);
+    if (assignedFilter === 'true') {
+  query = query.neq('assigned_to', null);
+} else if (assignedFilter === 'false') {
+  query = query.is('assigned_to', null);
+}
   }
 
   query = query.order('created_at', { ascending: order === 'asc' });
