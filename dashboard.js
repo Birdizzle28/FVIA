@@ -59,6 +59,16 @@ if (isAdmin) {
     console.error(err);
   }
 });
+setTimeout(() => {
+  const loadingScreen = document.getElementById('loading-screen');
+  if (loadingScreen) {
+    loadingScreen.style.display = 'none';
+    loadingScreen.style.visibility = 'hidden';
+    loadingScreen.style.opacity = '0';
+    loadingScreen.style.zIndex = '-1';
+    alert("⚠️ Fallback triggered: forcibly hid the loader.");
+  }
+}, 8000); // 8 seconds
 let currentPage = 1;
 const PAGE_SIZE = 25;
 let rangeStart = null;
