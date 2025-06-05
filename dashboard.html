@@ -360,6 +360,40 @@ await loadAssignmentHistory();
     document.getElementById('lead-form').reset();
   }
 });
+  document.getElementById('lead-request-form').addEventListener('submit', async (e) => {
+  e.preventDefault(); // 🚫 Stop page from reloading
+  alert("📨 Request Leads form submitted");
+
+  const city = document.getElementById('request-city').value.trim();
+  const zip = document.getElementById('request-zip').value.trim();
+  const type = document.getElementById('request-type').value;
+  const count = parseInt(document.getElementById('request-count').value);
+  const notes = document.getElementById('request-notes').value.trim();
+
+  const { data: { session } } = await supabase.auth.getSession();
+  const userId = session?.user?.id;
+
+  if (!userId) {
+    alert('❌ Not logged in.');
+    return;
+  }
+
+  const { error } = await supabase.from('lead_requests').insert({
+    submitted_by: userId,
+    request_city: city,
+    request_zip: zip,
+    lead_type: type,
+    requested_count: count,
+    notes
+  });
+
+  if (error) {
+    alert('❌ Failed to submit request: ' + error.message);
+  } else {
+    alert('✅ Request submitted!');
+    document.getElementById('lead-request-form').reset();
+  }
+});
   document.getElementById('phone-inputs').addEventListener('click', (e) => {
   // ADD PHONE
   if (e.target && e.target.classList.contains('add-phone-btn')) {
