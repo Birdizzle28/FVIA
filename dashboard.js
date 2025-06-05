@@ -8,63 +8,47 @@ const supabase = createClient(
 /*alert("Step 3: Checking session from dashboard...");*/
 
 document.addEventListener("DOMContentLoaded", async () => {
-  /*alert("Step 4: DOM loaded, checking Supabase session...");*/
-
+  const loadingScreen = document.getElementById('loading-screen');
   try {
     const sessionResult = await supabase.auth.getSession();
-    /*alert("Step 5: Session result received!");*/
-
     const session = sessionResult.data.session;
+
     if (!session) {
-      /*alert("Step 6: No session found");*/
       document.body.innerHTML = "<h1>Session not found. Please log in again.</h1>";
       return;
     }
 
-   /* alert("Step 7: Session found! Email: " + session.user.email);*/
-
-    // ✅ Step 8: Admin check
     const user = session.user;
     const isAdmin =
       user.email === 'fvinsuranceagency@gmail.com' ||
       user.email === 'johnsondemesi@gmail.com';
 
-   /* alert("Step 8: Admin status: " + isAdmin);*/
-
-    // ✅ Step 9: Show/hide admin-only elements
     document.querySelectorAll('.admin-only').forEach(el => {
       el.style.display = isAdmin ? 'inline' : 'none';
     });
 
-   /* alert("Step 9: Admin-only elements updated.");*/
+    // Hide the loading screen
+    if (loadingScreen) {
+      loadingScreen.style.display = 'none';
+      loadingScreen.style.visibility = 'hidden';
+      loadingScreen.style.opacity = '0';
+      loadingScreen.style.zIndex = '-1';
+    }
 
-    const loadingScreen = document.getElementById('loading-screen');
-if (loadingScreen) {
-  loadingScreen.style.display = 'none';
-  loadingScreen.style.visibility = 'hidden';
-  loadingScreen.style.opacity = '0';
-  loadingScreen.style.zIndex = '-1';
-}
-/*alert("Step 10: Loading screen hidden.");*/
-    // ✅ Only call once inside your main DOMContentLoaded block
-// Only preload requested leads, but keep it hidden until tab click
-if (isAdmin) {
-  await loadRequestedLeads();
-  // Ensure it's hidden just in case
-  const adminTab = document.getElementById('admin-requested-tab');
-  if (adminTab) adminTab.style.display = 'none';
-} 
-    document.querySelectorAll('.tab-content').forEach(tab => {
-  tab.style.display = 'none';
-});
+    // Setup tab behavior
+    document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
+    const defaultTab = document.getElementById('profile-tab');
+    if (defaultTab) defaultTab.style.display = 'block';
 
-const defaultTab = document.getElementById('profile-tab');
-if (defaultTab) {
-  defaultTab.style.display = 'block';
-}
+    // Admin load
+    await loadAgentsForAdmin();
+    await loadLeadsWithFilters();
+    if (isAdmin) await loadRequestedLeads();
+
   } catch (err) {
-    alert("Step X: Error while checking session: " + err.message);
+    if (loadingScreen) loadingScreen.style.display = 'none';
     document.body.innerHTML = "<h1>Error checking session. Please log in again.</h1>";
+    console.error(err);
   }
 });
 let currentPage = 1;
