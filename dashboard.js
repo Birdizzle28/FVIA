@@ -6,12 +6,15 @@ const supabase = createClient(
 );
 
 /*alert("Step 3: Checking session from dashboard...");*/
-/*document.addEventListener("DOMContentLoaded", async () => {
+document.addEventListener("DOMContentLoaded", async () => {
   alert("✅ DOM fully loaded and JS is running.");
   const loadingScreen = document.getElementById('loading-screen');
+
   try {
+    alert("🔍 Checking session...");
     const sessionResult = await supabase.auth.getSession();
     const session = sessionResult.data.session;
+    alert("📦 Session result: " + (session ? "Found" : "Missing"));
 
     if (!session) {
       document.body.innerHTML = "<h1>Session not found. Please log in again.</h1>";
@@ -23,42 +26,49 @@ const supabase = createClient(
       user.email === 'fvinsuranceagency@gmail.com' ||
       user.email === 'johnsondemesi@gmail.com';
 
+    alert("👤 Logged in as: " + user.email + "\nAdmin? " + isAdmin);
+
     document.querySelectorAll('.admin-only').forEach(el => {
       el.style.display = isAdmin ? 'inline' : 'none';
     });
 
-    // Hide the loading screen
     if (loadingScreen) {
+      alert("🧹 Hiding loading screen...");
       loadingScreen.style.display = 'none';
       loadingScreen.style.visibility = 'hidden';
       loadingScreen.style.opacity = '0';
       loadingScreen.style.zIndex = '-1';
     }
 
-    // Setup tab behavior
+    alert("🗂️ Hiding all tabs and showing default...");
     document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
     const defaultTab = document.getElementById('profile-tab');
     if (defaultTab) defaultTab.style.display = 'block';
 
-    // Admin load
+    alert("📥 Loading agents...");
     await loadAgentsForAdmin();
+    alert("📥 Loading leads...");
     await loadLeadsWithFilters();
 
-if (isAdmin) {
-  await loadRequestedLeads();
+    if (isAdmin) {
+      alert("📥 Loading requested leads...");
+      await loadRequestedLeads();
 
-  // Wait for the DOM to settle fully before running history
-  setTimeout(() => {
-    loadAssignmentHistory();
-  }, 100); // 100ms delay
-}
+      setTimeout(() => {
+        alert("📖 Loading assignment history...");
+        loadAssignmentHistory();
+      }, 100);
+    }
+
+    alert("✅ Dashboard finished loading.");
   } catch (err) {
     if (loadingScreen) loadingScreen.style.display = 'none';
     document.body.innerHTML = "<h1>Error checking session. Please log in again.</h1>";
+    alert("❌ Exception caught: " + err.message);
     console.error(err);
   }
 });
-setTimeout(() => {
+/*setTimeout(() => {
   const loadingScreen = document.getElementById('loading-screen');
   if (loadingScreen) {
     loadingScreen.style.display = 'none';
