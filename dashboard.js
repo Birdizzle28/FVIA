@@ -399,7 +399,7 @@ const cells = [
 
 // ========== APPLY FILTERS ==========
 document.getElementById('apply-filters').addEventListener('click', loadLeadsWithFilters);
-
+document.getElementById('assigned-filter').addEventListener('change', loadLeadsWithFilters);
 // ========== BULK ASSIGN ==========
 document.getElementById('bulk-assign-btn').addEventListener('click', async () => {
   const agentId = document.getElementById('bulk-assign-agent').value;
