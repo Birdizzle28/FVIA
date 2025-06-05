@@ -490,7 +490,9 @@ const updates = Array.from(selectedLeads).map(leadId => ({
 
   alert("📦 Updates payload:\n" + JSON.stringify(updates, null, 2));
 
-  const { error } = await supabase.from('leads').upsert(updates, { onConflict: 'id' });
+  const { error } = await supabase.from('leads')
+  .update({ assigned_to: agentId, assigned_at: new Date().toISOString() })
+  .in('id', Array.from(selectedLeads));
 
   if (error) {
     alert("❌ Supabase error: " + error.message);
