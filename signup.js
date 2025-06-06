@@ -42,7 +42,10 @@ if (signupForm) {
       // 2️⃣ Register the user with Supabase Auth (triggers confirmation email if enabled)
       const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
         email: email,
-        password: password
+        password: password,
+        options: {
+          emailRedirectTo: 'https://fv-ia.com/confirm.html'
+        }
       });
       if (signUpError) {
         // Sign-up failed (e.g., email already in use)
