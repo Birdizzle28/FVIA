@@ -32,6 +32,8 @@ if (signupForm) {
         .eq('agent_id', agentId)
         .eq('is_registered', false)
         .single();
+
+      message.textContent = JSON.stringify({ agentCheckError, approvedAgent }, null, 2);
       if (agentCheckError || !approvedAgent) {
         // If no matching record or already registered, show error
         showAlert("⚠️ Invalid agent ID or this agent is already registered.");
