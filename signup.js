@@ -72,11 +72,10 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
   }
 
   // Get session
-  const { data: sessionData, error: sessionError } = await supabase.auth.getSession()
-  const userId = sessionData?.session?.user?.id
+  const userId = signUpData?.user?.id
 
-  if (!userId || sessionError) {
-    message.textContent = 'Signup complete, but could not verify session. Contact admin.'
+  if (!userId) {
+    message.textContent = 'Signup complete, but user ID not available yet. Please check your email to confirm.';
     return
   }
 
