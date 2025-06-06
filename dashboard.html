@@ -908,7 +908,15 @@
     
       const { data, error } = await supabase
         .from('lead_assignments')
-        .select('assigned_at, lead_id, assigned_to, assigned_by')
+        .select(`
+          id,
+          lead_id,
+          assigned_at,
+          assigned_to,
+          assigned_by,
+          assigned_to_agent:assigned_to ( full_name ),
+          assigned_by_agent:assigned_by ( full_name )
+        `)
         .order('assigned_at', { ascending: false });
     
       if (error) {
