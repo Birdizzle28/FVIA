@@ -897,7 +897,9 @@
     document.getElementById('submit-anyway-btn').addEventListener('click', () => {
       const agentId = document.getElementById('bulk-assign-agent').value;
       assignLeads(agentId);
+      document.getElementById('reassign-warning-modal').style.display = 'none'; // ✅ This hides the modal
     });
+    
     document.getElementById('cancel-reassign-btn').addEventListener('click', () => {
       document.getElementById('reassign-warning-modal').style.display = 'none';
     });
