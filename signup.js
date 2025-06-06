@@ -32,7 +32,7 @@ if (signupForm) {
         .eq('agent_id', agentId)
         .eq('is_active', false)
         .single();
-      if (agentCheckError || !approvedAgent) {
+      if (agentCheckError || approvedAgent) {
         // If no matching record or already registered, show error
         showAlert("⚠️ Invalid agent ID or this agent is already registered.");
         return;
