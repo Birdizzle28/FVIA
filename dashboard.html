@@ -909,13 +909,10 @@
       const { data, error } = await supabase
         .from('lead_assignments')
         .select(`
-          id,
           lead_id,
           assigned_at,
-          assigned_to,
-          assigned_by,
-          assigned_to_agent:assigned_to ( full_name ),
-          assigned_by_agent:assigned_by ( full_name )
+          assigned_to_agent:assigned_to(full_name),
+          assigned_by_agent:assigned_by(full_name)
         `)
         .order('assigned_at', { ascending: false });
     
@@ -933,11 +930,14 @@
       tbody.innerHTML = '';
       data.forEach(entry => {
         const tr = document.createElement('tr');
+        const assignedToName = entry.assigned_to_agent?.full_name || entry.assigned_to;
+        const assignedByName = entry.assigned_by_agent?.full_name || entry.assigned_by;
+    
         tr.innerHTML = `
           <td>${new Date(entry.assigned_at).toLocaleString()}</td>
           <td>${entry.lead_id}</td>
-          <td>${entry.assigned_to_agent?.full_name || 'Unknown'}</td>
-          <td>${entry.assigned_by_agent?.full_name || 'Unknown'}</td>
+          <td>${assignedToName}</td>
+          <td>${assignedByName}</td>
         `;
         tbody.appendChild(tr);
       });
