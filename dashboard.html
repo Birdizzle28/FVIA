@@ -936,8 +936,8 @@
         tr.innerHTML = `
           <td>${new Date(entry.assigned_at).toLocaleString()}</td>
           <td>${entry.lead_id}</td>
-          <td>${entry.assigned_to}</td>
-          <td>${entry.assigned_by}</td>
+          <td>${entry.assigned_to_agent?.full_name || 'Unknown'}</td>
+          <td>${entry.assigned_by_agent?.full_name || 'Unknown'}</td>
         `;
         tbody.appendChild(tr);
       });
