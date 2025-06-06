@@ -30,9 +30,9 @@ if (signupForm) {
         .from('approved_agents')
         .select('*')
         .eq('agent_id', agentId)
-        .eq('is_active', false)
+        .eq('is_registered', false)
         .single();
-      if (agentCheckError || approvedAgent) {
+      if (agentCheckError || !approvedAgent) {
         // If no matching record or already registered, show error
         showAlert("⚠️ Invalid agent ID or this agent is already registered.");
         return;
@@ -70,7 +70,7 @@ if (signupForm) {
         const { error: updateError } = await supabase
           .from('approved_agents')
           .update({
-            is_active: true,
+            is_registered: true,
             first_name: firstName,
             last_name: lastName,
             email: email
@@ -88,7 +88,7 @@ if (signupForm) {
         const { error: updateError } = await supabase
           .from('approved_agents')
           .update({
-            is_active: true,
+            is_registered: true,
             first_name: firstName,
             last_name: lastName,
             email: email
