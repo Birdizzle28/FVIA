@@ -81,7 +81,6 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
 
   // Insert into agents
   const profile = {
-    id: userId,
     agent_id: agentId,
     email,
     full_name: `${firstName} ${lastName}`,
