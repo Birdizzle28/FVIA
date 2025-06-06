@@ -44,7 +44,7 @@ if (signupForm) {
         email: email,
         password: password,
         options: {
-          emailRedirectTo: 'https://fv-ia.com/confirm.html'
+          emailRedirectTo: 'https://fv-ia.com/confirmed.html'
         }
       });
       if (signUpError) {
