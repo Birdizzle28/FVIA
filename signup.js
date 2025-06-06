@@ -184,3 +184,84 @@ if (loginForm) {
     }
   });
 }
+
+// ✅ Email confirmation landing logic for confirmed.html
+const onConfirmedPage = window.location.pathname.includes('confirmed.html');
+
+if (onConfirmedPage) {
+  const statusBox = document.getElementById('status');
+  if (statusBox) statusBox.textContent = '⏳ Finishing setup...';
+
+  supabase.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      const user = session.user;
+      const email = user.email;
+
+      try {
+        // 1. Check if agent profile already exists
+        const { data: existing } = await supabase
+          .from('agents')
+          .select('id')
+          .eq('id', user.id)
+          .single();
+
+        if (!existing) {
+          // 2. Fetch approved agent info
+          const { data: approved, error: fetchErr } = await supabase
+            .from('approved_agents')
+            .select('agent_id, first_name, last_name')
+            .eq('email', email)
+            .single();
+
+          if (fetchErr || !approved) {
+            if (statusBox) statusBox.textContent = '⚠️ Approved agent record not found.';
+            return;
+          }
+
+          // 3. Insert into agents table
+          const { error: insertErr } = await supabase.from('agents').insert({
+            id: user.id,
+            agent_id: approved.agent_id,
+            first_name: approved.first_name,
+            last_name: approved.last_name,
+            full_name: `${approved.first_name} ${approved.last_name}`,
+            email: email,
+            is_active: true,
+            is_admin: false
+          });
+
+          if (insertErr) {
+            if (statusBox) statusBox.textContent = '❌ Failed to create agent profile.';
+            console.error(insertErr);
+            return;
+          }
+        }
+
+        // 4. Update approved_agents to mark registered
+        const { error: updateErr } = await supabase
+          .from('approved_agents')
+          .update({ is_registered: true })
+          .eq('email', email);
+
+        if (updateErr) {
+          console.warn('Could not update approved_agents:', updateErr);
+        }
+
+        // 5. Redirect to login
+        if (statusBox) statusBox.textContent = '✅ All set! Redirecting to login...';
+        setTimeout(() => {
+          window.location.href = 'login.html';
+        }, 3000);
+      } catch (err) {
+        if (statusBox) statusBox.textContent = '❌ Something went wrong.';
+        console.error(err);
+      }
+    }
+  });
+
+  // fallback: force reload if session exists but onAuthStateChange missed it
+  const { data: session } = await supabase.auth.getSession();
+  if (session && session.session) {
+    window.location.reload();
+  }
+}
