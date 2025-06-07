@@ -10,10 +10,10 @@ const isSignupPage = path.includes('signup.html');
 const isConfirmedPage = path.includes('confirmed.html');
 
 // SIGN-UP PAGE HANDLER
-if (isSignupPage) {
-  const signupForm = document.getElementById('signup-form');
-  const message = document.getElementById('message');
+const signupForm = document.getElementById('signup-form');
+const message = document.getElementById('message');
 
+if (signupForm) {
   signupForm.addEventListener('submit', async (event) => {
     event.preventDefault();
 
@@ -27,6 +27,11 @@ if (isSignupPage) {
       message.textContent = '⚠️ Please fill in all fields.';
       return;
     }
+
+    alert("✅ JS is working!"); // ← just for testing
+    // rest of signup logic here
+  });
+}
 
     const { data: approved, error: checkError } = await supabase
       .from('approved_agents')
