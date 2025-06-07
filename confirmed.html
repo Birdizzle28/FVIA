@@ -99,9 +99,10 @@
 	      }
 	    });
 	
-	    if (signUpError) {
-	      status.textContent = '❌ Signup failed: ' + signUpError.message;
-	      return;
+	    if (insertErr) {
+		  status.textContent = '❌ Failed to insert agent profile:\n' + JSON.stringify(insertErr, null, 2);
+		  return;
+		}
 	    }
 	
 	    status.textContent = '✅ Sign-up successful. Check your email to confirm.';
