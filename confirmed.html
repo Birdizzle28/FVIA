@@ -53,74 +53,71 @@
 		<p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
 	</footer>
 	<script type="module">
-	  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+	import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 	
-	  const supabase = createClient(
-	    'https://ddlbgkolnayqrxslzsxn.supabase.co',
-	    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
-	  );
+	const supabase = createClient(
+	  'https://ddlbgkolnayqrxslzsxn.supabase.co',
+	  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
+	);
 	
-	  const form = document.getElementById('signup-form');
-	  const status = document.getElementById('status');
-	  const message = document.getElementById('message');
+	const status = document.getElementById('status');
+	status.textContent = '⏳ Checking session...';
 	
-	  form.addEventListener('submit', async (event) => {
-	    event.preventDefault();
-	    status.textContent = '⏳ Signing up...';
+	const { data, error } = await supabase.auth.getSession();
+	const session = data?.session;
 	
-	    const agentId = document.getElementById('agent-id').value.trim();
-	    const firstName = document.getElementById('first-name').value.trim();
-	    const lastName = document.getElementById('last-name').value.trim();
-	    const email = document.getElementById('email').value.trim();
-	    const password = document.getElementById('password').value;
+	if (!session || !session.user) {
+	  status.textContent = '⚠️ No active session found. Try logging in again.';
+	} else {
+	  const user = session.user;
+	  const email = user.email;
 	
-	    if (!agentId || !firstName || !lastName || !email || !password) {
-	      status.textContent = '⚠️ Fill out all fields.';
-	      return;
-	    }
+	  status.textContent = '🔑 Session loaded for ' + email;
 	
-	    const { data: approved, error: checkErr } = await supabase
+	  const { data: exists } = await supabase
+	    .from('agents')
+	    .select('id')
+	    .eq('id', user.id)
+	    .single();
+	
+	  if (exists) {
+	    status.textContent = '✅ Agent already exists. Redirecting to login...';
+	    setTimeout(() => window.location.href = 'login.html', 3000);
+	  } else {
+	    const { data: approved, error: fetchErr } = await supabase
 	      .from('approved_agents')
-	      .select('*')
-	      .eq('agent_id', agentId)
-	      .eq('is_registered', false)
+	      .select('agent_id, first_name, last_name')
+	      .eq('email', email)
 	      .single();
 	
-	    if (checkErr || !approved) {
-	      status.textContent = '❌ Invalid or already registered agent ID.';
-	      return;
-	    }
+	    if (fetchErr || !approved) {
+	      status.textContent = '❌ Approved agent not found.';
+	    } else {
+	      const { error: insertErr } = await supabase.from('agents').insert({
+	        id: user.id,
+	        agent_id: approved.agent_id,
+	        first_name: approved.first_name,
+	        last_name: approved.last_name,
+	        full_name: `${approved.first_name} ${approved.last_name}`,
+	        email: email,
+	        is_active: true,
+	        is_admin: false
+	      });
 	
-	    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-	      email,
-	      password,
-	      options: {
-		emailRedirectTo: 'https://fv-ia.com/confirmed.html'
+	      if (insertErr) {
+	        status.textContent = '❌ Failed to insert agent: ' + insertErr.message;
+	      } else {
+	        await supabase
+	          .from('approved_agents')
+	          .update({ is_registered: true })
+	          .eq('email', email);
+	
+	        status.textContent = '🎉 Agent added! Redirecting to login...';
+	        setTimeout(() => window.location.href = 'login.html', 3000);
 	      }
-	    });
-	
-	    if (insertErr) {
-		  status.textContent = '❌ Failed to insert agent profile:\n' + JSON.stringify(insertErr, null, 2);
-		  return;
-		}
 	    }
-	
-	    status.textContent = '✅ Sign-up successful. Check your email to confirm.';
-	
-	    const { error: updateErr } = await supabase
-	      .from('approved_agents')
-	      .update({
-		is_registered: true,
-		first_name: firstName,
-		last_name: lastName,
-		email: email
-	      })
-	      .eq('agent_id', agentId);
-	
-	    if (updateErr) {
-	      message.textContent = '⚠️ Warning: couldn’t update agent record.';
-	    }
-	  });
+	  }
+	}
 	</script>
 </body>
 </html>
