@@ -5,7 +5,6 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Signup Confirmed | Family Values Insurance Agency</title>
 	<link rel="stylesheet" href="style.css">
-  <script type="module" src="signup.js"></script>
 	<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet">
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
@@ -53,5 +52,74 @@
 		</div>
 		<p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
 	</footer>
+	<script type="module">
+	  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+	
+	  const supabase = createClient(
+	    'https://ddlbgkolnayqrxslzsxn.supabase.co',
+	    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
+	  );
+	
+	  const form = document.getElementById('signup-form');
+	  const status = document.getElementById('status');
+	  const message = document.getElementById('message');
+	
+	  form.addEventListener('submit', async (event) => {
+	    event.preventDefault();
+	    status.textContent = '⏳ Signing up...';
+	
+	    const agentId = document.getElementById('agent-id').value.trim();
+	    const firstName = document.getElementById('first-name').value.trim();
+	    const lastName = document.getElementById('last-name').value.trim();
+	    const email = document.getElementById('email').value.trim();
+	    const password = document.getElementById('password').value;
+	
+	    if (!agentId || !firstName || !lastName || !email || !password) {
+	      status.textContent = '⚠️ Fill out all fields.';
+	      return;
+	    }
+	
+	    const { data: approved, error: checkErr } = await supabase
+	      .from('approved_agents')
+	      .select('*')
+	      .eq('agent_id', agentId)
+	      .eq('is_registered', false)
+	      .single();
+	
+	    if (checkErr || !approved) {
+	      status.textContent = '❌ Invalid or already registered agent ID.';
+	      return;
+	    }
+	
+	    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+	      email,
+	      password,
+	      options: {
+		emailRedirectTo: 'https://fv-ia.com/confirmed.html'
+	      }
+	    });
+	
+	    if (signUpError) {
+	      status.textContent = '❌ Signup failed: ' + signUpError.message;
+	      return;
+	    }
+	
+	    status.textContent = '✅ Sign-up successful. Check your email to confirm.';
+	
+	    const { error: updateErr } = await supabase
+	      .from('approved_agents')
+	      .update({
+		is_registered: true,
+		first_name: firstName,
+		last_name: lastName,
+		email: email
+	      })
+	      .eq('agent_id', agentId);
+	
+	    if (updateErr) {
+	      message.textContent = '⚠️ Warning: couldn’t update agent record.';
+	    }
+	  });
+	</script>
 </body>
 </html>
