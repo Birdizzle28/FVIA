@@ -3,15 +3,14 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<title>About Us | Family Values Insurance Agency</title>
+	<title>Email Confirmed | Family Values Insurance Agency</title>
 	<link rel="stylesheet" href="style.css">
-	<script type="module" src="signup.js"></script>
 	<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet">
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body id="indexbody">
 	<header class="index-grid-header">
-		<a href="index.html"><img href="index.html" id="headerlogo" src="Pics/img6.png" alt=""></a>
+		<a href="index.html"><img id="headerlogo" src="Pics/img6.png" alt=""></a>
 		<p><strong>Family Values Insurance Agency</strong></p>
 		<hr>
 		<nav class="header-flex-container">
@@ -22,27 +21,12 @@
 		</nav>
 		<hr>
 	</header>
+
 	<div class="auth-container">
-		<h2>Agent Sign-Up</h2>
-		<form id="signup-form">
-			<input type="text" id="first-name" placeholder="First Name" required>
-			<input type="text" id="last-name" placeholder="Last Name" required>
-			<input type="text" id="agent-id" placeholder="Agent ID (xx-xxxxxxx)" required>
-			<input type="email" id="email" placeholder="Email (used as username)" required>
-			<div class="password-wrapper">
-				<input type="password" id="password" placeholder="Password" required>
-				<span toggle="#password" class="fa fa-eye toggle-password"></span>
-			</div>
-			<div class="password-wrapper">
-				<input type="password" id="confirm-password" placeholder="Confirm Password" required>
-				<span toggle="#confirm-password" class="fa fa-eye toggle-password"></span>
-			</div>
-			<button type="submit">Sign Up</button>
-		</form>
-		<p class="switch-auth">Already have an account? <a href="login.html">Sign in here</a>.</p>
-		<p id="status">Activating your account…</p>
-		<p id="message"></p>
+		<h2>Confirming Your Email</h2>
+		<p id="status">⏳ Preparing...</p>
 	</div>
+
 	<footer class="index-grid-footer">
 		<img id="footerlogo" src="Pics/img6.png">
 		<hr class="footerhr">
@@ -51,7 +35,7 @@
 				<span class="fa fa-envelope"></span>
 				<span class="contactcontcontacts">fvinsuranceagency@gmail.com</span>
 			</a>
-				<a class="contactcontainer" href="tel:+17316934739">
+			<a class="contactcontainer" href="tel:+17316934739">
 				<span class="fa fa-phone"></span>
 				<span class="contactcontcontacts">(731) 693-4739</span>
 			</a>
@@ -66,5 +50,8 @@
 		</div>
 		<p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
 	</footer>
+
+	<!-- ✅ Load confirmed.js ONLY -->
+	<script type="module" src="confirmed.js"></script>
 </body>
 </html>
