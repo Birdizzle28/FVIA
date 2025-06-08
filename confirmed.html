@@ -82,53 +82,62 @@
 	    .single();
 	
 	  if (exists) {
-	    status.textContent = '✅ Agent already exists. Redirecting to login...';
-	    setTimeout(() => window.location.href = 'login.html', 3000);
-	  } else {
-	    const agentId = user.user_metadata?.agent_id;
-
-		if (!agentId) {
-		  status.textContent = '❌ Agent ID missing in user metadata.';
-		  return;
-		}
-		
-		const { data: approved, error: fetchErr } = await supabase
-		  .from('approved_agents')
-		  .select('agent_id')
-		  .eq('agent_id', agentId)
-		  .single();
-			
-	    if (fetchErr || !approved) {
-	      status.textContent = '❌ Approved agent not found.';
-	    } else {
-	      const { error: insertErr } = await supabase.from('agents').insert({
-		  id: user.id,
-		  agent_id: agentId,
-		  first_name: user.user_metadata.first_name,
-		  last_name: user.user_metadata.last_name,
-		  full_name: `${user.user_metadata.first_name} ${user.user_metadata.last_name}`,
-		  email: email,
-		  is_active: true,
-		  is_admin: false
-		});
-		
-		status.textContent = '📦 Inserting agent: ' + JSON.stringify(payload);
-		
-		const { data: insertData, error: insertErr } = await supabase
-		  .from('agents')
-		  .insert(payload);
-		
-		if (insertErr) {
-		  status.textContent = '❌ INSERT error: ' + insertErr.message;
-		} else if (!insertData || insertData.length === 0) {
-		  status.textContent = '❌ INSERT returned no data. Possibly duplicate ID?';
+		  status.textContent = '✅ Agent already exists. Redirecting to login...';
+		  setTimeout(() => window.location.href = 'login.html', 3000);
 		} else {
+		  const agentId = user.user_metadata?.agent_id;
+		  const firstName = user.user_metadata?.first_name;
+		  const lastName = user.user_metadata?.last_name;
+		
+		  if (!agentId || !firstName || !lastName) {
+		    status.textContent = '❌ Missing user metadata.';
+		    return;
+		  }
+		
+		  const { data: approved, error: fetchErr } = await supabase
+		    .from('approved_agents')
+		    .select('agent_id')
+		    .eq('agent_id', agentId)
+		    .single();
+		
+		  if (fetchErr || !approved) {
+		    status.textContent = '❌ Approved agent not found.';
+		    return;
+		  }
+		
+		  const payload = {
+		    id: user.id,
+		    agent_id: agentId,
+		    first_name: firstName,
+		    last_name: lastName,
+		    full_name: `${firstName} ${lastName}`,
+		    email: email,
+		    is_active: true,
+		    is_admin: false
+		  };
+		
+		  status.textContent = '📦 Inserting agent...';
+		
+		  const { data: insertData, error: insertErr } = await supabase
+		    .from('agents')
+		    .insert(payload);
+		
+		  if (insertErr) {
+		    status.textContent = '❌ INSERT error: ' + insertErr.message;
+		    return;
+		  }
+		
+		  if (!insertData || insertData.length === 0) {
+		    status.textContent = '❌ INSERT returned no data. Possibly duplicate ID?';
+		    return;
+		  }
+		
 		  status.textContent = '✅ Agent inserted. Now updating approved_agents...';
 		
 		  const { error: updateErr } = await supabase
 		    .from('approved_agents')
 		    .update({ is_registered: true })
-		    .eq('email', email);
+		    .eq('agent_id', agentId); // ← match by agent_id not email
 		
 		  if (updateErr) {
 		    status.textContent += '\n⚠️ But failed to update approved_agents: ' + updateErr.message;
@@ -137,8 +146,6 @@
 		    setTimeout(() => window.location.href = 'login.html', 3000);
 		  }
 		}
-	    }
-	  }
 	}
 	</script>
 </body>
