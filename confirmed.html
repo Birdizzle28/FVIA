@@ -129,15 +129,10 @@
 	
 	  const { data: insertData, error: insertErr } = await supabase
 		  .from('agents')
-		  .insert(payload, { returning: 'representation' });
+		  .insert(payload, { returning: 'minimal' });
 	
 	  if (insertErr) {
 	    status.textContent = '❌ Step 4 FAIL: Insert error: ' + insertErr.message;
-	    return;
-	  }
-	
-	  if (!insertData || insertData.length === 0) {
-	    status.textContent = '❌ Step 4 FAIL: Insert returned no data.';
 	    return;
 	  }
 	
