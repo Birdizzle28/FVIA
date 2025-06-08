@@ -377,6 +377,29 @@
         }
         
         const user = session.user;
+        const profileInput = document.getElementById('profile-photo-input');
+        const profileImg = document.getElementById('profile-photo');
+        // 🟢 Load profile data
+        const { data: agentProfile, error: profileError } = await supabase
+          .from('agents')
+          .select('first_name, last_name, full_name, bio, show_on_about, profile_photo_url, email, agent_id')
+          .eq('id', user.id)
+          .single();
+        
+        if (profileError) {
+          console.warn('Failed to load profile:', profileError.message);
+        } else {
+          if (agentProfile.first_name) firstNameInput.value = agentProfile.first_name;
+          if (agentProfile.last_name) lastNameInput.value = agentProfile.last_name;
+          if (agentProfile.bio) bioField.value = agentProfile.bio;
+          if (agentProfile.show_on_about !== null) publicStatusField.value = agentProfile.show_on_about.toString();
+          if (agentProfile.email) document.getElementById('profile-email').value = agentProfile.email;
+          if (agentProfile.agent_id) document.getElementById('profile-agent-id').value = agentProfile.agent_id;
+          if (agentProfile.profile_photo_url) {
+            profilePhoto.src = agentProfile.profile_photo_url;
+            uploadText.style.display = 'none';
+          }
+        }
         const isAdmin =
           user.email === 'fvinsuranceagency@gmail.com' ||
           user.email === 'johnsondemesi@gmail.com';
@@ -395,7 +418,75 @@
           loadingScreen.style.opacity = '0';
           loadingScreen.style.zIndex = '-1';
         }
+        // Load existing profile image from agents table
+        const { data: agentData, error: agentErr } = await supabase
+          .from('agents')
+          .select('profile_picture_url')
+          .eq('id', user.id)
+          .single();
         
+        if (!agentErr && agentData?.profile_picture_url) {
+          profileImg.src = agentData.profile_picture_url;
+        }
+        
+        // Set up image upload listener
+        profileInput.addEventListener('change', async (event) => {
+          const file = event.target.files[0];
+          if (!file) return;
+        
+          const filePath = `public/${user.id}/${Date.now()}-${file.name}`;
+          const { error: uploadErr } = await supabase.storage
+            .from('profile-pictures')
+            .upload(filePath, file, {
+              cacheControl: '3600',
+              upsert: true
+            });
+        
+          if (uploadErr) {
+            alert("❌ Upload failed: " + uploadErr.message);
+            return;
+          }
+        
+          const { data: { publicUrl } } = supabase
+            .storage
+            .from('profile-pictures')
+            .getPublicUrl(filePath);
+        
+          const { error: updateErr } = await supabase
+            .from('agents')
+            .update({ profile_picture_url: publicUrl })
+            .eq('id', user.id);
+        
+          if (updateErr) {
+            alert("✅ Uploaded, but failed to save profile: " + updateErr.message);
+          } else {
+            profileImg.src = publicUrl;
+            alert("✅ Profile picture updated!");
+          }
+        });
+        const profileForm = document.getElementById('profile-form');
+        const bioField = document.getElementById('profile-bio');
+        const publicStatusField = document.getElementById('profile-public-status');
+        const firstNameInput = document.getElementById('first-name');
+        const lastNameInput = document.getElementById('last-name');
+        const emailInput = document.getElementById('profile-email');
+        const agentIdInput = document.getElementById('profile-agent-id');
+        
+        const { data: agentInfo, error: agentInfoErr } = await supabase
+          .from('agents')
+          .select('first_name, last_name, email, agent_id, bio, show_on_about')
+          .eq('id', user.id)
+          .single();
+        
+        if (agentInfo && !agentInfoErr) {
+          firstNameInput.value = agentInfo.first_name || '';
+          lastNameInput.value = agentInfo.last_name || '';
+          emailInput.value = agentInfo.email || user.email;
+          agentIdInput.value = agentInfo.agent_id || '';
+          bioField.value = agentInfo.bio || '';
+          publicStatusField.value = agentInfo.show_on_about ? 'true' : 'false';
+        }
+  
         // Show default tab
         //alert("📑 Hiding all tabs and showing default...");
         document.querySelectorAll('.tab-content').forEach(tab => tab.style.display = 'none');
@@ -668,6 +759,81 @@
           document.getElementById('date-order').value = currentSortDirection;
           loadLeadsWithFilters();
         });
+      });
+      // ✅ PROFILE FORM SUBMIT LISTENER
+      profileForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const updatedFirst = firstNameInput.value.trim();
+        const updatedLast = lastNameInput.value.trim();
+        const updatedBio = bioField.value.trim();
+        const showPublic = publicStatusField.value === 'true';
+      
+        const fullName = `${updatedFirst} ${updatedLast}`;
+      
+        const { error } = await supabase
+          .from('agents')
+          .update({
+            first_name: updatedFirst,
+            last_name: updatedLast,
+            full_name: fullName,
+            bio: updatedBio,
+            show_on_about: showPublic
+          })
+          .eq('id', user.id);
+      
+        const msg = document.getElementById('edit-profile-message');
+        if (error) {
+          msg.textContent = '❌ Failed to update profile.';
+          msg.style.color = 'red';
+        } else {
+          msg.textContent = '✅ Profile updated successfully!';
+          msg.style.color = 'green';
+        }
+      });
+      // 🖼️ Upload profile picture
+      document.getElementById('profile-photo-input').addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+      
+        const fileExt = file.name.split('.').pop();
+        const fileName = `profile-${user.id}.${fileExt}`;
+        const filePath = `${user.id}/${fileName}`;
+      
+        // 1. Upload to storage bucket
+        const { error: uploadError } = await supabase.storage
+          .from('profile-photos')
+          .upload(filePath, file, { upsert: true });
+      
+        if (uploadError) {
+          alert('❌ Failed to upload image: ' + uploadError.message);
+          return;
+        }
+      
+        // 2. Get public URL
+        const { data: urlData } = supabase
+          .storage
+          .from('profile-photos')
+          .getPublicUrl(filePath);
+      
+        const publicUrl = urlData?.publicUrl;
+        if (!publicUrl) {
+          alert('❌ Failed to get image URL');
+          return;
+        }
+      
+        // 3. Save to agent profile
+        const { error: updateError } = await supabase
+          .from('agents')
+          .update({ profile_photo_url: publicUrl })
+          .eq('id', user.id);
+      
+        if (updateError) {
+          alert('❌ Failed to save profile photo: ' + updateError.message);
+        } else {
+          document.getElementById('profile-photo').src = publicUrl;
+          document.querySelector('.upload-text').style.display = 'none';
+          alert('✅ Profile picture updated!');
+        }
       });
     });
     
