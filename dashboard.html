@@ -415,38 +415,39 @@
         
         // 🖼 Upload profile photo
         profileInput.addEventListener('change', async (event) => {
-          const file = event.target.files[0];
-          if (!file) return;
-        
-          const filePath = `public/${userId}/${Date.now()}-${file.name}`;
-          const { error: uploadErr } = await supabase.storage
-            .from('profile-pictures')
-            .upload(filePath, file, { upsert: true });
-        
-          if (uploadErr) {
-            alert("❌ Upload failed: " + uploadErr.message);
-            return;
-          }
-        
-          const { data: { publicUrl } } = supabase
-            .storage
-            .from('profile-pictures')
-            .getPublicUrl(filePath);
-        
-          const { error: updateErr } = await supabase
-            .from('agents')
-            .update({ profile_picture_url: publicUrl })
-            .eq('id', userId);
-        
-          if (updateErr) {
-            alert("✅ Uploaded, but failed to update profile.");
-          } else {
-            profileImg.src = publicUrl;
-            uploadText.style.display = 'none';
-            statusMsg.textContent = "✅ Profile picture updated!";
-          }
-        });
-        
+        const file = event.target.files[0];
+        if (!file) return;
+      
+        const filePath = `public/${userId}/${Date.now()}-${file.name}`;
+        const { error: uploadErr } = await supabase.storage
+          .from('profile-pictures')
+          .upload(filePath, file, { upsert: true });
+      
+        if (uploadErr) {
+          alert("❌ Upload failed: " + uploadErr.message);
+          return;
+        }
+      
+        const { data: { publicUrl } } = supabase
+          .storage
+          .from('profile-pictures')
+          .getPublicUrl(filePath);
+      
+        const { error: updateErr } = await supabase
+          .from('agents')
+          .update({ profile_picture_url: publicUrl })
+          .eq('id', userId);
+      
+        if (updateErr) {
+          alert("✅ Uploaded, but failed to update profile.");
+        } else {
+          // 🟢 Force reload the image (bypass cache)
+          profileImg.src = publicUrl + `?t=${Date.now()}`;
+          uploadText.style.display = 'none';
+          statusMsg.textContent = "✅ Profile picture updated!";
+        }
+      });
+              
         // 💾 Save profile fields
         document.getElementById('profile-form').addEventListener('submit', async (e) => {
           e.preventDefault();
