@@ -93,31 +93,43 @@
 	    if (fetchErr || !approved) {
 	      status.textContent = '❌ Approved agent not found.';
 	    } else {
-	      const { error: insertErr, data: insertData } = await supabase
+	      const payload = {
+		  id: user.id,
+		  agent_id: approved.agent_id,
+		  first_name: approved.first_name,
+		  last_name: approved.last_name,
+		  full_name: `${approved.first_name} ${approved.last_name}`,
+		  email: email,
+		  is_active: true,
+		  is_admin: false,
+		  created_at: new Date().toISOString()
+		};
+		
+		status.textContent = '📦 Inserting agent: ' + JSON.stringify(payload);
+		
+		const { data: insertData, error: insertErr } = await supabase
 		  .from('agents')
-		  .upsert({
-		    id: user.id,
-		    agent_id: approved.agent_id,
-		    first_name: approved.first_name,
-		    last_name: approved.last_name,
-		    full_name: `${approved.first_name} ${approved.last_name}`,
-		    email: email,
-		    is_active: true,
-		    is_admin: false,
-		    created_at: new Date().toISOString()
-		  }, { onConflict: ['id'] });
-	
-	      if (insertErr) {
-	        status.textContent = '❌ Failed to insert agent: ' + insertErr.message;
-	      } else {
-	        await supabase
-	          .from('approved_agents')
-	          .update({ is_registered: true })
-	          .eq('email', email);
-	
-	        status.textContent = '🎉 Agent added! Redirecting to login...';
-	        setTimeout(() => window.location.href = 'login.html', 3000);
-	      }
+		  .insert(payload);
+		
+		if (insertErr) {
+		  status.textContent = '❌ INSERT error: ' + insertErr.message;
+		} else if (!insertData || insertData.length === 0) {
+		  status.textContent = '❌ INSERT returned no data. Possibly duplicate ID?';
+		} else {
+		  status.textContent = '✅ Agent inserted. Now updating approved_agents...';
+		
+		  const { error: updateErr } = await supabase
+		    .from('approved_agents')
+		    .update({ is_registered: true })
+		    .eq('email', email);
+		
+		  if (updateErr) {
+		    status.textContent += '\n⚠️ But failed to update approved_agents: ' + updateErr.message;
+		  } else {
+		    status.textContent += '\n🎉 All done! Redirecting...';
+		    setTimeout(() => window.location.href = 'login.html', 3000);
+		  }
+		}
 	    }
 	  }
 	}
