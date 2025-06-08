@@ -128,8 +128,8 @@
 	  };
 	
 	  const { data: insertData, error: insertErr } = await supabase
-	    .from('agents')
-	    .insert(payload);
+		  .from('agents')
+		  .insert(payload, { returning: 'representation' });
 	
 	  if (insertErr) {
 	    status.textContent = '❌ Step 4 FAIL: Insert error: ' + insertErr.message;
