@@ -192,6 +192,8 @@
         <tbody></tbody>
       </table>
     </section>
+
+    <!--PROFILE-->
     <section id="profile-tab" class="tab-content profile-section">
       <div class="profile-picture-wrapper">
         <label for="profile-photo-input">
@@ -214,6 +216,8 @@
         <p id="edit-profile-message"></p>
       </form>
     </section>
+
+    
     <section id="lead-tab" class="tab-content" style="display: none;">
       <h3>Submit a Lead</h3>
       <form id="lead-form">
@@ -379,7 +383,7 @@
         const user = session.user;
         const userId = user.id;
 
-        // DOM elements
+        // 🔧 DOM Elements
         const firstNameInput = document.getElementById('first-name');
         const lastNameInput = document.getElementById('last-name');
         const bioField = document.getElementById('profile-bio');
@@ -391,7 +395,11 @@
         const uploadText = document.querySelector('.upload-text');
         const statusMsg = document.getElementById('edit-profile-message');
         
-        // 🔄 Load profile
+        // 🧑‍💼 You should already have user or userId from Supabase session
+        // Example: const user = session.user;
+        // const userId = user.id;
+        
+        // 🔄 Load existing profile data
         const { data: agent, error: loadError } = await supabase
           .from('agents')
           .select('*')
@@ -405,48 +413,50 @@
           lastNameInput.value = agent.last_name || '';
           bioField.value = agent.bio || '';
           publicStatusField.value = agent.show_on_about ? 'true' : 'false';
-          emailInput.value = agent.email || user.email;
+          emailInput.value = agent.email || '';
           agentIdInput.value = agent.agent_id || '';
           if (agent.profile_picture_url) {
-            profileImg.src = agent.profile_picture_url;
+            profileImg.src = agent.profile_picture_url + `?refresh=${Date.now()}`;
             uploadText.style.display = 'none';
           }
         }
         
-        // 🖼 Upload profile photo
+        // 📸 Upload and update profile picture
         profileInput.addEventListener('change', async (event) => {
-        const file = event.target.files[0];
-        if (!file) return;
-      
-        const filePath = `public/${userId}/${Date.now()}-${file.name}`;
-        const { error: uploadErr } = await supabase.storage
-          .from('profile-pictures')
-          .upload(filePath, file, { upsert: true });
-      
-        if (uploadErr) {
-          alert("❌ Upload failed: " + uploadErr.message);
-          return;
-        }
-      
-        const { data: { publicUrl } } = supabase
-          .storage
-          .from('profile-pictures')
-          .getPublicUrl(filePath);
-      
-        const { error: updateErr } = await supabase
-          .from('agents')
-          .update({ profile_picture_url: publicUrl })
-          .eq('id', userId);
-      
-        if (updateErr) {
-          alert("✅ Uploaded, but failed to update profile.");
-        } else {
-          // 🟢 Force reload the image (bypass cache)
-          profileImg.src = publicUrl + `?t=${Date.now()}`;
-          uploadText.style.display = 'none';
-          statusMsg.textContent = "✅ Profile picture updated!";
-        }
-      });
+          const file = event.target.files[0];
+          if (!file) return;
+        
+          const filePath = `public/${userId}/${Date.now()}-${file.name}`;
+        
+          const { error: uploadErr } = await supabase.storage
+            .from('profile-pictures')
+            .upload(filePath, file, { upsert: true });
+        
+          if (uploadErr) {
+            alert("❌ Upload failed: " + uploadErr.message);
+            return;
+          }
+        
+          const { data: { publicUrl } } = supabase
+            .storage
+            .from('profile-pictures')
+            .getPublicUrl(filePath);
+        
+          const { error: updateErr } = await supabase
+            .from('agents')
+            .update({ profile_picture_url: publicUrl })
+            .eq('id', userId);
+        
+          if (updateErr) {
+            alert("✅ Uploaded, but failed to update profile.");
+          } else {
+            const finalUrl = publicUrl + `?refresh=${Date.now()}`;
+            alert("🖼️ Profile image URL: " + finalUrl);
+            profileImg.src = finalUrl;
+            uploadText.style.display = 'none';
+            statusMsg.textContent = "✅ Profile picture updated!";
+          }
+        });
               
         // 💾 Save profile fields
         document.getElementById('profile-form').addEventListener('submit', async (e) => {
