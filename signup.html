@@ -105,12 +105,17 @@
 		    }
 		
 		    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-		      email,
-		      password,
-		      options: {
-		        emailRedirectTo: 'https://fv-ia.com/confirmed.html'
-		      }
-		    });
+			  email,
+			  password,
+			  options: {
+			    emailRedirectTo: 'https://fv-ia.com/confirmed.html',
+			    data: {
+			      agent_id: agentId,
+			      first_name: firstName,
+			      last_name: lastName
+			    }
+			  }
+			});
 		
 		    if (signUpError) {
 		      status.textContent = '❌ Signup failed: ' + signUpError.message;
