@@ -101,17 +101,16 @@
 	    if (fetchErr || !approved) {
 	      status.textContent = '❌ Approved agent not found.';
 	    } else {
-	      const payload = {
+	      const { error: insertErr } = await supabase.from('agents').insert({
 		  id: user.id,
-		  agent_id: approved.agent_id,
-		  first_name: approved.first_name,
-		  last_name: approved.last_name,
-		  full_name: `${approved.first_name} ${approved.last_name}`,
+		  agent_id: agentId,
+		  first_name: user.user_metadata.first_name,
+		  last_name: user.user_metadata.last_name,
+		  full_name: `${user.user_metadata.first_name} ${user.user_metadata.last_name}`,
 		  email: email,
 		  is_active: true,
-		  is_admin: false,
-		  created_at: new Date().toISOString()
-		};
+		  is_admin: false
+		});
 		
 		status.textContent = '📦 Inserting agent: ' + JSON.stringify(payload);
 		
