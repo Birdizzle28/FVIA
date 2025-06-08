@@ -101,7 +101,8 @@
 	        full_name: `${approved.first_name} ${approved.last_name}`,
 	        email: email,
 	        is_active: true,
-	        is_admin: false
+	        is_admin: false,
+		created_at: new Date().toISOString()
 	      });
 	
 	      if (insertErr) {
