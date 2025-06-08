@@ -56,20 +56,23 @@
 	<script type="module">
 	import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 	
-	const supabase = createClient(
-	  'https://ddlbgkolnayqrxslzsxn.supabase.co',
-	  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
-	);
+	document.addEventListener('DOMContentLoaded', async () => {
+	  const supabase = createClient(
+	    'https://ddlbgkolnayqrxslzsxn.supabase.co',
+	    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
+	  );
 	
-	const status = document.getElementById('status');
-	status.textContent = '⏳ Checking session...';
+	  const status = document.getElementById('status');
+	  status.textContent = '⏳ Checking session...';
 	
-	const { data, error } = await supabase.auth.getSession();
-	const session = data?.session;
+	  const { data, error } = await supabase.auth.getSession();
+	  const session = data?.session;
 	
-	if (!session || !session.user) {
-	  status.textContent = '⚠️ No active session found. Try logging in again.';
-	} else {
+	  if (!session || !session.user) {
+	    status.textContent = '⚠️ No active session found. Try logging in again.';
+	    return;
+	  }
+	
 	  const user = session.user;
 	  const email = user.email;
 	
@@ -82,75 +85,76 @@
 	    .single();
 	
 	  if (exists) {
-		  status.textContent = '✅ Agent already exists. Redirecting to login...';
-		  setTimeout(() => window.location.href = 'login.html', 3000);
-		} else {
-		  status.textContent = '🔍 Step 2: Reading metadata...';
-		
-		  const agentId = user.user_metadata?.agent_id;
-		  const firstName = user.user_metadata?.first_name;
-		  const lastName = user.user_metadata?.last_name;
-		
-		  if (!agentId || !firstName || !lastName) {
-		    status.textContent = '❌ Step 2 FAIL: Missing metadata.';
-		    return;
-		  }
-		
-		  status.textContent = '🔍 Step 3: Checking approved_agents...';
-		
-		  const { data: approved, error: fetchErr } = await supabase
-		    .from('approved_agents')
-		    .select('agent_id')
-		    .eq('agent_id', agentId)
-		    .single();
-		
-		  if (fetchErr || !approved) {
-		    status.textContent = '❌ Step 3 FAIL: Approved agent not found.';
-		    return;
-		  }
-		
-		  status.textContent = '🔍 Step 4: Inserting into agents...';
-		
-		  const payload = {
-		    id: user.id,
-		    agent_id: agentId,
-		    first_name: firstName,
-		    last_name: lastName,
-		    full_name: `${firstName} ${lastName}`,
-		    email: email,
-		    is_active: true,
-		    is_admin: false
-		  };
-		
-		  const { data: insertData, error: insertErr } = await supabase
-		    .from('agents')
-		    .insert(payload);
-		
-		  if (insertErr) {
-		    status.textContent = '❌ Step 4 FAIL: Insert error: ' + insertErr.message;
-		    return;
-		  }
-		
-		  if (!insertData || insertData.length === 0) {
-		    status.textContent = '❌ Step 4 FAIL: Insert returned no data.';
-		    return;
-		  }
-		
-		  status.textContent = '✅ Step 5: Inserted. Now updating approved_agents...';
-		
-		  const { error: updateErr } = await supabase
-		    .from('approved_agents')
-		    .update({ is_registered: true })
-		    .eq('agent_id', agentId);
-		
-		  if (updateErr) {
-		    status.textContent += '\n⚠️ Step 5 WARNING: Could not update approved_agents: ' + updateErr.message;
-		  } else {
-		    status.textContent += '\n🎉 Step 6: All done! Redirecting...';
-		    setTimeout(() => window.location.href = 'login.html', 3000);
-		  }
-		}
-	}
-	</script>
+	    status.textContent = '✅ Agent already exists. Redirecting to login...';
+	    setTimeout(() => window.location.href = 'login.html', 3000);
+	    return;
+	  }
+	
+	  status.textContent = '🔍 Step 2: Reading metadata...';
+	
+	  const agentId = user.user_metadata?.agent_id;
+	  const firstName = user.user_metadata?.first_name;
+	  const lastName = user.user_metadata?.last_name;
+	
+	  if (!agentId || !firstName || !lastName) {
+	    status.textContent = '❌ Step 2 FAIL: Missing metadata.';
+	    return;
+	  }
+	
+	  status.textContent = '🔍 Step 3: Checking approved_agents...';
+	
+	  const { data: approved, error: fetchErr } = await supabase
+	    .from('approved_agents')
+	    .select('agent_id')
+	    .eq('agent_id', agentId)
+	    .single();
+	
+	  if (fetchErr || !approved) {
+	    status.textContent = '❌ Step 3 FAIL: Approved agent not found.';
+	    return;
+	  }
+	
+	  status.textContent = '🔍 Step 4: Inserting into agents...';
+	
+	  const payload = {
+	    id: user.id,
+	    agent_id: agentId,
+	    first_name: firstName,
+	    last_name: lastName,
+	    full_name: `${firstName} ${lastName}`,
+	    email: email,
+	    is_active: true,
+	    is_admin: false
+	  };
+	
+	  const { data: insertData, error: insertErr } = await supabase
+	    .from('agents')
+	    .insert(payload);
+	
+	  if (insertErr) {
+	    status.textContent = '❌ Step 4 FAIL: Insert error: ' + insertErr.message;
+	    return;
+	  }
+	
+	  if (!insertData || insertData.length === 0) {
+	    status.textContent = '❌ Step 4 FAIL: Insert returned no data.';
+	    return;
+	  }
+	
+	  status.textContent = '✅ Step 5: Inserted. Now updating approved_agents...';
+	
+	  const { error: updateErr } = await supabase
+	    .from('approved_agents')
+	    .update({ is_registered: true })
+	    .eq('agent_id', agentId);
+	
+	  if (updateErr) {
+	    status.textContent += '\n⚠️ Step 5 WARNING: Could not update approved_agents: ' + updateErr.message;
+	  } else {
+	    status.textContent += '\n🎉 Step 6: All done! Redirecting...';
+	    setTimeout(() => window.location.href = 'login.html', 3000);
+	  }
+	});
+</script>
 </body>
 </html>
