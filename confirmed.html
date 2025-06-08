@@ -85,12 +85,19 @@
 	    status.textContent = '✅ Agent already exists. Redirecting to login...';
 	    setTimeout(() => window.location.href = 'login.html', 3000);
 	  } else {
-	    const { data: approved, error: fetchErr } = await supabase
-	      .from('approved_agents')
-	      .select('agent_id, first_name, last_name')
-	      .eq('email', email)
-	      .single();
-	
+	    const agentId = user.user_metadata?.agent_id;
+
+		if (!agentId) {
+		  status.textContent = '❌ Agent ID missing in user metadata.';
+		  return;
+		}
+		
+		const { data: approved, error: fetchErr } = await supabase
+		  .from('approved_agents')
+		  .select('agent_id')
+		  .eq('agent_id', agentId)
+		  .single();
+			
 	    if (fetchErr || !approved) {
 	      status.textContent = '❌ Approved agent not found.';
 	    } else {
