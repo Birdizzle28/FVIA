@@ -627,6 +627,15 @@
             prevBtn.disabled = false;
           }
         }
+        document.addEventListener('change', (e) => {
+          if (e.target.classList.contains('lead-checkbox')) {
+            const anyChecked = document.querySelectorAll('#agent-leads-table .lead-checkbox:checked').length > 0;
+            const controls = document.getElementById('agent-export-controls');
+            if (controls) {
+              controls.style.display = anyChecked ? 'block' : 'none';
+            }
+          }
+        });
         // Pagination button listeners
         document.getElementById('agent-prev-page')?.addEventListener('click', () => {
           if (agentCurrentPage > 1) {
