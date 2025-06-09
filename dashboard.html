@@ -1219,5 +1219,11 @@ function getSelectedLeadsData() {
       };
     });
 </script>
+<script type="module">
+  const { jsPDF } = await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+  const doc = new jsPDF();
+  doc.text("PDF test is working!", 10, 10);
+  doc.save("test.pdf");
+</script>
 </body>
 </html>
