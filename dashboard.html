@@ -1160,17 +1160,19 @@ function getSelectedLeadsData() {
       const printWindow = window.open("", "_blank");
       const logo = `<img src="/Pics/Logo.png" style="height: 60px;" />`;
       const title = `<h2>Family Values Insurance Agency - Selected Leads</h2>`;
-      const table = `
-        <table border="1" cellpadding="10" cellspacing="0">
-          <thead>
-            <tr>${Object.keys(leads[0]).map(k => `<th>${k}</th>`).join("")}</tr>
-          </thead>
-          <tbody>
-            ${leads.map(lead => `<tr>${Object.values(lead).map(v => `<td>${v}</td>`).join("")}</tr>`).join("")}
-          </tbody>
-        </table>
-      `;
-      printWindow.document.write(`<html><body>${logo}${title}${table}</body></html>`);
+    
+      const allPages = leads.map(lead => {
+        const rows = Object.entries(lead).map(([k, v]) => `<tr><td><b>${k}</b></td><td>${v}</td></tr>`).join("");
+        return `
+          <div style="page-break-after: always;">
+            ${logo}
+            ${title}
+            <table border="1" cellpadding="10" cellspacing="0">${rows}</table>
+          </div>
+        `;
+      }).join("");
+    
+      printWindow.document.write(`<html><body>${allPages}</body></html>`);
       printWindow.document.close();
       printWindow.print();
     });
