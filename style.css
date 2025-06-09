@@ -665,3 +665,43 @@ html, #indexbody {
 #leads-table th.sorted {
   background-color: #dcefff;
 }
+@media print {
+  body {
+    font-family: 'Bellota Text', sans-serif;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .lead-page {
+    page-break-after: always;
+    padding: 30px;
+  }
+
+  .logo {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    margin-bottom: 10px;
+  }
+
+  h2, h4 {
+    margin: 5px 0;
+  }
+
+  p {
+    font-size: 14px;
+    margin: 5px 0;
+  }
+
+  .label {
+    font-weight: bold;
+    display: inline-block;
+    width: 130px;
+  }
+
+  .footer {
+    margin-top: 30px;
+    font-size: 10px;
+    color: #777;
+  }
+}
