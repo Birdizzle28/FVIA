@@ -1105,7 +1105,7 @@ document.addEventListener("click", (e) => {
 });
 
 // Helper: Get selected lead data
-function getSelectedLeadsData() {
+window.getSelectedLeadsData = function () {
   return Array.from(document.querySelectorAll('input[type="checkbox"].lead-checkbox:checked'))
     .map(cb => {
       const row = cb.closest("tr");
@@ -1123,7 +1123,7 @@ function getSelectedLeadsData() {
         submittedAt: row.querySelector(".lead-date")?.textContent.trim() || ""
       };
     });
-}
+};
     // Watch for checkbox changes to toggle export visibility
     function updateExportControlsVisibility() {
       const anyChecked = document.querySelectorAll('.lead-checkbox:checked').length > 0;
@@ -1184,72 +1184,73 @@ function getSelectedLeadsData() {
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
 <script>
-document.addEventListener("DOMContentLoaded", () => {
-  const btn = document.getElementById("export-pdf");
-  if (!btn) return alert("❌ export-pdf button not found");
-
-  btn.addEventListener("click", () => {
-    alert("✅ PDF button clicked");
-
-    const leads = getSelectedLeadsData();
-    if (!leads || leads.length === 0) return alert("❌ No leads selected");
-
-    alert("✅ Leads detected: " + leads.length);
-
-    const { jsPDF } = window.jspdf;
-    if (!jsPDF) return alert("❌ jsPDF not loaded");
-
-    const doc = new jsPDF();
-    const logo = new Image();
-    logo.src = "/Pics/Logo.png";
-
-    logo.onload = () => {
-      leads.forEach((lead, index) => {
-        if (index !== 0) doc.addPage();
-
-        doc.addImage(logo, "PNG", 80, 10, 50, 20);
-        doc.setFontSize(18);
-        doc.setFont("helvetica", "bold");
-        doc.text("Family Values Insurance Agency", 105, 40, { align: "center" });
-        doc.setFontSize(14);
-        doc.setFont("helvetica", "normal");
-        doc.text("Lead Confirmation Form", 105, 50, { align: "center" });
-
-        const startY = 70;
-        const lineHeight = 12;
-
-        const fields = [
-          ["First Name", lead.first_name],
-          ["Last Name", lead.last_name],
-          ["Age", lead.age],
-          ["Phone", lead.phone],
-          ["Lead Type", lead.leadType],
-          ["City", lead.city],
-          ["State", lead.state],
-          ["ZIP", lead.zip],
-          ["Address", lead.address],
-          ["Agent", lead.agent],
-          ["Submitted At", lead.submittedAt],
-        ];
-
-        fields.forEach(([label, value], i) => {
+  const leads = window.getSelectedLeadsData();
+  document.addEventListener("DOMContentLoaded", () => {
+    const btn = document.getElementById("export-pdf");
+    if (!btn) return alert("❌ export-pdf button not found");
+  
+    btn.addEventListener("click", () => {
+      alert("✅ PDF button clicked");
+  
+      const leads = getSelectedLeadsData();
+      if (!leads || leads.length === 0) return alert("❌ No leads selected");
+  
+      alert("✅ Leads detected: " + leads.length);
+  
+      const { jsPDF } = window.jspdf;
+      if (!jsPDF) return alert("❌ jsPDF not loaded");
+  
+      const doc = new jsPDF();
+      const logo = new Image();
+      logo.src = "/Pics/Logo.png";
+  
+      logo.onload = () => {
+        leads.forEach((lead, index) => {
+          if (index !== 0) doc.addPage();
+  
+          doc.addImage(logo, "PNG", 80, 10, 50, 20);
+          doc.setFontSize(18);
           doc.setFont("helvetica", "bold");
-          doc.text(`${label}:`, 20, startY + i * lineHeight);
+          doc.text("Family Values Insurance Agency", 105, 40, { align: "center" });
+          doc.setFontSize(14);
           doc.setFont("helvetica", "normal");
-          doc.text(value || "—", 70, startY + i * lineHeight);
+          doc.text("Lead Confirmation Form", 105, 50, { align: "center" });
+  
+          const startY = 70;
+          const lineHeight = 12;
+  
+          const fields = [
+            ["First Name", lead.first_name],
+            ["Last Name", lead.last_name],
+            ["Age", lead.age],
+            ["Phone", lead.phone],
+            ["Lead Type", lead.leadType],
+            ["City", lead.city],
+            ["State", lead.state],
+            ["ZIP", lead.zip],
+            ["Address", lead.address],
+            ["Agent", lead.agent],
+            ["Submitted At", lead.submittedAt],
+          ];
+  
+          fields.forEach(([label, value], i) => {
+            doc.setFont("helvetica", "bold");
+            doc.text(`${label}:`, 20, startY + i * lineHeight);
+            doc.setFont("helvetica", "normal");
+            doc.text(value || "—", 70, startY + i * lineHeight);
+          });
+  
+          doc.setFontSize(10);
+          doc.text(`Generated on ${new Date().toLocaleDateString()}`, 105, 285, { align: "center" });
         });
-
-        doc.setFontSize(10);
-        doc.text(`Generated on ${new Date().toLocaleDateString()}`, 105, 285, { align: "center" });
-      });
-
-      alert("✅ PDF ready — saving now!");
-      doc.save("FVIA_Leads.pdf");
-    };
-
-    logo.onerror = () => alert("⚠️ Logo failed to load. Check path: /Pics/Logo.png");
+  
+        alert("✅ PDF ready — saving now!");
+        doc.save("FVIA_Leads.pdf");
+      };
+  
+      logo.onerror = () => alert("⚠️ Logo failed to load. Check path: /Pics/Logo.png");
+    });
   });
-});
 </script>
 </body>
 </html>
