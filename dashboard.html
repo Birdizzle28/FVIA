@@ -1179,8 +1179,13 @@ function getSelectedLeadsData() {
       printWindow.document.close();
       printWindow.print();
     });
-    
-    // PDF Export (using jsPDF)
+</script>
+  <!-- jsPDF Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- PDF Export Handler -->
+<script>
+      // PDF Export (using jsPDF)
     document.getElementById("export-pdf").addEventListener("click", async () => {
       const leads = getSelectedLeadsData();
       if (leads.length === 0) return alert("No leads selected.");
@@ -1237,26 +1242,6 @@ function getSelectedLeadsData() {
         doc.save("FVIA_Leads.pdf");
       };
     });
-</script>
-  <!-- jsPDF Library -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-
-<!-- PDF Export Handler -->
-<script>
-  document.addEventListener("DOMContentLoaded", () => {
-    const pdfBtn = document.getElementById("export-pdf");
-
-    if (pdfBtn) {
-      pdfBtn.addEventListener("click", () => {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF();
-        doc.text("✅ Your PDF Export is working!", 20, 30);
-        doc.save("test.pdf");
-      });
-    } else {
-      alert("❌ PDF button not found");
-    }
-  });
 </script>
 </body>
 </html>
