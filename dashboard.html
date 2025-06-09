@@ -412,6 +412,7 @@
               <tr>
                 <th>Select</th>
                 <th data-column="created_at">Submitted</th>
+                <th>Agent</th>
                 <th data-column="first_name">First Name</th>
                 <th data-column="last_name">Last Name</th>
                 <th data-column="age">Age</th>
@@ -445,8 +446,6 @@
         </div>
       </div>
     </section>
-
-
 
     <!--Agent Thread-->
     <section id="thread-tab" class="tab-content" style="display: none;">
@@ -594,7 +593,8 @@
               'state': lead.state || '',
               'zip': lead.zip || '',
               'lead_type': lead.lead_type || '',
-              'notes': lead.notes || ''
+              'notes': lead.notes || '',
+              'submitted_by_name': lead.submitted_by_name || '' // 👈 ADD THIS
             };
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
@@ -1430,7 +1430,7 @@ document.addEventListener("click", (e) => {
         state: row.querySelector(".lead-state")?.textContent.trim() || "",
         zip: row.querySelector(".lead-zip")?.textContent.trim() || "",
         address: row.querySelector(".lead-address")?.textContent.trim() || "",
-        agent: row.querySelector(".lead-agent")?.textContent.trim() || "",
+        agent: row.querySelector(".lead-submitted_by_name")?.textContent.trim() || "",
         submittedAt: row.querySelector(".lead-date")?.textContent.trim() || ""
       };
     });
@@ -1623,8 +1623,8 @@ document.addEventListener("click", (e) => {
     return Array.from(document.querySelectorAll('#agent-leads-table input[type="checkbox"].lead-checkbox:checked')).map(cb => {
       const row = cb.closest("tr");
       return {
-        first_name: row.querySelector(".lead-name")?.textContent.trim() || "",
-        last_name: row.querySelector(".lead-last")?.textContent.trim() || "",
+        first_name: row.querySelector(".lead-first_name")?.textContent.trim() || "",
+        last_name: row.querySelector(".lead-last_name")?.textContent.trim() || "",
         age: row.querySelector(".lead-age")?.textContent.trim() || "",
         phone: row.querySelector(".lead-phone")?.textContent.trim() || "",
         leadType: row.querySelector(".lead-type")?.textContent.trim() || "",
@@ -1633,7 +1633,7 @@ document.addEventListener("click", (e) => {
         zip: row.querySelector(".lead-zip")?.textContent.trim() || "",
         address: row.querySelector(".lead-address")?.textContent.trim() || "",
         agent: row.querySelector(".lead-agent")?.textContent.trim() || "",
-        submittedAt: row.querySelector(".lead-date")?.textContent.trim() || ""
+        submittedAt: row.querySelector(".lead-created_at")?.textContent.trim() || ""
       };
     });
   };
