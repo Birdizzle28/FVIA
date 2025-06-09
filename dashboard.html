@@ -876,7 +876,7 @@
       const assignedFilter = document.getElementById('assigned-filter').value;
       
       let query = supabase.from('leads').select('*', { count: 'exact' });
-      if (userRole === 'agent') {
+      if (userRole !== 'admin') {
         query = query.eq('assigned_to', userId);
       }
       if (rangeStart) query = query.gte('created_at', rangeStart);
@@ -898,7 +898,7 @@
         .range(from, to);
       
       if (error) return console.error('Error loading leads:', error);
-      if (userRole === 'agent') {
+      if (userRole !== 'admin') {
         document.getElementById('agent-filter')?.closest('.filter-item')?.style.setProperty('display', 'none');
         document.getElementById('assigned-filter')?.closest('.filter-item')?.style.setProperty('display', 'none');
       
@@ -956,7 +956,7 @@
         }
       
         // 👇 Add Actions column ONLY for admins
-        if (userRole !== 'agent') {
+        if (userRole === 'admin') {
           const actionsTd = document.createElement('td');
           actionsTd.textContent = ''; // You can put buttons here later
           tr.appendChild(actionsTd);
