@@ -1110,6 +1110,17 @@ function getSelectedLeadsData() {
       };
     });
 }
+    // Watch for checkbox changes to toggle export visibility
+    function updateExportControlsVisibility() {
+      const anyChecked = document.querySelectorAll('.lead-checkbox:checked').length > 0;
+      document.getElementById('export-controls').style.display = anyChecked ? 'block' : 'none';
+    }
+    
+    document.addEventListener('change', (e) => {
+      if (e.target.matches('.lead-checkbox')) {
+        updateExportControlsVisibility();
+      }
+    });
 
     // CSV Export
     document.getElementById("export-csv").addEventListener("click", () => {
