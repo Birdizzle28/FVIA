@@ -1082,6 +1082,15 @@
         });
       });
     });
+    document.addEventListener("DOMContentLoaded", () => {
+      const exportBtn = document.getElementById("agent-export-btn");
+      const optionsBox = document.getElementById("agent-export-options");
+    
+      exportBtn?.addEventListener("click", () => {
+        const isVisible = optionsBox.style.display === "block";
+        optionsBox.style.display = isVisible ? "none" : "block";
+      });
+    });
     document.getElementById('agent-sort-by')?.addEventListener('change', () => {
       loadAgentLeads(); // Just reload with new sort
     });
