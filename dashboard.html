@@ -146,30 +146,30 @@
       
       
       <!-- Leads Table -->
-      <div id="leads-table-container">
-        <table id="leads-table">
-          <thead>
-            <tr>
-              <th>Select</th>
-              <th data-column="created_at">Submitted</th>
-              <th data-column="submitted_by_name">Agent</th>
-              <th data-column="first_name">First Name</th>
-              <th data-column="last_name">Last Name</th>
-              <th data-column="age">Age</th>
-              <th data-column="phone">Phone(s)</th>
-              <th data-column="address">Address</th>
-              <th data-column="city">City</th>
-              <th data-column="state">State</th>
-              <th data-column="zip">ZIP</th>
-              <th data-column="lead_type">Type</th>
-              <th data-column="notes">Notes</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-          <!-- Leads load here -->
-          </tbody>
-        </table>
+        <div id="leads-table-container">
+          <table id="leads-table">
+            <thead>
+              <tr>
+                <th>Select</th>
+                <th data-column="created_at">Submitted</th>
+                <th data-column="submitted_by_name">Agent</th>
+                <th data-column="first_name">First Name</th>
+                <th data-column="last_name">Last Name</th>
+                <th data-column="age">Age</th>
+                <th data-column="phone">Phone(s)</th>
+                <th data-column="address">Address</th>
+                <th data-column="city">City</th>
+                <th data-column="state">State</th>
+                <th data-column="zip">ZIP</th>
+                <th data-column="lead_type">Type</th>
+                <th data-column="notes">Notes</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+            <!-- Leads load here -->
+            </tbody>
+          </table>
         <div id="pagination-controls" style="margin-top: 10px;">
           <button id="prev-page">Previous</button>
           <span id="current-page">Page 1</span>
@@ -390,7 +390,7 @@
     alert("✅ Inline script is working.");
     //alert("✅ INLINE SCRIPT EXECUTED");
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-    
+      
     const supabase = createClient(
       'https://ddlbgkolnayqrxslzsxn.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
@@ -1113,7 +1113,7 @@ document.addEventListener("click", (e) => {
     return Array.from(document.querySelectorAll('input[type="checkbox"].lead-checkbox:checked')).map(cb => {
       const row = cb.closest("tr");
       return {
-        first_name: row.querySelector(".lead-first")?.textContent.trim() || "",
+        first_name: row.querySelector(".lead-name")?.textContent.trim() || "",
         last_name: row.querySelector(".lead-last")?.textContent.trim() || "",
         age: row.querySelector(".lead-age")?.textContent.trim() || "",
         phone: row.querySelector(".lead-phone")?.textContent.trim() || "",
