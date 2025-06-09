@@ -431,9 +431,19 @@
         }
         alert('🔑 User role is: ' + userRole);
         if (userRole === 'agent') {
+          const agentHeader = document.querySelector('#leads-table th[data-column="submitted_by_name"]');
+          if (agentHeader) agentHeader.style.display = 'none';
+        }
+        if (userRole === 'agent') {
+          // Hide export and bulk assign controls
+          document.getElementById('bulk-assign-controls')?.style.setProperty('display', 'none');
+          document.getElementById('export-controls')?.style.setProperty('display', 'none');
+        
+          // Hide assignment-related filters
           document.getElementById('agent-filter')?.closest('.filter-item')?.style.setProperty('display', 'none');
           document.getElementById('assigned-filter')?.closest('.filter-item')?.style.setProperty('display', 'none');
         
+          // Hide the Actions column header
           const actionsHeader = document.querySelector('#leads-table th:last-child');
           if (actionsHeader) actionsHeader.style.display = 'none';
         }
@@ -479,28 +489,22 @@
         profileInput.addEventListener('change', async (event) => {
           const file = event.target.files[0];
           if (!file) return;
-        
           const filePath = `${userId}/${Date.now()}-${file.name}`;
-        
           const { error: uploadErr } = await supabase.storage
             .from('profile-pictures')
             .upload(filePath, file, { upsert: true });
-        
           if (uploadErr) {
             alert("❌ Upload failed: " + uploadErr.message);
             return;
           }
-        
           const { data: { publicUrl } } = supabase
             .storage
             .from('profile-pictures')
             .getPublicUrl(filePath);
-        
           const { error: updateErr } = await supabase
             .from('agents')
             .update({ profile_picture_url: publicUrl })
             .eq('id', userId);
-        
           if (updateErr) {
             alert("✅ Uploaded, but failed to update profile.");
           } else {
@@ -883,6 +887,10 @@
       document.getElementById('selected-count').textContent = '0';
       document.getElementById('bulk-assign-controls').style.display = 'none';
       tbody.innerHTML = '';
+      if (userRole === 'agent') {
+        const actionsHeader = document.querySelector('#leads-table th:last-child');
+        if (actionsHeader) actionsHeader.style.display = 'none';
+      }
       const order = document.getElementById('date-order').value;
       const sortBy = document.getElementById('sort-by')?.value || 'created_at';
       const agent = document.getElementById('agent-filter').value;
@@ -895,6 +903,9 @@
       const assignedFilter = document.getElementById('assigned-filter').value;
       
       let query = supabase.from('leads').select('*', { count: 'exact' });
+      if (userRole === 'agent') {
+        query = query.eq('assigned_to', userId);
+      }
       if (rangeStart) query = query.gte('created_at', rangeStart);
       if (rangeEnd) query = query.lte('created_at', rangeEnd);
       if (agent) query = query.eq('assigned_to', agent);
@@ -922,7 +933,6 @@
       
       leads.forEach(lead => {
         const tr = document.createElement('tr');
-      
         const checkboxTd = document.createElement('td');
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
@@ -941,10 +951,11 @@
         checkboxTd.appendChild(checkbox);
         tr.appendChild(checkboxTd);
       
-        const agentName = allAgents.find(a => a.id === lead.assigned_to)?.full_name || 'Unassigned';
+        const agentName = userRole === 'agent' ? '' : (allAgents.find(a => a.id === lead.assigned_to)?.full_name || 'Unassigned');
+        
         const cellMap = {
           'lead-date': new Date(lead.created_at).toLocaleDateString(),
-          'lead-agent': agentName,
+          'lead-agent': userRole === 'agent' ? '' : agentName,
           'lead-name': lead.first_name || '',
           'lead-last': lead.last_name || '',
           'lead-age': lead.age || '',
@@ -963,7 +974,19 @@
           td.textContent = text;
           tr.appendChild(td);
         }
-      
+        if (userRole !== 'agent') {
+          const actionsTd = document.createElement('td');
+          actionsTd.textContent = ''; // You can insert admin buttons here later
+          tr.appendChild(actionsTd);
+        }
+        if (userRole === 'agent') {
+          const actionsCell = tr.querySelector('td:last-child');
+          if (actionsCell) actionsCell.style.display = 'none';
+        }
+        if (userRole === 'agent') {
+          const selectHeader = document.querySelector('#leads-table th:first-child');
+          if (selectHeader) selectHeader.style.display = 'none';
+        }
         tbody.appendChild(tr);
       });
     }
