@@ -1108,7 +1108,8 @@ function getSelectedLeadsData() {
     .map(cb => {
       const row = cb.closest("tr");
       return {
-        name: row.querySelector(".lead-name")?.textContent.trim() || "",
+        first_name: row.querySelector(".lead-first")?.textContent.trim() || "",
+        last_name: row.querySelector(".lead-last")?.textContent.trim() || "",
         age: row.querySelector(".lead-age")?.textContent.trim() || "",
         phone: row.querySelector(".lead-phone")?.textContent.trim() || "",
         leadType: row.querySelector(".lead-type")?.textContent.trim() || "",
@@ -1214,10 +1215,13 @@ function getSelectedLeadsData() {
             }
           });
         });
-    
         doc.save("FVIA_Leads.pdf");
       };
     });
+    const { jsPDF } = await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    const doc = new jsPDF();
+    doc.text("PDF test is working!", 10, 10);
+    doc.save("test.pdf");
 </script>
 </body>
 </html>
