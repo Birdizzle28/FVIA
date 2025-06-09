@@ -1294,7 +1294,7 @@ document.addEventListener("click", (e) => {
             doc.setFont("helvetica", "bold");
             doc.text(`${label}:`, labelX, y);
             doc.setFont("helvetica", "normal");
-            doc.text(value || "—", labelX, y);
+            doc.text(value || "—", valueX, y);
           });
 
           doc.setFontSize(10);
