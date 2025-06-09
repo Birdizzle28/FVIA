@@ -1155,8 +1155,6 @@ document.addEventListener("click", (e) => {
       if (!leads.length) return alert("No leads selected.");
 
       const printWindow = window.open("", "_blank");
-      const logo = `<img src="/Pics/img6.png" style="height: 60px;" />`;
-      const title = `<h2>Family Values Insurance Agency - Selected Leads</h2>`;
       const content = leads.map(lead => `
         <div class="page">
           <img src="/Pics/img6.png" class="logo" />
@@ -1185,25 +1183,65 @@ document.addEventListener("click", (e) => {
               body {
                 font-family: 'Bellota Text', sans-serif;
                 padding: 30px;
+                text-align: center;
               }
-              strong {
-                display: inline-block;
-                width: 150px;
-              }
-              img {
+              .logo {
+                width: 60px;
                 height: 60px;
                 object-fit: contain;
+                display: block;
+                margin: 0 auto 10px auto;
               }
-              div {
+              .label {
+                display: inline-block;
+                font-weight: bold;
+                width: 150px;
+                text-align: right;
+                margin-right: 10px;
+              }
+              .value {
+                display: inline-block;
+                text-align: left;
+              }
+              p {
+                text-align: left;
+                margin: 6px 0 6px 100px;
+              }
+              .footer {
+                margin-top: 30px;
+                font-size: 10px;
+                text-align: center;
+                color: #777;
+              }
+              .lead-page {
                 page-break-after: always;
               }
             </style>
           </head>
           <body>
-            ${content} <!-- Your generated lead content goes here -->
+            ${leads.map(lead => `
+              <div class="lead-page">
+                <img src="/Pics/img6.png" class="logo" />
+                <h2>Family Values Insurance Agency</h2>
+                <h4>Lead Confirmation Form</h4>
+                <p><span class="label">First Name:</span> <span class="value">${lead.first_name}</span></p>
+                <p><span class="label">Last Name:</span> <span class="value">${lead.last_name}</span></p>
+                <p><span class="label">Age:</span> <span class="value">${lead.age}</span></p>
+                <p><span class="label">Phone:</span> <span class="value">${lead.phone}</span></p>
+                <p><span class="label">Lead Type:</span> <span class="value">${lead.leadType}</span></p>
+                <p><span class="label">City:</span> <span class="value">${lead.city}</span></p>
+                <p><span class="label">State:</span> <span class="value">${lead.state}</span></p>
+                <p><span class="label">ZIP:</span> <span class="value">${lead.zip}</span></p>
+                <p><span class="label">Address:</span> <span class="value">${lead.address}</span></p>
+                <p><span class="label">Agent Assigned:</span> <span class="value">${lead.agent}</span></p>
+                <p><span class="label">Submitted At:</span> <span class="value">${lead.submittedAt}</span></p>
+                <div class="footer">Generated on ${new Date().toLocaleDateString()}</div>
+              </div>
+            `).join("")}
           </body>
         </html>
       `);
+      
       printWindow.document.close();
       printWindow.print();
     });
