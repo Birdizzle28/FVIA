@@ -142,8 +142,14 @@ const supabase = createClient(
 );
 
 document.addEventListener('DOMContentLoaded', async () => {
+  document.addEventListener('DOMContentLoaded', async () => {
+  alert("✅ SCRIPT IS RUNNING");
+
   const container = document.getElementById("agent-cards-container");
-  if (!container) return;
+  if (!container) {
+    alert("❌ Container not found!");
+    return;
+  }
 
   container.innerHTML = "Loading team...";
 
