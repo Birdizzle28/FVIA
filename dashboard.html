@@ -123,6 +123,10 @@
         <input type="text" id="lead-type-filter" placeholder="Lead Type">
         <button id="apply-filters">Apply Filters</button>
         <button id="reset-filters">Reset Filters</button>
+
+        
+
+        <!-- Leads Table Sorting-->
         <select id="sort-by" style="display: none;">
           <option value="first_name">first_name</option>
           <option value="last_name">last_name</option>
@@ -142,7 +146,6 @@
       
       
       <!-- Leads Table -->
-      <div id="leads-tab" class="tab-content" style="display: none;">
         <div id="leads-table-container">
           <table id="leads-table">
             <thead>
@@ -173,7 +176,6 @@
           <button id="next-page">Next</button>
         </div>
       </div>
-    </div>
 
       
       
@@ -385,54 +387,35 @@
     </div>
   </div>
   <script type="module">
+    alert("✅ Inline script is working.");
+    //alert("✅ INLINE SCRIPT EXECUTED");
     import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
+      
     const supabase = createClient(
       'https://ddlbgkolnayqrxslzsxn.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
     );
-    
-    // Global vars
-    let userId = null;
-    let userRole = "agent"; // default
-    
+
+
+
+    //DOMCONTENTLOADED
     document.addEventListener("DOMContentLoaded", async () => {
-      const loadingScreen = document.getElementById("loading-screen");
-    
+      //alert("✅ DOM fully loaded and JS is running.");
+      const loadingScreen = document.getElementById('loading-screen');
+      
       try {
+        alert("🔍 Checking session...");
         const sessionResult = await supabase.auth.getSession();
         const session = sessionResult.data.session;
-    
+        //alert("📦 Session result: " + (session ? "Found" : "Missing"));
+        
         if (!session) {
           document.body.innerHTML = "<h1>Session not found. Please log in again.</h1>";
           return;
         }
-    
+        
         const user = session.user;
-        userId = user.id;
-    
-        // Fetch profile
-        const { data: profile, error } = await supabase
-          .from("profiles")
-          .select("full_name, role")
-          .eq("id", userId)
-          .single();
-    
-        if (error) {
-          console.error("Failed to fetch profile:", error.message);
-          alert("Could not load profile.");
-          return;
-        }
-    
-        userRole = profile.role || "agent";
-        console.log("✅ Logged in as:", profile.full_name, "| Role:", userRole);
-      } catch (err) {
-        console.error("❌ Error during session check:", err.message);
-        alert("Something went wrong loading your session.");
-      } finally {
-        if (loadingScreen) loadingScreen.style.display = "none";
-      }
-
+        const userId = user.id;
 
         // 🔧 DOM Elements
         const firstNameInput = document.getElementById('first-name');
@@ -806,28 +789,17 @@
       
       let currentSortColumn = null;
       let currentSortDirection = 'asc';
-     document.querySelectorAll('#leads-table th[data-column]').forEach(th => {
+      document.querySelectorAll('#leads-table th[data-column]').forEach(th => {
         th.addEventListener('click', () => {
           const column = th.getAttribute('data-column');
-          
           if (currentSortColumn === column) {
             currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
           } else {
             currentSortColumn = column;
             currentSortDirection = 'asc';
           }
-      
           document.getElementById('sort-by').value = column;
           document.getElementById('date-order').value = currentSortDirection;
-      
-          // Clear all sort indicators
-          document.querySelectorAll('#leads-table th[data-column]').forEach(header => {
-            header.textContent = header.textContent.replace(/ ↑| ↓/, '');
-          });
-      
-          // Add sort arrow to the clicked column
-          th.textContent += currentSortDirection === 'asc' ? ' ↑' : ' ↓';
-      
           loadLeadsWithFilters();
         });
       });
@@ -903,20 +875,6 @@
       const assignedFilter = document.getElementById('assigned-filter').value;
       
       let query = supabase.from('leads').select('*', { count: 'exact' });
-      if (userRole !== 'admin') {
-        query = query.eq('assigned_to', userId);
-      
-        // Hide only assignment and agent filters
-        document.getElementById('agent-filter')?.closest('.filter-group')?.style.display = 'none';
-        document.getElementById('assigned-filter')?.closest('.filter-group')?.style.display = 'none';
-        // Hide agent name column for agents
-        document.querySelectorAll('th[data-column="submitted_by_name"], td.lead-agent')
-          .forEach(el => el.style.display = 'none');
-        
-        // Hide actions column for agents
-        document.querySelectorAll('th:last-child, td:last-child')
-          .forEach(el => el.style.display = 'none');
-      }
       if (rangeStart) query = query.gte('created_at', rangeStart);
       if (rangeEnd) query = query.lte('created_at', rangeEnd);
       if (agent) query = query.eq('assigned_to', agent);
