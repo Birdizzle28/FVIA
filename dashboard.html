@@ -412,7 +412,7 @@
               <tr>
                 <th>Select</th>
                 <th data-column="created_at">Submitted</th>
-                <th>Agent</th>
+                <th data-column="submitted_by_name">Agent</th>
                 <th data-column="first_name">First Name</th>
                 <th data-column="last_name">Last Name</th>
                 <th data-column="age">Age</th>
@@ -1425,7 +1425,7 @@ document.addEventListener("click", (e) => {
         last_name: row.querySelector(".lead-last")?.textContent.trim() || "",
         age: row.querySelector(".lead-age")?.textContent.trim() || "",
         phone: row.querySelector(".lead-phone")?.textContent.trim() || "",
-        leadType: row.querySelector(".lead-type")?.textContent.trim() || "",
+        leadType: row.querySelector(".lead-lead_type")?.textContent.trim() || "",
         city: row.querySelector(".lead-city")?.textContent.trim() || "",
         state: row.querySelector(".lead-state")?.textContent.trim() || "",
         zip: row.querySelector(".lead-zip")?.textContent.trim() || "",
