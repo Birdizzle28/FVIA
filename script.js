@@ -1,3 +1,5 @@
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
 window.addEventListener("load", () => {
   const slides = document.querySelector(".carousel");
   const thumbWrapper = document.querySelector(".thumbnail-wrapper");
@@ -132,7 +134,7 @@ if (chatBubble && chatWindow) {
 }
 
 
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
 
 const supabase = createClient(
   'https://ddlbgkolnayqrxslzsxn.supabase.co',
