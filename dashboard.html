@@ -1155,7 +1155,7 @@ document.addEventListener("click", (e) => {
       if (!leads.length) return alert("No leads selected.");
 
       const printWindow = window.open("", "_blank");
-      const logo = `<img src="/Pics/Logo.png" style="height: 60px;" />`;
+      const logo = `<img src="/Pics/img6.png" style="height: 60px;" />`;
       const title = `<h2>Family Values Insurance Agency - Selected Leads</h2>`;
       const content = leads.map(lead => {
         return `
@@ -1190,7 +1190,7 @@ document.addEventListener("click", (e) => {
       const doc = new jsPDF();
 
       const logo = new Image();
-      logo.src = "/Pics/Logo.png";
+      logo.src = "/Pics/img6.png";
 
       logo.onload = () => {
         leads.forEach((lead, index) => {
