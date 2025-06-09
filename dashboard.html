@@ -1177,39 +1177,45 @@ function getSelectedLeadsData() {
     
     // PDF Export (using jsPDF)
     document.getElementById("export-pdf").addEventListener("click", async () => {
-    const leads = getSelectedLeadsData();
-    if (leads.length === 0) return alert("No leads selected.");
-  
-    const jsPDFModule = await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-    const jsPDF = jsPDFModule.default;
-    await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js');
-  
-    const doc = new jsPDF();
-    const logo = new Image();
-    logo.src = "/Pics/Logo.png";
-  
-    logo.onload = () => {
-      doc.addImage(logo, "PNG", 10, 10, 30, 15);
-      doc.setFontSize(16);
-      doc.text("Family Values Insurance Agency", 50, 20);
-      doc.setFontSize(12);
-      doc.text("Selected Leads Export", 50, 28);
-  
-      const headers = Object.keys(leads[0]);
-      const rows = leads.map(lead => Object.values(lead));
-  
-      doc.autoTable({
-        startY: 40,
-        head: [headers],
-        body: rows,
-        styles: { fontSize: 9, overflow: 'linebreak' },
-        headStyles: { fillColor: [44, 62, 80] },
-        margin: { top: 40 }
-      });
-  
-      doc.save("FVIA_Leads.pdf");
-    };
-  });
+      const leads = getSelectedLeadsData();
+      if (leads.length === 0) return alert("No leads selected.");
+    
+      const { jsPDF } = await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+      await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js');
+    
+      const doc = new jsPDF();
+      const logo = new Image();
+      logo.src = "/Pics/Logo.png";
+    
+      logo.onload = () => {
+        leads.forEach((lead, index) => {
+          if (index > 0) doc.addPage();
+    
+          doc.addImage(logo, "PNG", 10, 10, 30, 15);
+          doc.setFontSize(16);
+          doc.text("Family Values Insurance Agency", 50, 20);
+          doc.setFontSize(12);
+          doc.text("Selected Lead Export", 50, 28);
+    
+          const headers = [["Field", "Value"]];
+          const rows = Object.entries(lead).map(([key, val]) => [key, val]);
+    
+          doc.autoTable({
+            startY: 40,
+            head: headers,
+            body: rows,
+            styles: { fontSize: 10, overflow: 'linebreak' },
+            headStyles: { fillColor: [44, 62, 80], textColor: 255 },
+            columnStyles: {
+              0: { cellWidth: 50 },
+              1: { cellWidth: 130 }
+            }
+          });
+        });
+    
+        doc.save("FVIA_Leads.pdf");
+      };
+    });
 </script>
 </body>
 </html>
