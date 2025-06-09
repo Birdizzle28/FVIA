@@ -875,6 +875,9 @@
       const assignedFilter = document.getElementById('assigned-filter').value;
       
       let query = supabase.from('leads').select('*', { count: 'exact' });
+      if (userRole === 'agent') {
+        query = query.eq('assigned_to', userId);
+      }
       if (rangeStart) query = query.gte('created_at', rangeStart);
       if (rangeEnd) query = query.lte('created_at', rangeEnd);
       if (agent) query = query.eq('assigned_to', agent);
@@ -894,6 +897,13 @@
         .range(from, to);
       
       if (error) return console.error('Error loading leads:', error);
+      if (userRole === 'agent') {
+        document.getElementById('agent-filter')?.closest('.filter-item')?.style.setProperty('display', 'none');
+        document.getElementById('assigned-filter')?.closest('.filter-item')?.style.setProperty('display', 'none');
+      
+        const actionsHeader = document.querySelector('#leads-table th:last-child');
+        if (actionsHeader) actionsHeader.style.display = 'none';
+      }
       
       const totalPages = Math.ceil(count / PAGE_SIZE);
       document.getElementById('current-page').textContent = `Page ${currentPage} of ${totalPages}`;
@@ -942,6 +952,13 @@
           td.classList.add(className);
           td.textContent = text;
           tr.appendChild(td);
+        }
+      
+        // 👇 Add Actions column ONLY for admins
+        if (userRole !== 'agent') {
+          const actionsTd = document.createElement('td');
+          actionsTd.textContent = ''; // You can put buttons here later
+          tr.appendChild(actionsTd);
         }
       
         tbody.appendChild(tr);
