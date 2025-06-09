@@ -9,6 +9,8 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
   <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 </head>
@@ -1219,11 +1221,19 @@ function getSelectedLeadsData() {
       };
     });
 </script>
-<script type="module">
-  const { jsPDF } = await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-  const doc = new jsPDF();
-  doc.text("PDF test is working!", 10, 10);
-  doc.save("test.pdf");
+<script>
+  window.addEventListener("load", () => {
+    const exportBtn = document.createElement("button");
+    exportBtn.textContent = "Test PDF";
+    document.body.appendChild(exportBtn);
+
+    exportBtn.addEventListener("click", () => {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+      doc.text("PDF export is working!", 20, 20);
+      doc.save("test.pdf");
+    });
+  });
 </script>
 </body>
 </html>
