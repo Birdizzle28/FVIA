@@ -661,3 +661,7 @@ html, #indexbody {
 #export-controls button {
   margin: 2px;
 }
+
+#leads-table th.sorted {
+  background-color: #dcefff;
+}
