@@ -850,6 +850,10 @@
     document.getElementById('bulk-assign-agent').addEventListener('change', (e) => {
       //alert("🔄 Agent selected: " + e.target.value);
     });
+    function toggleExportVisibility() {
+      const anyChecked = document.querySelectorAll(".lead-checkbox:checked").length > 0;
+      document.getElementById("export-controls").style.display = anyChecked ? "block" : "none";
+    }
     
     async function loadLeadsWithFilters() {
       const tbody = document.querySelector('#leads-table tbody');
@@ -896,9 +900,11 @@
       
       leads.forEach(lead => {
         const tr = document.createElement('tr');
+      
         const checkboxTd = document.createElement('td');
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
+        checkbox.classList.add('lead-checkbox');
         checkbox.dataset.leadId = lead.id;
         checkbox.addEventListener('change', (e) => {
           if (e.target.checked) {
@@ -908,29 +914,34 @@
           }
           document.getElementById('selected-count').textContent = selectedLeads.size;
           document.getElementById('bulk-assign-controls').style.display = selectedLeads.size > 0 ? 'block' : 'none';
+          toggleExportVisibility(); // 👈 NEW!
         });
         checkboxTd.appendChild(checkbox);
         tr.appendChild(checkboxTd);
+      
         const agentName = allAgents.find(a => a.id === lead.assigned_to)?.full_name || 'Unassigned';
-        const cells = [
-          new Date(lead.created_at).toLocaleDateString(),
-          agentName,
-          lead.first_name || '',
-          lead.last_name || '',
-          lead.age || '',
-          (lead.phone || []).join(', '),
-          lead.address || '',
-          lead.city || '',
-          lead.state || '',
-          lead.zip || '',
-          lead.lead_type || '',
-          lead.notes || ''
-        ];
-        cells.forEach(text => {
+        const cellMap = {
+          'lead-date': new Date(lead.created_at).toLocaleDateString(),
+          'lead-agent': agentName,
+          'lead-name': lead.first_name || '',
+          'lead-last': lead.last_name || '',
+          'lead-age': lead.age || '',
+          'lead-phone': (lead.phone || []).join(', '),
+          'lead-address': lead.address || '',
+          'lead-city': lead.city || '',
+          'lead-state': lead.state || '',
+          'lead-zip': lead.zip || '',
+          'lead-type': lead.lead_type || '',
+          'lead-notes': lead.notes || ''
+        };
+      
+        for (const [className, text] of Object.entries(cellMap)) {
           const td = document.createElement('td');
+          td.classList.add(className);
           td.textContent = text;
           tr.appendChild(td);
-        });
+        }
+      
         tbody.appendChild(tr);
       });
     }
