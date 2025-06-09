@@ -416,7 +416,27 @@
         
         const user = session.user;
         const userId = user.id;
+        let userRole = 'agent'; // Default
 
+        const { data: agentProfile, error: roleError } = await supabase
+          .from('agents')
+          .select('is_admin')
+          .eq('id', userId)
+          .single();
+        
+        if (roleError) {
+          alert('⚠️ Failed to check admin status: ' + roleError.message);
+        } else if (agentProfile && agentProfile.is_admin === true) {
+          userRole = 'admin';
+        }
+        alert('🔑 User role is: ' + userRole);
+        if (userRole === 'agent') {
+          document.getElementById('agent-filter')?.closest('.filter-item')?.style.setProperty('display', 'none');
+          document.getElementById('assigned-filter')?.closest('.filter-item')?.style.setProperty('display', 'none');
+        
+          const actionsHeader = document.querySelector('#leads-table th:last-child');
+          if (actionsHeader) actionsHeader.style.display = 'none';
+        }
         // 🔧 DOM Elements
         const firstNameInput = document.getElementById('first-name');
         const lastNameInput = document.getElementById('last-name');
