@@ -1421,8 +1421,8 @@ document.addEventListener("click", (e) => {
     return Array.from(document.querySelectorAll('input[type="checkbox"].lead-checkbox:checked')).map(cb => {
       const row = cb.closest("tr");
       return {
-        first_name: row.querySelector(".lead-name")?.textContent.trim() || "",
-        last_name: row.querySelector(".lead-last")?.textContent.trim() || "",
+        first_name: row.querySelector(".lead-first_name")?.textContent.trim() || "",
+        last_name: row.querySelector(".lead-last_name")?.textContent.trim() || "",
         age: row.querySelector(".lead-age")?.textContent.trim() || "",
         phone: row.querySelector(".lead-phone")?.textContent.trim() || "",
         leadType: row.querySelector(".lead-lead_type")?.textContent.trim() || "",
@@ -1431,7 +1431,7 @@ document.addEventListener("click", (e) => {
         zip: row.querySelector(".lead-zip")?.textContent.trim() || "",
         address: row.querySelector(".lead-address")?.textContent.trim() || "",
         agent: row.querySelector(".lead-submitted_by_name")?.textContent.trim() || "",
-        submittedAt: row.querySelector(".lead-date")?.textContent.trim() || ""
+        submittedAt: row.querySelector(".lead-created_at")?.textContent.trim() || ""
       };
     });
   };
