@@ -1261,17 +1261,19 @@ document.addEventListener("click", (e) => {
         leads.forEach((lead, index) => {
           if (index !== 0) doc.addPage();
 
-          doc.addImage(logo, "PNG", 80, 10, 30, 30); // centered
+          doc.addImage(logo, "PNG", 90, 10, 30, 30); // centered
           doc.setFontSize(18);
           doc.setFont("helvetica", "bold");
-          doc.text("Family Values Insurance Agency", 105, 40, { align: "center" });
+          doc.text("Family Values Insurance Agency", 105, 50, { align: "center" });
 
           doc.setFontSize(14);
           doc.setFont("helvetica", "normal");
-          doc.text("Lead Confirmation Form", 105, 50, { align: "center" });
+          doc.text("Lead Confirmation Form", 105, 60, { align: "center" });
 
-          const startY = 70;
-          const lineHeight = 12;
+          const startY = 80;
+          const lineHeight = 10;
+          const labelX = 20;
+          const valueX = 70;
 
           const fields = [
             ["First Name", lead.first_name],
@@ -1290,12 +1292,13 @@ document.addEventListener("click", (e) => {
           fields.forEach(([label, value], i) => {
             const y = startY + i * lineHeight;
             doc.setFont("helvetica", "bold");
-            doc.text(`${label}:`, 20, y);
+            doc.text(`${label}:`, labelX, y);
             doc.setFont("helvetica", "normal");
-            doc.text(value || "—", 70, y);
+            doc.text(value || "—", labelX, y);
           });
 
           doc.setFontSize(10);
+          doc.setTextColor(120);
           doc.text(`Generated on ${new Date().toLocaleDateString()}`, 105, 285, { align: "center" });
         });
 
