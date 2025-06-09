@@ -1427,10 +1427,10 @@ document.addEventListener("click", (e) => {
         phone: row.querySelector(".lead-phone")?.textContent.trim() || "",
         leadType: row.querySelector(".lead-lead_type")?.textContent.trim() || "",
         city: row.querySelector(".lead-city")?.textContent.trim() || "",
-        state: row.querySelector(".lead-state")?.innerText.trim() || "",
+        state: row.querySelector(".lead-state")?.innerText.trim() || row.querySelector(".lead-state select")?.value || "",
         zip: row.querySelector(".lead-zip")?.textContent.trim() || "",
         address: row.querySelector(".lead-address")?.textContent.trim() || "",
-        agent: row.querySelector(".lead-submitted_by_name")?.innerText.trim() || "",
+        agent: row.querySelector(".lead-submitted_by_name")?.innerText.trim() || row.querySelector(".lead-submitted_by_name select")?.value || "",
         submittedAt: row.querySelector(".lead-created_at")?.textContent.trim() || ""
       };
     });
