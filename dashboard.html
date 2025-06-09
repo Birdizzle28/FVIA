@@ -397,11 +397,13 @@
     );
 
     let userRole = 'agent'; // Default
+    let userId;
 
     //DOMCONTENTLOADED
     document.addEventListener("DOMContentLoaded", async () => {
       //alert("✅ DOM fully loaded and JS is running.");
       const loadingScreen = document.getElementById('loading-screen');
+      
       
       try {
         alert("🔍 Checking session...");
@@ -415,8 +417,7 @@
         }
         
         const user = session.user;
-        const userId = user.id;
-
+        userId = user.id;
         const { data: agentProfile, error: roleError } = await supabase
           .from('agents')
           .select('is_admin')
