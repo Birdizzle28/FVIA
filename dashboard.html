@@ -45,7 +45,6 @@
       <div id="requested-leads-container" class="scroll-container"></div>
       <hr>
       <h3>All Leads</h3>
-      
       <!-- Filters -->
       <div id="admin-filters">
         <input id="date-range" placeholder="Select date range" readonly>
@@ -123,10 +122,6 @@
         <input type="text" id="lead-type-filter" placeholder="Lead Type">
         <button id="apply-filters">Apply Filters</button>
         <button id="reset-filters">Reset Filters</button>
-
-        
-
-        <!-- Leads Table Sorting-->
         <select id="sort-by" style="display: none;">
           <option value="first_name">first_name</option>
           <option value="last_name">last_name</option>
@@ -142,9 +137,6 @@
           <option value="created_at">created_at</option>
         </select>
       </div>
-
-      
-      
       <!-- Leads Table -->
         <div id="leads-table-container">
           <table id="leads-table">
@@ -176,9 +168,6 @@
           <button id="next-page">Next</button>
         </div>
       </div>
-
-      
-      
       <!-- Bulk Assign Controls -->
       <div id="bulk-assign-controls" style="display: none; margin-top: 10px;">
         <label for="bulk-assign-agent">Assign <span id="selected-count">0</span> lead(s) to:</label>
@@ -193,9 +182,6 @@
           <button id="export-print">Print</button>
         </div>
       </div>
-
-      
-
       <!--Assignment History-->
       <h3 style="margin-top: 30px;">Assignment History</h3>
       <table id="assignment-history-table">
@@ -210,10 +196,7 @@
         <tbody></tbody>
       </table>
     </section>
-    
-
-
-
+  
     <!--PROFILE-->
     <section id="profile-tab" class="tab-content profile-section">
       <div class="profile-picture-wrapper">
@@ -237,8 +220,6 @@
         <p id="edit-profile-message"></p>
       </form>
     </section>
-
-    
 
     <!--LEAD SUBMISSION-->
     <section id="lead-tab" class="tab-content" style="display: none;">
@@ -270,9 +251,6 @@
         <button type="submit">Submit Lead</button>
       </form>
       <p id="lead-message"></p>
-
-      
-
       <!--LEAD REQUESTS-->
       <h3>Request Leads</h3>
       <form id="lead-request-form">
@@ -344,6 +322,127 @@
         <button type="submit">Submit Request</button>
       </form>
       <p id="request-message"></p>
+      <!--Agent Leads Viewer-->
+      <div id="agent-leads-viewer" style="display: none;">
+        <div id="agent-filters">
+          <input id="agent-date-range" placeholder="Select date range" readonly>
+          <label for="agent-date-order">Order:</label>
+          <select id="agent-date-order">
+            <option value="desc">Most Recent</option>
+            <option value="asc">Oldest</option>
+          </select>
+          <input type="text" id="agent-zip-filter" placeholder="ZIP">
+          <input type="text" id="agent-city-filter" placeholder="City">
+          <select id="agent-state-filter">
+            <option value="">Select State</option>
+            <option value="AL">Alabama</option>
+            <option value="AK">Alaska</option>
+            <option value="AZ">Arizona</option>
+            <option value="AR">Arkansas</option>
+            <option value="CA">California</option>
+            <option value="CO">Colorado</option>
+            <option value="CT">Connecticut</option>
+            <option value="DE">Delaware</option>
+            <option value="FL">Florida</option>
+            <option value="GA">Georgia</option>
+            <option value="HI">Hawaii</option>
+            <option value="ID">Idaho</option>
+            <option value="IL">Illinois</option>
+            <option value="IN">Indiana</option>
+            <option value="IA">Iowa</option>
+            <option value="KS">Kansas</option>
+            <option value="KY">Kentucky</option>
+            <option value="LA">Louisiana</option>
+            <option value="ME">Maine</option>
+            <option value="MD">Maryland</option>
+            <option value="MA">Massachusetts</option>
+            <option value="MI">Michigan</option>
+            <option value="MN">Minnesota</option>
+            <option value="MS">Mississippi</option>
+            <option value="MO">Missouri</option>
+            <option value="MT">Montana</option>
+            <option value="NE">Nebraska</option>
+            <option value="NV">Nevada</option>
+            <option value="NH">New Hampshire</option>
+            <option value="NJ">New Jersey</option>
+            <option value="NM">New Mexico</option>
+            <option value="NY">New York</option>
+            <option value="NC">North Carolina</option>
+            <option value="ND">North Dakota</option>
+            <option value="OH">Ohio</option>
+            <option value="OK">Oklahoma</option>
+            <option value="OR">Oregon</option>
+            <option value="PA">Pennsylvania</option>
+            <option value="RI">Rhode Island</option>
+            <option value="SC">South Carolina</option>
+            <option value="SD">South Dakota</option>
+            <option value="TN">Tennessee</option>
+            <option value="TX">Texas</option>
+            <option value="UT">Utah</option>
+            <option value="VT">Vermont</option>
+            <option value="VA">Virginia</option>
+            <option value="WA">Washington</option>
+            <option value="WV">West Virginia</option>
+            <option value="WI">Wisconsin</option>
+            <option value="WY">Wyoming</option>
+          </select>
+          <input type="text" id="agent-first-name-filter" placeholder="First Name">
+          <input type="text" id="agent-last-name-filter" placeholder="Last Name">
+          <input type="text" id="agent-lead-type-filter" placeholder="Lead Type">
+          <button id="agent-apply-filters">Apply Filters</button>
+          <button id="agent-reset-filters">Reset Filters</button>
+          <select id="agent-sort-by" style="display: none;">
+            <option value="first_name">first_name</option>
+            <option value="last_name">last_name</option>
+            <option value="age">age</option>
+            <option value="phone">phone</option>
+            <option value="address">address</option>
+            <option value="city">city</option>
+            <option value="state">state</option>
+            <option value="zip">zip</option>
+            <option value="lead_type">lead_type</option>
+            <option value="notes">notes</option>
+            <option value="created_at">created_at</option>
+          </select>
+        </div>
+      
+        <div id="agent-leads-table-container">
+          <table id="agent-leads-table">
+            <thead>
+              <tr>
+                <th data-column="created_at">Submitted</th>
+                <th data-column="first_name">First Name</th>
+                <th data-column="last_name">Last Name</th>
+                <th data-column="age">Age</th>
+                <th data-column="phone">Phone(s)</th>
+                <th data-column="address">Address</th>
+                <th data-column="city">City</th>
+                <th data-column="state">State</th>
+                <th data-column="zip">ZIP</th>
+                <th data-column="lead_type">Type</th>
+                <th data-column="notes">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Agent leads will load here -->
+            </tbody>
+          </table>
+          <div id="agent-pagination-controls" style="margin-top: 10px;">
+            <button id="agent-prev-page">Previous</button>
+            <span id="agent-current-page">Page 1</span>
+            <button id="agent-next-page">Next</button>
+          </div>
+        </div>
+      
+        <div id="agent-export-controls" style="display: none;">
+          <button id="agent-export-btn">Export</button>
+          <div id="agent-export-options" style="display: none; position: absolute; background: white; border: 1px solid #ccc; padding: 5px;">
+            <button id="agent-export-pdf">PDF</button>
+            <button id="agent-export-csv">CSV</button>
+            <button id="agent-export-print">Print</button>
+          </div>
+        </div>
+      </div>
     </section>
 
 
@@ -404,7 +503,6 @@
       //alert("✅ DOM fully loaded and JS is running.");
       const loadingScreen = document.getElementById('loading-screen');
       
-      
       try {
         alert("🔍 Checking session...");
         const sessionResult = await supabase.auth.getSession();
@@ -418,6 +516,7 @@
         
         const user = session.user;
         userId = user.id;
+        
         const { data: agentProfile, error: roleError } = await supabase
           .from('agents')
           .select('is_admin')
@@ -430,6 +529,144 @@
           userRole = 'admin';
         }
         alert('🔑 User role is: ' + userRole);
+        const agentLeadsViewer = document.getElementById('agent-leads-viewer');
+        if (agentLeadsViewer && (userRole === 'agent' || userRole === 'admin')) {
+          agentLeadsViewer.style.display = 'block';
+        }
+        // ✅ Call only *after* userId is available
+        if (document.getElementById('agent-leads-table') && userId) {
+          loadAgentLeads();
+        }
+        let agentCurrentPage = 1;
+        const agentPageSize = 25; // 25 rows per page
+        // 👇 Define the function below
+        async function loadAgentLeads() {
+          const tableBody = document.querySelector('#agent-leads-table tbody');
+          tableBody.innerHTML = '';
+        
+          let query = supabase
+            .from('leads')
+            .select('*')
+            .eq('assigned_to', userId);
+          
+          // Get filters
+          const dateOrder = document.getElementById('agent-date-order')?.value || 'desc';
+          const zip = document.getElementById('agent-zip-filter')?.value.trim();
+          const city = document.getElementById('agent-city-filter')?.value.trim();
+          const state = document.getElementById('agent-state-filter')?.value;
+          const firstName = document.getElementById('agent-first-name-filter')?.value.trim();
+          const lastName = document.getElementById('agent-last-name-filter')?.value.trim();
+          const leadType = document.getElementById('agent-lead-type-filter')?.value.trim();
+          
+          // Apply filters if values exist
+          if (zip) query = query.ilike('zip', `%${zip}%`);
+          if (city) query = query.ilike('city', `%${city}%`);
+          if (state) query = query.eq('state', state);
+          if (firstName) query = query.ilike('first_name', `%${firstName}%`);
+          if (lastName) query = query.ilike('last_name', `%${lastName}%`);
+          if (leadType) query = query.ilike('lead_type', `%${leadType}%`);
+
+          const from = (agentCurrentPage - 1) * agentPageSize;
+          const to = from + agentPageSize - 1;
+          query = query.range(from, to);
+          const sortBy = document.getElementById('agent-sort-by')?.value || 'created_at';
+          query = query.order(sortBy, { ascending: dateOrder === 'asc' });
+          
+          const { data: leads, error } = await query;
+        
+          if (error) {
+            alert('❌ Failed to load agent leads: ' + error.message);
+            return;
+          }
+        
+          leads.forEach(lead => {
+            const tr = document.createElement('tr');
+        
+            const cellMap = {
+              'created_at': new Date(lead.created_at).toLocaleDateString(),
+              'first_name': lead.first_name || '',
+              'last_name': lead.last_name || '',
+              'age': lead.age || '',
+              'phone': (lead.phone || []).join(', '),
+              'address': lead.address || '',
+              'city': lead.city || '',
+              'state': lead.state || '',
+              'zip': lead.zip || '',
+              'lead_type': lead.lead_type || '',
+              'notes': lead.notes || ''
+            };
+        
+            for (const [key, value] of Object.entries(cellMap)) {
+              const td = document.createElement('td');
+              td.classList.add(`lead-${key}`);
+              td.textContent = value;
+              tr.appendChild(td);
+            }
+        
+            tableBody.appendChild(tr);
+          });
+          const nextBtn = document.getElementById('agent-next-page');
+          if (leads.length < agentPageSize) {
+            nextBtn.disabled = true;
+          } else {
+            nextBtn.disabled = false;
+          }
+          document.getElementById('agent-current-page').textContent = `Page ${agentCurrentPage}`;
+          const prevBtn = document.getElementById('agent-prev-page');
+          if (agentCurrentPage === 1) {
+            prevBtn.disabled = true;
+          } else {
+            prevBtn.disabled = false;
+          }
+        }
+        // Pagination button listeners
+        document.getElementById('agent-prev-page')?.addEventListener('click', () => {
+          if (agentCurrentPage > 1) {
+            agentCurrentPage--;
+            loadAgentLeads();
+          }
+        });
+        
+        document.getElementById('agent-apply-filters')?.addEventListener('click', () => {
+          agentCurrentPage = 1;
+          loadAgentLeads();
+        });
+        
+        document.getElementById('agent-reset-filters')?.addEventListener('click', () => {
+          agentCurrentPage = 1;
+          // Clear all filter fields
+          document.getElementById('agent-date-range').value = '';
+          document.getElementById('agent-date-order').value = 'desc';
+          document.getElementById('agent-zip-filter').value = '';
+          document.getElementById('agent-city-filter').value = '';
+          document.getElementById('agent-state-filter').value = '';
+          document.getElementById('agent-first-name-filter').value = '';
+          document.getElementById('agent-last-name-filter').value = '';
+          document.getElementById('agent-lead-type-filter').value = '';
+          document.getElementById('agent-sort-by').value = 'created_at';
+        
+          loadAgentLeads();
+        });
+        
+        document.getElementById('agent-reset-filters')?.addEventListener('click', () => {
+          // Clear all filter fields
+          document.getElementById('agent-date-range').value = '';
+          document.getElementById('agent-date-order').value = 'desc';
+          document.getElementById('agent-zip-filter').value = '';
+          document.getElementById('agent-city-filter').value = '';
+          document.getElementById('agent-state-filter').value = '';
+          document.getElementById('agent-first-name-filter').value = '';
+          document.getElementById('agent-last-name-filter').value = '';
+          document.getElementById('agent-lead-type-filter').value = '';
+          document.getElementById('agent-sort-by').value = 'created_at';
+          
+          loadAgentLeads(); // Reload full list
+        });
+        
+        // ✅ Call this only if the user has access
+        if (document.getElementById('agent-leads-table')) {
+          loadAgentLeads();
+        }
         if (userRole === 'agent') {
           const agentHeader = document.querySelector('#leads-table th[data-column="submitted_by_name"]');
           if (agentHeader) agentHeader.style.display = 'none';
@@ -828,7 +1065,9 @@
         });
       });
     });
-    
+    document.getElementById('agent-sort-by')?.addEventListener('change', () => {
+      loadAgentLeads(); // Just reload with new sort
+    });
     let allAgents = [];
     let selectedLeads = new Set();
     let currentPage = 1;
@@ -1154,6 +1393,208 @@ document.addEventListener("click", (e) => {
   // Global helper
   window.getSelectedLeadsData = function () {
     return Array.from(document.querySelectorAll('input[type="checkbox"].lead-checkbox:checked')).map(cb => {
+      const row = cb.closest("tr");
+      return {
+        first_name: row.querySelector(".lead-name")?.textContent.trim() || "",
+        last_name: row.querySelector(".lead-last")?.textContent.trim() || "",
+        age: row.querySelector(".lead-age")?.textContent.trim() || "",
+        phone: row.querySelector(".lead-phone")?.textContent.trim() || "",
+        leadType: row.querySelector(".lead-type")?.textContent.trim() || "",
+        city: row.querySelector(".lead-city")?.textContent.trim() || "",
+        state: row.querySelector(".lead-state")?.textContent.trim() || "",
+        zip: row.querySelector(".lead-zip")?.textContent.trim() || "",
+        address: row.querySelector(".lead-address")?.textContent.trim() || "",
+        agent: row.querySelector(".lead-agent")?.textContent.trim() || "",
+        submittedAt: row.querySelector(".lead-date")?.textContent.trim() || ""
+      };
+    });
+  };
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const csvBtn = document.getElementById("export-csv");
+    const printBtn = document.getElementById("export-print");
+    const pdfBtn = document.getElementById("export-pdf");
+
+    // CSV Export
+    csvBtn?.addEventListener("click", () => {
+      const leads = getSelectedLeadsData();
+      if (!leads.length) return alert("No leads selected.");
+
+      const headers = Object.keys(leads[0]).join(",");
+      const rows = leads.map(lead => Object.values(lead).map(v => `"${v}"`).join(","));
+      const csv = [headers, ...rows].join("\n");
+
+      const blob = new Blob([csv], { type: "text/csv" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "leads.csv";
+      link.click();
+    });
+
+    // Print Export
+    printBtn?.addEventListener("click", () => {
+      const leads = getSelectedLeadsData();
+      if (!leads.length) return alert("No leads selected.");
+
+      const printWindow = window.open("", "_blank");
+      const content = leads.map(lead => `
+        <div class="page">
+          <img src="/Pics/img6.png" class="logo" />
+          <div class="title">Family Values Insurance Agency</div>
+          <div class="subtitle">Lead Confirmation Form</div>
+          <p><span class="label">First Name:</span> ${lead.first_name}</p>
+          <p><span class="label">Last Name:</span> ${lead.last_name}</p>
+          <p><span class="label">Age:</span> ${lead.age}</p>
+          <p><span class="label">Phone:</span> ${lead.phone}</p>
+          <p><span class="label">Lead Type:</span> ${lead.leadType}</p>
+          <p><span class="label">City:</span> ${lead.city}</p>
+          <p><span class="label">State:</span> ${lead.state}</p>
+          <p><span class="label">ZIP:</span> ${lead.zip}</p>
+          <p><span class="label">Address:</span> ${lead.address}</p>
+          <p><span class="label">Agent Assigned:</span> ${lead.agent}</p>
+          <p><span class="label">Submitted At:</span> ${lead.submittedAt}</p>
+          <div class="footer">Generated on ${new Date().toLocaleDateString()}</div>
+        </div>
+      `).join("");
+
+      printWindow.document.write(`
+        <html>
+          <head>
+            <link href="https://fonts.googleapis.com/css2?family=Bellota+Text&display=swap" rel="stylesheet">
+            <style>
+              body {
+                font-family: 'Bellota Text', sans-serif;
+                padding: 30px;
+                text-align: center;
+              }
+              .logo {
+                width: 60px;
+                height: 60px;
+                object-fit: contain;
+                display: block;
+                margin: 0 auto 10px auto;
+              }
+              .label {
+                display: inline-block;
+                font-weight: bold;
+                width: 150px;
+                text-align: right;
+                margin-right: 10px;
+              }
+              .value {
+                display: inline-block;
+                text-align: left;
+              }
+              p {
+                text-align: left;
+                margin: 6px 0 6px 100px;
+              }
+              .footer {
+                margin-top: 30px;
+                font-size: 10px;
+                text-align: center;
+                color: #777;
+              }
+              .lead-page {
+                page-break-after: always;
+              }
+            </style>
+          </head>
+          <body>
+            ${leads.map(lead => `
+              <div class="lead-page">
+                <img src="/Pics/img6.png" class="logo" />
+                <h2>Family Values Insurance Agency</h2>
+                <h4>Lead Confirmation Form</h4>
+                <p><span class="label">First Name:</span> <span class="value">${lead.first_name}</span></p>
+                <p><span class="label">Last Name:</span> <span class="value">${lead.last_name}</span></p>
+                <p><span class="label">Age:</span> <span class="value">${lead.age}</span></p>
+                <p><span class="label">Phone:</span> <span class="value">${lead.phone}</span></p>
+                <p><span class="label">Lead Type:</span> <span class="value">${lead.leadType}</span></p>
+                <p><span class="label">City:</span> <span class="value">${lead.city}</span></p>
+                <p><span class="label">State:</span> <span class="value">${lead.state}</span></p>
+                <p><span class="label">ZIP:</span> <span class="value">${lead.zip}</span></p>
+                <p><span class="label">Address:</span> <span class="value">${lead.address}</span></p>
+                <p><span class="label">Agent Assigned:</span> <span class="value">${lead.agent}</span></p>
+                <p><span class="label">Submitted At:</span> <span class="value">${lead.submittedAt}</span></p>
+                <div class="footer">Generated on ${new Date().toLocaleDateString()}</div>
+              </div>
+            `).join("")}
+          </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      printWindow.print();
+    });
+
+    // PDF Export
+    pdfBtn?.addEventListener("click", () => {
+      const leads = getSelectedLeadsData();
+      if (!leads.length) return alert("No leads selected.");
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      const logo = new Image();
+      logo.src = "/Pics/img6.png";
+
+      logo.onload = () => {
+        leads.forEach((lead, index) => {
+          if (index !== 0) doc.addPage();
+
+          doc.addImage(logo, "PNG", 90, 10, 30, 30); // centered
+          doc.setFontSize(18);
+          doc.setFont("helvetica", "bold");
+          doc.text("Family Values Insurance Agency", 105, 50, { align: "center" });
+
+          doc.setFontSize(14);
+          doc.setFont("helvetica", "normal");
+          doc.text("Lead Confirmation Form", 105, 60, { align: "center" });
+
+          const startY = 80;
+          const lineHeight = 10;
+          const labelX = 20;
+          const valueX = 70;
+
+          const fields = [
+            ["First Name", lead.first_name],
+            ["Last Name", lead.last_name],
+            ["Age", lead.age],
+            ["Phone", lead.phone],
+            ["Lead Type", lead.leadType],
+            ["City", lead.city],
+            ["State", lead.state],
+            ["ZIP", lead.zip],
+            ["Address", lead.address],
+            ["Agent Assigned", lead.agent],
+            ["Submitted At", lead.submittedAt],
+          ];
+
+          fields.forEach(([label, value], i) => {
+            const y = startY + i * lineHeight;
+            doc.setFont("helvetica", "bold");
+            doc.text(`${label}:`, labelX, y);
+            doc.setFont("helvetica", "normal");
+            doc.text(value || "—", valueX, y);
+          });
+
+          doc.setFontSize(10);
+          doc.setTextColor(120);
+          doc.text(`Generated on ${new Date().toLocaleDateString()}`, 105, 285, { align: "center" });
+        });
+
+        doc.save("FVIA_Leads.pdf");
+      };
+
+      logo.onerror = () => alert("❌ Failed to load logo.");
+    });
+  });
+</script>
+<script>
+  // Global helper
+  window.getSelectedLeadsData = function () {
+    return Array.from(document.querySelectorAll('#agent-leads-table input[type="checkbox"].lead-checkbox:checked')).map(cb => {
       const row = cb.closest("tr");
       return {
         first_name: row.querySelector(".lead-name")?.textContent.trim() || "",
