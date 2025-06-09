@@ -124,7 +124,8 @@
         <input type="text" id="lead-type-filter" placeholder="Lead Type">
         <button id="apply-filters">Apply Filters</button>
         <button id="reset-filters">Reset Filters</button>
-        
+
+        <!-- Leads Table Sorting-->
         <select id="sort-by" style="display: none;">
           <option value="first_name">first_name</option>
           <option value="last_name">last_name</option>
@@ -179,6 +180,16 @@
         <select id="bulk-assign-agent"></select>
         <button id="bulk-assign-btn">Assign</button>
       </div>
+      <div id="export-controls" style="display: none;">
+        <button id="export-btn">Export</button>
+        <div id="export-options" style="display: none; position: absolute; background: white; border: 1px solid #ccc; padding: 5px;">
+          <button id="export-pdf">PDF</button>
+          <button id="export-csv">CSV</button>
+          <button id="export-print">Print</button>
+        </div>
+      </div>
+
+      <!--Assignment History-->
       <h3 style="margin-top: 30px;">Assignment History</h3>
       <table id="assignment-history-table">
         <thead>
@@ -217,7 +228,7 @@
       </form>
     </section>
 
-    
+    <!--LEAD SUBMISSION-->
     <section id="lead-tab" class="tab-content" style="display: none;">
       <h3>Submit a Lead</h3>
       <form id="lead-form">
@@ -247,6 +258,8 @@
         <button type="submit">Submit Lead</button>
       </form>
       <p id="lead-message"></p>
+
+      <!--LEAD REQUESTS-->
       <h3>Request Leads</h3>
       <form id="lead-request-form">
         <input type="text" id="request-city" placeholder="City" />
