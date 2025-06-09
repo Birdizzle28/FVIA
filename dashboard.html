@@ -52,18 +52,15 @@
           <option value="desc">Most Recent</option>
           <option value="asc">Oldest</option>
         </select>
-        
         <label for="agent-filter">Agent:</label>
         <select id="agent-filter">
           <option value="">All Agents</option>
         </select>
-        
         <select id="assigned-filter">
           <option value="">Assigned & Unassigned</option>
           <option value="true">Assigned</option>
           <option value="false">Unassigned</option>
         </select>
-        
         <input type="text" id="zip-filter" placeholder="ZIP">
         <input type="text" id="city-filter" placeholder="City">
         <select id="state-filter">
@@ -125,6 +122,8 @@
         <button id="apply-filters">Apply Filters</button>
         <button id="reset-filters">Reset Filters</button>
 
+        
+
         <!-- Leads Table Sorting-->
         <select id="sort-by" style="display: none;">
           <option value="first_name">first_name</option>
@@ -141,6 +140,8 @@
           <option value="created_at">created_at</option>
         </select>
       </div>
+
+      
       
       <!-- Leads Table -->
       <div id="leads-table-container">
@@ -173,6 +174,8 @@
           <button id="next-page">Next</button>
         </div>
       </div>
+
+      
       
       <!-- Bulk Assign Controls -->
       <div id="bulk-assign-controls" style="display: none; margin-top: 10px;">
@@ -189,6 +192,8 @@
         </div>
       </div>
 
+      
+
       <!--Assignment History-->
       <h3 style="margin-top: 30px;">Assignment History</h3>
       <table id="assignment-history-table">
@@ -203,6 +208,9 @@
         <tbody></tbody>
       </table>
     </section>
+    
+
+
 
     <!--PROFILE-->
     <section id="profile-tab" class="tab-content profile-section">
@@ -227,6 +235,8 @@
         <p id="edit-profile-message"></p>
       </form>
     </section>
+
+    
 
     <!--LEAD SUBMISSION-->
     <section id="lead-tab" class="tab-content" style="display: none;">
@@ -258,6 +268,8 @@
         <button type="submit">Submit Lead</button>
       </form>
       <p id="lead-message"></p>
+
+      
 
       <!--LEAD REQUESTS-->
       <h3>Request Leads</h3>
@@ -331,6 +343,10 @@
       </form>
       <p id="request-message"></p>
     </section>
+
+
+
+    <!--Agent Thread-->
     <section id="thread-tab" class="tab-content" style="display: none;">
       <h3>Agent Thread</h3>
       <p>Coming soon: agents will post messages here about events, updates, and more.</p>
@@ -377,7 +393,10 @@
       'https://ddlbgkolnayqrxslzsxn.supabase.co',
       'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
     );
-    
+
+
+
+    //DOMCONTENTLOADED
     document.addEventListener("DOMContentLoaded", async () => {
       //alert("✅ DOM fully loaded and JS is running.");
       const loadingScreen = document.getElementById('loading-screen');
@@ -1107,6 +1126,9 @@ function getSelectedLeadsData() {
       link.download = "leads.csv";
       link.click();
     });
+
+
+    
     
     // Print Export
     document.getElementById("export-print").addEventListener("click", () => {
@@ -1133,37 +1155,38 @@ function getSelectedLeadsData() {
     
     // PDF Export (using jsPDF)
     document.getElementById("export-pdf").addEventListener("click", async () => {
-      const leads = getSelectedLeadsData();
-      if (leads.length === 0) return alert("No leads selected.");
-    
-      const { jsPDF } = await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
-      const doc = new jsPDF();
-      const logo = new Image();
-      logo.src = "/Pics/Logo.png";
-    
-      logo.onload = () => {
-        doc.addImage(logo, "PNG", 10, 10, 30, 15);
-        doc.setFontSize(16);
-        doc.text("Family Values Insurance Agency", 50, 20);
-        doc.setFontSize(12);
-        doc.text("Selected Leads Export", 50, 28);
-    
-        let y = 40;
-        const headers = Object.keys(leads[0]);
-        doc.setFont("helvetica", "bold");
-        headers.forEach((h, i) => doc.text(h, 10 + i * 30, y));
-        doc.setFont("helvetica", "normal");
-    
-        leads.forEach((lead, rowIndex) => {
-          y += 10;
-          Object.values(lead).forEach((val, colIndex) => {
-            doc.text(String(val), 10 + colIndex * 30, y);
-          });
-        });
-    
-        doc.save("leads.pdf");
-      };
-    });
+    const leads = getSelectedLeadsData();
+    if (leads.length === 0) return alert("No leads selected.");
+  
+    const { jsPDF } = await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+    await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js');
+  
+    const doc = new jsPDF();
+    const logo = new Image();
+    logo.src = "/Pics/Logo.png";
+  
+    logo.onload = () => {
+      doc.addImage(logo, "PNG", 10, 10, 30, 15);
+      doc.setFontSize(16);
+      doc.text("Family Values Insurance Agency", 50, 20);
+      doc.setFontSize(12);
+      doc.text("Selected Leads Export", 50, 28);
+  
+      const headers = Object.keys(leads[0]);
+      const rows = leads.map(lead => Object.values(lead));
+  
+      doc.autoTable({
+        startY: 40,
+        head: [headers],
+        body: rows,
+        styles: { fontSize: 9, overflow: 'linebreak' },
+        headStyles: { fillColor: [44, 62, 80] },
+        margin: { top: 40 }
+      });
+  
+      doc.save("FVIA_Leads.pdf");
+    };
+  });
 </script>
 </body>
 </html>
