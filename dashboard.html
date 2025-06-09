@@ -1157,27 +1157,53 @@ document.addEventListener("click", (e) => {
       const printWindow = window.open("", "_blank");
       const logo = `<img src="/Pics/img6.png" style="height: 60px;" />`;
       const title = `<h2>Family Values Insurance Agency - Selected Leads</h2>`;
-      const content = leads.map(lead => {
-        return `
-          <div style="page-break-after: always;">
-            ${logo}
-            ${title}
-            <p><strong>First Name:</strong> ${lead.first_name}</p>
-            <p><strong>Last Name:</strong> ${lead.last_name}</p>
-            <p><strong>Age:</strong> ${lead.age}</p>
-            <p><strong>Phone:</strong> ${lead.phone}</p>
-            <p><strong>Lead Type:</strong> ${lead.leadType}</p>
-            <p><strong>City:</strong> ${lead.city}</p>
-            <p><strong>State:</strong> ${lead.state}</p>
-            <p><strong>ZIP:</strong> ${lead.zip}</p>
-            <p><strong>Address:</strong> ${lead.address}</p>
-            <p><strong>Agent:</strong> ${lead.agent}</p>
-            <p><strong>Submitted At:</strong> ${lead.submittedAt}</p>
-          </div>
-        `;
-      }).join("");
+      const content = leads.map(lead => `
+        <div class="page">
+          <img src="/Pics/img6.png" class="logo" />
+          <div class="title">Family Values Insurance Agency</div>
+          <div class="subtitle">Lead Confirmation Form</div>
+          <p><span class="label">First Name:</span> ${lead.first_name}</p>
+          <p><span class="label">Last Name:</span> ${lead.last_name}</p>
+          <p><span class="label">Age:</span> ${lead.age}</p>
+          <p><span class="label">Phone:</span> ${lead.phone}</p>
+          <p><span class="label">Lead Type:</span> ${lead.leadType}</p>
+          <p><span class="label">City:</span> ${lead.city}</p>
+          <p><span class="label">State:</span> ${lead.state}</p>
+          <p><span class="label">ZIP:</span> ${lead.zip}</p>
+          <p><span class="label">Address:</span> ${lead.address}</p>
+          <p><span class="label">Agent Assigned:</span> ${lead.agent}</p>
+          <p><span class="label">Submitted At:</span> ${lead.submittedAt}</p>
+          <div class="footer">Generated on ${new Date().toLocaleDateString()}</div>
+        </div>
+      `).join("");
 
-      printWindow.document.write(`<html><body>${content}</body></html>`);
+      printWindow.document.write(`
+        <html>
+          <head>
+            <link href="https://fonts.googleapis.com/css2?family=Bellota+Text&display=swap" rel="stylesheet">
+            <style>
+              body {
+                font-family: 'Bellota Text', sans-serif;
+                padding: 30px;
+              }
+              strong {
+                display: inline-block;
+                width: 150px;
+              }
+              img {
+                height: 60px;
+                object-fit: contain;
+              }
+              div {
+                page-break-after: always;
+              }
+            </style>
+          </head>
+          <body>
+            ${content} <!-- Your generated lead content goes here -->
+          </body>
+        </html>
+      `);
       printWindow.document.close();
       printWindow.print();
     });
@@ -1197,7 +1223,7 @@ document.addEventListener("click", (e) => {
         leads.forEach((lead, index) => {
           if (index !== 0) doc.addPage();
 
-          doc.addImage(logo, "PNG", 80, 10, 50, 20); // centered
+          doc.addImage(logo, "PNG", 80, 10, 30, 30); // centered
           doc.setFontSize(18);
           doc.setFont("helvetica", "bold");
           doc.text("Family Values Insurance Agency", 105, 40, { align: "center" });
