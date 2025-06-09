@@ -653,3 +653,11 @@ html, #indexbody {
   margin-top: 10px;
   color: red;
 }
+#export-controls {
+  position: relative;
+  display: inline-block;
+  margin-top: 10px;
+}
+#export-controls button {
+  margin: 2px;
+}
