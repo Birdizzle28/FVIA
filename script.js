@@ -1,41 +1,3 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-const supabase = createClient(
-  'https://ddlbgkolnayqrxslzsxn.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
-);
-
-document.addEventListener('DOMContentLoaded', async () => {
-  const container = document.getElementById("agent-cards-container");
-  if (!container) return;
-
-  container.innerHTML = "Loading team...";
-
-  const { data: agents, error } = await supabase
-    .from('agents')
-    .select('full_name, bio, profile_picture_url')
-    .eq('show_on_about', true)
-    .eq('is_active', true);
-
-  if (error || !agents) {
-    container.innerHTML = "<p>Unable to load team members.</p>";
-    console.error("Error loading agents:", error);
-    return;
-  }
-
-  if (agents.length === 0) {
-    container.innerHTML = "<p>No team members to show yet.</p>";
-    return;
-  }
-
-  container.innerHTML = agents.map(agent => `
-    <div class="agent-card">
-      <img src="${agent.profile_picture_url}" alt="${agent.full_name}" class="agent-photo" />
-      <h3>${agent.full_name}</h3>
-      <p>${agent.bio || 'No bio provided.'}</p>
-    </div>
-  `).join('');
-});
 window.addEventListener("load", () => {
   const slides = document.querySelector(".carousel");
   const thumbWrapper = document.querySelector(".thumbnail-wrapper");
@@ -168,3 +130,43 @@ if (chatBubble && chatWindow) {
     chatWindow.style.display = chatWindow.style.display === "none" ? "block" : "none";
   });
 }
+
+
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+const supabase = createClient(
+  'https://ddlbgkolnayqrxslzsxn.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
+);
+
+document.addEventListener('DOMContentLoaded', async () => {
+  const container = document.getElementById("agent-cards-container");
+  if (!container) return;
+
+  container.innerHTML = "Loading team...";
+
+  const { data: agents, error } = await supabase
+    .from('agents')
+    .select('full_name, bio, profile_picture_url')
+    .eq('show_on_about', true)
+    .eq('is_active', true);
+
+  if (error || !agents) {
+    container.innerHTML = "<p>Unable to load team members.</p>";
+    console.error("Error loading agents:", error);
+    return;
+  }
+
+  if (agents.length === 0) {
+    container.innerHTML = "<p>No team members to show yet.</p>";
+    return;
+  }
+
+  container.innerHTML = agents.map(agent => `
+    <div class="agent-card">
+      <img src="${agent.profile_picture_url}" alt="${agent.full_name}" class="agent-photo" />
+      <h3>${agent.full_name}</h3>
+      <p>${agent.bio || 'No bio provided.'}</p>
+    </div>
+  `).join('');
+});
