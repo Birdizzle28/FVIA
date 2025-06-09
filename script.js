@@ -1,4 +1,4 @@
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
 
 window.addEventListener("load", () => {
   const slides = document.querySelector(".carousel");
@@ -133,6 +133,7 @@ if (chatBubble && chatWindow) {
   });
 }
 
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
 
 
