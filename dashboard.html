@@ -1057,6 +1057,113 @@
         tbody.appendChild(tr);
       });
     }
+    // Toggle export dropdown
+const exportBtn = document.getElementById("export-btn");
+const exportOptions = document.getElementById("export-options");
+
+exportBtn.addEventListener("click", () => {
+  exportOptions.style.display = exportOptions.style.display === "block" ? "none" : "block";
+});
+
+// Hide dropdown when clicking outside
+document.addEventListener("click", (e) => {
+  if (!exportBtn.contains(e.target) && !exportOptions.contains(e.target)) {
+    exportOptions.style.display = "none";
+  }
+});
+
+// Helper: Get selected lead data
+function getSelectedLeadsData() {
+  return Array.from(document.querySelectorAll('input[type="checkbox"].lead-checkbox:checked'))
+    .map(cb => {
+      const row = cb.closest("tr");
+      return {
+        name: row.querySelector(".lead-name")?.textContent.trim() || "",
+        age: row.querySelector(".lead-age")?.textContent.trim() || "",
+        phone: row.querySelector(".lead-phone")?.textContent.trim() || "",
+        leadType: row.querySelector(".lead-type")?.textContent.trim() || "",
+        city: row.querySelector(".lead-city")?.textContent.trim() || "",
+        state: row.querySelector(".lead-state")?.textContent.trim() || "",
+        zip: row.querySelector(".lead-zip")?.textContent.trim() || "",
+        address: row.querySelector(".lead-address")?.textContent.trim() || "",
+        agent: row.querySelector(".lead-agent")?.textContent.trim() || "",
+        submittedAt: row.querySelector(".lead-date")?.textContent.trim() || ""
+      };
+    });
+}
+
+    // CSV Export
+    document.getElementById("export-csv").addEventListener("click", () => {
+      const leads = getSelectedLeadsData();
+      if (leads.length === 0) return alert("No leads selected.");
+    
+      const headers = Object.keys(leads[0]).join(",");
+      const rows = leads.map(lead => Object.values(lead).map(v => `"${v}"`).join(","));
+      const csv = [headers, ...rows].join("\n");
+    
+      const blob = new Blob([csv], { type: "text/csv" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "leads.csv";
+      link.click();
+    });
+    
+    // Print Export
+    document.getElementById("export-print").addEventListener("click", () => {
+      const leads = getSelectedLeadsData();
+      if (leads.length === 0) return alert("No leads selected.");
+    
+      const printWindow = window.open("", "_blank");
+      const logo = `<img src="/Pics/Logo.png" style="height: 60px;" />`;
+      const title = `<h2>Family Values Insurance Agency - Selected Leads</h2>`;
+      const table = `
+        <table border="1" cellpadding="10" cellspacing="0">
+          <thead>
+            <tr>${Object.keys(leads[0]).map(k => `<th>${k}</th>`).join("")}</tr>
+          </thead>
+          <tbody>
+            ${leads.map(lead => `<tr>${Object.values(lead).map(v => `<td>${v}</td>`).join("")}</tr>`).join("")}
+          </tbody>
+        </table>
+      `;
+      printWindow.document.write(`<html><body>${logo}${title}${table}</body></html>`);
+      printWindow.document.close();
+      printWindow.print();
+    });
+    
+    // PDF Export (using jsPDF)
+    document.getElementById("export-pdf").addEventListener("click", async () => {
+      const leads = getSelectedLeadsData();
+      if (leads.length === 0) return alert("No leads selected.");
+    
+      const { jsPDF } = await import('https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js');
+      const doc = new jsPDF();
+      const logo = new Image();
+      logo.src = "/Pics/Logo.png";
+    
+      logo.onload = () => {
+        doc.addImage(logo, "PNG", 10, 10, 30, 15);
+        doc.setFontSize(16);
+        doc.text("Family Values Insurance Agency", 50, 20);
+        doc.setFontSize(12);
+        doc.text("Selected Leads Export", 50, 28);
+    
+        let y = 40;
+        const headers = Object.keys(leads[0]);
+        doc.setFont("helvetica", "bold");
+        headers.forEach((h, i) => doc.text(h, 10 + i * 30, y));
+        doc.setFont("helvetica", "normal");
+    
+        leads.forEach((lead, rowIndex) => {
+          y += 10;
+          Object.values(lead).forEach((val, colIndex) => {
+            doc.text(String(val), 10 + colIndex * 30, y);
+          });
+        });
+    
+        doc.save("leads.pdf");
+      };
+    });
 </script>
 </body>
 </html>
