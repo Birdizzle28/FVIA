@@ -1238,5 +1238,25 @@ function getSelectedLeadsData() {
       };
     });
 </script>
+  <!-- jsPDF Library -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<!-- PDF Export Handler -->
+<script>
+  document.addEventListener("DOMContentLoaded", () => {
+    const pdfBtn = document.getElementById("export-pdf");
+
+    if (pdfBtn) {
+      pdfBtn.addEventListener("click", () => {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.text("✅ Your PDF Export is working!", 20, 30);
+        doc.save("test.pdf");
+      });
+    } else {
+      alert("❌ PDF button not found");
+    }
+  });
+</script>
 </body>
 </html>
