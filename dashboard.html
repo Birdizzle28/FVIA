@@ -1627,12 +1627,12 @@ document.addEventListener("click", (e) => {
         last_name: row.querySelector(".lead-last_name")?.textContent.trim() || "",
         age: row.querySelector(".lead-age")?.textContent.trim() || "",
         phone: row.querySelector(".lead-phone")?.textContent.trim() || "",
-        leadType: row.querySelector(".lead-type")?.textContent.trim() || "",
+        leadType: row.querySelector(".lead-lead_type")?.innerText.trim() || "",
         city: row.querySelector(".lead-city")?.textContent.trim() || "",
         state: row.querySelector(".lead-state")?.textContent.trim() || "",
         zip: row.querySelector(".lead-zip")?.textContent.trim() || "",
         address: row.querySelector(".lead-address")?.textContent.trim() || "",
-        agent: row.querySelector(".lead-agent")?.textContent.trim() || "",
+        agent: row.querySelector(".lead-submitted_by_name")?.innerText.trim() || "",
         submittedAt: row.querySelector(".lead-created_at")?.textContent.trim() || ""
       };
     });
