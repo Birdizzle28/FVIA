@@ -447,6 +447,8 @@
       </div>
     </section>
 
+
+
     <!--Agent Thread-->
     <section id="thread-tab" class="tab-content" style="display: none;">
       <h3>Agent Thread</h3>
@@ -594,7 +596,7 @@
               'zip': lead.zip || '',
               'lead_type': lead.lead_type || '',
               'notes': lead.notes || '',
-              'submitted_by_name': lead.submitted_by_name || '' // 👈 ADD THIS
+              'submitted_by_name': lead.submitted_by_name || ''
             };
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
@@ -1421,17 +1423,17 @@ document.addEventListener("click", (e) => {
     return Array.from(document.querySelectorAll('input[type="checkbox"].lead-checkbox:checked')).map(cb => {
       const row = cb.closest("tr");
       return {
-        first_name: row.querySelector(".lead-first_name")?.textContent.trim() || "",
-        last_name: row.querySelector(".lead-last_name")?.textContent.trim() || "",
+        first_name: row.querySelector(".lead-name")?.textContent.trim() || "",
+        last_name: row.querySelector(".lead-last")?.textContent.trim() || "",
         age: row.querySelector(".lead-age")?.textContent.trim() || "",
         phone: row.querySelector(".lead-phone")?.textContent.trim() || "",
-        leadType: row.querySelector(".lead-lead_type")?.textContent.trim() || "",
+        leadType: row.querySelector(".lead-type")?.textContent.trim() || "",
         city: row.querySelector(".lead-city")?.textContent.trim() || "",
-        state: row.querySelector(".lead-state")?.innerText.trim() || row.querySelector(".lead-state select")?.value || "",
+        state: row.querySelector(".lead-state")?.textContent.trim() || "",
         zip: row.querySelector(".lead-zip")?.textContent.trim() || "",
         address: row.querySelector(".lead-address")?.textContent.trim() || "",
-        agent: row.querySelector(".lead-submitted_by_name")?.innerText.trim() || row.querySelector(".lead-submitted_by_name select")?.value || "",
-        submittedAt: row.querySelector(".lead-created_at")?.textContent.trim() || ""
+        agent: row.querySelector(".lead-agent")?.textContent.trim() || "",
+        submittedAt: row.querySelector(".lead-date")?.textContent.trim() || ""
       };
     });
   };
@@ -1627,12 +1629,12 @@ document.addEventListener("click", (e) => {
         last_name: row.querySelector(".lead-last_name")?.textContent.trim() || "",
         age: row.querySelector(".lead-age")?.textContent.trim() || "",
         phone: row.querySelector(".lead-phone")?.textContent.trim() || "",
-        leadType: row.querySelector(".lead-lead_type")?.innerText.trim() || "",
+        leadType: row.querySelector(".lead-lead_type")?.textContent.trim() || "",
         city: row.querySelector(".lead-city")?.textContent.trim() || "",
-        state: row.querySelector(".lead-state")?.innerText.trim() || "",
+        state: row.querySelector(".lead-state")?.textContent.trim() || "",
         zip: row.querySelector(".lead-zip")?.textContent.trim() || "",
         address: row.querySelector(".lead-address")?.textContent.trim() || "",
-        agent: row.querySelector(".lead-submitted_by_name")?.innerText.trim() || "",
+        agent: row.querySelector(".lead-submitted_by_name")?.textContent.trim() || "",
         submittedAt: row.querySelector(".lead-created_at")?.textContent.trim() || ""
       };
     });
