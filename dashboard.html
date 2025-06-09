@@ -1183,24 +1183,25 @@ function getSelectedLeadsData() {
 <!-- Load jsPDF via CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-<!-- PDF Export Handler -->
 <script>
   document.addEventListener("DOMContentLoaded", () => {
-    document.getElementById("export-pdf").addEventListener("click", () => {
+    const pdfBtn = document.getElementById("export-pdf");
+    if (!pdfBtn) return;
+
+    pdfBtn.addEventListener("click", () => {
       const leads = getSelectedLeadsData();
       if (leads.length === 0) return alert("No leads selected.");
 
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF();
-
       const logo = new Image();
       logo.src = "/Pics/Logo.png";
 
       logo.onload = () => {
         leads.forEach((lead, index) => {
-          if (index !== 0) doc.addPage();
+          if (index > 0) doc.addPage();
 
-          // Logo & Header
+          // Header
           doc.addImage(logo, "PNG", 80, 10, 50, 20);
           doc.setFontSize(18);
           doc.setFont("helvetica", "bold");
@@ -1210,11 +1211,9 @@ function getSelectedLeadsData() {
           doc.setFont("helvetica", "normal");
           doc.text("Lead Confirmation Form", 105, 50, { align: "center" });
 
-          // Fields
-          const startY = 70;
-          const lineHeight = 12;
+          // Info
           const fields = [
-            ["Full Name", `${lead.name || ""} ${lead.last || ""}`],
+            ["Full Name", `${lead.name} ${lead.last || ""}`],
             ["Age", lead.age],
             ["Phone", lead.phone],
             ["Lead Type", lead.leadType],
@@ -1226,12 +1225,13 @@ function getSelectedLeadsData() {
             ["Submitted At", lead.submittedAt],
           ];
 
-          fields.forEach(([label, value], i) => {
-            const y = startY + i * lineHeight;
+          let y = 70;
+          fields.forEach(([label, value]) => {
             doc.setFont("helvetica", "bold");
             doc.text(`${label}:`, 20, y);
             doc.setFont("helvetica", "normal");
             doc.text(value || "—", 70, y);
+            y += 10;
           });
 
           // Footer
