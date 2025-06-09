@@ -410,6 +410,7 @@
           <table id="agent-leads-table">
             <thead>
               <tr>
+                <th>Select</th>
                 <th data-column="created_at">Submitted</th>
                 <th data-column="first_name">First Name</th>
                 <th data-column="last_name">Last Name</th>
@@ -595,7 +596,14 @@
               'lead_type': lead.lead_type || '',
               'notes': lead.notes || ''
             };
-        
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.classList.add('lead-checkbox');
+          
+            const checkboxTd = document.createElement('td');
+            checkboxTd.appendChild(checkbox);
+            tr.appendChild(checkboxTd);
+            
             for (const [key, value] of Object.entries(cellMap)) {
               const td = document.createElement('td');
               td.classList.add(`lead-${key}`);
