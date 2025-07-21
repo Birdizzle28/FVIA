@@ -26,6 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     .select('*')
     .eq('id', user.id)
     .single();
+  console.log("Fetched profile:", profile);
 
   if (profile) {
     document.getElementById('first-name').value = profile.first_name || '';
