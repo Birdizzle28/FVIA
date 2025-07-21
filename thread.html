@@ -4,38 +4,63 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Agent Thread | Family Values Insurance Agency</title>
-  <link rel="stylesheet" href="style.css" />
-  <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="../agentstyle.css" />
+  <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 </head>
-<body id="indexbody">
 
+<body id="dashboardbody">
   <header class="index-grid-header">
-    <a href="profile.html"><img id="headerlogo" src="Pics/img6.png" alt="Logo"></a>
-    <p><strong>Family Values Insurance Agency</strong></p>
-    <hr>
-    <nav class="header-flex-container">
-      <a href="profile.html">Profile</a>
-      <a href="leads.html">Leads</a>
-      <a href="thread.html" class="active-tab">Thread</a>
-      <a href="admin.html">Admin</a>
-      <a href="login.html" id="logout-btn">Logout</a>
-    </nav>
+    <div id="logofvcontainer">
+      <div id="logodiv">
+        <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+      </div>
+      <div id="fvdiv">
+        <p><strong>Family Values</strong></p>
+        <p>Insurance Agency</p>
+      </div>
+    </div>
+    <div id="navcontainer">
+      <nav class="header-flex-container">
+        <a href="profile.html">Profile</a>
+        <a href="leads.html">Leads</a>
+        <a href="thread.html" class="active-tab">Thread</a>
+        <a href="admin.html" class="admin-only">Admin</a>
+        <a href="#" id="logout-btn">Logout</a>
+      </nav>
+    </div>
   </header>
 
-  <main class="tab-content">
-    <section class="tab-section">
-      <h2>Team Thread</h2>
-
-      <form id="thread-form">
-        <textarea id="post-content" placeholder="Write something for the team..." required></textarea>
-        <button type="submit">Post</button>
-        <p id="post-message" class="form-message"></p>
-      </form>
-
-      <div id="thread-feed" class="thread-feed"></div>
+  <main class="auth-container">
+    <section id="thread-tab" class="tab-content">
+      <h3>Agent Thread</h3>
+      <p>Coming soon: agents will post messages here about events, updates, and more.</p>
     </section>
   </main>
+
+  <footer class="index-grid-footer">
+    <img id="footerlogo" src="../Pics/img17.png" alt="FVIA Footer Logo" />
+    <hr class="footerhr" />
+    <div id="footercontact">
+      <a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
+        <span class="fa fa-envelope"></span>
+        <span class="contactcontcontacts">fvinsuranceagency@gmail.com</span>
+      </a>
+      <a class="contactcontainer" href="tel:+17316934739">
+        <span class="fa fa-phone"></span>
+        <span class="contactcontcontacts">(731) 693-4739</span>
+      </a>
+    </div>
+    <hr class="footerhr" />
+    <div id="footersocial">
+      <a class="fab fa-facebook-f" href="#"></a>
+      <a class="fab fa-linkedin-in" href="#"></a>
+      <a class="fab fa-instagram" href="#"></a>
+      <a class="fab fa-youtube" href="#"></a>
+      <a class="fab fa-google" href="#"></a>
+    </div>
+    <p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
+  </footer>
 
   <script type="module" src="thread.js"></script>
 </body>
