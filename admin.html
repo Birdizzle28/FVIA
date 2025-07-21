@@ -14,11 +14,9 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 </head>
-
 <body id="dashboardbody">
   <div id="loading-screen">Loading dashboard...</div>
-  
-  <!-- Header -->
+
   <header class="index-grid-header">
     <div id="logofvcontainer">
       <div id="logodiv">
@@ -40,16 +38,103 @@
     </div>
   </header>
 
-  <!-- Main Admin Content -->
   <main class="auth-container">
-    <section id="admin-requested-tab" class="tab-content admin-only" style="display: block;">
-      <!-- All original Admin tab content from your previous message will be inserted here -->
-      <!-- ⬇ To save space in this reply, everything from <h3>Lead Requests</h3> to the assignment history table stays the same -->
-      <!-- Just paste that full section content right here exactly as it was -->
+    <section id="admin-requested-tab" class="tab-content admin-only">
+      <h3>Lead Requests</h3>
+      <div id="requested-leads-container" class="scroll-container"></div>
+      <hr>
+      <h3>All Leads</h3>
+
+      <!-- Filters -->
+      <div id="admin-filters">
+        <input id="date-range" placeholder="Select date range" readonly>
+        <label for="date-order">Order:</label>
+        <select id="date-order">
+          <option value="desc">Most Recent</option>
+          <option value="asc">Oldest</option>
+        </select>
+        <label for="agent-filter">Agent:</label>
+        <select id="agent-filter">
+          <option value="">All Agents</option>
+        </select>
+        <select id="assigned-filter">
+          <option value="">Assigned & Unassigned</option>
+          <option value="true">Assigned</option>
+          <option value="false">Unassigned</option>
+        </select>
+        <input type="text" id="zip-filter" placeholder="ZIP">
+        <input type="text" id="city-filter" placeholder="City">
+        <select id="state-filter"> <!-- Full state list omitted for brevity --> </select>
+        <input type="text" id="first-name-filter" placeholder="First Name">
+        <input type="text" id="last-name-filter" placeholder="Last Name">
+        <input type="text" id="lead-type-filter" placeholder="Lead Type">
+        <button id="apply-filters">Apply Filters</button>
+        <button id="reset-filters">Reset Filters</button>
+      </div>
+
+      <!-- Leads Table -->
+      <div id="leads-table-container">
+        <table id="leads-table">
+          <thead>
+            <tr>
+              <th>Select</th>
+              <th data-column="created_at">Submitted</th>
+              <th data-column="submitted_by_name">Agent</th>
+              <th data-column="first_name">First Name</th>
+              <th data-column="last_name">Last Name</th>
+              <th data-column="age">Age</th>
+              <th data-column="phone">Phone(s)</th>
+              <th data-column="address">Address</th>
+              <th data-column="city">City</th>
+              <th data-column="state">State</th>
+              <th data-column="zip">ZIP</th>
+              <th data-column="lead_type">Type</th>
+              <th data-column="notes">Notes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div id="pagination-controls" style="margin-top: 10px;">
+          <button id="prev-page">Previous</button>
+          <span id="current-page">Page 1</span>
+          <button id="next-page">Next</button>
+        </div>
+      </div>
+
+      <!-- Bulk Assign Controls -->
+      <div id="bulk-assign-controls" style="display: none; margin-top: 10px;">
+        <label for="bulk-assign-agent">Assign <span id="selected-count">0</span> lead(s) to:</label>
+        <select id="bulk-assign-agent"></select>
+        <button id="bulk-assign-btn">Assign</button>
+      </div>
+
+      <!-- Export Options -->
+      <div id="export-controls" style="display: none;">
+        <button id="export-btn">Export</button>
+        <div id="export-options" style="display: none; position: absolute; background: white; border: 1px solid #ccc; padding: 5px;">
+          <button id="export-pdf">PDF</button>
+          <button id="export-csv">CSV</button>
+          <button id="export-print">Print</button>
+        </div>
+      </div>
+
+      <!-- Assignment History -->
+      <h3 style="margin-top: 30px;">Assignment History</h3>
+      <table id="assignment-history-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Lead ID</th>
+            <th>Assigned To</th>
+            <th>Assigned By</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
     </section>
   </main>
 
-  <!-- Footer -->
   <footer class="index-grid-footer">
     <img id="footerlogo" src="../Pics/img17.png" alt="FVIA Footer Logo" />
     <hr class="footerhr" />
@@ -74,7 +159,6 @@
     <p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
   </footer>
 
-  <!-- Modal -->
   <div id="reassign-warning-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
     <div style="background:white; padding:20px; border-radius:10px; max-width:90vw; width:300px; text-align:center;">
       <p><strong>Warning!</strong> You are about to re-assign one or more leads. Would you still like to submit?</p>
@@ -85,7 +169,6 @@
     </div>
   </div>
 
-  <!-- Your future admin.js goes here -->
-  <script type="module" src="admin.js"></script>
+  <script type="module" src="../scripts/admin.js"></script>
 </body>
 </html>
