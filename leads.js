@@ -66,22 +66,45 @@ document.getElementById('lead-form')?.addEventListener('submit', async (e) => {
 });
 
 // Lead request
+// LEAD REQUEST SUBMIT (fixed to match your Supabase schema)
 document.getElementById('lead-request-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
-  const session = await supabase.auth.getSession();
-  const user = session.data.session.user;
-  const { error } = await supabase.from('lead_requests').insert({
-    agent_id: user.id,
-    city: document.getElementById('request-city').value,
-    state: document.getElementById('request-state').value,
-    zip: document.getElementById('request-zip').value,
-    lead_type: document.getElementById('request-type').value,
-    quantity: parseInt(document.getElementById('request-count').value),
-    notes: document.getElementById('request-notes').value
-  });
-  document.getElementById('request-message').textContent = error ? 'Failed to request leads.' : 'Request submitted!';
-});
+  const messageEl = document.getElementById('request-message');
+  messageEl.textContent = ''; // Clear any previous message
 
+  try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const user = sessionData.session?.user;
+
+    if (!user) {
+      messageEl.textContent = '❌ You must be logged in.';
+      return;
+    }
+
+    const requestData = {
+      submitted_by: user.id,
+      city: document.getElementById('request-city').value,
+      state: document.getElementById('request-state').value,
+      zip: document.getElementById('request-zip').value,
+      lead_type: document.getElementById('request-type').value,
+      requested_count: parseInt(document.getElementById('request-count').value),
+      notes: document.getElementById('request-notes').value
+    };
+
+    const { error } = await supabase.from('lead_requests').insert(requestData);
+
+    if (error) {
+      console.error('❌ Request insert failed:', error);
+      messageEl.textContent = '❌ Failed to submit request.';
+    } else {
+      messageEl.textContent = '✅ Request submitted!';
+    }
+  } catch (err) {
+    console.error('Unexpected error:', err);
+    messageEl.textContent = '❌ Something went wrong.';
+  }
+});
+  
 // Load agent leads
 async function loadAgentLeads() {
   const session = await supabase.auth.getSession();
