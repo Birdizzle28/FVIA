@@ -8,12 +8,15 @@ const supabase = createClient(
 // Wait for DOM
 document.addEventListener('DOMContentLoaded', async () => {
   const loadingScreen = document.getElementById('loading-screen');
-  const user = (await supabase.auth.getUser()).data.user;
 
-  if (!user) {
-    window.location.href = '../login.html';
+  const { data: { session } } = await supabase.auth.getSession();
+
+  if (!session) {
+    window.location.href = 'agent-login.html'; // or 'login.html' if that's what you're using
     return;
   }
+
+  const user = session.user;
 
   loadingScreen.style.display = 'none';
 
