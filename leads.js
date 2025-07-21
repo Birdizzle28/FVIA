@@ -136,7 +136,7 @@ async function loadAgentLeads() {
   paginatedLeads.forEach(lead => {
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td></td>
+      <td><input type="checkbox" class="lead-select-checkbox" data-lead-id="${lead.id}"></td>
       <td>${new Date(lead.created_at).toLocaleDateString()}</td>
       <td>${lead.submitted_by_name || ''}</td>
       <td>${lead.first_name}</td>
