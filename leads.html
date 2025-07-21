@@ -44,7 +44,8 @@
         <input type="number" id="lead-age" placeholder="Age" required />
         <input type="text" id="lead-address" name="lead-address" placeholder="Street Address (Optional)">
         <input type="text" id="lead-city" placeholder="City" />
-        <select id="lead-state" name="lead-state" placeholder="Select State" required>
+        <select id="lead-state" name="lead-state" required>
+          <option value="" disabled selected hidden>Select State</option>
           <option value="AL">Alabama</option>
           <option value="AK">Alaska</option>
           <option value="AZ">Arizona</option>
@@ -119,7 +120,8 @@
       <h3>Request Leads</h3>
       <form id="lead-request-form">
         <input type="text" id="request-city" placeholder="City" />
-        <select id="request-state" placeholder="Select State" required>
+        <select id="request-state" required>
+          <option value="" disabled selected hidden>Select State</option>
           <option value="AL">Alabama</option>
           <option value="AK">Alaska</option>
           <option value="AZ">Arizona</option>
