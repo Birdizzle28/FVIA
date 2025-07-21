@@ -7,7 +7,7 @@ let currentUserId = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) return window.location.href = "../login.html";
+  if (!session) return window.location.href = "login.html";
 
   currentUser = session.user;
   currentUserId = currentUser.id;
