@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Agent Profile | Family Values Insurance Agency</title>
+  <link rel="stylesheet" href="agentstyle.css" />
+  <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+</head>
+
+<body id="dashboardbody">
+  <div id="loading-screen">Loading profile...</div>
+
+  <!-- Header -->
+  <header class="index-grid-header">
+    <div id="logofvcontainer">
+      <div id="logodiv">
+        <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+      </div>
+      <div id="fvdiv">
+        <p><strong>Family Values</strong></p>
+        <p>Insurance Agency</p>
+      </div>
+    </div>
+    <div id="navcontainer">
+      <nav class="header-flex-container">
+        <a href="profile.html">Profile</a>
+        <a href="leads.html">Leads</a>
+        <a href="thread.html">Thread</a>
+        <a href="admin.html" class="admin-only">Admin</a>
+        <a href="#" id="logout-btn">Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Profile Section -->
+  <main class="auth-container">
+    <section id="profile-tab" class="tab-content profile-section">
+      <div class="profile-picture-wrapper">
+        <label for="profile-photo-input">
+          <div class="profile-picture-placeholder">
+            <img id="profile-photo" src="../Pics/placeholder-user.png" alt="Profile Picture" />
+            <span class="upload-text">Add profile picture</span>
+          </div>
+        </label>
+        <input type="file" id="profile-photo-input" accept="image/*" style="display:none;" />
+      </div>
+      <form id="profile-form">
+        <div class="form-group"><label for="first-name">First Name</label><input type="text" id="first-name" placeholder="John" /></div>
+        <div class="form-group"><label for="last-name">Last Name</label><input type="text" id="last-name" placeholder="Doe" /></div>
+        <div class="form-group"><label for="profile-email">Email</label><input type="email" id="profile-email" disabled /></div>
+        <div class="form-group"><label for="profile-agent-id">Agent ID</label><input type="text" id="profile-agent-id" disabled /></div>
+        <div class="form-group"><label for="profile-bio">Bio</label><textarea id="profile-bio" placeholder="Tell us about yourself..."></textarea></div>
+        <div class="form-group"><label for="profile-public-status">Visible on About Page</label>
+        <select id="profile-public-status"><option value="true">Yes</option><option value="false">No</option></select></div>
+        <button type="submit">Save Changes</button>
+        <p id="edit-profile-message"></p>
+      </form>
+    </section>
+  </main>
+
+  <!-- Footer -->
+  <footer class="index-grid-footer">
+    <img id="footerlogo" src="../Pics/img17.png" alt="FVIA Footer Logo" />
+    <hr class="footerhr" />
+    <div id="footercontact">
+      <a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
+        <span class="fa fa-envelope"></span>
+        <span class="contactcontcontacts">fvinsuranceagency@gmail.com</span>
+      </a>
+      <a class="contactcontainer" href="tel:+17316934739">
+        <span class="fa fa-phone"></span>
+        <span class="contactcontcontacts">(731) 693-4739</span>
+      </a>
+    </div>
+    <hr class="footerhr" />
+    <div id="footersocial">
+      <a class="fab fa-facebook-f" href="#"></a>
+      <a class="fab fa-linkedin-in" href="#"></a>
+      <a class="fab fa-instagram" href="#"></a>
+      <a class="fab fa-youtube" href="#"></a>
+      <a class="fab fa-google" href="#"></a>
+    </div>
+    <p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
+  </footer>
+
+  <script type="module" src="profile.js"></script>
+</body>
+</html>
