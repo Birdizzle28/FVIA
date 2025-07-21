@@ -4,6 +4,22 @@ const supabase = createClient('https://ddlbgkolnayqrxslzsxn.supabase.co', 'eyJhb
 
 // ✅ Session check
 document.addEventListener('DOMContentLoaded', async () => {
+  const stateSelect1 = document.getElementById('lead-state');
+  const stateSelect2 = document.getElementById('request-state');
+
+  if (stateSelect1) new Choices(stateSelect1, {
+    searchEnabled: true,
+    shouldSort: false,
+    placeholder: true,
+    searchPlaceholderValue: 'Type to filter…'
+  });
+
+  if (stateSelect2) new Choices(stateSelect2, {
+    searchEnabled: true,
+    shouldSort: false,
+    placeholder: true,
+    searchPlaceholderValue: 'Type to filter…'
+  });
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     window.location.href = 'login.html';
