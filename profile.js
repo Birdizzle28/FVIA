@@ -26,7 +26,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     .select('*')
     .eq('id', user.id)
     .single();
+  
   console.log("Fetched profile:", profile);
+  if (!profile.is_admin) {
+    const adminLink = document.querySelector('.admin-only');
+    if (adminLink) adminLink.style.display = 'none';
+  }
+
 
   if (profile) {
     document.getElementById('first-name').value = profile.first_name || '';
@@ -37,6 +43,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('profile-public-status').value = profile.public || 'false';
     document.getElementById('profile-photo').src =
       profile.profile_picture_url || '../Pics/placeholder-user.png';
+      if (profile.profile_picture_url) {
+        const uploadText = document.querySelector('.upload-text');
+        if (uploadText) uploadText.style.display = 'none';
+      }
+
   }
 
   // Save profile changes
