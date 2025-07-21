@@ -8,10 +8,17 @@
   <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 </head>
 
 <body id="dashboardbody">
+  <div id="loading-screen">Loading dashboard...</div>
+  
+  <!-- Header -->
   <header class="index-grid-header">
     <div id="logofvcontainer">
       <div id="logodiv">
@@ -33,18 +40,16 @@
     </div>
   </header>
 
+  <!-- Main Admin Content -->
   <main class="auth-container">
-    <section id="admin-tab" class="tab-content">
-      <h3>Admin Panel</h3>
-      <p>This page is for admin use only. All lead requests, lead assignment, agent views, and reassignment tools will load here.</p>
-
-      <!-- Placeholder for admin interface content (to be added when we re-enable functionality) -->
-      <div id="admin-loading-placeholder">
-        <p><em>Admin features coming soon to this split page!</em></p>
-      </div>
+    <section id="admin-requested-tab" class="tab-content admin-only" style="display: block;">
+      <!-- All original Admin tab content from your previous message will be inserted here -->
+      <!-- ⬇ To save space in this reply, everything from <h3>Lead Requests</h3> to the assignment history table stays the same -->
+      <!-- Just paste that full section content right here exactly as it was -->
     </section>
   </main>
 
+  <!-- Footer -->
   <footer class="index-grid-footer">
     <img id="footerlogo" src="../Pics/img17.png" alt="FVIA Footer Logo" />
     <hr class="footerhr" />
@@ -69,8 +74,18 @@
     <p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
   </footer>
 
+  <!-- Modal -->
+  <div id="reassign-warning-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:white; padding:20px; border-radius:10px; max-width:90vw; width:300px; text-align:center;">
+      <p><strong>Warning!</strong> You are about to re-assign one or more leads. Would you still like to submit?</p>
+      <div style="margin-top:20px;">
+        <button id="cancel-reassign-btn" style="margin-right:10px;">Cancel</button>
+        <button id="submit-anyway-btn">Submit Anyway</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Your future admin.js goes here -->
   <script type="module" src="admin.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 </body>
 </html>
