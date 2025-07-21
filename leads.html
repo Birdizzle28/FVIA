@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Leads | Family Values Insurance Agency</title>
+  <link rel="stylesheet" href="../agentstyle.css" />
+  <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+</head>
+
+<body id="dashboardbody">
+  <header class="index-grid-header">
+    <div id="logofvcontainer">
+      <div id="logodiv">
+        <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+      </div>
+      <div id="fvdiv">
+        <p><strong>Family Values</strong></p>
+        <p>Insurance Agency</p>
+      </div>
+    </div>
+    <div id="navcontainer">
+      <nav class="header-flex-container">
+        <a href="profile.html">Profile</a>
+        <a href="leads.html">Leads</a>
+        <a href="thread.html">Thread</a>
+        <a href="admin.html" class="admin-only">Admin</a>
+        <a href="#" id="logout-btn">Logout</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="auth-container">
+
+    <!--LEAD SUBMISSION-->
+    <section id="lead-tab" class="tab-content">
+      <h3>Submit a Lead</h3>
+      <form id="lead-form">
+        <input type="text" id="lead-first" placeholder="First Name" required />
+        <input type="text" id="lead-last" placeholder="Last Name" required />
+        <input type="number" id="lead-age" placeholder="Age" required />
+        <input type="text" id="lead-address" name="lead-address" placeholder="Street Address (Optional)">
+        <input type="text" id="lead-city" placeholder="City" />
+        <select id="lead-state" name="lead-state" required>
+          <option value="">Select State</option>
+        </select>
+        <input type="text" id="lead-zip" placeholder="ZIP Code" />
+        <div id="phone-inputs">
+          <div class="phone-line">
+            <input type="tel" name="lead-phone" placeholder="(123) 456-7890" maxlength="14" required />
+            <button type="button" class="add-phone-btn">+</button>
+          </div>
+        </div>
+        <select id="lead-type" required>
+          <option value="">Select Lead Type</option>
+          <option value="Facebook">Facebook</option>
+          <option value="Google SEO">Google SEO</option>
+          <option value="Referral">Referral</option>
+          <option value="Other">Other</option>
+        </select>
+        <textarea id="lead-notes" placeholder="Notes (optional)"></textarea>
+        <button type="submit">Submit Lead</button>
+      </form>
+      <p id="lead-message"></p>
+
+      <!--LEAD REQUESTS-->
+      <h3>Request Leads</h3>
+      <form id="lead-request-form">
+        <input type="text" id="request-city" placeholder="City" />
+        <select id="request-state">
+          <option value="">Select State</option>
+          <!-- Add all 50 state options -->
+        </select>
+        <input type="text" id="request-zip" placeholder="ZIP Code" />     
+        <select id="request-type">
+          <option value="">Select Lead Type</option>
+          <option value="Facebook">Facebook</option>
+          <option value="Google SEO">Google SEO</option>
+          <option value="Referral">Referral</option>
+          <option value="Other">Other</option>
+        </select>
+        <label for="request-count">How many leads?</label>
+        <input type="number" id="request-count" name="request-count" min="1" required>
+        <textarea id="request-notes" placeholder="Notes (optional)"></textarea>
+        <button type="submit">Submit Request</button>
+      </form>
+      <p id="request-message"></p>
+
+      <!--Agent Leads Viewer-->
+      <div id="agent-leads-viewer">
+        <div id="agent-filters">
+          <input id="agent-date-range" placeholder="Select date range" readonly>
+          <label for="agent-date-order">Order:</label>
+          <select id="agent-date-order">
+            <option value="desc">Most Recent</option>
+            <option value="asc">Oldest</option>
+          </select>
+          <input type="text" id="agent-zip-filter" placeholder="ZIP">
+          <input type="text" id="agent-city-filter" placeholder="City">
+          <select id="agent-state-filter">
+            <option value="">Select State</option>
+            <!-- Add state list -->
+          </select>
+          <input type="text" id="agent-first-name-filter" placeholder="First Name">
+          <input type="text" id="agent-last-name-filter" placeholder="Last Name">
+          <input type="text" id="agent-lead-type-filter" placeholder="Lead Type">
+          <button id="agent-apply-filters">Apply Filters</button>
+          <button id="agent-reset-filters">Reset Filters</button>
+        </div>
+
+        <div id="agent-leads-table-container">
+          <table id="agent-leads-table">
+            <thead>
+              <tr>
+                <th>Select</th>
+                <th>Submitted</th>
+                <th>Agent</th>
+                <th>First</th>
+                <th>Last</th>
+                <th>Age</th>
+                <th>Phone(s)</th>
+                <th>Address</th>
+                <th>City</th>
+                <th>State</th>
+                <th>ZIP</th>
+                <th>Type</th>
+                <th>Notes</th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+          </table>
+          <div id="agent-pagination-controls">
+            <button id="agent-prev-page">Previous</button>
+            <span id="agent-current-page">Page 1</span>
+            <button id="agent-next-page">Next</button>
+          </div>
+        </div>
+
+        <div id="agent-export-controls">
+          <button id="agent-export-btn">Export</button>
+          <div id="agent-export-options" style="display: none;">
+            <button id="agent-export-pdf">PDF</button>
+            <button id="agent-export-csv">CSV</button>
+            <button id="agent-export-print">Print</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <footer class="index-grid-footer">
+    <img id="footerlogo" src="../Pics/img17.png" alt="FVIA Footer Logo" />
+    <hr class="footerhr" />
+    <div id="footercontact">
+      <a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
+        <span class="fa fa-envelope"></span>
+        <span class="contactcontcontacts">fvinsuranceagency@gmail.com</span>
+      </a>
+      <a class="contactcontainer" href="tel:+17316934739">
+        <span class="fa fa-phone"></span>
+        <span class="contactcontcontacts">(731) 693-4739</span>
+      </a>
+    </div>
+    <hr class="footerhr" />
+    <div id="footersocial">
+      <a class="fab fa-facebook-f" href="#"></a>
+      <a class="fab fa-linkedin-in" href="#"></a>
+      <a class="fab fa-instagram" href="#"></a>
+      <a class="fab fa-youtube" href="#"></a>
+      <a class="fab fa-google" href="#"></a>
+    </div>
+    <p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
+  </footer>
+
+  <script type="module" src="leads.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+</body>
+</html>
