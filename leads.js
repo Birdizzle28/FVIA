@@ -26,10 +26,21 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-// Utility: Format phone numbers
-function formatPhone(phone) {
-  return phone.replace(/\D/g, '').replace(/(\d{3})(\d{3})(\d{4})/, '($1) $2-$3');
+// Format phone number as (123) 456-7890 while typing
+function formatPhoneInput(input) {
+  input.addEventListener('input', () => {
+    let numbers = input.value.replace(/\D/g, '');
+    if (numbers.length > 10) numbers = numbers.slice(0, 10);
+    const parts = [];
+
+    if (numbers.length > 0) parts.push('(' + numbers.slice(0, 3));
+    if (numbers.length >= 4) parts.push(') ' + numbers.slice(3, 6));
+    if (numbers.length >= 7) parts.push('-' + numbers.slice(6, 10));
+
+    input.value = parts.join('');
+  });
 }
+document.querySelectorAll('input[name="lead-phone"]').forEach(formatPhoneInput);
 
 // Lead submission
 document.getElementById('lead-form')?.addEventListener('submit', async (e) => {
@@ -137,8 +148,15 @@ document.querySelector('.add-phone-btn')?.addEventListener('click', () => {
   const phoneInputs = document.getElementById('phone-inputs');
   const div = document.createElement('div');
   div.className = 'phone-line';
-  div.innerHTML = `<input type="tel" name="lead-phone" placeholder="(123) 456-7890" maxlength="14" required /> <button type="button" class="remove-phone-btn">-</button>`;
+  div.innerHTML = `
+    <input type="tel" name="lead-phone" placeholder="(123) 456-7890" maxlength="14" required />
+    <button type="button" class="remove-phone-btn">-</button>
+  `;
   phoneInputs.appendChild(div);
+
+  // Apply formatter to new input
+  const newInput = div.querySelector('input');
+  formatPhoneInput(newInput);
 });
 
 // Remove phone field
