@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Admin | Family Values Insurance Agency</title>
-  <link rel="stylesheet" href="agentstyle.css" />
+  <link rel="stylesheet" href="../agentstyle.css" />
   <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
@@ -14,13 +14,13 @@
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 </head>
-
 <body id="dashboardbody">
   <div id="loading-screen">Loading dashboard...</div>
+
   <header class="index-grid-header">
     <div id="logofvcontainer">
       <div id="logodiv">
-        <a href="index.html"><img id="headerlogo" src="Pics/img17.png" alt="FVIA Logo" /></a>
+        <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
       </div>
       <div id="fvdiv">
         <p><strong>Family Values</strong></p>
@@ -44,28 +44,82 @@
       <div id="requested-leads-container" class="scroll-container"></div>
       <hr>
       <h3>All Leads</h3>
-      <!-- Filter UI and Leads Table -->
-      <div id="admin-filters">...<!--(same filter inputs you pasted)--></div>
-      <div id="leads-table-container">
-        <table id="leads-table">...</table>
-        <div id="pagination-controls">...</div>
+
+      <!-- Filters -->
+      <div id="admin-filters">
+        <input id="date-range" placeholder="Select date range" readonly>
+        <label for="date-order">Order:</label>
+        <select id="date-order">
+          <option value="desc">Most Recent</option>
+          <option value="asc">Oldest</option>
+        </select>
+        <label for="agent-filter">Agent:</label>
+        <select id="agent-filter">
+          <option value="">All Agents</option>
+        </select>
+        <select id="assigned-filter">
+          <option value="">Assigned & Unassigned</option>
+          <option value="true">Assigned</option>
+          <option value="false">Unassigned</option>
+        </select>
+        <input type="text" id="zip-filter" placeholder="ZIP">
+        <input type="text" id="city-filter" placeholder="City">
+        <select id="state-filter"> <!-- Full state list omitted for brevity --> </select>
+        <input type="text" id="first-name-filter" placeholder="First Name">
+        <input type="text" id="last-name-filter" placeholder="Last Name">
+        <input type="text" id="lead-type-filter" placeholder="Lead Type">
+        <button id="apply-filters">Apply Filters</button>
+        <button id="reset-filters">Reset Filters</button>
       </div>
 
-      <div id="bulk-assign-controls" style="display: none;">
+      <!-- Leads Table -->
+      <div id="leads-table-container">
+        <table id="leads-table">
+          <thead>
+            <tr>
+              <th>Select</th>
+              <th data-column="created_at">Submitted</th>
+              <th data-column="submitted_by_name">Agent</th>
+              <th data-column="first_name">First Name</th>
+              <th data-column="last_name">Last Name</th>
+              <th data-column="age">Age</th>
+              <th data-column="phone">Phone(s)</th>
+              <th data-column="address">Address</th>
+              <th data-column="city">City</th>
+              <th data-column="state">State</th>
+              <th data-column="zip">ZIP</th>
+              <th data-column="lead_type">Type</th>
+              <th data-column="notes">Notes</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <div id="pagination-controls" style="margin-top: 10px;">
+          <button id="prev-page">Previous</button>
+          <span id="current-page">Page 1</span>
+          <button id="next-page">Next</button>
+        </div>
+      </div>
+
+      <!-- Bulk Assign Controls -->
+      <div id="bulk-assign-controls" style="display: none; margin-top: 10px;">
         <label for="bulk-assign-agent">Assign <span id="selected-count">0</span> lead(s) to:</label>
         <select id="bulk-assign-agent"></select>
         <button id="bulk-assign-btn">Assign</button>
       </div>
 
+      <!-- Export Options -->
       <div id="export-controls" style="display: none;">
         <button id="export-btn">Export</button>
-        <div id="export-options">
+        <div id="export-options" style="display: none; position: absolute; background: white; border: 1px solid #ccc; padding: 5px;">
           <button id="export-pdf">PDF</button>
           <button id="export-csv">CSV</button>
           <button id="export-print">Print</button>
         </div>
       </div>
 
+      <!-- Assignment History -->
       <h3 style="margin-top: 30px;">Assignment History</h3>
       <table id="assignment-history-table">
         <thead>
@@ -82,7 +136,7 @@
   </main>
 
   <footer class="index-grid-footer">
-    <img id="footerlogo" src="Pics/img17.png" alt="FVIA Footer Logo" />
+    <img id="footerlogo" src="../Pics/img17.png" alt="FVIA Footer Logo" />
     <hr class="footerhr" />
     <div id="footercontact">
       <a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
@@ -105,15 +159,16 @@
     <p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
   </footer>
 
-  <div id="reassign-warning-modal" style="display:none;">
-    <div>
-      <p><strong>Warning!</strong> You are about to re-assign one or more leads. Continue?</p>
-      <button id="cancel-reassign-btn">Cancel</button>
-      <button id="submit-anyway-btn">Submit Anyway</button>
+  <div id="reassign-warning-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <div style="background:white; padding:20px; border-radius:10px; max-width:90vw; width:300px; text-align:center;">
+      <p><strong>Warning!</strong> You are about to re-assign one or more leads. Would you still like to submit?</p>
+      <div style="margin-top:20px;">
+        <button id="cancel-reassign-btn" style="margin-right:10px;">Cancel</button>
+        <button id="submit-anyway-btn">Submit Anyway</button>
+      </div>
     </div>
   </div>
 
-  <!-- Your Admin JS -->
-  <script type="module" src="admin.js"></script>
+  <script type="module" src="../scripts/admin.js"></script>
 </body>
 </html>
