@@ -119,17 +119,45 @@ async function loadAgentLeads() {
   const session = await supabase.auth.getSession();
   const user = session.data.session.user;
 
-  const { data: leads } = await supabase
+  let query = supabase
     .from('leads')
     .select('*')
-    .eq('assigned_to', user.id)
-    .order('created_at', { ascending: false });
+    .eq('assigned_to', user.id);
 
+  // ✅ Apply filters
+  const filters = {
+    first_name: document.getElementById('filter-first-name')?.value.trim(),
+    last_name: document.getElementById('filter-last-name')?.value.trim(),
+    zip: document.getElementById('filter-zip')?.value.trim(),
+    city: document.getElementById('filter-city')?.value.trim(),
+    state: document.getElementById('filter-state')?.value.trim(),
+    lead_type: document.getElementById('filter-type')?.value.trim(),
+  };
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value) {
+      query = query.ilike(key, `%${value}%`);
+    }
+  });
+
+  // Optional: Sort order
+  const order = document.getElementById('filter-order')?.value || 'desc';
+  query = query.order('created_at', { ascending: order === 'asc' });
+
+  // ✅ Fetch filtered results
+  const { data: leads, error } = await query;
+
+  if (error) {
+    console.error('Failed to load leads:', error);
+    return;
+  }
+
+  // Pagination
   agentTotalPages = Math.ceil(leads.length / pageSize);
-
   const start = (agentCurrentPage - 1) * pageSize;
   const paginatedLeads = leads.slice(start, start + pageSize);
 
+  // Render rows
   const tbody = document.querySelector('#agent-leads-table tbody');
   tbody.innerHTML = '';
 
@@ -155,6 +183,11 @@ async function loadAgentLeads() {
 
   updateAgentPaginationControls();
 }
+
+document.getElementById('apply-agent-filters')?.addEventListener('click', async () => {
+  agentCurrentPage = 1;
+  await loadAgentLeads(); // Reload leads with current filters applied
+});
 loadAgentLeads();
 
 // Export to PDF, CSV, Print
