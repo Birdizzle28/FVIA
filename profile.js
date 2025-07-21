@@ -22,7 +22,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Load profile info
   const { data: profile } = await supabase
-    .from('profiles')
+    .from('agents')
     .select('*')
     .eq('id', user.id)
     .single();
@@ -85,7 +85,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const avatarUrl = publicUrl.publicUrl;
 
     const { error: updateError } = await supabase
-      .from('profiles')
+      .from('agents')
       .update({ avatar_url: avatarUrl })
       .eq('id', user.id);
 
