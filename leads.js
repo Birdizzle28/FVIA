@@ -2,6 +2,16 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 const supabase = createClient('https://ddlbgkolnayqrxslzsxn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho');
 
+let agentCurrentPage = 1;
+let agentTotalPages = 1;
+const pageSize = 25;
+
+function updateAgentPaginationControls() {
+  document.getElementById('agent-current-page').textContent = `Page ${agentCurrentPage}`;
+  document.getElementById('agent-prev-page').disabled = agentCurrentPage === 1;
+  document.getElementById('agent-next-page').disabled = agentCurrentPage === agentTotalPages;
+}
+
 // ✅ Session check
 document.addEventListener('DOMContentLoaded', async () => {
   const stateSelect1 = document.getElementById('lead-state');
@@ -65,7 +75,6 @@ document.getElementById('lead-form')?.addEventListener('submit', async (e) => {
   document.getElementById('lead-message').textContent = error ? 'Failed to submit lead.' : 'Lead submitted!';
 });
 
-// Lead request
 // LEAD REQUEST SUBMIT (fixed to match your Supabase schema)
 document.getElementById('lead-request-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
@@ -109,13 +118,25 @@ document.getElementById('lead-request-form')?.addEventListener('submit', async (
 async function loadAgentLeads() {
   const session = await supabase.auth.getSession();
   const user = session.data.session.user;
-  const { data: leads } = await supabase.from('leads').select('*').eq('assigned_to', user.id).order('created_at', { ascending: false });
+
+  const { data: leads } = await supabase
+    .from('leads')
+    .select('*')
+    .eq('assigned_to', user.id)
+    .order('created_at', { ascending: false });
+
+  agentTotalPages = Math.ceil(leads.length / pageSize);
+
+  const start = (agentCurrentPage - 1) * pageSize;
+  const paginatedLeads = leads.slice(start, start + pageSize);
+
   const tbody = document.querySelector('#agent-leads-table tbody');
   tbody.innerHTML = '';
-  leads.forEach(lead => {
+
+  paginatedLeads.forEach(lead => {
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td><input type="checkbox" class="lead-checkbox" data-id="${lead.id}"></td>
+      <td></td>
       <td>${new Date(lead.created_at).toLocaleDateString()}</td>
       <td>${lead.submitted_by_name || ''}</td>
       <td>${lead.first_name}</td>
@@ -131,6 +152,8 @@ async function loadAgentLeads() {
     `;
     tbody.appendChild(row);
   });
+
+  updateAgentPaginationControls();
 }
 loadAgentLeads();
 
