@@ -36,7 +36,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('profile-bio').value = profile.bio || '';
     document.getElementById('profile-public-status').value = profile.public || 'false';
     document.getElementById('profile-photo').src =
-      profile.avatar_url || '../Pics/placeholder-user.png';
+      profile.profile_picture_url || '../Pics/placeholder-user.png';
   }
 
   // Save profile changes
@@ -86,7 +86,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const { error: updateError } = await supabase
       .from('agents')
-      .update({ avatar_url: avatarUrl })
+      .update({ profile_picture_url: avatarUrl })
       .eq('id', user.id);
 
     if (!updateError) {
