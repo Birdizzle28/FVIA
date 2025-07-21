@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Agent Thread | Family Values Insurance Agency</title>
+  <link rel="stylesheet" href="style.css" />
+  <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+</head>
+<body id="indexbody">
+
+  <header class="index-grid-header">
+    <a href="profile.html"><img id="headerlogo" src="Pics/img6.png" alt="Logo"></a>
+    <p><strong>Family Values Insurance Agency</strong></p>
+    <hr>
+    <nav class="header-flex-container">
+      <a href="profile.html">Profile</a>
+      <a href="leads.html">Leads</a>
+      <a href="thread.html" class="active-tab">Thread</a>
+      <a href="admin.html">Admin</a>
+      <a href="login.html" id="logout-btn">Logout</a>
+    </nav>
+  </header>
+
+  <main class="tab-content">
+    <section class="tab-section">
+      <h2>Team Thread</h2>
+
+      <form id="thread-form">
+        <textarea id="post-content" placeholder="Write something for the team..." required></textarea>
+        <button type="submit">Post</button>
+        <p id="post-message" class="form-message"></p>
+      </form>
+
+      <div id="thread-feed" class="thread-feed"></div>
+    </section>
+  </main>
+
+  <script type="module" src="thread.js"></script>
+</body>
+</html>
