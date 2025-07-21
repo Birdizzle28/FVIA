@@ -522,6 +522,10 @@ html, #indexbody {
 .contact-form-section button:hover {
   background-color: #005fa3;
 }
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
 
 @media (min-width: 768px) {
   .contact-container {
