@@ -147,6 +147,7 @@ async function loadAgentLeads() {
     const [start, end] = dateRange.split(/\s*-\s*/);
     const startDate = new Date(start);
     const endDate = new Date(end);
+    endDate.setHours(23, 59, 59, 999);
     if (!isNaN(startDate) && !isNaN(endDate)) {
       query = query.gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString());
     }
