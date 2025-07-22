@@ -255,37 +255,181 @@ document.getElementById('agent-prev-page')?.addEventListener('click', async () =
   }
 });
 
-// Export to PDF, CSV, Print
-document.getElementById('agent-export-btn')?.addEventListener('click', () => {
-  const exportBox = document.getElementById('agent-export-options');
-  exportBox.style.display = exportBox.style.display === 'block' ? 'none' : 'block';
-});
 
-document.getElementById('agent-export-pdf')?.addEventListener('click', () => {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  doc.autoTable({ html: '#agent-leads-table' });
-  doc.save('agent-leads.pdf');
-});
+    // CSV Export
+    csvBtn?.addEventListener("click", () => {
+      const leads = getSelectedLeadsData();
+      if (!leads.length) return alert("No leads selected.");
 
-document.getElementById('agent-export-csv')?.addEventListener('click', () => {
-  const table = document.getElementById('agent-leads-table');
-  const rows = Array.from(table.querySelectorAll('tr'));
-  const csv = rows.map(row => Array.from(row.children).map(cell => `"${cell.textContent.trim()}"`).join(',')).join('\n');
-  const blob = new Blob([csv], { type: 'text/csv' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'agent-leads.csv';
-  a.click();
-});
+      const headers = Object.keys(leads[0]).join(",");
+      const rows = leads.map(lead => Object.values(lead).map(v => `"${v}"`).join(","));
+      const csv = [headers, ...rows].join("\n");
 
-document.getElementById('agent-export-print')?.addEventListener('click', () => {
-  const printWindow = window.open('', '', 'width=800,height=600');
-  printWindow.document.write(`<html><head><title>Print Leads</title></head><body>${document.getElementById('agent-leads-table').outerHTML}</body></html>`);
-  printWindow.document.close();
-  printWindow.print();
-});
+      const blob = new Blob([csv], { type: "text/csv" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      link.download = "leads.csv";
+      link.click();
+    });
+
+    // Print Export
+    printBtn?.addEventListener("click", () => {
+      const leads = getSelectedLeadsData();
+      if (!leads.length) return alert("No leads selected.");
+
+      const printWindow = window.open("", "_blank");
+      const content = leads.map(lead => `
+        <div class="page">
+          <img src="/Pics/img6.png" class="logo" />
+          <div class="title">Family Values Insurance Agency</div>
+          <div class="subtitle">Lead Confirmation Form</div>
+          <p><span class="label">First Name:</span> ${lead.first_name}</p>
+          <p><span class="label">Last Name:</span> ${lead.last_name}</p>
+          <p><span class="label">Age:</span> ${lead.age}</p>
+          <p><span class="label">Phone:</span> ${lead.phone}</p>
+          <p><span class="label">Lead Type:</span> ${lead.leadType}</p>
+          <p><span class="label">City:</span> ${lead.city}</p>
+          <p><span class="label">State:</span> ${lead.state}</p>
+          <p><span class="label">ZIP:</span> ${lead.zip}</p>
+          <p><span class="label">Address:</span> ${lead.address}</p>
+          <p><span class="label">Agent Assigned:</span> ${lead.agent}</p>
+          <p><span class="label">Submitted At:</span> ${lead.submittedAt}</p>
+          <div class="footer">Generated on ${new Date().toLocaleDateString()}</div>
+        </div>
+      `).join("");
+
+      printWindow.document.write(`
+        <html>
+          <head>
+            <link href="https://fonts.googleapis.com/css2?family=Bellota+Text&display=swap" rel="stylesheet">
+            <style>
+              body {
+                font-family: 'Bellota Text', sans-serif;
+                padding: 30px;
+                text-align: center;
+              }
+              .logo {
+                width: 60px;
+                height: 60px;
+                object-fit: contain;
+                display: block;
+                margin: 0 auto 10px auto;
+              }
+              .label {
+                display: inline-block;
+                font-weight: bold;
+                width: 150px;
+                text-align: right;
+                margin-right: 10px;
+              }
+              .value {
+                display: inline-block;
+                text-align: left;
+              }
+              p {
+                text-align: left;
+                margin: 6px 0 6px 100px;
+              }
+              .footer {
+                margin-top: 30px;
+                font-size: 10px;
+                text-align: center;
+                color: #777;
+              }
+              .lead-page {
+                page-break-after: always;
+              }
+            </style>
+          </head>
+          <body>
+            ${leads.map(lead => `
+              <div class="lead-page">
+                <img src="/Pics/img6.png" class="logo" />
+                <h2>Family Values Insurance Agency</h2>
+                <h4>Lead Confirmation Form</h4>
+                <p><span class="label">First Name:</span> <span class="value">${lead.first_name}</span></p>
+                <p><span class="label">Last Name:</span> <span class="value">${lead.last_name}</span></p>
+                <p><span class="label">Age:</span> <span class="value">${lead.age}</span></p>
+                <p><span class="label">Phone:</span> <span class="value">${lead.phone}</span></p>
+                <p><span class="label">Lead Type:</span> <span class="value">${lead.leadType}</span></p>
+                <p><span class="label">City:</span> <span class="value">${lead.city}</span></p>
+                <p><span class="label">State:</span> <span class="value">${lead.state}</span></p>
+                <p><span class="label">ZIP:</span> <span class="value">${lead.zip}</span></p>
+                <p><span class="label">Address:</span> <span class="value">${lead.address}</span></p>
+                <p><span class="label">Agent Assigned:</span> <span class="value">${lead.agent}</span></p>
+                <p><span class="label">Submitted At:</span> <span class="value">${lead.submittedAt}</span></p>
+                <div class="footer">Generated on ${new Date().toLocaleDateString()}</div>
+              </div>
+            `).join("")}
+          </body>
+        </html>
+      `);
+      
+      printWindow.document.close();
+      printWindow.print();
+    });
+
+    // PDF Export
+    pdfBtn?.addEventListener("click", () => {
+      const leads = getSelectedLeadsData();
+      if (!leads.length) return alert("No leads selected.");
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF();
+
+      const logo = new Image();
+      logo.src = "/Pics/img6.png";
+
+      logo.onload = () => {
+        leads.forEach((lead, index) => {
+          if (index !== 0) doc.addPage();
+
+          doc.addImage(logo, "PNG", 90, 10, 30, 30); // centered
+          doc.setFontSize(18);
+          doc.setFont("helvetica", "bold");
+          doc.text("Family Values Insurance Agency", 105, 50, { align: "center" });
+
+          doc.setFontSize(14);
+          doc.setFont("helvetica", "normal");
+          doc.text("Lead Confirmation Form", 105, 60, { align: "center" });
+
+          const startY = 80;
+          const lineHeight = 10;
+          const labelX = 20;
+          const valueX = 70;
+
+          const fields = [
+            ["First Name", lead.first_name],
+            ["Last Name", lead.last_name],
+            ["Age", lead.age],
+            ["Phone", lead.phone],
+            ["Lead Type", lead.leadType],
+            ["City", lead.city],
+            ["State", lead.state],
+            ["ZIP", lead.zip],
+            ["Address", lead.address],
+            ["Agent Assigned", lead.agent],
+            ["Submitted At", lead.submittedAt],
+          ];
+
+          fields.forEach(([label, value], i) => {
+            const y = startY + i * lineHeight;
+            doc.setFont("helvetica", "bold");
+            doc.text(`${label}:`, labelX, y);
+            doc.setFont("helvetica", "normal");
+            doc.text(value || "—", valueX, y);
+          });
+
+          doc.setFontSize(10);
+          doc.setTextColor(120);
+          doc.text(`Generated on ${new Date().toLocaleDateString()}`, 105, 285, { align: "center" });
+        });
+
+        doc.save("FVIA_Leads.pdf");
+      };
+
+      logo.onerror = () => alert("❌ Failed to load logo.");
+    });
 
 // Add phone field
 document.querySelector('.add-phone-btn')?.addEventListener('click', () => {
