@@ -205,7 +205,20 @@ flatpickr("#agent-date-range", {
   dateFormat: "Y-m-d",
   rangeSeparator: " - " // ✅ CORRECT placement
 });
+  
+document.getElementById('agent-reset-filters')?.addEventListener('click', () => {
+  document.getElementById('agent-date-range').value = '';
+  document.getElementById('agent-date-order').value = 'desc';
+  document.getElementById('agent-zip-filter').value = '';
+  document.getElementById('agent-city-filter').value = '';
+  document.getElementById('agent-state-filter').value = '';
+  document.getElementById('agent-first-name-filter').value = '';
+  document.getElementById('agent-last-name-filter').value = '';
+  document.getElementById('agent-lead-type-filter').value = '';
 
+  agentCurrentPage = 1;
+  loadAgentLeads();
+});
 
 const agentStateFilter = document.getElementById('agent-state-filter');
 if (agentStateFilter) new Choices(agentStateFilter, {
