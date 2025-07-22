@@ -143,8 +143,8 @@ async function loadAgentLeads() {
   }
 
   // ✅ Apply date range if selected
-  if (dateRange && dateRange.includes(' - ')) {
-    const [start, end] = dateRange.split(/\s*-\s*/);
+  if (dateRange && dateRange.includes(' to ')) {
+    const [start, end] = dateRange.split(/\s*to\s*/);
     const startDate = new Date(start);
     const endDate = new Date(end);
     endDate.setHours(23, 59, 59, 999);
