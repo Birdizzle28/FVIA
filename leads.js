@@ -260,6 +260,24 @@ const csvBtn = document.getElementById('agent-export-csv');
 const printBtn = document.getElementById('agent-export-print');
 const pdfBtn = document.getElementById('agent-export-pdf');
 
+window.getSelectedLeadsData = function () {
+  return Array.from(document.querySelectorAll('input[type="checkbox"].lead-checkbox:checked')).map(cb => {
+    const row = cb.closest("tr");
+    return {
+      first_name: row.querySelector(".lead-name")?.textContent.trim() || "",
+      last_name: row.querySelector(".lead-last")?.textContent.trim() || "",
+      age: row.querySelector(".lead-age")?.textContent.trim() || "",
+      phone: row.querySelector(".lead-phone")?.textContent.trim() || "",
+      leadType: row.querySelector(".lead-type")?.textContent.trim() || "",
+      city: row.querySelector(".lead-city")?.textContent.trim() || "",
+      state: row.querySelector(".lead-state")?.textContent.trim() || "",
+      zip: row.querySelector(".lead-zip")?.textContent.trim() || "",
+      address: row.querySelector(".lead-address")?.textContent.trim() || "",
+      agent: row.querySelector(".lead-agent")?.textContent.trim() || "",
+      submittedAt: row.querySelector(".lead-date")?.textContent.trim() || ""
+    };
+  });
+};
 // CSV Export
 csvBtn?.addEventListener("click", () => {
   const leads = getSelectedLeadsData();
