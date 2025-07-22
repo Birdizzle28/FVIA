@@ -259,6 +259,19 @@ document.getElementById('agent-prev-page')?.addEventListener('click', async () =
 const csvBtn = document.getElementById('agent-export-csv');
 const printBtn = document.getElementById('agent-export-print');
 const pdfBtn = document.getElementById('agent-export-pdf');
+const exportBtn = document.getElementById('agent-export-btn');
+const exportOptions = document.getElementById('agent-export-options');
+
+exportBtn?.addEventListener('click', (e) => {
+  e.stopPropagation(); // Prevents triggering the document click below
+  exportOptions.style.display = exportOptions.style.display === 'block' ? 'none' : 'block';
+});
+
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('#agent-export-controls')) {
+    exportOptions.style.display = 'none';
+  }
+});
 
 window.getSelectedLeadsData = function () {
   return Array.from(document.querySelectorAll('input[type="checkbox"].lead-checkbox:checked')).map(cb => {
