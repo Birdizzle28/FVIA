@@ -143,15 +143,23 @@ async function loadAgentLeads() {
   }
 
   // ✅ Apply date range if selected
-  if (dateRange) {
+  if (dateRange && dateRange.includes(' - ')) {
     const [start, end] = dateRange.split(/\s*-\s*/);
     const startDate = new Date(start);
     const endDate = new Date(end);
     endDate.setHours(23, 59, 59, 999);
-    console.log('Start Date:', startDate.toISOString());
-    console.log('End Date:', endDate.toISOString());
-    if (!isNaN(startDate) && !isNaN(endDate)) {
-      query = query.gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString());
+
+    console.log('Parsed start:', startDate.toISOString());
+    console.log('Parsed end:', endDate.toISOString());
+
+    if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+      console.warn('⛔ Invalid date format detected');
+    } else if (startDate > endDate) {
+      console.warn('⛔ Start date is after end date!');
+    } else {
+      query = query
+        .gte('created_at', startDate.toISOString())
+        .lte('created_at', endDate.toISOString());
     }
   }
 
@@ -196,6 +204,7 @@ async function loadAgentLeads() {
 
   updateAgentPaginationControls();
 }
+
 
 document.getElementById('agent-apply-filters')?.addEventListener('click', async () => {
   agentCurrentPage = 1;
