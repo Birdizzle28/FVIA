@@ -207,7 +207,6 @@ async function loadAgentLeads() {
 
 }
 
-
 document.getElementById('agent-apply-filters')?.addEventListener('click', async () => {
   agentCurrentPage = 1;
   await loadAgentLeads(); // Reload leads with current filters applied
@@ -240,6 +239,20 @@ if (agentStateFilter) new Choices(agentStateFilter, {
   shouldSort: false,
   placeholder: true,
   searchPlaceholderValue: 'Type to filter…'
+});
+
+document.getElementById('agent-next-page')?.addEventListener('click', async () => {
+  if (agentCurrentPage < agentTotalPages) {
+    agentCurrentPage++;
+    await loadAgentLeads();
+  }
+});
+
+document.getElementById('agent-prev-page')?.addEventListener('click', async () => {
+  if (agentCurrentPage > 1) {
+    agentCurrentPage--;
+    await loadAgentLeads();
+  }
 });
 
 // Export to PDF, CSV, Print
