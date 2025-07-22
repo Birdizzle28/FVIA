@@ -200,6 +200,11 @@ document.getElementById('agent-apply-filters')?.addEventListener('click', async 
 });
 loadAgentLeads();
 
+  flatpickr("#agent-date-range", {
+  mode: "range",
+  dateFormat: "Y-m-d"
+});
+
 const agentStateFilter = document.getElementById('agent-state-filter');
 if (agentStateFilter) new Choices(agentStateFilter, {
   searchEnabled: true,
@@ -207,7 +212,6 @@ if (agentStateFilter) new Choices(agentStateFilter, {
   placeholder: true,
   searchPlaceholderValue: 'Type to filter…'
 });
-
 
 // Export to PDF, CSV, Print
 document.getElementById('agent-export-btn')?.addEventListener('click', () => {
