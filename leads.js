@@ -185,20 +185,21 @@ async function loadAgentLeads() {
   paginatedLeads.forEach(lead => {
     const row = document.createElement('tr');
     row.innerHTML = `
-      <td><input type="checkbox" class="lead-select-checkbox" data-lead-id="${lead.id}"></td>
-      <td>${new Date(lead.created_at).toLocaleDateString()}</td>
-      <td>${lead.submitted_by_name || ''}</td>
-      <td>${lead.first_name}</td>
-      <td>${lead.last_name}</td>
-      <td>${lead.age}</td>
-      <td>${(lead.phone || []).join(', ')}</td>
-      <td>${lead.address || ''}</td>
-      <td>${lead.city || ''}</td>
-      <td>${lead.state || ''}</td>
-      <td>${lead.zip || ''}</td>
-      <td>${lead.lead_type || ''}</td>
-      <td>${lead.notes || ''}</td>
+      <td><input type="checkbox" class="lead-checkbox" data-lead-id="${lead.id}"></td>
+      <td class="lead-date">${new Date(lead.created_at).toLocaleDateString()}</td>
+      <td class="lead-agent">${lead.submitted_by_name || ''}</td>
+      <td class="lead-name">${lead.first_name}</td>
+      <td class="lead-last">${lead.last_name}</td>
+      <td class="lead-age">${lead.age}</td>
+      <td class="lead-phone">${(lead.phone || []).join(', ')}</td>
+      <td class="lead-address">${lead.address || ''}</td>
+      <td class="lead-city">${lead.city || ''}</td>
+      <td class="lead-state">${lead.state || ''}</td>
+      <td class="lead-zip">${lead.zip || ''}</td>
+      <td class="lead-type">${lead.lead_type || ''}</td>
+      <td class="lead-notes">${lead.notes || ''}</td>
     `;
+
     tbody.appendChild(row);
   });
 
