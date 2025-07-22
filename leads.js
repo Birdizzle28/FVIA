@@ -124,40 +124,50 @@ async function loadAgentLeads() {
     .select('*')
     .eq('assigned_to', user.id);
 
-  // ✅ Apply filters
+  // ✅ Gather filter values
   const filters = {
-    first_name: document.getElementById('filter-first-name')?.value.trim(),
-    last_name: document.getElementById('filter-last-name')?.value.trim(),
-    zip: document.getElementById('filter-zip')?.value.trim(),
-    city: document.getElementById('filter-city')?.value.trim(),
-    state: document.getElementById('filter-state')?.value.trim(),
-    lead_type: document.getElementById('filter-type')?.value.trim(),
+    first_name: document.getElementById('agent-first-name-filter')?.value.trim(),
+    last_name: document.getElementById('agent-last-name-filter')?.value.trim(),
+    zip: document.getElementById('agent-zip-filter')?.value.trim(),
+    city: document.getElementById('agent-city-filter')?.value.trim(),
+    state: document.getElementById('agent-state-filter')?.value.trim(),
+    lead_type: document.getElementById('agent-lead-type-filter')?.value.trim()
   };
 
-  Object.entries(filters).forEach(([key, value]) => {
-    if (value) {
-      query = query.ilike(key, `%${value}%`);
-    }
-  });
+  const dateRange = document.getElementById('agent-date-range')?.value;
+  const order = document.getElementById('agent-date-order')?.value || 'desc';
 
-  // Optional: Sort order
-  const order = document.getElementById('filter-order')?.value || 'desc';
+  // ✅ Apply string filters
+  for (const [key, value] of Object.entries(filters)) {
+    if (value) query = query.ilike(key, `%${value}%`);
+  }
+
+  // ✅ Apply date range if selected
+  if (dateRange) {
+    const [start, end] = dateRange.split(' - ');
+    const startDate = new Date(start);
+    const endDate = new Date(end);
+    if (!isNaN(startDate) && !isNaN(endDate)) {
+      query = query.gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString());
+    }
+  }
+
+  // ✅ Apply order
   query = query.order('created_at', { ascending: order === 'asc' });
 
-  // ✅ Fetch filtered results
+  // ✅ Fetch data
   const { data: leads, error } = await query;
-
   if (error) {
-    console.error('Failed to load leads:', error);
+    console.error('❌ Error loading leads:', error);
     return;
   }
 
-  // Pagination
+  // ✅ Paginate
   agentTotalPages = Math.ceil(leads.length / pageSize);
   const start = (agentCurrentPage - 1) * pageSize;
   const paginatedLeads = leads.slice(start, start + pageSize);
 
-  // Render rows
+  // ✅ Render table
   const tbody = document.querySelector('#agent-leads-table tbody');
   tbody.innerHTML = '';
 
