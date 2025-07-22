@@ -194,7 +194,7 @@ async function loadAgentLeads() {
   updateAgentPaginationControls();
 }
 
-document.getElementById('apply-agent-filters')?.addEventListener('click', async () => {
+document.getElementById('agent-apply-filters')?.addEventListener('click', async () => {
   agentCurrentPage = 1;
   await loadAgentLeads(); // Reload leads with current filters applied
 });
