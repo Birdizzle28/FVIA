@@ -203,6 +203,9 @@ loadAgentLeads();
   flatpickr("#agent-date-range", {
   mode: "range",
   dateFormat: "Y-m-d"
+  locale: {
+    rangeSeparator: " - "  // Matches your existing split(' - ') code
+  }
 });
 
 const agentStateFilter = document.getElementById('agent-state-filter');
