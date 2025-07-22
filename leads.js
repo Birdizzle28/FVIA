@@ -144,7 +144,7 @@ async function loadAgentLeads() {
 
   // ✅ Apply date range if selected
   if (dateRange) {
-    const [start, end] = dateRange.split('/\s*-\s*/');
+    const [start, end] = dateRange.split(/\s*-\s*/);
     const startDate = new Date(start);
     const endDate = new Date(end);
     if (!isNaN(startDate) && !isNaN(endDate)) {
