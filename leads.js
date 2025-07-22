@@ -200,13 +200,12 @@ document.getElementById('agent-apply-filters')?.addEventListener('click', async 
 });
 loadAgentLeads();
 
-  flatpickr("#agent-date-range", {
+flatpickr("#agent-date-range", {
   mode: "range",
-  dateFormat: "Y-m-d"
-  locale: {
-    rangeSeparator: " - "  // Matches your existing split(' - ') code
-  }
+  dateFormat: "Y-m-d",
+  rangeSeparator: " - " // ✅ CORRECT placement
 });
+
 
 const agentStateFilter = document.getElementById('agent-state-filter');
 if (agentStateFilter) new Choices(agentStateFilter, {
