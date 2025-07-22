@@ -217,7 +217,7 @@ loadAgentLeads();
 flatpickr("#agent-date-range", {
   mode: "range",
   dateFormat: "Y-m-d",
-  rangeSeparator: " - " // ✅ CORRECT placement
+  rangeSeparator: " to " // ✅ CORRECT placement
 });
   
 document.getElementById('agent-reset-filters')?.addEventListener('click', () => {
