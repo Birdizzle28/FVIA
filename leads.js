@@ -200,6 +200,15 @@ document.getElementById('agent-apply-filters')?.addEventListener('click', async 
 });
 loadAgentLeads();
 
+const agentStateFilter = document.getElementById('agent-state-filter');
+if (agentStateFilter) new Choices(agentStateFilter, {
+  searchEnabled: true,
+  shouldSort: false,
+  placeholder: true,
+  searchPlaceholderValue: 'Type to filter…'
+});
+
+
 // Export to PDF, CSV, Print
 document.getElementById('agent-export-btn')?.addEventListener('click', () => {
   const exportBox = document.getElementById('agent-export-options');
