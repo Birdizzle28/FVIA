@@ -203,6 +203,8 @@ async function loadAgentLeads() {
   });
 
   updateAgentPaginationControls();
+  console.log('Date range value:', document.getElementById('agent-date-range').value);
+
 }
 
 
