@@ -121,3 +121,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 });
+//Logout
+document.getElementById('logout-btn')?.addEventListener('click', async (e) => {
+  e.preventDefault();
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    alert('Logout failed!');
+    console.error(error);
+  } else {
+    window.location.href = '../index.html'; // or your login page
+  }
+});
