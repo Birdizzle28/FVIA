@@ -265,3 +265,14 @@ function exportPDF() {
   doc.autoTable({ html: table, startY: 20, styles: { font: "helvetica", fontSize: 9 } });
   doc.save("leads.pdf");
 }
+//Logout
+document.getElementById('logout-btn')?.addEventListener('click', async (e) => {
+  e.preventDefault();
+  const { error } = await supabase.auth.signOut();
+  if (error) {
+    alert('Logout failed!');
+    console.error(error);
+  } else {
+    window.location.href = '../index.html'; // or your login page
+  }
+});
