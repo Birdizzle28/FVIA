@@ -16,17 +16,6 @@ function updateAgentPaginationControls() {
 document.addEventListener('DOMContentLoaded', async () => {
   const stateSelect1 = document.getElementById('lead-state');
   const stateSelect2 = document.getElementById('request-state');
-  const { data: profile } = await supabase
-      .from('agents')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-  
-  console.log("Fetched profile:", profile);
-  if (!profile.is_admin) {
-    const adminLink = document.querySelector('.admin-only');
-    if (adminLink) adminLink.style.display = 'none';
-  }
   
   document.getElementById('agent-hub-toggle')?.addEventListener('click', (e) => {
     e.stopPropagation(); // Prevent global click from hiding it immediately
@@ -54,10 +43,30 @@ document.addEventListener('DOMContentLoaded', async () => {
     placeholder: true,
     searchPlaceholderValue: 'Type to filter…'
   });
+  const loadingScreen = document.getElementById('loading-screen');
+
   const { data: { session } } = await supabase.auth.getSession();
+
   if (!session) {
-    window.location.href = 'login.html';
+    window.location.href = 'login.html'; // or 'login.html' if that's what you're using
     return;
+  }
+
+  const user = session.user;
+
+  loadingScreen.style.display = 'none';
+
+  // Load profile info
+  const { data: profile } = await supabase
+    .from('agents')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+  
+  console.log("Fetched profile:", profile);
+  if (!profile.is_admin) {
+    const adminLink = document.querySelector('.admin-only');
+    if (adminLink) adminLink.style.display = 'none';
   }
 
 // Format phone number as (123) 456-7890 while typing
