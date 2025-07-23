@@ -486,3 +486,31 @@ font-family: Bellota Text;
   background: white;
   z-index: 1;
 }
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: white;
+  min-width: 180px;
+  box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
+  z-index: 10;
+}
+
+.dropdown-content a {
+  display: block;
+  padding: 10px 15px;
+  color: black;
+  text-decoration: none;
+}
+
+.dropdown-content a:hover {
+  background-color: #f0f0f0;
+}
