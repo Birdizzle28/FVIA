@@ -17,6 +17,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const stateSelect1 = document.getElementById('lead-state');
   const stateSelect2 = document.getElementById('request-state');
 
+  if (!profile.is_admin) {
+    const adminLink = document.querySelector('.admin-only');
+    if (adminLink) adminLink.style.display = 'none';
+  }
+  
   document.getElementById('agent-hub-toggle')?.addEventListener('click', (e) => {
     e.stopPropagation(); // Prevent global click from hiding it immediately
     const menu = document.getElementById('agent-hub-menu');
