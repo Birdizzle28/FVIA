@@ -16,7 +16,13 @@ function updateAgentPaginationControls() {
 document.addEventListener('DOMContentLoaded', async () => {
   const stateSelect1 = document.getElementById('lead-state');
   const stateSelect2 = document.getElementById('request-state');
-
+  const { data: profile } = await supabase
+      .from('agents')
+      .select('*')
+      .eq('id', user.id)
+      .single();
+  
+  console.log("Fetched profile:", profile);
   if (!profile.is_admin) {
     const adminLink = document.querySelector('.admin-only');
     if (adminLink) adminLink.style.display = 'none';
