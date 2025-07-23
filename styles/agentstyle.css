@@ -494,6 +494,9 @@ button:disabled {
   position: relative;
   display: inline-block;
 }
+#agent-hub-menu {
+  display: none;
+}
 
 .dropdown-content {
   display: none;
