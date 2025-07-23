@@ -54,8 +54,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const user = session.user;
 
-  loadingScreen.style.display = 'none';
-
   // Load profile info
   const { data: profile } = await supabase
     .from('agents')
