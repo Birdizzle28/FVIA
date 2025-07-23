@@ -2,19 +2,6 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 const supabase = createClient('https://ddlbgkolnayqrxslzsxn.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho');
 
-document.getElementById('agent-hub-toggle')?.addEventListener('click', (e) => {
-  e.stopPropagation(); // Prevent global click from hiding it immediately
-  const menu = document.getElementById('agent-hub-menu');
-  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
-});
-
-// Optional: Close dropdown if clicked outside
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('.dropdown')) {
-    document.getElementById('agent-hub-menu').style.display = 'none';
-  }
-});
-
 let agentCurrentPage = 1;
 let agentTotalPages = 1;
 const pageSize = 25;
@@ -29,6 +16,19 @@ function updateAgentPaginationControls() {
 document.addEventListener('DOMContentLoaded', async () => {
   const stateSelect1 = document.getElementById('lead-state');
   const stateSelect2 = document.getElementById('request-state');
+
+document.getElementById('agent-hub-toggle')?.addEventListener('click', (e) => {
+  e.stopPropagation(); // Prevent global click from hiding it immediately
+  const menu = document.getElementById('agent-hub-menu');
+  menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+});
+
+// Optional: Close dropdown if clicked outside
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.dropdown')) {
+    document.getElementById('agent-hub-menu').style.display = 'none';
+  }
+});
 
   if (stateSelect1) new Choices(stateSelect1, {
     searchEnabled: true,
