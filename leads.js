@@ -70,7 +70,8 @@ document.getElementById('lead-form')?.addEventListener('submit', async (e) => {
     lead_type: document.getElementById('lead-type').value,
     notes: document.getElementById('lead-notes').value,
     assigned_to: user.id,
-    submitted_by: user.id
+    submitted_by: user.id,
+    submitted_by_name: agentProfile?.full_name || 'Unknown'
   });
   document.getElementById('lead-message').textContent = error ? 'Failed to submit lead.' : 'Lead submitted!';
 });
@@ -205,7 +206,6 @@ async function loadAgentLeads() {
 
   updateAgentPaginationControls();
   console.log('Date range value:', document.getElementById('agent-date-range').value);
-
 }
 
 document.getElementById('agent-apply-filters')?.addEventListener('click', async () => {
