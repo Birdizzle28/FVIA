@@ -17,16 +17,20 @@ document.addEventListener('DOMContentLoaded', async () => {
   const stateSelect1 = document.getElementById('lead-state');
   const stateSelect2 = document.getElementById('request-state');
   
-  document.getElementById('agent-hub-toggle')?.addEventListener('click', (e) => {
-    e.stopPropagation(); // Prevent global click from hiding it immediately
-    const menu = document.getElementById('agent-hub-menu');
-    menu.style.display = menu.style.display === 'block' ? 'none' : 'block';
+  const toggle = document.getElementById("agent-hub-toggle");
+  const menu = document.getElementById("agent-hub-menu");
+
+  // Make sure menu is hidden initially
+  menu.style.display = "none";
+
+  toggle?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.style.display = menu.style.display === "block" ? "none" : "block";
   });
-  
-  // Optional: Close dropdown if clicked outside
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.dropdown')) {
-      document.getElementById('agent-hub-menu').style.display = 'none';
+
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".dropdown")) {
+      menu.style.display = "none";
     }
   });
 
