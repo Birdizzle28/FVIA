@@ -709,3 +709,11 @@ button:disabled {
     color: #777;
   }
 }
+.dropdown-content {
+  display: none; /* Make sure this is here */
+  position: absolute;
+  background-color: white;
+  min-width: 180px;
+  box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
+  z-index: 10;
+}
