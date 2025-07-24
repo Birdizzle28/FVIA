@@ -271,8 +271,8 @@ function generateOptimizedRoute(points, mode = 'DRIVING') {
   }));
 
   const request = {
-    origin: points[0],
-    destination: points[points.length - 1],
+    origin,
+    destination,
     waypoints,
     travelMode: mode,
     optimizeWaypoints: true
