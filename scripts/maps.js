@@ -7,7 +7,7 @@ const supabase = createClient(
 
 let map; // must be global for callback
 let currentViewMode = 'mine'; // Default
-async function loadLeadPins(user, isAdmin, viewMode = 'mine') {
+async function loadLeadPins(user, isAdmin, viewMode = 'mine', filters = {}) {
   let query = supabase.from('leads').select('*').not('lat', 'is', null).not('lng', 'is', null);
 
   if (!isAdmin || viewMode === 'mine') {
@@ -107,14 +107,9 @@ document.getElementById('reset-map-filters').addEventListener('click', () => {
     // Show dropdown to admins
     document.getElementById('view-toggle-container').style.display = 'block';
     document.getElementById('lead-view-select').addEventListener('change', (e) => {
-      const mode = e.target.value;
+      currentViewMode = e.target.value;
       loadLeadPins(user, isAdmin, currentViewMode);
     });
-  }
-
-  if (!profile?.is_admin) {
-    const adminLink = document.querySelector('.admin-only');
-    if (adminLink) adminLink.style.display = 'none';
   }
   flatpickr("#filter-date-range", {
     mode: "range",
