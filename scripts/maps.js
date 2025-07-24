@@ -39,6 +39,7 @@ function initMap() {
   map = new google.maps.Map(document.getElementById("map"), {
     center: { lat: 36.1627, lng: -86.7816 },
     zoom: 8,
+    mapId: '6ea480352876049060496b2a'
   });
 
   loadLeadPins(); // Step 3: this will show the markers, we'll add this later
