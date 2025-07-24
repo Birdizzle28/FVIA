@@ -367,6 +367,11 @@ startRouteBtn.addEventListener('click', () => {
 
 // 👇 Optimize Route
 optimizeRouteBtn.addEventListener('click', () => {
+  if (selectedRoutePoints.length < 2) {
+    alert("Select at least 2 leads before optimizing the route.");
+    return;
+  }
+
   const travelMode = document.getElementById('travel-mode').value;
   const origin = selectedRoutePoints[0].address;
   const destination = selectedRoutePoints[selectedRoutePoints.length - 1].address;
