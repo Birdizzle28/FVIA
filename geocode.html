@@ -13,6 +13,27 @@
     const GEOCODING_API = 'https://maps.googleapis.com/maps/api/geocode/json';
     const API_KEY = 'AIzaSyD5nGhz1mUXK1aGsoQSzo4MXYcI-uoxPa4';
 
+    function formatAddress(lead) {
+      const city = (lead.city || '').trim();
+      const zip = (lead.zip || '').trim();
+
+      let state = (lead.state || '').trim();
+
+      // Auto-fill TN if ZIP is in 383xx and state is blank or wrong
+      if (!state && zip.startsWith('383')) {
+        state = 'TN';
+      }
+
+      const parts = [
+        lead.address?.trim(),
+        city,
+        state,
+        zip
+      ].filter(Boolean);
+
+      return parts.join(', ');
+    }
+
     async function geocodeAddress(address) {
       const url = `${GEOCODING_API}?address=${encodeURIComponent(address)}&key=${API_KEY}`;
       const response = await fetch(url);
@@ -22,7 +43,7 @@
         const location = data.results[0].geometry.location;
         return { lat: location.lat, lng: location.lng };
       } else {
-        console.warn(`Failed to geocode: ${address}`);
+        console.warn(`⚠️ Failed to geocode: ${address}`);
         return null;
       }
     }
@@ -32,27 +53,9 @@
       if (error) return console.error('Error fetching leads:', error);
 
       for (const lead of leads) {
-      function formatAddress(lead) {
-  const city = (lead.city || '').trim();
-  const zip = (lead.zip || '').trim();
+        const fullAddress = formatAddress(lead);
+        console.log(`📍 Trying to geocode: ${fullAddress}`);
 
-  let state = (lead.state || '').trim();
-
-  // Auto-fill TN if ZIP is in the 383xx range and state is blank or wrong
-  if (!state && zip.startsWith('383')) {
-    state = 'TN';
-  }
-
-  const parts = [
-    lead.address?.trim(),
-    city,
-    state,
-    zip
-  ].filter(Boolean);
-
-  return parts.join(', ');
-}
-console.log(`📍 Trying to geocode: ${fullAddress}`);
         const coords = await geocodeAddress(fullAddress);
 
         if (coords) {
@@ -62,15 +65,16 @@ console.log(`📍 Trying to geocode: ${fullAddress}`);
             .eq('id', lead.id);
 
           if (updateError) {
-            console.error(`Failed to update lead ${lead.id}`, updateError);
+            console.error(`❌ Failed to update lead ${lead.id}`, updateError);
           } else {
-            console.log(`Updated lead ${lead.id} with coords:`, coords);
+            console.log(`✅ Updated lead ${lead.id} with coords:`, coords);
           }
         }
+
         await new Promise(r => setTimeout(r, 250)); // Delay to avoid rate limits
       }
 
-      console.log("✅ Done updating all leads!");
+      console.log("🎉 Done updating all leads!");
     }
 
     updateLeadsWithCoordinates();
