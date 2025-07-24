@@ -81,9 +81,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     const leadType = document.getElementById('filter-lead-type').value;
     const city = document.getElementById('filter-city').value;
     const zip = document.getElementById('filter-zip').value;
-    const dateRange = document.getElementById('filter-date-range').value
-      .split(' to ')
-      .map(d => new Date(d).toISOString());
+    const rawRange = document.getElementById('filter-date-range').value;
+    let dateRange = null;
+    
+    if (rawRange && rawRange.includes(' to ')) {
+      const [start, end] = rawRange.split(' to ');
+      if (start && end) {
+        dateRange = [new Date(start).toISOString(), new Date(end).toISOString()];
+      }
+    }
   
     const filters = {
       ageMin: ageMin || null,
@@ -91,7 +97,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       leadType: leadType || null,
       city: city || null,
       zip: zip || null,
-      dateRange: dateRange.length === 2 ? dateRange : null
+      dateRange
     };
     loadLeadPins(user, isAdmin, currentViewMode, filters);
   });
