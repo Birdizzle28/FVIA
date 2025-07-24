@@ -1,6 +1,9 @@
+/* Global font */
 * {
-font-family: Bellota Text;
+  font-family: Bellota Text;
 }
+
+/* Loading screen overlay */
 #loading-screen {
   position: fixed;
   z-index: 999;
@@ -14,6 +17,7 @@ font-family: Bellota Text;
   font-size: 1.5rem;
 }
 
+/* Debug message banner */
 #debug-msg {
   position: fixed;
   top: 10px;
@@ -24,24 +28,28 @@ font-family: Bellota Text;
   font-weight: bold;
   color: red;
 }
+
+/* Dashboard background */
 #dashboardbody {
-        background-color: white;
-        margin: 0;
-        background-image: radial-gradient(#915864, #353468);
-        min-height: 80vw;
+  background-color: white;
+  margin: 0;
+  background-image: radial-gradient(#915864, #353468);
+  min-height: 80vw;
 }
+
+/* Grid layout for main sections */
 .index-grid {
-        margin: 0;
-        color: white;
-        width: 100%;
-        display: grid;
-        grid-template-areas:
-                "indexheader"
-                "indexmain"
-                "indexfooter";
+  margin: 0;
+  color: white;
+  width: 100%;
+  display: grid;
+  grid-template-areas:
+    "indexheader"
+    "indexmain"
+    "indexfooter";
 }
 
-
+/* Header styling */
 .index-grid-header {
   display: flex;
   justify-content: space-between;
@@ -50,25 +58,21 @@ font-family: Bellota Text;
   padding: 10px 20px;
   flex-wrap: wrap;
 }
-
 #logofvcontainer {
   display: flex;
   flex-direction: row;
   align-items: center;
   flex-shrink: 0;
 }
-
 #logodiv {
   display: flex;
   align-items: center;
   margin-right: 10px;
 }
-
 #headerlogo {
   height: 75px;
   width: 75px;
 }
-
 #fvdiv {
   display: flex;
   flex-direction: column;
@@ -76,7 +80,6 @@ font-family: Bellota Text;
   line-height: 1.2;
   color: white;
 }
-
 #fvdiv p {
   margin: 0;
   font-size: 1.2rem;
@@ -84,13 +87,12 @@ font-family: Bellota Text;
   color: #353468;
 }
 
-/* nav container takes up the rest */
+/* Navigation */
 #navcontainer {
   flex: 1;
   display: flex;
   justify-content: flex-end;
 }
-
 .header-flex-container {
   display: flex;
   gap: 20px;
@@ -98,20 +100,17 @@ font-family: Bellota Text;
   justify-content: center;
   flex-wrap: wrap;
 }
-
 .header-flex-container a {
-  color: white;
   font-weight: bold;
   text-decoration: none;
   font-size: 1rem;
   color: #353468;
 }
 
-
-/*MAIN*/
+/* Profile section card */
 .profile-section {
   max-width: 75%;
-  margin: 20px auto 20px auto;
+  margin: 20px auto;
   display: flex;
   flex-direction: column;
   gap: 20px;
@@ -119,13 +118,11 @@ font-family: Bellota Text;
   background-color: white;
   border-radius: 2%;
 }
-
 .profile-picture-wrapper {
   display: flex;
   justify-content: center;
   margin-top: 30px;
 }
-
 .profile-picture-placeholder {
   position: relative;
   width: 140px;
@@ -137,14 +134,12 @@ font-family: Bellota Text;
   text-align: center;
   cursor: pointer;
 }
-
 .profile-picture-placeholder img {
   width: 100%;
   height: 100%;
   object-fit: cover;
   opacity: 0.5;
 }
-
 .upload-text {
   position: absolute;
   top: 50%;
@@ -156,6 +151,7 @@ font-family: Bellota Text;
   pointer-events: none;
 }
 
+/* Profile form styles */
 #profile-form {
   display: flex;
   flex-direction: column;
@@ -163,18 +159,15 @@ font-family: Bellota Text;
   width: 90%;
   margin: auto;
 }
-
 .form-group {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
 }
-
 .form-group label {
   font-weight: bold;
   margin-bottom: 5px;
 }
-
 .form-group input,
 .form-group textarea,
 .form-group select {
@@ -184,7 +177,6 @@ font-family: Bellota Text;
   font-size: 1rem;
   border: 1px solid #ccc;
 }
-
 #profile-form button {
   width: 100%;
   padding: 10px;
@@ -195,298 +187,115 @@ font-family: Bellota Text;
   font-weight: bold;
   cursor: pointer;
 }
-
 #edit-profile-message {
   font-weight: bold;
   margin-top: 10px;
 }
 
-
-/*FOOTER*/
+/* Footer */
 .index-grid-footer {
-        display: flex;
-        background-color: #ed9ea5;
-        grid-area: indexfooter;
-        flex-direction: column;
-        align-items: center;
+  display: flex;
+  background-color: #ed9ea5;
+  grid-area: indexfooter;
+  flex-direction: column;
+  align-items: center;
 }
 #footerlogo {
-        display: inline-block;
-        height: 55px;
-        width: 55px;
-        margin: 10px auto;
+  display: inline-block;
+  height: 55px;
+  width: 55px;
+  margin: 10px auto;
 }
 #footercontact {
-        margin: 10px;
-        text-decoration: none;
+  margin: 10px;
+  text-decoration: none;
 }
 .contactcontainer span {
-        font-size: 1.8vw;
-        text-decoration: none;
-        color: #353468;
-        margin: 0;
-        padding: 0;
+  font-size: 1.8vw;
+  text-decoration: none;
+  color: #353468;
+  margin: 0;
+  padding: 0;
 }
 .contactcontcontacts {
-        text-decoration: none;
+  text-decoration: none;
 }
 .contactcontainer {
-        text-decoration: none;
-        color: inherit; /* optional: makes it match surrounding text */
+  text-decoration: none;
+  color: inherit;
 }
 .footerhr {
-        width: 50vw;
-        border: solid 1px #353468;
+  width: 50vw;
+  border: solid 1px #353468;
 }
 .fab, .fa {
-        padding: 1vw;
-        font-size: 1.9vw;
-        width: 2vw;
-        height: 2vw;
-        text-align: center;
-        text-decoration: none;
-        margin: auto;
-        border-radius: 50%;
+  padding: 1vw;
+  font-size: 1.9vw;
+  width: 2vw;
+  height: 2vw;
+  text-align: center;
+  text-decoration: none;
+  margin: auto;
+  border-radius: 50%;
 }
 .fa-facebook-f {
-        background: #3B5998;
-        color: white;
-        margin-top: 10px;
+  background: #3B5998;
 }
-.fa-google {
-        background: #dd4b39;
-        color: white;
-        margin-top: 10px;
+.fa-twitter {
+  background: #55ACEE;
 }
 .fa-linkedin-in {
-        background: #007bb5;
-        color: white;
-        margin-top: 10px;
+  background: #0e76a8;
 }
 .fa-youtube {
-        background: #bb0000;
-        color: white;
-        margin-top: 10px;
+  background: #c4302b;
 }
-.fa-instagram {
-        background: #125688;
-        color: white;
-        margin-top: 10px;
+.fab:hover, .fa:hover {
+  opacity: 0.7;
 }
 
-/* NAVIGATION HOVER + STYLES */
-.header-flex-container {
-  display: flex;
-  gap: 20px;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  background-color: #d88f9b; /* slightly darker than #ed9ea5 */
-  padding: 5px;
-  border-radius: 1%;
-}
-
-.header-flex-container a {
-  color: #353468;
-  font-weight: bold;
-  text-decoration: none;
-  font-size: 1rem;
-  padding: 6px 12px;
-  border-radius: 4px;
-  transition: background-color 0.3s ease, color 0.3s ease;
-}
-
-.header-flex-container a:hover {
-  background-color: #915864;
-  color: white;
-}
-
-/* RESPONSIVE HEADER & FOOTER FOR MOBILE */
-@media screen and (max-width: 768px) {
-  .index-grid-header {
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-  }
-
-  #logofvcontainer {
-    flex-direction: column;
-    align-items: center;
-  }
-
-  #headerlogo {
-    margin: 10px auto;
-  }
-
-  #fvdiv p {
-    font-size: 1.1rem;
-    line-height: 1.4;
-  }
-
-  #navcontainer {
-    width: 100%;
-    margin-top: 10px;
-  }
-
-  .header-flex-container {
-    flex-direction: column;
-    gap: 10px;
-    padding: 10px;
-  }
-
-  .header-flex-container a {
-    display: block;
-    width: 100%;
-    border-bottom: 1px solid #ccc;
-    padding: 10px 0;
-  }
-
-  .header-flex-container a:last-child {
-    border-bottom: none;
-  }
-
-  /* Footer tweaks */
-  #footercontact {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 5px;
-  }
-
-  .contactcontainer span {
-    font-size: 4.5vw;
-    text-align: center;
-  }
-}
-/* --- NAVIGATION: MOBILE FIX --- */
-@media screen and (max-width: 768px) {
-  .header-flex-container {
-    flex-direction: column;
-    gap: 10px;
-    padding: 10px;
-    width: 100%; /* take full screen width */
-    align-items: center;
-  }
-
-  .header-flex-container a {
-    display: block;
-    width: 100%;
-    text-align: center;
-    padding: 10px 0;
-    border-bottom: 1px solid #353468; /* match text color */
-  }
-
-  .header-flex-container a:last-child {
-    border-bottom: none;
-  }
-
-  #navcontainer {
-    width: 100%;
-    margin-top: 10px;
-  }
-
-  /* --- INPUT LEAK FIX --- */
-  .auth-container input,
-  .auth-container textarea {
-    box-sizing: border-box;
-    width: 100%;
-    max-width: 100%;
-  }
-
-  /* --- CONTACT SECTION: ICON MERGE FIX --- */
-  #footercontact {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 12px;
-  }
-
-  .contactcontainer {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    text-align: center;
-  }
-
-  .contactcontainer span.fa,
-  .contactcontainer .contactcontcontacts {
-    font-size: 4.5vw;
-    display: inline-block;
-  }
-}
-#lead-message {
-  display: block;
-  margin-top: 15px;
-  font-weight: bold;
-  font-size: 1rem;
-  text-align: center;
-}
-
-.admin-only {
-  display: none;
-}
-#requested-leads-container {
-  max-height: 320px;
-  overflow-y: auto;
-  border: 1px solid #ccc;
-  padding: 10px;
-  background: #fff;
-  border-radius: 8px;
-}
-#leads-table-container {
-  max-height: 600px;
-  overflow-y: auto;
-  border: 1px solid #ccc;
-}
-
+/* Lead management table */
 #leads-table-container table {
   border-collapse: collapse;
   width: 100%;
 }
-
 #leads-table-container thead th {
   position: sticky;
   top: 0;
   background-color: #f4f4f4;
   z-index: 1;
-  cursor: pointer; /* Also for sorting UX */
+  cursor: pointer; /* for sort indicator */
 }
-
 #leads-table {
   width: 100%;
   border-collapse: collapse;
 }
-
-#leads-table th, #leads-table td {
+#leads-table th,
+#leads-table td {
   border: 1px solid #ccc;
   padding: 8px;
   text-align: left;
   font-size: 0.9em;
 }
-
 #lead-filters {
   display: flex;
   flex-wrap: wrap;
   gap: 10px;
   margin-bottom: 15px;
 }
-
 #lead-filters input,
 #lead-filters select {
   padding: 5px;
   font-size: 0.9em;
 }
-#leads-table thead th {
-  position: sticky;
-  top: 0;
-  background: white;
-  z-index: 1;
-}
+
+/* Generic disabled button style */
 button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
+
+/* Dropdown menu */
 .dropdown {
   position: relative;
   display: inline-block;
@@ -494,7 +303,6 @@ button:disabled {
 #agent-hub-menu {
   display: none;
 }
-
 .dropdown-content {
   display: none;
   position: absolute;
@@ -503,22 +311,23 @@ button:disabled {
   box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
   z-index: 10;
 }
-
 .dropdown-content a {
   display: block;
   padding: 10px 15px;
   color: black;
   text-decoration: none;
 }
-
 .dropdown-content a:hover {
   background-color: #f0f0f0;
 }
+
+/* Map container */
 #map {
   position: relative;
-  z-index: 1; /* Lower than the panel */
+  z-index: 1; /* so that the overlay panel can sit above */
 }
-/* Slide Panel Styles */
+
+/* Routing side panel (hidden by default) */
 #route-panel {
   position: fixed;
   top: 0;
@@ -534,23 +343,20 @@ button:disabled {
   flex-direction: column;
   padding: 1rem;
 }
-
 #route-panel.open {
   right: 0;
 }
-
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-
 #close-route-panel {
   background: none;
   border: none;
   font-size: 1.5rem;
+  cursor: pointer;
 }
-
 #route-stops-list {
   flex: 1;
   margin: 1rem 0;
@@ -558,13 +364,13 @@ button:disabled {
   border: 1px solid #ddd;
   padding: 0.5rem;
 }
-
 .route-actions {
   display: flex;
   justify-content: space-between;
   gap: 0.5rem;
 }
 
+/* Panel toggle button (floating over map) */
 #route-panel-toggle {
   position: fixed;
   bottom: 80px;
@@ -577,4 +383,42 @@ button:disabled {
   padding: 0.5rem 0.75rem;
   border-radius: 50%;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+
+/* Route stop items in the list */
+.route-stop {
+  cursor: grab;
+  user-select: none;
+  padding: 4px 0;
+  border-bottom: 1px solid #eee;
+}
+.route-stop:last-child {
+  border-bottom: none;
+}
+.route-stop.dragging {
+  opacity: 0.5;
+}
+
+/* Inputs and select in route panel */
+#route-panel input,
+#route-panel select {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 0.5rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  font-size: 0.95rem;
+}
+
+/* (Optional) style for route action buttons */
+.route-actions button {
+  padding: 8px 12px;
+  border: none;
+  border-radius: 4px;
+  background: #f0f0f0;
+  cursor: pointer;
+}
+.route-actions button:hover:enabled {
+  background: #e0e0e0;
 }
