@@ -6,6 +6,7 @@ const supabase = createClient(
 );
 
 let map; // must be global for callback
+let radiusCircle = null;
 let currentViewMode = 'mine'; // Default
 async function geocodeZip(zip) {
   const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${zip}&key=AIzaSyD5nGhz1mUXK1aGsoQSzo4MXYcI-uoxPa4`);
@@ -54,9 +55,26 @@ async function loadLeadPins(user, isAdmin, viewMode = 'mine', filters = {}, cent
   }
 
   // Clear existing markers from map (optional, if markers stack)
+  // Clear previous markers and circle
   map.markers?.forEach(m => m.setMap(null));
   map.markers = [];
-
+  if (radiusCircle) {
+    radiusCircle.setMap(null);
+    radiusCircle = null;
+  }
+  // Draw radius circle if applicable
+  if (centerPoint && radiusMiles) {
+    radiusCircle = new google.maps.Circle({
+      strokeColor: "#007bff",
+      strokeOpacity: 0.8,
+      strokeWeight: 2,
+      fillColor: "#007bff",
+      fillOpacity: 0.15,
+      map,
+      center: centerPoint,
+      radius: radiusMiles * 1609.34 // Convert miles to meters
+    });
+  }
   leads.forEach((lead) => {
     if (centerPoint && radiusMiles) {
       const distance = haversineDistance(centerPoint, { lat: lead.lat, lng: lead.lng });
