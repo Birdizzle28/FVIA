@@ -2,17 +2,18 @@
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 const supabase = createClient(
   'https://ddlbgkolnayqrxslzsxn.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJnY29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
 );
 
-let map; // must be global for callback
-let radiusCircle = null;
-let currentViewMode = 'mine'; // Default view mode
-let routingMode = false;
-let selectedRoutePoints = [];
-let directionsService;
-let directionsRenderer;
+let map;                    // Google Map instance
+let directionsService;      // Google Maps Directions service
+let directionsRenderer;     // Renderer for displaying directions
+let routingMode = false;    // Whether routing mode is enabled
+let selectedRoutePoints = [];// Array of selected route stops (with lat, lng, name, address, id)
+let radiusCircle = null;    // Optional radius filter circle
+let currentViewMode = 'mine';// Default lead view mode ('mine' or 'all')
 
+// Utility: Geocode a ZIP code to lat/lng using Google Geocoding API
 async function geocodeZip(zip) {
   const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${zip}&key=AIzaSyD5nGhz1mUXK1aGsoQSzo4MXYcI-uoxPa4`);
   const data = await response.json();
@@ -22,35 +23,46 @@ async function geocodeZip(zip) {
   return null;
 }
 
+// Utility: Calculate haversine distance (miles) between two lat/lng coordinates
 function haversineDistance(coord1, coord2) {
-  const toRad = (x) => x * Math.PI / 180;
+  const toRad = x => x * Math.PI / 180;
   const R = 3958.8; // Earth radius in miles
   const dLat = toRad(coord2.lat - coord1.lat);
   const dLng = toRad(coord2.lng - coord1.lng);
   const lat1 = toRad(coord1.lat);
   const lat2 = toRad(coord2.lat);
-
-  const a = Math.sin(dLat / 2) ** 2 +
-            Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+  const a = Math.sin(dLat/2)**2 + Math.sin(dLng/2)**2 * Math.cos(lat1) * Math.cos(lat2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 }
 
+// Initialize Google Map and directions services
+function initMap() {
+  directionsService = new google.maps.DirectionsService();
+  directionsRenderer = new google.maps.DirectionsRenderer();
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat: 36.1627, lng: -86.7816 }, // default center (e.g. Nashville)
+    zoom: 8,
+    mapId: '6ea480352876049060496b2a'
+  });
+  directionsRenderer.setMap(map);
+}
+
+// Load lead pins from Supabase for the given user (and filters). Adds markers to map.
 async function loadLeadPins(user, isAdmin, viewMode = 'mine', filters = {}, centerPoint = null, radiusMiles = null) {
+  // Build Supabase query for leads
   let query = supabase.from('leads').select('*').not('lat', 'is', null).not('lng', 'is', null);
   if (!isAdmin || viewMode === 'mine') {
     query = query.eq('assigned_to', user.id);
   }
-  // Apply filters
+  // Apply filters if provided
   if (filters.ageMin) query = query.gte('age', filters.ageMin);
   if (filters.ageMax) query = query.lte('age', filters.ageMax);
   if (filters.leadType) query = query.eq('lead_type', filters.leadType);
   if (filters.city) query = query.ilike('city', `%${filters.city}%`);
   if (filters.zip) query = query.eq('zip', filters.zip);
   if (filters.dateRange?.length === 2) {
-    query = query
-      .gte('created_at', filters.dateRange[0])
-      .lte('created_at', filters.dateRange[1]);
+    query = query.gte('created_at', filters.dateRange[0]).lte('created_at', filters.dateRange[1]);
   }
 
   const { data: leads, error } = await query;
@@ -59,141 +71,308 @@ async function loadLeadPins(user, isAdmin, viewMode = 'mine', filters = {}, cent
     return;
   }
 
-  // Clear previous markers and radius circle
+  // Clear existing markers and radius circle from map
   map.markers?.forEach(m => m.setMap(null));
   map.markers = [];
   if (radiusCircle) {
     radiusCircle.setMap(null);
     radiusCircle = null;
   }
-  // Draw radius circle if applicable
+  // If radius filter applied, draw the circle
   if (centerPoint && radiusMiles) {
     radiusCircle = new google.maps.Circle({
-      strokeColor: "#007bff",
+      strokeColor: '#007bff',
       strokeOpacity: 0.8,
       strokeWeight: 2,
-      fillColor: "#007bff",
+      fillColor: '#007bff',
       fillOpacity: 0.15,
       map,
       center: centerPoint,
-      radius: radiusMiles * 1609.34 // Convert miles to meters
+      radius: radiusMiles * 1609.34  // miles to meters
     });
   }
 
-  leads.forEach((lead) => {
-    // If radius filter is active, skip leads outside the radius
+  // Create a marker for each lead
+  const { AdvancedMarkerElement } = google.maps.marker;  // Using AdvancedMarker for custom content
+  leads.forEach(lead => {
+    // If radius filter active, skip leads outside radius
     if (centerPoint && radiusMiles) {
       const distance = haversineDistance(centerPoint, { lat: lead.lat, lng: lead.lng });
       if (distance > radiusMiles) return;
     }
-    const { AdvancedMarkerElement } = google.maps.marker;
     const marker = new AdvancedMarkerElement({
       position: { lat: lead.lat, lng: lead.lng },
       map,
       title: `${lead.first_name} ${lead.last_name}`
     });
-
+    // Marker click event
     marker.addListener('click', () => {
       if (routingMode) {
         // In routing mode, select this lead as a route stop
-        selectedRoutePoints.push({
+        const pointData = {
+          id: lead.id,
           lat: lead.lat,
           lng: lead.lng,
           address: `${lead.address}, ${lead.city}, ${lead.state} ${lead.zip}`,
           name: `${lead.first_name} ${lead.last_name}`
-        });
-        // Mark the selected point visually (small green dot)
+        };
+        selectedRoutePoints.push(pointData);
+        // Visually mark the selected point by changing marker appearance
         marker.content = document.createElement('div');
-        marker.content.innerHTML = `<div style="width: 20px; height: 20px; background-color: green; border-radius: 50%; border: 2px solid white;"></div>`;
-        // Enable "Generate Route" button if at least two points are selected
-        document.getElementById('generate-route').disabled = selectedRoutePoints.length < 2;
-        // Update route stops list in the side panel and open the panel
-        updateRouteListUI();
+        marker.content.innerHTML = `<div style="width: 16px; height: 16px; background-color: green; border: 2px solid white; border-radius: 50%;"></div>`;
+        // Ensure the route panel is open and UI updated
         document.getElementById('route-panel').classList.add('open');
+        updateRouteListUI();
+        // Enable routing buttons if at least two points selected
+        const startBtn = document.getElementById('start-route');
+        const optBtn = document.getElementById('optimize-route');
+        if (selectedRoutePoints.length >= 2) {
+          if (startBtn) startBtn.disabled = false;
+          if (optBtn) optBtn.disabled = false;
+        }
       } else {
-        // In normal mode, show info window for the lead
+        // Not in routing mode: show lead info in an info window
         const infoWindow = new google.maps.InfoWindow({
           content: `<strong>${lead.first_name} ${lead.last_name}</strong><br>${lead.address}, ${lead.city}, ${lead.state} ${lead.zip}`
         });
         infoWindow.open(map, marker);
       }
     });
-
     map.markers.push(marker);
   });
 }
 
-function initMap() {
-  directionsService = new google.maps.DirectionsService();
-  map = new google.maps.Map(document.getElementById('map'), {
-    center: { lat: 36.1627, lng: -86.7816 },
-    zoom: 8,
-    mapId: '6ea480352876049060496b2a'
-  });
-  directionsRenderer = new google.maps.DirectionsRenderer();
-  directionsRenderer.setMap(map);
-}
-
-function updateRouteListUI() {
-  const list = document.getElementById('route-stops-list');
-  list.innerHTML = '';
+// Update the route stops list UI in the side panel (called after selecting or reordering stops)
+function updateRouteListUI(legDurations = []) {
+  const listEl = document.getElementById('route-stops-list');
+  if (!listEl) return;
+  listEl.innerHTML = '';  // clear current list
+  // Determine if a custom start location is being used (if the start address input has value)
+  const customStartUsed = !!document.getElementById('custom-start')?.value.trim();
+  const customEndUsed   = !!document.getElementById('custom-end')?.value.trim();
+  // Loop through each selected stop and add to UI list
   selectedRoutePoints.forEach((point, index) => {
     const item = document.createElement('div');
     item.className = 'route-stop';
-    item.textContent = `${index + 1}. ${point.name || 'Lead'} - ${point.address}`;
-    list.appendChild(item);
+    // Determine travel time text for this stop if available
+    let timeText = '';
+    if (legDurations.length > 0) {
+      if (customStartUsed) {
+        // If custom start provided, legDurations array corresponds one-to-one with stops (first leg is start->first stop)
+        if (index < legDurations.length) {
+          timeText = ` (${legDurations[index].text})`;
+          if (index === 0) {
+            // Optionally clarify first stop time is from start
+            timeText = ` (${legDurations[index].text} from start)`;
+          }
+        }
+      } else {
+        // No custom start: legDurations[0] corresponds to travel to second stop, etc.
+        if (index === 0) {
+          timeText = ''; // first stop is starting point, no travel time
+        } else if (index - 1 < legDurations.length) {
+          timeText = ` (${legDurations[index - 1].text})`;
+        }
+      }
+      // If custom end is used, the last leg (to end) is not attached to a stop here (handled separately for end).
+    }
+    item.textContent = `${point.name} - ${point.address}${timeText}`;
+    item.draggable = true;
+    // Drag events for reordering
+    item.addEventListener('dragstart', () => {
+      item.classList.add('dragging');
+    });
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      // After drag, update the selectedRoutePoints order based on new DOM order
+      const newOrder = [];
+      document.querySelectorAll('#route-stops-list .route-stop').forEach(stopEl => {
+        // Find matching point by address (addresses are unique per lead)
+        const addr = stopEl.textContent.split(' - ')[1].split('(')[0].trim();
+        const pt = selectedRoutePoints.find(p => p.address === addr);
+        if (pt) newOrder.push(pt);
+      });
+      selectedRoutePoints = newOrder;
+      // Automatically regenerate route for new order if a route was already displayed
+      if (directionsRenderer && directionsRenderer.getDirections()?.routes?.length) {
+        generateRoute(false); // recalc route with new order
+      } else {
+        // If no route drawn yet, just update UI times (none in this case)
+        updateRouteListUI();
+      }
+    });
+    listEl.appendChild(item);
   });
 }
 
-function formatDuration(totalSeconds) {
-  const minutes = Math.round(totalSeconds / 60);
-  if (minutes < 60) {
-    return minutes + ' min';
+// Helper: Determine the element after which to insert the dragged item (for drag-and-drop list reordering) [oai_citation:0‡medium.com](https://medium.com/codex/drag-n-drop-with-vanilla-javascript-75f9c396ecd#:~:text=insert%20this%20node%20into%20the,container%2C%20where%20we%20want%20it)
+function getDragAfterElement(container, y) {
+  const draggableElements = [...container.querySelectorAll('.route-stop:not(.dragging)')];
+  let closest = { offset: Number.NEGATIVE_INFINITY, element: null };
+  for (const child of draggableElements) {
+    const box = child.getBoundingClientRect();
+    const offset = y - box.top - box.height / 2;
+    if (offset < 0 && offset > closest.offset) {
+      closest = { offset: offset, element: child };
+    }
   }
-  const hours = Math.floor(minutes / 60);
-  const mins = minutes % 60;
-  if (mins === 0) {
-    return `${hours} hr`;
-  }
-  return `${hours} hr ${mins} min`;
+  return closest.element;
 }
 
+// Attach dragover event on the stops list container to handle reordering
+document.addEventListener('dragover', e => {
+  const container = document.getElementById('route-stops-list');
+  if (!container) return;
+  e.preventDefault();
+  const afterElement = getDragAfterElement(container, e.clientY);
+  const dragged = document.querySelector('.dragging');
+  if (dragged) {
+    if (!afterElement) {
+      container.appendChild(dragged);
+    } else {
+      container.insertBefore(dragged, afterElement);
+    }
+  }
+});
+
+// Generate and display the route on the map for the current selectedRoutePoints.
+// If optimize=true, will optimize waypoint order for shortest path.
+function generateRoute(optimize = false) {
+  if (selectedRoutePoints.length < 2) {
+    alert('Select at least two locations for routing.');
+    return;
+  }
+  const travelMode = document.getElementById('travel-mode')?.value || 'DRIVING';
+  // Determine origin and destination
+  const startInput = document.getElementById('custom-start')?.value.trim();
+  const endInput   = document.getElementById('custom-end')?.value.trim();
+  let origin, destination;
+  if (startInput) {
+    origin = startInput;
+  } else {
+    origin = selectedRoutePoints[0].address;
+  }
+  if (endInput) {
+    destination = endInput;
+  } else {
+    destination = selectedRoutePoints[selectedRoutePoints.length - 1].address;
+  }
+  // Build waypoints (all intermediate stops that are not origin or final destination)
+  let waypoints = [];
+  // If custom start is used, include all selected points as waypoints (destination might be custom end or last lead)
+  // If no custom start, include selected points except first and last (which serve as origin/destination)
+  if (startInput) {
+    // Use all selected points as waypoints (they all come after custom origin)
+    waypoints = selectedRoutePoints.map(pt => ({ location: { lat: pt.lat, lng: pt.lng }, stopover: true }));
+    // If custom end also used, we'll include all points and let destination be separate.
+    // Remove the last one if it's also the destination and custom end not used:
+    if (!endInput) {
+      // If no custom end, the last selected point is actually the destination (we should not include it in waypoints)
+      waypoints = selectedRoutePoints.slice(0, -1).map(pt => ({ location: { lat: pt.lat, lng: pt.lng }, stopover: true }));
+    }
+  } else {
+    // No custom start: origin is first selected, destination is last selected (unless custom end overrides it)
+    if (endInput) {
+      // If custom end given but no custom start, include all selected points (origin is first lead, dest is custom end)
+      waypoints = selectedRoutePoints.slice(1).map(pt => ({ location: { lat: pt.lat, lng: pt.lng }, stopover: true }));
+    } else {
+      // No custom start or end: use intermediate points (excluding first and last)
+      waypoints = selectedRoutePoints.slice(1, -1).map(pt => ({ location: { lat: pt.lat, lng: pt.lng }, stopover: true }));
+    }
+  }
+  // Prepare request for Directions API
+  const request = {
+    origin,
+    destination,
+    waypoints,
+    travelMode: travelMode.toUpperCase(),
+    optimizeWaypoints: optimize
+  };
+  directionsService.route(request, (result, status) => {
+    if (status === 'OK') {
+      directionsRenderer.setDirections(result);
+      // If optimizing, reorder the selectedRoutePoints according to Google's optimized order
+      if (optimize && result.routes[0].waypoint_order) {
+        const order = result.routes[0].waypoint_order;
+        // Reconstruct new order: keep origin and destination fixed if they are actual leads
+        let newPoints = [];
+        if (!startInput) newPoints.push(selectedRoutePoints[0]); // include first lead as origin if not custom start
+        order.forEach(idx => {
+          newPoints.push(selectedRoutePoints[idx + (startInput ? 0 : 1)]);
+        });
+        if (!endInput) newPoints.push(selectedRoutePoints[selectedRoutePoints.length - 1]); // include last lead as destination if no custom end
+        // If custom start or end are used, the above logic ensures all selected leads are included in order. 
+        selectedRoutePoints = newPoints;
+      }
+      // Compute leg durations and total time
+      const route = result.routes[0];
+      let totalSeconds = 0;
+      let legDurations = route.legs.map(leg => {
+        totalSeconds += leg.duration.value;
+        return leg.duration;
+      });
+      // If custom end was provided, the last leg in legs is from last lead to end (not a "stop"), so exclude it for per-stop times
+      if (endInput && legDurations.length > 0) {
+        // Remove final leg duration from per-stop list
+        legDurations = legDurations.slice(0, -1);
+      }
+      // Update total time display
+      const totalTimeMin = Math.round(totalSeconds / 60);
+      const totalTimeSpan = document.getElementById('total-route-time');
+      if (totalTimeSpan) {
+        totalTimeSpan.textContent = `Total: ${ totalTimeMin < 60 
+          ? totalTimeMin + ' min' 
+          : Math.floor(totalTimeMin/60) + ' hr ' + (totalTimeMin % 60) + ' min' }`;
+      }
+      // Update the stops list UI with travel times for each stop
+      updateRouteListUI(legDurations);
+      // Enable export button now that route is available
+      const exportBtn = document.getElementById('export-route');
+      if (exportBtn) exportBtn.disabled = false;
+    } else {
+      alert('Could not generate route: ' + status);
+    }
+  });
+}
+
+// Prompt user to open route in Google Maps app or stay in web
+function promptOpenInMaps() {
+  // Build Google Maps Directions URL for external app
+  const travelMode = document.getElementById('travel-mode')?.value || 'DRIVING';
+  const origin = document.getElementById('custom-start')?.value.trim() || selectedRoutePoints[0]?.address;
+  const destination = document.getElementById('custom-end')?.value.trim() || selectedRoutePoints[selectedRoutePoints.length - 1]?.address;
+  let waypointsParam = '';
+  if (selectedRoutePoints.length > 2) {
+    // Exclude first and last selected points if they serve as origin/destination in URL
+    const intermediate = selectedRoutePoints.slice(1, -1).map(p => p.address);
+    if (intermediate.length > 0) {
+      waypointsParam = '&waypoints=' + intermediate.map(addr => encodeURIComponent(addr)).join('|');
+    }
+  }
+  const mapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=${travelMode.toLowerCase()}${waypointsParam}`;
+  // Confirm with user [oai_citation:1‡developers.google.com](https://developers.google.com/maps/documentation/urls/get-started#:~:text=,waypoints%20allowed%20varies%20by%20the)
+  if (confirm('Open this route in Google Maps?')) {
+    window.open(mapsUrl, '_blank');
+  }
+}
+
+// On DOM content load, set up event listeners and initial state
 document.addEventListener('DOMContentLoaded', async () => {
   const routePanel = document.getElementById('route-panel');
   const routePanelToggle = document.getElementById('route-panel-toggle');
   const closeRoutePanelBtn = document.getElementById('close-route-panel');
-  const enableRoutingCheckbox = document.getElementById('enable-routing');
-  const generateRouteBtn = document.getElementById('generate-route');
-  const resetRouteBtn = document.getElementById('reset-route');
-  const travelModeSelect = document.getElementById('travel-mode');
-  const customStartInput = document.getElementById('custom-start');
-  const customEndInput = document.getElementById('custom-end');
-  const optimizeRouteBtn = document.getElementById('optimize-route');
-  const startRouteBtn = document.getElementById('start-route');
-
-  // Check user session
+  // Require login
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     window.location.href = 'login.html';
     return;
   }
   const user = session.user;
+  // Fetch agent profile to check admin status
   const { data: profile } = await supabase.from('agents').select('*').eq('id', user.id).single();
   const isAdmin = profile?.is_admin;
 
-  // If not admin, hide admin-only links; if admin, enable view toggle
-  if (!isAdmin) {
-    const adminLink = document.querySelector('.admin-only');
-    if (adminLink) adminLink.style.display = 'none';
-  } else {
-    document.getElementById('view-toggle-container').style.display = 'block';
-    document.getElementById('lead-view-select').addEventListener('change', (e) => {
-      currentViewMode = e.target.value;
-      loadLeadPins(user, isAdmin, currentViewMode);
-    });
-  }
-
-  // Toggle route planner panel
+  // Toggle side panel visibility
   routePanelToggle.addEventListener('click', () => {
     routePanel.classList.toggle('open');
   });
@@ -202,29 +381,118 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Enable/disable routing mode
-  enableRoutingCheckbox.addEventListener('change', (e) => {
+  document.getElementById('enable-routing').addEventListener('change', e => {
     routingMode = e.target.checked;
     selectedRoutePoints = [];
-    // Clear any existing route from the map
-    directionsRenderer?.setDirections({ routes: [] });
-    // Reset any custom marker styling
+    // Reset all markers to default appearance
     map.markers?.forEach(m => { if (m.content) m.content = null; });
-    // Reset route UI
-    updateRouteListUI();
-    document.getElementById('total-route-time').textContent = '--';
-    generateRouteBtn.disabled = true;
-    // If exiting routing mode, close the route panel
+    // If turning off routing mode, clear any existing route from map and close panel
     if (!routingMode) {
+      directionsRenderer.setDirections({ routes: [] });
       routePanel.classList.remove('open');
     }
+    // Reset route list UI
+    updateRouteListUI();
+    // Disable route control buttons until new selection
+    const startBtn = document.getElementById('start-route');
+    const optBtn = document.getElementById('optimize-route');
+    const expBtn = document.getElementById('export-route');
+    if (startBtn) startBtn.disabled = true;
+    if (optBtn) optBtn.disabled = true;
+    if (expBtn) expBtn.disabled = true;
   });
 
-  // Show/hide ZIP code input based on radius center method
-  document.getElementById('radius-center-method').addEventListener('change', (e) => {
+  // Start button: generate route (in entered order) and prompt for Maps app
+  const startRouteBtn = document.getElementById('start-route');
+  startRouteBtn.addEventListener('click', () => {
+    generateRoute(false);
+    // After drawing route, prompt to open in Google Maps app or stay in web
+    setTimeout(promptOpenInMaps, 500);
+  });
+
+  // Optimize Route button: generate optimized route
+  document.getElementById('optimize-route').addEventListener('click', () => {
+    generateRoute(true);
+  });
+
+  // Reset Route button: clear selections and map directions
+  document.getElementById('reset-route').addEventListener('click', () => {
+    selectedRoutePoints = [];
+    directionsRenderer.setDirections({ routes: [] });
+    map.markers?.forEach(m => { if (m.content) m.content = null; }); // reset marker icons
+    updateRouteListUI();
+    // Disable route buttons
+    document.getElementById('start-route').disabled = true;
+    document.getElementById('optimize-route').disabled = true;
+    document.getElementById('export-route')?.setAttribute('disabled', 'true');
+  });
+
+  // Export Route button (optional): export route stops and times to CSV
+  const exportBtn = document.getElementById('export-route');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+      if (!directionsRenderer.getDirections() || !directionsRenderer.getDirections().routes.length) {
+        alert('Please generate a route before exporting.');
+        return;
+      }
+      const route = directionsRenderer.getDirections().routes[0];
+      const legs = route.legs;
+      const customStart = !!document.getElementById('custom-start')?.value.trim();
+      const customEnd   = !!document.getElementById('custom-end')?.value.trim();
+      // Prepare CSV lines
+      const lines = [];
+      lines.push(['Stop Name', 'Address', 'Travel Time from Previous'].join(','));
+      // If custom start provided, include start address as first line (no travel time)
+      if (customStart) {
+        const startAddr = document.getElementById('custom-start').value.trim();
+        lines.push(`Start,${startAddr},`);
+      }
+      // List each selected lead stop with travel time from previous
+      selectedRoutePoints.forEach((pt, idx) => {
+        let travelTime = '';
+        if (idx === 0) {
+          if (customStart) {
+            // first stop travel from custom start
+            travelTime = legs[0]?.duration.text || '';
+          } else {
+            travelTime = ''; // starting point
+          }
+        } else {
+          // Subsequent stops
+          if (customStart) {
+            travelTime = legs[idx]?.duration.text || '';
+          } else {
+            travelTime = legs[idx - 1]?.duration.text || '';
+          }
+        }
+        lines.push(`${pt.name},${pt.address},${travelTime}`);
+      });
+      // If custom end provided, include end address with travel time from last stop
+      if (customEnd) {
+        const endAddr = document.getElementById('custom-end').value.trim();
+        const lastLeg = legs[legs.length - 1];
+        lines.push(`End,${endAddr},${lastLeg?.duration.text || ''}`);
+      }
+      // Create CSV blob and trigger download
+      const csvContent = lines.join('\n');
+      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'route_export.csv';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  // Apply radius filter UI logic (show/hide ZIP input based on method)
+  document.getElementById('radius-center-method').addEventListener('change', e => {
     document.getElementById('filter-center-zip').style.display = e.target.value === 'zip' ? 'inline-block' : 'none';
   });
 
-  // Apply filters to reload map pins
+  // Apply Map Filters button
   document.getElementById('apply-map-filters').addEventListener('click', async () => {
     const ageMin = document.getElementById('filter-age-min').value;
     const ageMax = document.getElementById('filter-age-max').value;
@@ -261,152 +529,60 @@ document.addEventListener('DOMContentLoaded', async () => {
       zip: zip || null,
       dateRange
     };
-    loadLeadPins(user, isAdmin, currentViewMode, filters, centerPoint, radiusMiles);
+    await loadLeadPins(user, isAdmin, currentViewMode, filters, centerPoint, radiusMiles);
   });
 
-  // Reset filters and reload pins
+  // Reset Map Filters button
   document.getElementById('reset-map-filters').addEventListener('click', () => {
     document.querySelectorAll('#map-filters input, #map-filters select').forEach(el => el.value = '');
     loadLeadPins(user, isAdmin, currentViewMode);
   });
 
-  // Initialize date range picker
+  // If user is not admin, hide any admin-only links
+  if (!isAdmin) {
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = 'none');
+  } else {
+    // Show admin view toggle dropdown if admin
+    document.getElementById('view-toggle-container').style.display = 'block';
+    document.getElementById('lead-view-select').addEventListener('change', e => {
+      currentViewMode = e.target.value;
+      loadLeadPins(user, isAdmin, currentViewMode);
+    });
+  }
+
+  // Initialize date range picker for filter
   flatpickr('#filter-date-range', {
     mode: 'range',
     dateFormat: 'Y-m-d'
   });
 
-  // Agent Hub dropdown menu behavior
-  const toggleBtn = document.getElementById('agent-hub-toggle');
-  const dropdownMenu = document.getElementById('agent-hub-menu');
-  dropdownMenu.style.display = 'none';
-  toggleBtn?.addEventListener('click', (e) => {
+  // Agent hub menu dropdown toggle
+  const hubToggle = document.getElementById('agent-hub-toggle');
+  const hubMenu = document.getElementById('agent-hub-menu');
+  if (hubMenu) hubMenu.style.display = 'none';
+  hubToggle?.addEventListener('click', e => {
     e.stopPropagation();
-    dropdownMenu.style.display = dropdownMenu.style.display === 'block' ? 'none' : 'block';
+    if (hubMenu) hubMenu.style.display = hubMenu.style.display === 'block' ? 'none' : 'block';
   });
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.dropdown')) {
-      dropdownMenu.style.display = 'none';
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.dropdown') && hubMenu) {
+      hubMenu.style.display = 'none';
     }
   });
 
   // Logout button
-  document.getElementById('logout-btn')?.addEventListener('click', async (e) => {
+  document.getElementById('logout-btn')?.addEventListener('click', async e => {
     e.preventDefault();
-    const { error } = await supabase.auth.signOut();
-    if (!error) window.location.href = '../index.html';
+    const { error: logoutError } = await supabase.auth.signOut();
+    if (!logoutError) window.location.href = '../index.html';
   });
 
-  // Generate Route (initial route drawing without optimization)
-  generateRouteBtn.addEventListener('click', () => {
-    if (selectedRoutePoints.length < 2) {
-      alert('Select at least two locations for routing.');
-      return;
-    }
-    const travelMode = travelModeSelect.value;
-    let origin = selectedRoutePoints[0].address;
-    let destination = selectedRoutePoints[selectedRoutePoints.length - 1].address;
-    const startAddr = customStartInput.value.trim();
-    const endAddr = customEndInput.value.trim();
-    if (startAddr) origin = startAddr;
-    if (endAddr) destination = endAddr;
-    const waypoints = selectedRoutePoints.slice(1, -1).map(p => ({ location: p.address, stopover: true }));
-    directionsService.route({ origin, destination, waypoints, optimizeWaypoints: false, travelMode }, (result, status) => {
-      if (status === 'OK') {
-        directionsRenderer.setDirections(result);
-        // Calculate total travel time
-        let totalSeconds = 0;
-        result.routes[0].legs.forEach(leg => { totalSeconds += leg.duration.value; });
-        document.getElementById('total-route-time').textContent = formatDuration(totalSeconds);
-        // Open the route planner panel to show stops and total time
-        routePanel.classList.add('open');
-      } else {
-        alert('Route generation failed: ' + status);
-      }
-    });
-  });
-
-  // Optimize Route (recalculate route with optimized waypoints order)
-  optimizeRouteBtn.addEventListener('click', () => {
-    if (selectedRoutePoints.length < 2) {
-      alert('Select at least two locations before optimizing the route.');
-      return;
-    }
-    const travelMode = travelModeSelect.value;
-    let origin = selectedRoutePoints[0].address;
-    let destination = selectedRoutePoints[selectedRoutePoints.length - 1].address;
-    const startAddr = customStartInput.value.trim();
-    const endAddr = customEndInput.value.trim();
-    if (startAddr) origin = startAddr;
-    if (endAddr) destination = endAddr;
-    const waypoints = selectedRoutePoints.slice(1, -1).map(p => ({ location: p.address, stopover: true }));
-    directionsService.route({ origin, destination, waypoints, optimizeWaypoints: true, travelMode }, (result, status) => {
-      if (status === 'OK') {
-        directionsRenderer.setDirections(result);
-        // Reorder selectedRoutePoints according to the optimized order returned by Google Maps
-        const order = result.routes[0].waypoint_order;
-        const newOrder = [ selectedRoutePoints[0] ];
-        order.forEach(i => {
-          newOrder.push(selectedRoutePoints[i + 1]);
-        });
-        newOrder.push(selectedRoutePoints[selectedRoutePoints.length - 1]);
-        selectedRoutePoints = newOrder;
-        updateRouteListUI();
-        // Update total travel time
-        let totalSeconds = 0;
-        result.routes[0].legs.forEach(leg => { totalSeconds += leg.duration.value; });
-        document.getElementById('total-route-time').textContent = formatDuration(totalSeconds);
-      } else {
-        alert('Route optimization failed: ' + status);
-      }
-    });
-  });
-
-  // Start Route (open the route in Google Maps for navigation)
-  startRouteBtn.addEventListener('click', () => {
-    if (selectedRoutePoints.length < 2) {
-      alert('Select at least two locations to start the route.');
-      return;
-    }
-    let origin = selectedRoutePoints[0].address;
-    let destination = selectedRoutePoints[selectedRoutePoints.length - 1].address;
-    const startAddr = customStartInput.value.trim();
-    const endAddr = customEndInput.value.trim();
-    if (startAddr) origin = startAddr;
-    if (endAddr) destination = endAddr;
-    let waypointsParam = '';
-    if (selectedRoutePoints.length > 2) {
-      const midPoints = selectedRoutePoints.slice(1, -1).map(p => p.address);
-      waypointsParam = midPoints.join('|');
-    }
-    const travelMode = travelModeSelect.value.toLowerCase();
-    let googleMapsUrl = `https://www.google.com/maps/dir/?api=1&origin=${encodeURIComponent(origin)}&destination=${encodeURIComponent(destination)}&travelmode=${travelMode}`;
-    if (waypointsParam) {
-      googleMapsUrl += `&waypoints=${encodeURIComponent(waypointsParam)}`;
-    }
-    window.open(googleMapsUrl, '_blank');
-  });
-
-  // Reset Route (clear selections and route display)
-  resetRouteBtn.addEventListener('click', () => {
-    selectedRoutePoints = [];
-    directionsRenderer.setDirections({ routes: [] });
-    map.markers?.forEach(m => { if (m.content) m.content = null; });
-    updateRouteListUI();
-    document.getElementById('total-route-time').textContent = '--';
-    generateRouteBtn.disabled = true;
-  });
-
-  // Initialize map and load pins after Google Maps API is loaded
-  if (window.google && window.google.maps) {
-    initMap();
-    currentViewMode = isAdmin ? 'mine' : 'mine'; // default to "My Leads"
-    loadLeadPins(user, isAdmin, currentViewMode);
-  } else {
-    window.addEventListener('maps-loaded', () => {
-      initMap();
-      currentViewMode = isAdmin ? 'mine' : 'mine';
-      loadLeadPins(user, isAdmin, currentViewMode);
-    });
-  }
+  // Initialize the map and load initial lead markers
+  initMap();
+  currentViewMode = isAdmin ? 'mine' : 'mine';  // Admin defaults to 'mine' as well
+  await loadLeadPins(user, isAdmin, currentViewMode);
+  // Set initial state of route control buttons
+  document.getElementById('start-route').disabled = true;
+  document.getElementById('optimize-route').disabled = true;
+  if (exportBtn) exportBtn.disabled = true;
 });
