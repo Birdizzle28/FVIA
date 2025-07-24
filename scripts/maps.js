@@ -93,7 +93,12 @@ async function loadLeadPins(user, isAdmin, viewMode = 'mine', filters = {}, cent
 
     marker.addListener('click', () => {
       if (routingMode) {
-        selectedRoutePoints.push({ lat: lead.lat, lng: lead.lng });
+        selectedRoutePoints.push({
+          lat: lead.lat,
+          lng: lead.lng,
+          address: `${lead.address}, ${lead.city}, ${lead.state} ${lead.zip}`,
+          name: `${lead.first_name} ${lead.last_name}`
+        });
         marker.content = document.createElement('div');
         marker.content.innerHTML = `<div style="width: 20px; height: 20px; background-color: green; border-radius: 50%; border: 2px solid white;"></div>`;
         document.getElementById('generate-route').disabled = selectedRoutePoints.length < 2;
@@ -104,7 +109,8 @@ async function loadLeadPins(user, isAdmin, viewMode = 'mine', filters = {}, cent
         infoWindow.open(map, marker);
         }
     });
-
+    document.getElementById('route-panel')?.classList.add('open');
+    updateRouteListUI();
     map.markers.push(marker); // Save marker to clear later
   });
 }
@@ -115,10 +121,14 @@ function initMap() {
     zoom: 8,
     mapId: '6ea480352876049060496b2a'
   });
-  directionsRenderer = new google.maps.DirectionsRenderer({ map });
+  directionsRenderer = new google.maps.DirectionsRenderer();
+  directionsRenderer.setMap(map);
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const routePanel = document.getElementById('route-panel');
+  const routePanelToggle = document.getElementById('route-panel-toggle');
+  const closeRoutePanelBtn = document.getElementById('close-route-panel');
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     window.location.href = 'login.html';
@@ -287,9 +297,6 @@ function generateOptimizedRoute(points, mode = 'DRIVING') {
   });
 }
 // Elements
-const routePanel = document.getElementById('route-panel');
-const routePanelToggle = document.getElementById('route-panel-toggle');
-const closeRoutePanelBtn = document.getElementById('close-route-panel');
 const routeStopsList = document.getElementById('route-stops-list');
 const totalTimeSpan = document.getElementById('total-route-time');
 const startRouteBtn = document.getElementById('start-route');
