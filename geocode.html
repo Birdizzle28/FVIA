@@ -32,7 +32,15 @@
       if (error) return console.error('Error fetching leads:', error);
 
       for (const lead of leads) {
-        const fullAddress = `${lead.address}, ${lead.city}, ${lead.state || ''} ${lead.zip}`;
+      const addressParts = [
+        lead.address?.trim(),
+        lead.city?.trim(),
+        lead.state?.trim(),
+        lead.zip?.trim()
+      ].filter(Boolean); // removes nulls, undefined, and blanks
+
+const fullAddress = addressParts.join(', ');
+console.log(`📍 Trying to geocode: ${fullAddress}`);
         const coords = await geocodeAddress(fullAddress);
 
         if (coords) {
