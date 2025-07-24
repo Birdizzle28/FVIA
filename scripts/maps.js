@@ -6,11 +6,24 @@ const supabase = createClient(
 );
 
 let map; // must be global for callback
+let currentViewMode = 'mine'; // Default
 async function loadLeadPins(user, isAdmin, viewMode = 'mine') {
   let query = supabase.from('leads').select('*').not('lat', 'is', null).not('lng', 'is', null);
 
   if (!isAdmin || viewMode === 'mine') {
     query = query.eq('assigned_to', user.id);
+  }
+  // Apply filters
+  if (filters.ageMin) query = query.gte('age', filters.ageMin);
+  if (filters.ageMax) query = query.lte('age', filters.ageMax);
+  if (filters.leadType) query = query.eq('lead_type', filters.leadType);
+  if (filters.city) query = query.ilike('city', `%${filters.city}%`);
+  if (filters.zip) query = query.eq('zip', filters.zip);
+
+  if (filters.dateRange?.length === 2) {
+    query = query
+      .gte('created_at', filters.dateRange[0])
+      .lte('created_at', filters.dateRange[1]);
   }
 
   const { data: leads, error } = await query;
@@ -31,11 +44,10 @@ async function loadLeadPins(user, isAdmin, viewMode = 'mine') {
       title: `${lead.first_name} ${lead.last_name}`
     });
 
-    const infoWindow = new google.maps.InfoWindow({
-      content: `<strong>${lead.first_name} ${lead.last_name}</strong><br>${lead.address}, ${lead.city}, ${lead.state} ${lead.zip}`,
-    });
-
     marker.addListener('click', () => {
+      const infoWindow = new google.maps.InfoWindow({
+        content: `<strong>${lead.first_name} ${lead.last_name}</strong><br>${lead.address}, ${lead.city}, ${lead.state} ${lead.zip}`,
+      });
       infoWindow.open(map, marker);
     });
 
@@ -56,16 +68,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     window.location.href = 'login.html';
     return;
   }
-
   const user = session.user;
-
   const { data: profile } = await supabase
     .from('agents')
     .select('*')
     .eq('id', user.id)
     .single();
   const isAdmin = profile?.is_admin;
+  document.getElementById('apply-map-filters').addEventListener('click', () => {
+    const ageMin = document.getElementById('filter-age-min').value;
+    const ageMax = document.getElementById('filter-age-max').value;
+    const leadType = document.getElementById('filter-lead-type').value;
+    const city = document.getElementById('filter-city').value;
+    const zip = document.getElementById('filter-zip').value;
+    const dateRange = document.getElementById('filter-date-range').value
+      .split(' to ')
+      .map(d => new Date(d).toISOString());
+  
+    const filters = {
+      ageMin: ageMin || null,
+      ageMax: ageMax || null,
+      leadType: leadType || null,
+      city: city || null,
+      zip: zip || null,
+      dateRange: dateRange.length === 2 ? dateRange : null
+    };
+    loadLeadPins(user, isAdmin, currentViewMode, filters);
+  });
 
+document.getElementById('reset-map-filters').addEventListener('click', () => {
+  document.querySelectorAll('#map-filters input, #map-filters select').forEach(el => el.value = '');
+  loadLeadPins(user, isAdmin, currentViewMode);
+});
   if (!isAdmin) {
     const adminLink = document.querySelector('.admin-only');
     if (adminLink) adminLink.style.display = 'none';
@@ -74,7 +108,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('view-toggle-container').style.display = 'block';
     document.getElementById('lead-view-select').addEventListener('change', (e) => {
       const mode = e.target.value;
-      loadLeadPins(user, isAdmin, mode);
+      loadLeadPins(user, isAdmin, currentViewMode);
     });
   }
 
@@ -82,7 +116,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const adminLink = document.querySelector('.admin-only');
     if (adminLink) adminLink.style.display = 'none';
   }
-
+  flatpickr("#filter-date-range", {
+    mode: "range",
+    dateFormat: "Y-m-d"
+  });
   // Agent Hub dropdown
   const toggle = document.getElementById("agent-hub-toggle");
   const menu = document.getElementById("agent-hub-menu");
