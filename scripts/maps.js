@@ -147,7 +147,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       zip: zip || null,
       dateRange
     };
-    loadLeadPins(user, isAdmin, currentViewMode, filters);
+    loadLeadPins(user, isAdmin, currentViewMode, filters, centerPoint, radiusMiles);
   });
 
 document.getElementById('reset-map-filters').addEventListener('click', () => {
