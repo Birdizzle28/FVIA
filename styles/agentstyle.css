@@ -25,24 +25,21 @@ font-family: Bellota Text;
   color: red;
 }
 #dashboardbody {
-	background-color: white;
-	margin: 0;
-	background-image: radial-gradient(#915864, #353468);
-	min-height: 80vw;
+        background-color: white;
+        margin: 0;
+        background-image: radial-gradient(#915864, #353468);
+        min-height: 80vw;
 }
 .index-grid {
-	margin: 0;
-	color: white;
-	width: 100%;
-	display: grid;
-	grid-template-areas:
-		"indexheader"
-		"indexmain"
-		"indexfooter";
+        margin: 0;
+        color: white;
+        width: 100%;
+        display: grid;
+        grid-template-areas:
+                "indexheader"
+                "indexmain"
+                "indexfooter";
 }
-
-
-
 
 
 .index-grid-header {
@@ -205,77 +202,76 @@ font-family: Bellota Text;
 }
 
 
-
 /*FOOTER*/
 .index-grid-footer {
-	display: flex;
-	background-color: #ed9ea5;
-	grid-area: indexfooter;
-	flex-direction: column;
-	align-items: center;
+        display: flex;
+        background-color: #ed9ea5;
+        grid-area: indexfooter;
+        flex-direction: column;
+        align-items: center;
 }
 #footerlogo {
-	display: inline-block;
-	height: 55px;
-	width: 55px;
-	margin: 10px auto;
+        display: inline-block;
+        height: 55px;
+        width: 55px;
+        margin: 10px auto;
 }
 #footercontact {
-	margin: 10px;
-	text-decoration: none;
+        margin: 10px;
+        text-decoration: none;
 }
 .contactcontainer span {
-	font-size: 1.8vw;
-	text-decoration: none;
-	color: #353468;
-	margin: 0;
-	padding: 0;
+        font-size: 1.8vw;
+        text-decoration: none;
+        color: #353468;
+        margin: 0;
+        padding: 0;
 }
 .contactcontcontacts {
-	text-decoration: none;
+        text-decoration: none;
 }
 .contactcontainer {
-	text-decoration: none;
-	color: inherit; /* optional: makes it match surrounding text */
+        text-decoration: none;
+        color: inherit; /* optional: makes it match surrounding text */
 }
 .footerhr {
-	width: 50vw;
-	border: solid 1px #353468;
+        width: 50vw;
+        border: solid 1px #353468;
 }
 .fab, .fa {
-	padding: 1vw;
-	font-size: 1.9vw;
-	width: 2vw;
-	height: 2vw;
-	text-align: center;
-	text-decoration: none;
-	margin: auto;
-	border-radius: 50%;
+        padding: 1vw;
+        font-size: 1.9vw;
+        width: 2vw;
+        height: 2vw;
+        text-align: center;
+        text-decoration: none;
+        margin: auto;
+        border-radius: 50%;
 }
 .fa-facebook-f {
-	background: #3B5998;
-	color: white;
-	margin-top: 10px;
+        background: #3B5998;
+        color: white;
+        margin-top: 10px;
 }
 .fa-google {
-	background: #dd4b39;
-	color: white;
-	margin-top: 10px;
+        background: #dd4b39;
+        color: white;
+        margin-top: 10px;
 }
 .fa-linkedin-in {
-	background: #007bb5;
-	color: white;
-	margin-top: 10px;
+        background: #007bb5;
+        color: white;
+        margin-top: 10px;
 }
 .fa-youtube {
-	background: #bb0000;
-	color: white;
-	margin-top: 10px;
+        background: #bb0000;
+        color: white;
+        margin-top: 10px;
 }
 .fa-instagram {
-	background: #125688;
-	color: white;
-	margin-top: 10px;
+        background: #125688;
+        color: white;
+        margin-top: 10px;
 }
 
 /* NAVIGATION HOVER + STYLES */
@@ -361,6 +357,7 @@ font-family: Bellota Text;
     font-size: 4.5vw;
     text-align: center;
   }
+}
 /* --- NAVIGATION: MOBILE FIX --- */
 @media screen and (max-width: 768px) {
   .header-flex-container {
@@ -490,7 +487,38 @@ button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
-/* Sliding Route Planner Panel Styles */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+#agent-hub-menu {
+  display: none;
+}
+
+.dropdown-content {
+  display: none;
+  position: absolute;
+  background-color: white;
+  min-width: 180px;
+  box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
+  z-index: 10;
+}
+
+.dropdown-content a {
+  display: block;
+  padding: 10px 15px;
+  color: black;
+  text-decoration: none;
+}
+
+.dropdown-content a:hover {
+  background-color: #f0f0f0;
+}
+#map {
+  position: relative;
+  z-index: 1; /* Lower than the panel */
+}
+/* Slide Panel Styles */
 #route-panel {
   position: fixed;
   top: 0;
@@ -506,33 +534,23 @@ button:disabled {
   flex-direction: column;
   padding: 1rem;
 }
-#route-panel.open { right: 0; }
+
+#route-panel.open {
+  right: 0;
+}
+
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
+
 #close-route-panel {
   background: none;
   border: none;
   font-size: 1.5rem;
 }
-.route-settings {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 0; /* merged spacing handled by stops-list margin */
-}
-.custom-addresses {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-.travel-mode-select {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
+
 #route-stops-list {
   flex: 1;
   margin: 1rem 0;
@@ -540,14 +558,13 @@ button:disabled {
   border: 1px solid #ddd;
   padding: 0.5rem;
 }
-.route-summary {
-  /* Summary section for total time and external link */
-}
+
 .route-actions {
   display: flex;
   justify-content: space-between;
   gap: 0.5rem;
 }
+
 #route-panel-toggle {
   position: fixed;
   bottom: 80px;
@@ -560,65 +577,4 @@ button:disabled {
   padding: 0.5rem 0.75rem;
   border-radius: 50%;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  cursor: pointer;
-}
-
-/* Drag-and-drop route stop items */
-.route-stop {
-  background: #f8f9fa;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 5px 8px;
-  margin-bottom: 0.5rem;
-  cursor: grab;
-  user-select: none;
-}
-.route-stop.dragging {
-  opacity: 0.6;
-}
-
-/* Route action buttons styling */
-.route-actions button {
-  background: #007bff;
-  color: #fff;
-  border: none;
-  padding: 0.5rem 0.75rem;
-  border-radius: 4px;
-  font: inherit;
-  cursor: pointer;
-}
-.route-actions button:hover:enabled {
-  background: #0069d9;
-}
-button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-
-/* External directions link styled as button */
-#open-external {
-  display: inline-block;
-  margin-top: 0.5rem;
-  padding: 0.25rem 0.5rem;
-  background: #007bff;
-  color: #fff;
-  text-decoration: none;
-  border-radius: 4px;
-}
-
-/* Responsive adjustments for smaller screens */
-@media (max-width: 768px) {
-  #route-panel {
-    width: 80%;
-    right: -80%;
-  }
-}
-@media (max-width: 576px) {
-  #route-panel {
-    width: 100%;
-    right: -100%;
-  }
-  #map {
-    height: 400px;
-  }
 }
