@@ -134,7 +134,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('enable-routing').addEventListener('change', (e) => {
     routingMode = e.target.checked;
     selectedRoutePoints = [];
-    map.markers?.forEach(m => m.setIcon(null)); // Clear selection highlights
+    map.markers?.forEach(m => {
+      m.content = null; // This resets to default marker style
+    });
   });
 
 document.getElementById('generate-route').addEventListener('click', () => {
