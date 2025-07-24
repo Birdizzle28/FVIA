@@ -5,20 +5,22 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
 );
 
-let map; // must be global for callback
-async function loadLeadPins(user, isAdmin) {
+let map; // must be global for callbackasync function loadLeadPins(user, isAdmin, viewMode = 'mine') {
   let query = supabase.from('leads').select('*').not('lat', 'is', null).not('lng', 'is', null);
 
-  if (!isAdmin) {
+  if (!isAdmin || viewMode === 'mine') {
     query = query.eq('assigned_to', user.id);
   }
 
   const { data: leads, error } = await query;
-
   if (error) {
     console.error('Error loading leads:', error.message);
     return;
   }
+
+  // Clear existing markers from map (optional, if markers stack)
+  map.markers?.forEach(m => m.setMap(null));
+  map.markers = [];
 
   leads.forEach((lead) => {
     const { AdvancedMarkerElement } = google.maps.marker;
@@ -35,6 +37,8 @@ async function loadLeadPins(user, isAdmin) {
     marker.addListener('click', () => {
       infoWindow.open(map, marker);
     });
+
+    map.markers.push(marker); // Save marker to clear later
   });
 }
 function initMap() {
@@ -59,6 +63,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     .select('*')
     .eq('id', user.id)
     .single();
+  const isAdmin = profile?.is_admin;
+
+  if (!isAdmin) {
+    const adminLink = document.querySelector('.admin-only');
+    if (adminLink) adminLink.style.display = 'none';
+  } else {
+    // Show dropdown to admins
+    document.getElementById('view-toggle-container').style.display = 'block';
+    document.getElementById('lead-view-select').addEventListener('change', (e) => {
+      const mode = e.target.value;
+      loadLeadPins(user, isAdmin, mode);
+    });
+  }
 
   if (!profile?.is_admin) {
     const adminLink = document.querySelector('.admin-only');
