@@ -106,6 +106,26 @@
       </select>
       <button id="reset-route">Reset Route</button>
     </div>
+    <!-- Route Panel Toggle Icon -->
+    <button id="route-panel-toggle" title="Route Planner">
+      <i class="fas fa-route"></i>
+    </button>
+    
+    <!-- Route Planner Panel -->
+    <div id="route-panel" class="slide-panel">
+      <div class="panel-header">
+        <h2>Route Planner</h2>
+        <button id="close-route-panel">&times;</button>
+      </div>
+      <div id="route-stops-list" class="stops-list"></div>
+      <div class="route-summary">
+        <p><strong>Total Time:</strong> <span id="total-route-time">--</span></p>
+      </div>
+      <div class="route-actions">
+        <button id="optimize-route">Optimize Route</button>
+        <button id="start-route">Start</button>
+      </div>
+    </div>
   </main>
   <footer class="index-grid-footer">
     <img id="footerlogo" src="../Pics/img17.png" alt="FVIA Footer Logo" />
