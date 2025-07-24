@@ -295,7 +295,6 @@ const totalTimeSpan = document.getElementById('total-route-time');
 const startRouteBtn = document.getElementById('start-route');
 const optimizeRouteBtn = document.getElementById('optimize-route');
 
-let selectedRoutePoints = [];
 let directionsService = new google.maps.DirectionsService();
 let directionsRenderer = new google.maps.DirectionsRenderer({ map });
 
