@@ -3,111 +3,167 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Map & Routing | Family Values Insurance Agency</title>
-
-  <!-- Styles -->
+  <title>Maps & Routing | Family Values</title>
   <link rel="stylesheet" href="styles/agentstyle.css" />
   <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
-
-  <!-- Google Maps API -->
-  <script src="https://maps.googleapis.com/maps/api/js?key=YOUR_GOOGLE_MAPS_API_KEY&libraries=marker&callback=initMap" async defer></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 </head>
-<body id="indexbody">
+
+<body id="dashboardbody">
   <header class="index-grid-header">
-    <a href="index.html"><img id="headerlogo" src="Pics/img6.png" alt="FVIA Logo" /></a>
-    <p><strong>Family Values Insurance Agency</strong></p>
-    <hr />
-    <div class="header-flex-container">
-      <nav class="dropdown">
-        <span id="agent-hub-toggle">Agent Hub <i class="fa fa-caret-down"></i></span>
-        <div id="agent-hub-menu">
-          <a href="leads.html">My Leads</a>
-          <a href="maps.html">Map & Routing</a>
-          <a href="calculator.html">Insurance Calculator</a>
+    <div id="logofvcontainer">
+      <div id="logodiv">
+        <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+      </div>
+      <div id="fvdiv">
+        <p><strong>Family Values</strong></p>
+        <p>Insurance Agency</p>
+      </div>
+    </div>
+    <div id="navcontainer">
+      <nav class="header-flex-container">
+        <a href="profile.html">Profile</a>
+        <div class="dropdown">
+          <button id="agent-hub-toggle" class="dropbtn">Agent Hub ▾</button>
+          <div id="agent-hub-menu" class="dropdown-content">
+            <a href="leads.html">My Leads</a>
+            <a href="maps.html">Map & Routing</a>
+            <a href="calculator.html">Insurance Calculator</a>
+          </div>
         </div>
+        <a href="thread.html">Thread</a>
+        <a href="admin.html" class="admin-only">Admin</a>
+        <a href="#" id="logout-btn">Logout</a>
       </nav>
-      <nav><a href="profile.html">Profile</a></nav>
-      <nav><a href="thread.html">Thread</a></nav>
-      <nav><a href="admin.html" class="admin-only">Admin</a></nav>
-      <nav><a id="logout-btn">Logout</a></nav>
     </div>
   </header>
-
-  <main id="map-view-container">
-    <div id="map-controls">
-      <h2>Map Filters</h2>
-      <div id="map-filters">
-        <label>Lead Type: <input id="filter-lead-type" type="text" /></label>
-        <label>City: <input id="filter-city" type="text" /></label>
-        <label>ZIP: <input id="filter-zip" type="text" /></label>
-        <label>Age Min: <input id="filter-age-min" type="number" min="0" /></label>
-        <label>Age Max: <input id="filter-age-max" type="number" min="0" /></label>
-        <label>Date Range: <input id="filter-date-range" type="text" /></label>
-        <label>Radius (mi): <input id="filter-radius" type="number" step="0.1" /></label>
-        <label>Radius Center:
-          <select id="radius-center-method">
-            <option value="">None</option>
-            <option value="zip">By ZIP</option>
-            <option value="current">My Location</option>
-          </select>
-        </label>
-        <label id="zip-center-label" style="display:none;">ZIP for center:
-          <input id="filter-center-zip" type="text" />
-        </label>
-        <button id="apply-map-filters">Apply Filters</button>
-        <button id="reset-map-filters">Reset</button>
-      </div>
-
-      <div class="admin-only" id="view-toggle-container" style="display:none;">
-        <label>View: 
-          <select id="lead-view-select">
-            <option value="mine">My Leads</option>
-            <option value="all">All Leads</option>
-          </select>
-        </label>
-      </div>
-
-      <label><input type="checkbox" id="enable-routing" /> Enable Routing Mode</label>
+  <main class="auth-container">
+    <div id="view-toggle-container" style="margin-bottom: 10px; display: none;">
+      <label for="lead-view-select"><strong>Show:</strong></label>
+      <select id="lead-view-select">
+        <option value="mine">My Leads</option>
+        <option value="all">All Leads</option>
+      </select>
     </div>
-
-    <div id="map"></div>
-
-    <div id="route-panel">
-      <div id="route-panel-header">
-        <h2>Route Planner</h2>
-        <button id="close-route-panel">×</button>
+    <section id="map-filters" style="margin-bottom: 20px;">
+      <div class="filter-group">
+        <label>Age:</label>
+        <input type="number" id="filter-age-min" placeholder="Min" style="width: 60px;">
+        <input type="number" id="filter-age-max" placeholder="Max" style="width: 60px;">
       </div>
-      <div id="route-options">
-        <label>Start Point: <input id="custom-start" type="text" placeholder="Optional" /></label>
-        <label>End Point: <input id="custom-end" type="text" placeholder="Optional" /></label>
-        <label>Travel Mode: 
-          <select id="travel-mode">
-            <option value="DRIVING">Driving</option>
-            <option value="WALKING">Walking</option>
-            <option value="BICYCLING">Bicycling</option>
-            <option value="TRANSIT">Transit</option>
-          </select>
-        </label>
+      <div class="filter-group">
+        <label>Lead Type:</label>
+        <select id="filter-lead-type">
+          <option value="">Any</option>
+          <option value="Facebook">Facebook</option>
+          <option value="Google SEO">Google SEO</option>
+          <option value="Referral">Referral</option>
+          <option value="Other">Other</option>
+        </select>
       </div>
-      <div id="route-stops-list"></div>
-      <p>Total Time: <span id="total-route-time">0 min</span></p>
-      <button id="start-route">Start</button>
-      <button id="optimize-route">Optimize</button>
-      <button id="reset-route">Reset</button>
-      <a id="open-external" href="#" target="_blank" style="display:none;">Open in Google Maps</a>
-    </div>
-
-    <button id="route-panel-toggle" title="Toggle Route Panel"><i class="fa fa-map"></i></button>
+      <div class="filter-group">
+        <label>Date Range:</label>
+        <input type="text" id="filter-date-range" placeholder="Select range">
+      </div>
+      <div class="filter-group">
+        <label>City:</label>
+        <input type="text" id="filter-city">
+      </div>
+      <div class="filter-group">
+        <label>ZIP:</label>
+        <input type="text" id="filter-zip">
+      </div>
+      <div id="radius-filter">
+        <label>Search radius (miles):</label>
+        <input type="number" id="filter-radius" min="1" max="100" placeholder="e.g. 10" />
+        <label>Center by:</label>
+        <select id="radius-center-method">
+          <option value="">-- Select --</option>
+          <option value="zip">ZIP Code</option>
+          <option value="current">My Location</option>
+        </select>
+        <input type="text" id="filter-center-zip" placeholder="ZIP Code" style="display: none;" />
+      </div>
+      <button id="apply-map-filters">Apply Filters</button>
+      <button id="reset-map-filters">Reset</button>
+    </section>
+    <div id="map" style="width: 100%; height: 600px;"></div>
+    <!-- (Route controls are now integrated into the sliding panel) -->
   </main>
 
-  <footer>
-    <p>© 2025 Family Values Insurance Agency. All rights reserved.</p>
+  <!-- Route Panel Toggle Icon (floating button to open/close planner) -->
+  <button id="route-panel-toggle" title="Route Planner">
+    <i class="fas fa-route"></i>
+  </button>
+
+  <!-- Route Planner Sliding Panel -->
+  <div id="route-panel" class="slide-panel">
+    <div class="panel-header">
+      <h2>Route Planner</h2>
+      <button id="close-route-panel">&times;</button>
+    </div>
+    <div class="route-settings">
+      <label><input type="checkbox" id="enable-routing"> Enable Routing Mode</label>
+      <div class="custom-addresses">
+        <input type="text" id="custom-start" placeholder="Start Address (optional)" />
+        <input type="text" id="custom-end" placeholder="End Address (optional)" />
+      </div>
+      <div class="travel-mode-select">
+        <label for="travel-mode">Mode:</label>
+        <select id="travel-mode">
+          <option value="DRIVING">Driving</option>
+          <option value="WALKING">Walking</option>
+          <option value="BICYCLING">Bicycling</option>
+        </select>
+      </div>
+    </div>
+    <div id="route-stops-list" class="stops-list"><!-- Selected stops will appear here --></div>
+    <div class="route-summary">
+      <p><strong>Total Time:</strong> <span id="total-route-time">--</span></p>
+      <p><a id="open-external" href="#" target="_blank" rel="noopener" style="display:none;">Open in Google Maps</a></p>
+    </div>
+    <div class="route-actions">
+      <button id="optimize-route" disabled>Optimize Route</button>
+      <button id="reset-route">Reset</button>
+      <button id="start-route" disabled>Start</button>
+    </div>
+  </div>
+
+  <footer class="index-grid-footer">
+    <img id="footerlogo" src="../Pics/img17.png" alt="FVIA Footer Logo" />
+    <hr class="footerhr" />
+    <div id="footercontact">
+      <a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
+        <span class="fa fa-envelope"></span>
+        <span class="contactcontcontacts">fvinsuranceagency@gmail.com</span>
+      </a>
+      <a class="contactcontainer" href="tel:+17316934739">
+        <span class="fa fa-phone"></span>
+        <span class="contactcontcontacts">(731) 693-4739</span>
+      </a>
+    </div>
+    <hr class="footerhr" />
+    <div id="footersocial">
+      <a class="fab fa-facebook-f" href="#"></a>
+      <a class="fab fa-linkedin-in" href="#"></a>
+      <a class="fab fa-instagram" href="#"></a>
+      <a class="fab fa-youtube" href="#"></a>
+      <a class="fab fa-google" href="#"></a>
+    </div>
+    <p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
   </footer>
 
-  <!-- Scripts -->
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script type="module" src="scripts/maps.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script
+    src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD5nGhz1mUXK1aGsoQSzo4MXYcI-uoxPa4&libraries=marker"
+    async defer
+    onload="window.dispatchEvent(new Event('maps-loaded'))">
+  </script>
 </body>
 </html>
