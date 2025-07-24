@@ -47,6 +47,41 @@
         <option value="all">All Leads</option>
       </select>
     </div>
+    <section id="map-filters" style="margin-bottom: 20px;">
+      <div class="filter-group">
+        <label>Age:</label>
+        <input type="number" id="filter-age-min" placeholder="Min" style="width: 60px;">
+        <input type="number" id="filter-age-max" placeholder="Max" style="width: 60px;">
+      </div>
+    
+      <div class="filter-group">
+        <label>Lead Type:</label>
+        <select id="filter-lead-type">
+          <option value="">Any</option>
+          <option value="Final Expense">Final Expense</option>
+          <option value="Mortgage Protection">Mortgage Protection</option>
+          <option value="Medicare">Medicare</option>
+        </select>
+      </div>
+    
+      <div class="filter-group">
+        <label>Date Range:</label>
+        <input type="text" id="filter-date-range" placeholder="Select range">
+      </div>
+    
+      <div class="filter-group">
+        <label>City:</label>
+        <input type="text" id="filter-city">
+      </div>
+    
+      <div class="filter-group">
+        <label>ZIP:</label>
+        <input type="text" id="filter-zip">
+      </div>
+    
+      <button id="apply-map-filters">Apply Filters</button>
+      <button id="reset-map-filters">Reset</button>
+    </section>
     <div id="map" style="width: 100%; height: 600px;"></div>
   </main>
   <footer class="index-grid-footer">
