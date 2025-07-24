@@ -94,7 +94,8 @@ async function loadLeadPins(user, isAdmin, viewMode = 'mine', filters = {}, cent
     marker.addListener('click', () => {
       if (routingMode) {
         selectedRoutePoints.push({ lat: lead.lat, lng: lead.lng });
-        marker.setIcon("http://maps.google.com/mapfiles/ms/icons/green-dot.png");
+        marker.content = document.createElement('div');
+        marker.content.innerHTML = `<div style="width: 20px; height: 20px; background-color: green; border-radius: 50%; border: 2px solid white;"></div>`;
         document.getElementById('generate-route').disabled = selectedRoutePoints.length < 2;
       } else {
         const infoWindow = new google.maps.InfoWindow({
