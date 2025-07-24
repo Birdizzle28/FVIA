@@ -106,5 +106,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!error) window.location.href = '../index.html';
   });
   initMap();
-  loadLeadPins(user, isAdmin);
+
+  const viewMode = isAdmin ? 'mine' : 'mine'; // admin defaults to 'mine', agents forced to 'mine'
+  loadLeadPins(user, isAdmin, viewMode);
 });
