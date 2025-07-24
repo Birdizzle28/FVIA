@@ -32,14 +32,26 @@
       if (error) return console.error('Error fetching leads:', error);
 
       for (const lead of leads) {
-      const addressParts = [
-        lead.address?.trim(),
-        lead.city?.trim(),
-        lead.state?.trim(),
-        lead.zip?.trim()
-      ].filter(Boolean); // removes nulls, undefined, and blanks
+      function formatAddress(lead) {
+  const city = (lead.city || '').trim();
+  const zip = (lead.zip || '').trim();
 
-const fullAddress = addressParts.join(', ');
+  let state = (lead.state || '').trim();
+
+  // Auto-fill TN if ZIP is in the 383xx range and state is blank or wrong
+  if (!state && zip.startsWith('383')) {
+    state = 'TN';
+  }
+
+  const parts = [
+    lead.address?.trim(),
+    city,
+    state,
+    zip
+  ].filter(Boolean);
+
+  return parts.join(', ');
+}
 console.log(`📍 Trying to geocode: ${fullAddress}`);
         const coords = await geocodeAddress(fullAddress);
 
