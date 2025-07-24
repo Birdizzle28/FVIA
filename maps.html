@@ -58,9 +58,10 @@
         <label>Lead Type:</label>
         <select id="filter-lead-type">
           <option value="">Any</option>
-          <option value="Final Expense">Final Expense</option>
-          <option value="Mortgage Protection">Mortgage Protection</option>
-          <option value="Medicare">Medicare</option>
+          <option value="Facebook">Facebook</option>
+          <option value="Google SEO">Google SEO</option>
+          <option value="Referral">Referral</option>
+          <option value="Other">Other</option>
         </select>
       </div>
     
@@ -78,7 +79,17 @@
         <label>ZIP:</label>
         <input type="text" id="filter-zip">
       </div>
-    
+      <div id="radius-filter">
+        <label>Search radius (miles):</label>
+        <input type="number" id="filter-radius" min="1" max="100" placeholder="e.g. 10" />
+        <label>Center by:</label>
+        <select id="radius-center-method">
+          <option value="">-- Select --</option>
+          <option value="zip">ZIP Code</option>
+          <option value="current">My Location</option>
+        </select>
+        <input type="text" id="filter-center-zip" placeholder="ZIP Code" style="display: none;" />
+      </div>
       <button id="apply-map-filters">Apply Filters</button>
       <button id="reset-map-filters">Reset</button>
     </section>
