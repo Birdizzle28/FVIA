@@ -8,6 +8,10 @@ const supabase = createClient(
 let map; // must be global for callback
 let radiusCircle = null;
 let currentViewMode = 'mine'; // Default
+let routingMode = false;
+let selectedRoutePoints = [];
+let directionsService;
+let directionsRenderer;
 async function geocodeZip(zip) {
   const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${zip}&key=AIzaSyD5nGhz1mUXK1aGsoQSzo4MXYcI-uoxPa4`);
   const data = await response.json();
@@ -88,16 +92,24 @@ async function loadLeadPins(user, isAdmin, viewMode = 'mine', filters = {}, cent
     });
 
     marker.addListener('click', () => {
-      const infoWindow = new google.maps.InfoWindow({
-        content: `<strong>${lead.first_name} ${lead.last_name}</strong><br>${lead.address}, ${lead.city}, ${lead.state} ${lead.zip}`,
-      });
-      infoWindow.open(map, marker);
+      if (routingMode) {
+        selectedRoutePoints.push({ lat: lead.lat, lng: lead.lng });
+        marker.setIcon("http://maps.google.com/mapfiles/ms/icons/green-dot.png");
+        document.getElementById('generate-route').disabled = selectedRoutePoints.length < 2;
+      } else {
+        const infoWindow = new google.maps.InfoWindow({
+          content: `<strong>${lead.first_name} ${lead.last_name}</strong><br>${lead.address}, ${lead.city}, ${lead.state} ${lead.zip}`,
+        });
+        infoWindow.open(map, marker);
+        }
     });
 
     map.markers.push(marker); // Save marker to clear later
   });
 }
 function initMap() {
+  directionsService = new google.maps.DirectionsService();
+  directionsRenderer = new google.maps.DirectionsRenderer({ map });
   map = new google.maps.Map(document.getElementById("map"), {
     center: { lat: 36.1627, lng: -86.7816 },
     zoom: 8,
@@ -118,6 +130,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     .eq('id', user.id)
     .single();
   const isAdmin = profile?.is_admin;
+  document.getElementById('enable-routing').addEventListener('change', (e) => {
+    routingMode = e.target.checked;
+    selectedRoutePoints = [];
+    map.markers?.forEach(m => m.setIcon(null)); // Clear selection highlights
+  });
+
+document.getElementById('generate-route').addEventListener('click', () => {
+  if (selectedRoutePoints.length < 2) {
+    alert("Select at least two locations for routing.");
+    return;
+  }
+  const travelMode = document.getElementById('travel-mode').value;
+  generateOptimizedRoute(selectedRoutePoints, travelMode);
+});
   document.getElementById('radius-center-method').addEventListener('change', (e) => {
     document.getElementById('filter-center-zip').style.display = e.target.value === 'zip' ? 'inline-block' : 'none';
   });
@@ -214,3 +240,27 @@ document.getElementById('reset-map-filters').addEventListener('click', () => {
   currentViewMode = isAdmin ? 'mine' : 'mine'; // admin defaults to 'mine', agents forced to 'mine'
   loadLeadPins(user, isAdmin, currentViewMode);
 });
+
+
+function generateOptimizedRoute(points, mode = 'DRIVING') {
+  const waypoints = points.slice(1, -1).map(loc => ({
+    location: loc,
+    stopover: true
+  }));
+
+  const request = {
+    origin: points[0],
+    destination: points[points.length - 1],
+    waypoints,
+    travelMode: mode,
+    optimizeWaypoints: true
+  };
+
+  directionsService.route(request, (result, status) => {
+    if (status === 'OK') {
+      directionsRenderer.setDirections(result);
+    } else {
+      alert('Could not generate route: ' + status);
+    }
+  });
+}
