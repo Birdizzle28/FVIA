@@ -7,7 +7,28 @@ const supabase = createClient(
 
 let map; // must be global for callback
 let currentViewMode = 'mine'; // Default
-async function loadLeadPins(user, isAdmin, viewMode = 'mine', filters = {}) {
+async function geocodeZip(zip) {
+  const response = await fetch(`https://maps.googleapis.com/maps/api/geocode/json?address=${zip}&key=AIzaSyD5nGhz1mUXK1aGsoQSzo4MXYcI-uoxPa4`);
+  const data = await response.json();
+  if (data.status === 'OK') {
+    return data.results[0].geometry.location;
+  }
+  return null;
+}
+function haversineDistance(coord1, coord2) {
+  const toRad = (x) => x * Math.PI / 180;
+  const R = 3958.8; // Miles
+  const dLat = toRad(coord2.lat - coord1.lat);
+  const dLng = toRad(coord2.lng - coord1.lng);
+  const lat1 = toRad(coord1.lat);
+  const lat2 = toRad(coord2.lat);
+
+  const a = Math.sin(dLat / 2) ** 2 +
+            Math.sin(dLng / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+async function loadLeadPins(user, isAdmin, viewMode = 'mine', filters = {}, centerPoint = null, radiusMiles = null) {
   let query = supabase.from('leads').select('*').not('lat', 'is', null).not('lng', 'is', null);
 
   if (!isAdmin || viewMode === 'mine') {
@@ -37,6 +58,10 @@ async function loadLeadPins(user, isAdmin, viewMode = 'mine', filters = {}) {
   map.markers = [];
 
   leads.forEach((lead) => {
+    if (centerPoint && radiusMiles) {
+      const distance = haversineDistance(centerPoint, { lat: lead.lat, lng: lead.lng });
+      if (distance > radiusMiles) return;
+    }
     const { AdvancedMarkerElement } = google.maps.marker;
     const marker = new AdvancedMarkerElement({
       position: { lat: lead.lat, lng: lead.lng },
@@ -75,12 +100,35 @@ document.addEventListener('DOMContentLoaded', async () => {
     .eq('id', user.id)
     .single();
   const isAdmin = profile?.is_admin;
+  document.getElementById('radius-center-method').addEventListener('change', (e) => {
+    document.getElementById('filter-center-zip').style.display = e.target.value === 'zip' ? 'inline-block' : 'none';
+  });
   document.getElementById('apply-map-filters').addEventListener('click', () => {
     const ageMin = document.getElementById('filter-age-min').value;
     const ageMax = document.getElementById('filter-age-max').value;
     const leadType = document.getElementById('filter-lead-type').value;
     const city = document.getElementById('filter-city').value;
     const zip = document.getElementById('filter-zip').value;
+    const radiusMiles = parseFloat(document.getElementById('filter-radius').value);
+    const centerMethod = document.getElementById('radius-center-method').value;
+    const centerZip = document.getElementById('filter-center-zip').value;
+    let centerPoint = null;
+    
+    if (radiusMiles && centerMethod === 'zip' && centerZip) {
+      centerPoint = await geocodeZip(centerZip);
+    } else if (radiusMiles && centerMethod === 'current') {
+      try {
+        const pos = await new Promise((res, rej) =>
+          navigator.geolocation.getCurrentPosition(res, rej)
+        );
+        centerPoint = {
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude
+        };
+      } catch {
+        alert('Unable to access your location.');
+      }
+    }
     const rawRange = document.getElementById('filter-date-range').value;
     let dateRange = null;
     
