@@ -286,3 +286,110 @@ function generateOptimizedRoute(points, mode = 'DRIVING') {
     }
   });
 }
+// Elements
+const routePanel = document.getElementById('route-panel');
+const routePanelToggle = document.getElementById('route-panel-toggle');
+const closeRoutePanelBtn = document.getElementById('close-route-panel');
+const routeStopsList = document.getElementById('route-stops-list');
+const totalTimeSpan = document.getElementById('total-route-time');
+const startRouteBtn = document.getElementById('start-route');
+const optimizeRouteBtn = document.getElementById('optimize-route');
+
+let selectedRoutePoints = [];
+let directionsService = new google.maps.DirectionsService();
+let directionsRenderer = new google.maps.DirectionsRenderer({ map });
+
+// 👇 Toggle panel
+routePanelToggle.addEventListener('click', () => {
+  routePanel.classList.toggle('open');
+});
+
+closeRoutePanelBtn.addEventListener('click', () => {
+  routePanel.classList.remove('open');
+});
+
+// 👇 Add this when markers are clicked during Routing Mode:
+function addStopToRoute(markerData) {
+  selectedRoutePoints.push(markerData);
+  updateRouteListUI();
+  if (selectedRoutePoints.length >= 2) {
+    document.getElementById('generate-route').disabled = false;
+  }
+}
+
+// 👇 Update UI inside panel
+function updateRouteListUI() {
+  routeStopsList.innerHTML = '';
+  selectedRoutePoints.forEach((point, index) => {
+    const item = document.createElement('div');
+    item.className = 'route-stop';
+    item.textContent = `${point.name || 'Lead'} - ${point.address}`;
+    routeStopsList.appendChild(item);
+  });
+}
+
+// 👇 Generate route (Start button)
+startRouteBtn.addEventListener('click', () => {
+  if (selectedRoutePoints.length < 2) return alert("Select at least 2 leads.");
+
+  const travelMode = document.getElementById('travel-mode').value;
+  const origin = selectedRoutePoints[0].address;
+  const destination = selectedRoutePoints[selectedRoutePoints.length - 1].address;
+  const waypoints = selectedRoutePoints.slice(1, -1).map(p => ({ location: p.address, stopover: true }));
+
+  directionsService.route({
+    origin,
+    destination,
+    waypoints,
+    optimizeWaypoints: false,
+    travelMode
+  }, (result, status) => {
+    if (status === 'OK') {
+      directionsRenderer.setDirections(result);
+      // Get total duration
+      let total = 0;
+      result.routes[0].legs.forEach(leg => {
+        total += leg.duration.value;
+      });
+      const minutes = Math.round(total / 60);
+      totalTimeSpan.textContent = `${minutes} min`;
+    } else {
+      alert('Route failed: ' + status);
+    }
+  });
+});
+
+// 👇 Optimize Route
+optimizeRouteBtn.addEventListener('click', () => {
+  const travelMode = document.getElementById('travel-mode').value;
+  const origin = selectedRoutePoints[0].address;
+  const destination = selectedRoutePoints[selectedRoutePoints.length - 1].address;
+  const waypoints = selectedRoutePoints.slice(1, -1).map(p => ({ location: p.address, stopover: true }));
+
+  directionsService.route({
+    origin,
+    destination,
+    waypoints,
+    optimizeWaypoints: true,
+    travelMode
+  }, (result, status) => {
+    if (status === 'OK') {
+      directionsRenderer.setDirections(result);
+
+      // Reorder the waypoints based on optimized order
+      const order = result.routes[0].waypoint_order;
+      const newOrder = [selectedRoutePoints[0], ...order.map(i => selectedRoutePoints[i + 1]), selectedRoutePoints[selectedRoutePoints.length - 1]];
+      selectedRoutePoints = newOrder;
+      updateRouteListUI();
+
+      let total = 0;
+      result.routes[0].legs.forEach(leg => {
+        total += leg.duration.value;
+      });
+      const minutes = Math.round(total / 60);
+      totalTimeSpan.textContent = `${minutes} min`;
+    } else {
+      alert('Optimization failed: ' + status);
+    }
+  });
+});
