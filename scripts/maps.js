@@ -410,11 +410,3 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 });
-
-// Select key DOM elements for quick access
-const routeStopsList = document.getElementById('route-stops-list');
-const totalTimeSpan = document.getElementById('total-route-time');
-const startRouteBtn = document.getElementById('start-route');
-const optimizeRouteBtn = document.getElementById('optimize-route');
-const openExternalLink = document.getElementById('open-external');
-``` [oai_citation:5‡stackoverflow.com](https://stackoverflow.com/questions/10588607/tutorial-for-html5-dragdrop-sortable-list#:~:text=function%20dragStart%28e%29%20,target%3B) [oai_citation:6‡developers.google.com](https://developers.google.com/maps/documentation/urls/get-started#:~:text=following%20waypoints%3A)
