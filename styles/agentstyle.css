@@ -517,7 +517,10 @@ button:disabled {
 .dropdown-content a:hover {
   background-color: #f0f0f0;
 }
-
+#map {
+  position: relative;
+  z-index: 1; /* Lower than the panel */
+}
 /* Slide Panel Styles */
 #route-panel {
   position: fixed;
