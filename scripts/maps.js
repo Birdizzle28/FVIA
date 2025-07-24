@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('radius-center-method').addEventListener('change', (e) => {
     document.getElementById('filter-center-zip').style.display = e.target.value === 'zip' ? 'inline-block' : 'none';
   });
-  document.getElementById('apply-map-filters').addEventListener('click', () => {
+  document.getElementById('apply-map-filters').addEventListener('click', async () => {
     const ageMin = document.getElementById('filter-age-min').value;
     const ageMax = document.getElementById('filter-age-max').value;
     const leadType = document.getElementById('filter-lead-type').value;
