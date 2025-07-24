@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>One-Time Geocode</title>
+  <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+    const supabase = createClient(
+      'https://ddlbgkolnayqrxslzsxn.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
+    );
+
+    const GEOCODING_API = 'https://maps.googleapis.com/maps/api/geocode/json';
+    const API_KEY = 'AIzaSyD5nGhz1mUXK1aGsoQSzo4MXYcI-uoxPa4';
+
+    async function geocodeAddress(address) {
+      const url = `${GEOCODING_API}?address=${encodeURIComponent(address)}&key=${API_KEY}`;
+      const response = await fetch(url);
+      const data = await response.json();
+
+      if (data.status === 'OK') {
+        const location = data.results[0].geometry.location;
+        return { lat: location.lat, lng: location.lng };
+      } else {
+        console.warn(`Failed to geocode: ${address}`);
+        return null;
+      }
+    }
+
+    async function updateLeadsWithCoordinates() {
+      const { data: leads, error } = await supabase.from('leads').select('*');
+      if (error) return console.error('Error fetching leads:', error);
+
+      for (const lead of leads) {
+        const fullAddress = `${lead.address}, ${lead.city}, ${lead.state || ''} ${lead.zip}`;
+        const coords = await geocodeAddress(fullAddress);
+
+        if (coords) {
+          const { error: updateError } = await supabase
+            .from('leads')
+            .update({ lat: coords.lat, lng: coords.lng })
+            .eq('id', lead.id);
+
+          if (updateError) {
+            console.error(`Failed to update lead ${lead.id}`, updateError);
+          } else {
+            console.log(`Updated lead ${lead.id} with coords:`, coords);
+          }
+        }
+        await new Promise(r => setTimeout(r, 250)); // Delay to avoid rate limits
+      }
+
+      console.log("✅ Done updating all leads!");
+    }
+
+    updateLeadsWithCoordinates();
+  </script>
+</head>
+<body>
+  <h1>Geocoding leads... check console</h1>
+</body>
+</html>
