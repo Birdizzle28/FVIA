@@ -6,13 +6,42 @@ const supabase = createClient(
 );
 
 let map; // must be global for callback
+async function loadLeadPins() {
+  const { data: leads, error } = await supabase
+    .from('leads')
+    .select('*')
+    .not('lat', 'is', null)
+    .not('lng', 'is', null);
 
-window.initMap = function () {
+  if (error) {
+    console.error('Error loading leads:', error.message);
+    return;
+  }
+
+  leads.forEach((lead) => {
+    const marker = new google.maps.Marker({
+      position: { lat: lead.lat, lng: lead.lng },
+      map,
+      title: `${lead.first_name} ${lead.last_name}`,
+    });
+
+    const infoWindow = new google.maps.InfoWindow({
+      content: `<strong>${lead.first_name} ${lead.last_name}</strong><br>${lead.address}, ${lead.city}, ${lead.state} ${lead.zip}`,
+    });
+
+    marker.addListener('click', () => {
+      infoWindow.open(map, marker);
+    });
+  });
+}
+function initMap() {
   map = new google.maps.Map(document.getElementById("map"), {
-    center: { lat: 36.1627, lng: -86.7816 }, // Nashville, TN as default center
+    center: { lat: 36.1627, lng: -86.7816 },
     zoom: 8,
   });
-};
+
+  loadLeadPins(); // Step 3: this will show the markers, we'll add this later
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   const { data: { session } } = await supabase.auth.getSession();
@@ -56,4 +85,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { error } = await supabase.auth.signOut();
     if (!error) window.location.href = '../index.html';
   });
+  initMap();
 });
