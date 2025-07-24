@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           lat: pos.coords.latitude,
           lng: pos.coords.longitude
         };
-      } catch {
+      } catch (err) {
         alert('Unable to access your location.');
       }
     }
