@@ -145,6 +145,6 @@ document.getElementById('reset-map-filters').addEventListener('click', () => {
   });
   initMap();
 
-  const viewMode = isAdmin ? 'mine' : 'mine'; // admin defaults to 'mine', agents forced to 'mine'
-  loadLeadPins(user, isAdmin, viewMode);
+  currentViewMode = isAdmin ? 'mine' : 'mine'; // admin defaults to 'mine', agents forced to 'mine'
+  loadLeadPins(user, isAdmin, currentViewMode);
 });
