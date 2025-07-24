@@ -147,6 +147,17 @@ document.getElementById('generate-route').addEventListener('click', () => {
   const travelMode = document.getElementById('travel-mode').value;
   generateOptimizedRoute(selectedRoutePoints, travelMode);
 });
+  document.getElementById('reset-route').addEventListener('click', () => {
+    selectedRoutePoints = [];
+    directionsRenderer.setDirections({ routes: [] });
+  
+    // Reset marker content (if customized)
+    map.markers?.forEach(m => {
+      if (m.content) m.content = null;
+    });
+  
+    document.getElementById('generate-route').disabled = true;
+  });
   document.getElementById('radius-center-method').addEventListener('change', (e) => {
     document.getElementById('filter-center-zip').style.display = e.target.value === 'zip' ? 'inline-block' : 'none';
   });
