@@ -279,9 +279,9 @@ function generateOptimizedRoute(points, mode = 'DRIVING') {
   const startInput = document.getElementById('custom-start').value.trim();
   const endInput = document.getElementById('custom-end').value.trim();
   
-  let origin = points[0];
-  let destination = points[points.length - 1];
-
+  let origin = points[0].address;
+  let destination = points[points.length - 1].address;
+  
   if (startInput) origin = startInput;
   if (endInput) destination = endInput;
   const waypoints = points.slice(1, -1).map(loc => ({
