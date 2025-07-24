@@ -19,10 +19,11 @@ async function loadLeadPins() {
   }
 
   leads.forEach((lead) => {
-    const marker = new google.maps.Marker({
+    const { AdvancedMarkerElement } = google.maps.marker;
+    const marker = new AdvancedMarkerElement({
       position: { lat: lead.lat, lng: lead.lng },
-      map,
-      title: `${lead.first_name} ${lead.last_name}`,
+      map: map,
+      title: `${lead.first_name} ${lead.last_name}`
     });
 
     const infoWindow = new google.maps.InfoWindow({
