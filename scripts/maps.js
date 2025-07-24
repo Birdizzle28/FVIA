@@ -6,12 +6,14 @@ const supabase = createClient(
 );
 
 let map; // must be global for callback
-async function loadLeadPins() {
-  const { data: leads, error } = await supabase
-    .from('leads')
-    .select('*')
-    .not('lat', 'is', null)
-    .not('lng', 'is', null);
+async function loadLeadPins(user, isAdmin) {
+  let query = supabase.from('leads').select('*').not('lat', 'is', null).not('lng', 'is', null);
+
+  if (!isAdmin) {
+    query = query.eq('assigned_to', user.id);
+  }
+
+  const { data: leads, error } = await query;
 
   if (error) {
     console.error('Error loading leads:', error.message);
@@ -22,7 +24,7 @@ async function loadLeadPins() {
     const { AdvancedMarkerElement } = google.maps.marker;
     const marker = new AdvancedMarkerElement({
       position: { lat: lead.lat, lng: lead.lng },
-      map: map,
+      map,
       title: `${lead.first_name} ${lead.last_name}`
     });
 
@@ -41,8 +43,6 @@ function initMap() {
     zoom: 8,
     mapId: '6ea480352876049060496b2a'
   });
-
-  loadLeadPins(); // Step 3: this will show the markers, we'll add this later
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -88,4 +88,5 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!error) window.location.href = '../index.html';
   });
   initMap();
+  loadLeadPins(user, isAdmin);
 });
