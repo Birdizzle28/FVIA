@@ -490,38 +490,7 @@ button:disabled {
   opacity: 0.4;
   cursor: not-allowed;
 }
-.dropdown {
-  position: relative;
-  display: inline-block;
-}
-#agent-hub-menu {
-  display: none;
-}
-
-.dropdown-content {
-  display: none;
-  position: absolute;
-  background-color: white;
-  min-width: 180px;
-  box-shadow: 0px 4px 6px rgba(0,0,0,0.2);
-  z-index: 10;
-}
-
-.dropdown-content a {
-  display: block;
-  padding: 10px 15px;
-  color: black;
-  text-decoration: none;
-}
-
-.dropdown-content a:hover {
-  background-color: #f0f0f0;
-}
-#map {
-  position: relative;
-  z-index: 1; /* Lower than the panel */
-}
-/* Slide Panel Styles */
+/* Sliding Route Planner Panel Styles */
 #route-panel {
   position: fixed;
   top: 0;
@@ -537,23 +506,33 @@ button:disabled {
   flex-direction: column;
   padding: 1rem;
 }
-
-#route-panel.open {
-  right: 0;
-}
-
+#route-panel.open { right: 0; }
 .panel-header {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
-
 #close-route-panel {
   background: none;
   border: none;
   font-size: 1.5rem;
 }
-
+.route-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 0; /* merged spacing handled by stops-list margin */
+}
+.custom-addresses {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.travel-mode-select {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
 #route-stops-list {
   flex: 1;
   margin: 1rem 0;
@@ -561,13 +540,14 @@ button:disabled {
   border: 1px solid #ddd;
   padding: 0.5rem;
 }
-
+.route-summary {
+  /* Summary section for total time and external link */
+}
 .route-actions {
   display: flex;
   justify-content: space-between;
   gap: 0.5rem;
 }
-
 #route-panel-toggle {
   position: fixed;
   bottom: 80px;
@@ -580,4 +560,65 @@ button:disabled {
   padding: 0.5rem 0.75rem;
   border-radius: 50%;
   box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+  cursor: pointer;
+}
+
+/* Drag-and-drop route stop items */
+.route-stop {
+  background: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 5px 8px;
+  margin-bottom: 0.5rem;
+  cursor: grab;
+  user-select: none;
+}
+.route-stop.dragging {
+  opacity: 0.6;
+}
+
+/* Route action buttons styling */
+.route-actions button {
+  background: #007bff;
+  color: #fff;
+  border: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  font: inherit;
+  cursor: pointer;
+}
+.route-actions button:hover:enabled {
+  background: #0069d9;
+}
+button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* External directions link styled as button */
+#open-external {
+  display: inline-block;
+  margin-top: 0.5rem;
+  padding: 0.25rem 0.5rem;
+  background: #007bff;
+  color: #fff;
+  text-decoration: none;
+  border-radius: 4px;
+}
+
+/* Responsive adjustments for smaller screens */
+@media (max-width: 768px) {
+  #route-panel {
+    width: 80%;
+    right: -80%;
+  }
+}
+@media (max-width: 576px) {
+  #route-panel {
+    width: 100%;
+    right: -100%;
+  }
+  #map {
+    height: 400px;
+  }
 }
