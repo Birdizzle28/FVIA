@@ -141,6 +141,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     .eq('id', user.id)
     .single();
   const isAdmin = profile?.is_admin;
+  
+  // 👇 Toggle panel
+  routePanelToggle.addEventListener('click', () => {
+    routePanel.classList.toggle('open');
+  });
+  
+  closeRoutePanelBtn.addEventListener('click', () => {
+    routePanel.classList.remove('open');
+  });
   document.getElementById('enable-routing').addEventListener('change', (e) => {
     routingMode = e.target.checked;
     selectedRoutePoints = [];
@@ -304,15 +313,6 @@ const optimizeRouteBtn = document.getElementById('optimize-route');
 
 directionsService = new google.maps.DirectionsService();
 directionsRenderer = new google.maps.DirectionsRenderer({ map });
-
-// 👇 Toggle panel
-routePanelToggle.addEventListener('click', () => {
-  routePanel.classList.toggle('open');
-});
-
-closeRoutePanelBtn.addEventListener('click', () => {
-  routePanel.classList.remove('open');
-});
 
 // 👇 Add this when markers are clicked during Routing Mode:
 function addStopToRoute(markerData) {
