@@ -53,7 +53,6 @@
         <input type="number" id="filter-age-min" placeholder="Min" style="width: 60px;">
         <input type="number" id="filter-age-max" placeholder="Max" style="width: 60px;">
       </div>
-    
       <div class="filter-group">
         <label>Lead Type:</label>
         <select id="filter-lead-type">
@@ -64,17 +63,14 @@
           <option value="Other">Other</option>
         </select>
       </div>
-    
       <div class="filter-group">
         <label>Date Range:</label>
         <input type="text" id="filter-date-range" placeholder="Select range">
       </div>
-    
       <div class="filter-group">
         <label>City:</label>
         <input type="text" id="filter-city">
       </div>
-    
       <div class="filter-group">
         <label>ZIP:</label>
         <input type="text" id="filter-zip">
@@ -94,39 +90,47 @@
       <button id="reset-map-filters">Reset</button>
     </section>
     <div id="map" style="width: 100%; height: 600px;"></div>
-    <div id="route-controls" style="margin-top: 10px;">
-      <label><input type="checkbox" id="enable-routing"> Enable Routing Mode</label>
-      <input type="text" id="custom-start" placeholder="Start Address (optional)">
-      <input type="text" id="custom-end" placeholder="End Address (optional)">
-      <button id="generate-route" disabled>Generate Route</button>
-      <select id="travel-mode">
-        <option value="DRIVING">Driving</option>
-        <option value="WALKING">Walking</option>
-        <option value="BICYCLING">Bicycling</option>
-      </select>
-      <button id="reset-route">Reset Route</button>
-    </div>
+    <!-- (Route controls are now integrated into the sliding panel) -->
   </main>
-  <!-- Route Panel Toggle Icon -->
+
+  <!-- Route Panel Toggle Icon (floating button to open/close planner) -->
   <button id="route-panel-toggle" title="Route Planner">
     <i class="fas fa-route"></i>
   </button>
-  
-  <!-- Route Planner Panel -->
+
+  <!-- Route Planner Sliding Panel -->
   <div id="route-panel" class="slide-panel">
     <div class="panel-header">
       <h2>Route Planner</h2>
       <button id="close-route-panel">&times;</button>
     </div>
-    <div id="route-stops-list" class="stops-list"></div>
+    <div class="route-settings">
+      <label><input type="checkbox" id="enable-routing"> Enable Routing Mode</label>
+      <div class="custom-addresses">
+        <input type="text" id="custom-start" placeholder="Start Address (optional)" />
+        <input type="text" id="custom-end" placeholder="End Address (optional)" />
+      </div>
+      <div class="travel-mode-select">
+        <label for="travel-mode">Mode:</label>
+        <select id="travel-mode">
+          <option value="DRIVING">Driving</option>
+          <option value="WALKING">Walking</option>
+          <option value="BICYCLING">Bicycling</option>
+        </select>
+      </div>
+    </div>
+    <div id="route-stops-list" class="stops-list"><!-- Selected stops will appear here --></div>
     <div class="route-summary">
       <p><strong>Total Time:</strong> <span id="total-route-time">--</span></p>
+      <p><a id="open-external" href="#" target="_blank" rel="noopener" style="display:none;">Open in Google Maps</a></p>
     </div>
     <div class="route-actions">
-      <button id="optimize-route">Optimize Route</button>
-      <button id="start-route">Start</button>
+      <button id="optimize-route" disabled>Optimize Route</button>
+      <button id="reset-route">Reset</button>
+      <button id="start-route" disabled>Start</button>
     </div>
   </div>
+
   <footer class="index-grid-footer">
     <img id="footerlogo" src="../Pics/img17.png" alt="FVIA Footer Logo" />
     <hr class="footerhr" />
@@ -156,11 +160,9 @@
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-  
   <script
     src="https://maps.googleapis.com/maps/api/js?key=AIzaSyD5nGhz1mUXK1aGsoQSzo4MXYcI-uoxPa4&libraries=marker"
-    async
-    defer
+    async defer
     onload="window.dispatchEvent(new Event('maps-loaded'))">
   </script>
 </body>
