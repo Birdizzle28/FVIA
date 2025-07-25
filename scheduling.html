@@ -2,17 +2,17 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Scheduling | Family Values</title>
   <link rel="stylesheet" href="styles/agentstyle.css" />
   <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
 </head>
-
 <body id="dashboardbody">
   <header class="index-grid-header">
+    <!-- Header content (logo and nav) preserved from existing layout -->
     <div id="logofvcontainer">
       <div id="logodiv">
         <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
@@ -40,9 +40,36 @@
       </nav>
     </div>
   </header>
+
   <main class="auth-container">
-    
+    <section class="schedule-section">
+      <h2>Appointment Scheduler</h2>
+      <!-- Appointment Booking Form -->
+      <form id="appointment-form">
+        <div class="form-group">
+          <label for="title">Appointment Title:</label>
+          <input type="text" id="title" name="title" required />
+        </div>
+        <div class="form-group">
+          <label for="client-name">Client Name:</label>
+          <input type="text" id="client-name" name="clientName" placeholder="e.g. John Doe" />
+        </div>
+        <div class="form-group">
+          <label for="client-contact">Client Contact (Email or Phone):</label>
+          <input type="text" id="client-contact" name="clientContact" placeholder="email or phone number" />
+        </div>
+        <div class="form-group">
+          <label for="datetime">Date & Time:</label>
+          <input type="text" id="datetime" name="datetime" required placeholder="Select date and time" />
+        </div>
+        <button type="submit" id="create-appointment">Create Appointment</button>
+      </form>
+
+      <!-- Calendar container -->
+      <div id="calendar"></div>
+    </section>
   </main>
+
   <footer class="index-grid-footer">
     <img id="footerlogo" src="../Pics/img17.png" alt="FVIA Footer Logo" />
     <hr class="footerhr" />
@@ -67,10 +94,12 @@
     <p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
   </footer>
 
-  <script type="module" src="scripts/scheduling.js"></script>
+  <!-- External Libraries Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <!-- FullCalendar bundle (for month/week/day views and drag/drop) -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.18/index.global.min.js"></script>
+  <!-- Main Scheduling Application Script (ES Module) -->
+  <script type="module" src="scripts/scheduling.js"></script>
 </body>
 </html>
