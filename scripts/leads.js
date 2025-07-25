@@ -11,6 +11,30 @@ function updateAgentPaginationControls() {
   document.getElementById('agent-prev-page').disabled = agentCurrentPage === 1;
   document.getElementById('agent-next-page').disabled = agentCurrentPage === agentTotalPages;
 }
+let agentProfile = null;
+
+async function fetchAgentProfile() {
+  const {
+    data: { user },
+    error: userError
+  } = await supabase.auth.getUser();
+  if (userError || !user) {
+    console.error("User not found or not logged in.");
+    return;
+  }
+
+  const { data, error } = await supabase
+    .from('agents')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (error) {
+    console.error('Error fetching agent profile:', error);
+  } else {
+    agentProfile = data;
+  }
+}
 
 // ✅ Session check
 document.addEventListener('DOMContentLoaded', async () => {
@@ -112,6 +136,7 @@ async function populateProductTypeDropdown(dropdownId) {
 }
 await populateProductTypeDropdown('lead-product-type');    // Lead submission form
 await populateProductTypeDropdown('filter-product-type');  // Lead request form
+await fetchAgentProfile();
 document.getElementById('lead-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const session = await supabase.auth.getSession();
