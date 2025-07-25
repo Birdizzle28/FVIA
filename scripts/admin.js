@@ -15,6 +15,21 @@ let rangeEnd = null;
 let allowedProductsFilter = null;
 
 document.addEventListener('DOMContentLoaded', async () => {
+  const toggle = document.getElementById("agent-hub-toggle");
+  const menu = document.getElementById("agent-hub-menu");
+
+  // Initialize dropdown menu (Agent Hub) behavior
+  menu.style.display = "none";
+  toggle?.addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.style.display = (menu.style.display === "block") ? "none" : "block";
+  });
+  document.addEventListener("click", (e) => {
+    if (!e.target.closest(".dropdown")) {
+      menu.style.display = "none";
+    }
+  });
+
   // Require login session
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
