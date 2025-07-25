@@ -195,6 +195,14 @@
           <option value="Referral">Referral</option>
           <option value="Other">Other</option>
         </select>
+        <!-- Inside filters section -->
+        <div class="filter-group">
+          <label>Product Type:</label>
+          <select id="filter-product-type">
+            <option value="">Any</option>
+            <!-- Populate with agent's authorized types -->
+          </select>
+        </div>
         <label for="request-count">How many leads?</label>
         <input type="number" id="request-count" name="request-count" min="1" required>
         <textarea id="request-notes" placeholder="Notes (optional)"></textarea>
