@@ -88,26 +88,30 @@ function formatPhoneInput(input) {
 document.querySelectorAll('input[name="lead-phone"]').forEach(formatPhoneInput);
 
 // Lead submission
-async function populateProductTypeDropdown() {
-    const user = await supabase.auth.getUser();
-    const { data: profile } = await supabase
-      .from('agents')
-      .select('product_types')
-      .eq('id', user.data.user.id)
-      .single();
-  
-    const dropdown = document.getElementById('lead-product-type');
-    dropdown.innerHTML = '';
-  
-    if (profile?.product_types?.length > 0) {
-      profile.product_types.forEach(type => {
-        const option = document.createElement('option');
-        option.value = type;
-        option.textContent = type;
-        dropdown.appendChild(option);
-      });
-    }
+async function populateProductTypeDropdown(dropdownId) {
+  const user = await supabase.auth.getUser();
+  const { data: profile } = await supabase
+    .from('agents')
+    .select('product_types')
+    .eq('id', user.data.user.id)
+    .single();
+
+  const dropdown = document.getElementById(dropdownId);
+  if (!dropdown) return;
+
+  dropdown.innerHTML = '<option value="">Select product type</option>';
+
+  if (profile?.product_types?.length > 0) {
+    profile.product_types.forEach(type => {
+      const option = document.createElement('option');
+      option.value = type;
+      option.textContent = type;
+      dropdown.appendChild(option);
+    });
   }
+}
+await populateProductTypeDropdown('lead-product-type');    // Lead submission form
+await populateProductTypeDropdown('filter-product-type');  // Lead request form
 document.getElementById('lead-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const session = await supabase.auth.getSession();
@@ -133,26 +137,6 @@ document.getElementById('lead-form')?.addEventListener('submit', async (e) => {
 });
 
 // LEAD REQUEST SUBMIT (fixed to match your Supabase schema)
-async function populateProductTypeDropdown() {
-    const user = await supabase.auth.getUser();
-    const { data: profile } = await supabase
-      .from('agents')
-      .select('product_types')
-      .eq('id', user.data.user.id)
-      .single();
-  
-    const dropdown = document.getElementById('filter-product-type');
-    dropdown.innerHTML = '';
-  
-    if (profile?.product_types?.length > 0) {
-      profile.product_types.forEach(type => {
-        const option = document.createElement('option');
-        option.value = type;
-        option.textContent = type;
-        dropdown.appendChild(option);
-      });
-    }
-  }
 document.getElementById('lead-request-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const messageEl = document.getElementById('request-message');
