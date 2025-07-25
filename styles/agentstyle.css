@@ -435,3 +435,75 @@ button:disabled {
 .route-actions button:hover:enabled {
   background: #e0e0e0;
 }
+/* === Scheduling App Additional Styles === */
+
+/* Container for the scheduling section (white card layout similar to profile section) */
+.schedule-section {
+  max-width: 90%;
+  margin: 20px auto;
+  background-color: white;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+/* Appointment form styles */
+#appointment-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+/* Ensure form inputs fill width (inherits .form-group styles from existing CSS) */
+#appointment-form .form-group {
+  width: 100%;
+}
+/* Style for the form submit button */
+#appointment-form button {
+  align-self: flex-start; /* align button to left (you can center if desired) */
+  background-color: #5e2a4b;
+  color: white;
+  border: none;
+  border-radius: 5px;
+  padding: 10px 15px;
+  font-weight: bold;
+  cursor: pointer;
+}
+/* Hover state for the button */
+#appointment-form button:hover {
+  background-color: #482039;
+}
+
+/* Calendar element should fill the container */
+#calendar {
+  width: 100%;
+  /* Provide a minimum height so calendar always shows (e.g., month view) */
+  min-height: 600px;
+  margin-top: 10px;
+}
+
+/* FullCalendar theming with CSS variables (v6+) */
+:root {
+  /* Buttons (Prev/Next/Today) styling to match theme */
+  --fc-button-bg-color: #5e2a4b;
+  --fc-button-border-color: #5e2a4b;
+  --fc-button-text-color: #ffffff;
+  --fc-button-hover-bg-color: #472037;    /* slightly darker on hover */
+  --fc-button-active-bg-color: #331429;   /* darker when active/clicked */
+
+  /* Current day highlight and selection */
+  --fc-today-bg-color: rgba(237, 158, 165, 0.2); /* light pink translucent for today */
+  --fc-highlight-color: rgba(94, 42, 75, 0.15);   /* translucent purple for selection */
+  
+  /* Event colors */
+  --fc-event-bg-color: #ed9ea5;    /* use agency pink for events */
+  --fc-event-border-color: #ed9ea5;
+  --fc-event-text-color: #fff;     /* white text on colored events */
+}
+/* If needed, override any specific FullCalendar default font to use Bellota Text */
+.fc {
+  font-family: Bellota Text, sans-serif;
+}
+/* (Optional) Smaller font for day numbers or event text if needed for compact view */
+.fc .fc-daygrid-day-number {
+  font-size: 0.85em;
+}
