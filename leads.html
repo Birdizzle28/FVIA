@@ -119,6 +119,12 @@
           <option value="Referral">Referral</option>
           <option value="Other">Other</option>
         </select>
+        <div class="form-group">
+          <label for="lead-product-type">Product Type:</label>
+          <select id="lead-product-type" name="product_type" required>
+            <!-- Options will be populated dynamically from agent profile -->
+          </select>
+        </div>
         <textarea id="lead-notes" placeholder="Notes (optional)"></textarea>
         <button type="submit">Submit Lead</button>
       </form>
