@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   const toggle = document.getElementById("agent-hub-toggle");
   const menu = document.getElementById("agent-hub-menu");
-
+  const productType = document.getElementById('lead-product-type').value;
   // Make sure menu is hidden initially
   menu.style.display = "none";
 
@@ -47,6 +47,26 @@ document.addEventListener('DOMContentLoaded', async () => {
     placeholder: true,
     searchPlaceholderValue: 'Type to filter…'
   });
+  async function populateProductTypeDropdown() {
+  const user = await supabase.auth.getUser();
+  const { data: profile } = await supabase
+    .from('agents')
+    .select('product_types')
+    .eq('id', user.data.user.id)
+    .single();
+
+  const dropdown = document.getElementById('lead-product-type');
+  dropdown.innerHTML = '';
+
+  if (profile?.product_types?.length > 0) {
+    profile.product_types.forEach(type => {
+      const option = document.createElement('option');
+      option.value = type;
+      option.textContent = type;
+      dropdown.appendChild(option);
+    });
+  }
+}
   const loadingScreen = document.getElementById('loading-screen');
 
   const { data: { session } } = await supabase.auth.getSession();
@@ -106,7 +126,8 @@ document.getElementById('lead-form')?.addEventListener('submit', async (e) => {
     notes: document.getElementById('lead-notes').value,
     assigned_to: user.id,
     submitted_by: user.id,
-    submitted_by_name: agentProfile?.full_name || 'Unknown'
+    submitted_by_name: agentProfile?.full_name || 'Unknown',
+    product_type: productType
   });
   document.getElementById('lead-message').textContent = error ? 'Failed to submit lead.' : 'Lead submitted!';
 });
