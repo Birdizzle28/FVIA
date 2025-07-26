@@ -287,20 +287,32 @@
 #leads-table-container thead th {
   position: sticky;
   top: 0;
-  background-color: #f4f4f4;
+  background-color: #353468;   /* pick a theme colour */
+  color: #ffffff;
   z-index: 1;
   cursor: pointer; /* for sort indicator */
 }
 #leads-table {
   width: 100%;
   border-collapse: collapse;
+  background-color: #ffffff;
 }
 #leads-table th,
 #leads-table td {
-  border: 1px solid #ccc;
+  border: 1px solid black;
   padding: 8px;
   text-align: left;
   font-size: 0.9em;
+}
+/* Style the body cells */
+#leads-table tbody td {
+  padding: 8px;
+  border: 1px solid #ddd;
+}
+
+/* Zebra striping on every other row */
+#leads-table tbody tr:nth-child(even) {
+  background-color: #f5f5f5;   /* light gray */
 }
 #lead-filters {
   display: flex;
@@ -660,6 +672,9 @@ button:disabled {
   flex-direction: column;
   gap: 20px;
   width: 100%;
+  max-width: 90%;      /* limit overall width */
+  margin: 0 auto;      /* centre on the page */
+
 }
 
 /* Create a two‑column grid for the filters */
