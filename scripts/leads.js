@@ -43,7 +43,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   
   const toggle = document.getElementById("agent-hub-toggle");
   const menu = document.getElementById("agent-hub-menu");
-  const productType = document.getElementById('lead-product-type').value;
+  
   // Make sure menu is hidden initially
   menu.style.display = "none";
 
@@ -158,6 +158,7 @@ await populateProductTypeDropdown('filter-product-type');  // Lead request form
 await fetchAgentProfile();
 document.getElementById('lead-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
+  const productType = document.getElementById('lead-product-type').value;
   const fullAddress = `${document.getElementById('lead-address').value}, ${document.getElementById('lead-city').value}, ${document.getElementById('lead-state').value} ${document.getElementById('lead-zip').value}`;
   const { lat, lng } = await geocodeAddress(fullAddress);
   const session = await supabase.auth.getSession();
