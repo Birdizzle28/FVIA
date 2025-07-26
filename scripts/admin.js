@@ -311,6 +311,45 @@ document.addEventListener('DOMContentLoaded', async () => {
   } else {
     agentHubBtn?.classList.remove('active-page');
   }
+  const navButtons = {
+    all: document.getElementById('nav-all'),
+    requests: document.getElementById('nav-requests'),
+    history: document.getElementById('nav-history'),
+    stats: document.getElementById('nav-stats'),
+  };
+
+  // Map sections to their IDs
+  const sections = {
+    all: document.getElementById('admin-all-section'),
+    requests: document.getElementById('admin-requests-section'),
+    history: document.getElementById('admin-history-section'),
+    stats: document.getElementById('admin-stats-section'),
+  };
+
+  function hideAllAdminSections() {
+    Object.values(sections).forEach(sec => sec.style.display = 'none');
+    Object.values(navButtons).forEach(btn => btn.classList.remove('active'));
+  }
+
+  function showAdminSection(name) {
+    hideAllAdminSections();
+    sections[name].style.display = 'block';
+    navButtons[name].classList.add('active');
+
+    // You can optionally load data here when switching tabs.
+    // For example:
+    // if (name === 'history') loadAssignmentHistory();
+  }
+
+  // Initial view
+  showAdminSection('all');
+
+  // Attach click handlers
+  navButtons.all.addEventListener('click', () => showAdminSection('all'));
+  navButtons.requests.addEventListener('click', () => showAdminSection('requests'));
+  navButtons.history.addEventListener('click', () => showAdminSection('history'));
+  navButtons.stats.addEventListener('click', () => showAdminSection('stats'));
+
 }); // end DOMContentLoaded
 
 // Load active agents and populate filters
