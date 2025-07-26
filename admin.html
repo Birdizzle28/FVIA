@@ -189,51 +189,51 @@
           <option value="notes">notes</option>
           <option value="created_at">created_at</option>
         </select>
-      </div>
-      <div id="leads-table-container">
-        <table id="leads-table">
-          <thead>
-            <tr>
-              <th><input type="checkbox" id="select-all"></th>
-              <th data-column="created_at">Submitted</th>
-              <th data-column="submitted_by_name">Agent</th>
-              <th data-column="first_name">First Name</th>
-              <th data-column="last_name">Last Name</th>
-              <th data-column="age">Age</th>
-              <th data-column="phone">Phone(s)</th>
-              <th data-column="address">Address</th>
-              <th data-column="city">City</th>
-              <th data-column="state">State</th>
-              <th data-column="zip">ZIP</th>
-              <th data-column="lead_type">Type</th>
-              <th data-column="notes">Notes</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <!-- Leads load here -->
-          </tbody>
-        </table>
-        <div id="pagination-controls" style="margin-top: 10px;">
-          <button id="prev-page">Previous</button>
-          <span id="current-page">Page 1</span>
-          <button id="next-page">Next</button>
+        <div id="leads-table-container">
+          <table id="leads-table">
+            <thead>
+              <tr>
+                <th><input type="checkbox" id="select-all"></th>
+                <th data-column="created_at">Submitted</th>
+                <th data-column="submitted_by_name">Agent</th>
+                <th data-column="first_name">First Name</th>
+                <th data-column="last_name">Last Name</th>
+                <th data-column="age">Age</th>
+                <th data-column="phone">Phone(s)</th>
+                <th data-column="address">Address</th>
+                <th data-column="city">City</th>
+                <th data-column="state">State</th>
+                <th data-column="zip">ZIP</th>
+                <th data-column="lead_type">Type</th>
+                <th data-column="notes">Notes</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- Leads load here -->
+            </tbody>
+          </table>
+          <div id="pagination-controls" style="margin-top: 10px;">
+            <button id="prev-page">Previous</button>
+            <span id="current-page">Page 1</span>
+            <button id="next-page">Next</button>
+          </div>
         </div>
-      </div>
-      <!-- Bulk Assign Controls -->
-      <div id="bulk-assign-controls" style="display: none; margin-top: 10px;">
-        <label for="bulk-assign-agent">Assign <span id="selected-count">0</span> lead(s) to:</label>
-        <select id="bulk-assign-agent">
-          <!-- populated by script -->
-        </select>
-        <button id="bulk-assign-btn">Assign</button>
-      </div>
-      <div id="export-controls" style="display: none; position: relative;">
-        <button id="export-btn">Export</button>
-        <div id="export-options" style="display: none; position: absolute; background: white; border: 1px solid #ccc; padding: 5px;">
-          <button id="export-pdf">PDF</button>
-          <button id="export-csv">CSV</button>
-          <button id="export-print">Print</button>
+        <!-- Bulk Assign Controls -->
+        <div id="bulk-assign-controls" style="display: none; margin-top: 10px;">
+          <label for="bulk-assign-agent">Assign <span id="selected-count">0</span> lead(s) to:</label>
+          <select id="bulk-assign-agent">
+            <!-- populated by script -->
+          </select>
+          <button id="bulk-assign-btn">Assign</button>
+        </div>
+        <div id="export-controls" style="display: none; position: relative;">
+          <button id="export-btn">Export</button>
+          <div id="export-options" style="display: none; position: absolute; background: white; border: 1px solid #ccc; padding: 5px;">
+            <button id="export-pdf">PDF</button>
+            <button id="export-csv">CSV</button>
+            <button id="export-print">Print</button>
+          </div>
         </div>
       </div>
     </section>
