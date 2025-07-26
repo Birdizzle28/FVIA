@@ -4,7 +4,7 @@ const supabase = createClient('https://ddlbgkolnayqrxslzsxn.supabase.co', 'eyJhb
 let agentCurrentPage = 1;
 let agentTotalPages = 1;
 const pageSize = 25;
-console.log("Page Path:", window.location.pathname); // debug
+alert("Page Path:", window.location.pathname); // debug
 function updateAgentPaginationControls() {
   document.getElementById('agent-current-page').textContent = `Page ${agentCurrentPage}`;
   document.getElementById('agent-prev-page').disabled = agentCurrentPage === 1;
