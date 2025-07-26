@@ -625,7 +625,7 @@ const sections = {
 };
 
 //Highlight "Agent Hub" only for Agent hub links
-  const agentHubBtn = document.getElementById('agent-hub-button');
+  const agentHubBtn = document.getElementById('agent-hub-toggle');
   if (window.location.pathname.includes('leads.html')) {
     agentHubBtn?.classList.add('active-page');
   } else {
