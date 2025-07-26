@@ -129,6 +129,7 @@ async function geocodeAddress(address) {
     console.error('Error during geocoding:', error);
     return { lat: null, lng: null };
   }
+  console.log(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`);
 }
 // Lead submission
 async function populateProductTypeDropdown(dropdownId) {
