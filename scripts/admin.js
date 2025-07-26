@@ -512,7 +512,7 @@ async function loadLeadsWithFilters() {
       'lead-zip': lead.zip || '',
       'lead-type': lead.lead_type || '',
       'lead-notes': lead.notes || '',
-      productTd.textContent = lead.product_type || '';
+      'lead-product': lead.product_type || ''
     };
     for (const [cls, text] of Object.entries(cellMap)) {
       const td = document.createElement('td');
