@@ -520,11 +520,6 @@ async function loadLeadsWithFilters() {
       td.textContent = text;
       tr.appendChild(td);
     }
-    // Empty Actions cell (reserved for future use)
-    const actionsTd = document.createElement('td');
-    actionsTd.textContent = '';
-    tr.appendChild(actionsTd);
-    tbody.appendChild(tr);
   });
 }
 const selectAllBox = document.getElementById('select-all');
