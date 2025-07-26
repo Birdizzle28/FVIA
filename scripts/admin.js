@@ -677,7 +677,7 @@ async function assignLeads(agentId) {
   // Reset selection and refresh data
   selectedLeads.clear();
   document.getElementById('selected-count').textContent = '0';
-  document.getElementById('bulk-assign-controls').style.display = 'none';
+  document.getElementById('bulk-export-container').style.display = 'none';
   await loadLeadsWithFilters();
   await loadAssignmentHistory();
 }
