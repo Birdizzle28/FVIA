@@ -720,15 +720,17 @@ const printBtn = document.getElementById('agent-export-print');
 const pdfBtn = document.getElementById('agent-export-pdf');
 const exportBtn = document.getElementById('agent-export-btn');
 const exportOptions = document.getElementById('agent-export-options');
+
 exportBtn?.addEventListener('click', (e) => {
   e.stopPropagation();
   exportOptions.style.display = exportOptions.style.display === 'block' ? 'none' : 'block';
 });
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('#agent-export-controls')) {
+  if (!e.target.closest('#agent-export-controls') && exportOptions) {
     exportOptions.style.display = 'none';
   }
 });
+if (!exportOptions) console.warn("exportOptions not found on this page");
 csvBtn?.addEventListener("click", () => {
   const leads = getSelectedLeadsData();
   if (!leads.length) return alert("No leads selected.");
