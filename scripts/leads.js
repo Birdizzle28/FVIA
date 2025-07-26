@@ -159,6 +159,7 @@ await populateProductTypeDropdown('filter-product-type');  // Lead request form
 await fetchAgentProfile();
 document.getElementById('lead-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
+  const assignedAt = new Date().toISOString();
   const productType = document.getElementById('lead-product-type').value;
   const fullAddress = `${document.getElementById('lead-address').value}, ${document.getElementById('lead-city').value}, ${document.getElementById('lead-state').value} ${document.getElementById('lead-zip').value}`;
   const { lat, lng } = await geocodeAddress(fullAddress);
@@ -182,7 +183,8 @@ document.getElementById('lead-form')?.addEventListener('submit', async (e) => {
     submitted_by_name: agentProfile?.full_name || 'Unknown',
     product_type: productType,
     lat,
-    lng
+    lng,
+    assigned_at: assignedAt
   });
   document.getElementById('lead-message').textContent = error ? 'Failed to submit lead.' : 'Lead submitted!';
 });
