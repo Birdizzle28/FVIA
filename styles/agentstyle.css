@@ -654,3 +654,68 @@ button:disabled {
   /* hide all sections by default; the script will show the first one */
   display: none;
 }
+/* Wrap filters and table together */
+#admin-all-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+/* Create a two‑column grid for the filters */
+.filter-wrapper {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 15px;
+  padding: 15px;
+  background-color: #ffffff;
+  border-radius: 8px;
+}
+
+/* Stack label above each input/select */
+.filter-group {
+  display: flex;
+  flex-direction: column;
+}
+
+.filter-group label {
+  margin-bottom: 4px;
+  font-weight: bold;
+  color: #353468;
+}
+
+.filter-group input,
+.filter-group select {
+  width: 100%;
+  height: 40px;       /* consistent height */
+  padding: 8px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  box-sizing: border-box;
+}
+
+/* Position Apply/Reset buttons across both columns */
+.filter-buttons {
+  grid-column: span 2;            /* span both columns */
+  display: flex;
+  justify-content: center;        /* center them horizontally */
+  gap: 20px;
+}
+
+#apply-filters,
+#reset-filters {
+  flex: 1;                        /* each takes half the available width */
+  padding: 12px;
+  background-color: #ed9ea5;
+  color: #353468;
+  border: none;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+#apply-filters:hover,
+#reset-filters:hover {
+  background-color: #353468;
+  color: #fff;
+}
