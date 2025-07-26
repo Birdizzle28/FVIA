@@ -612,6 +612,39 @@ document.getElementById('phone-inputs')?.addEventListener('click', (e) => {
     e.target.parentElement.remove();
   }
 });
+  // Button and section logic for navigation
+const navButtons = {
+  view: document.getElementById('nav-view'),
+  submit: document.getElementById('nav-submit'),
+  request: document.getElementById('nav-request'),
+};
+
+const sections = {
+  view: document.getElementById('lead-viewer-section'),
+  submit: document.getElementById('submit-lead-section'),
+  request: document.getElementById('request-leads-section'),
+};
+
+// Hide all sections
+function hideAllLeadSections() {
+  Object.values(sections).forEach(section => section.style.display = 'none');
+  Object.values(navButtons).forEach(btn => btn.classList.remove('active'));
+}
+
+// Show selected section
+function showSection(name) {
+  hideAllLeadSections();
+  sections[name].style.display = 'block';
+  navButtons[name].classList.add('active');
+}
+
+// Initial state: show View
+showSection('view');
+
+// Add click handlers
+navButtons.view.addEventListener('click', () => showSection('view'));
+navButtons.submit.addEventListener('click', () => showSection('submit'));
+navButtons.request.addEventListener('click', () => showSection('request'));
 });
 //Logout
 document.getElementById('logout-btn')?.addEventListener('click', async (e) => {
