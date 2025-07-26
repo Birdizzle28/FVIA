@@ -510,7 +510,7 @@ button:disabled {
 /* ... (existing global styles above unchanged) ... */
 
 /* Header - style Agent Hub button to match theme */
-button#agent-hub-toggle {
+#agent-hub-toggle {
   background-color: #ed9ea5;
   color: #5e2a4b;
   border: none;
@@ -519,10 +519,10 @@ button#agent-hub-toggle {
   font-weight: bold;
   cursor: pointer;
 }
-button#agent-hub-toggle:hover {
+#agent-hub-toggle:hover {
   background-color: #482039;
 }
-button#agent-hub-toggle.active-page {
+#agent-hub-toggle.active-page {
   background-color: #5e2a4b;
   color: white;
 }
