@@ -245,6 +245,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log(`(DEBUG) SMS notification: Appointment "${appt.title}" ${when}. Client contact: ${appt.client_phone || appt.client_email}`);
     // TODO: implement actual SMS API call (e.g., call an Edge Function that uses Twilio)
   }
+  //Active page highlight tab
+  const agentHubBtn = document.getElementById('agent-hub-toggle');
+  const hubPages = ['scheduling']; // Add more if needed 
+  console.log("Page Path:", window.location.pathname); // debug
+  console.log("Found Agent Hub Button:", agentHubBtn); // debug
+  if (hubPages.some(page => window.location.pathname.includes(page))) {
+    agentHubBtn?.classList.add('active-page');
+  } else {
+    agentHubBtn?.classList.remove('active-page');
+  }
 });
 
 // Logout button handler (preserved from existing code)
