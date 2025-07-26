@@ -490,7 +490,7 @@ async function loadLeadsWithFilters() {
         selectedLeads.delete(lead.id);
       }
       document.getElementById('selected-count').textContent = selectedLeads.size;
-      document.getElementById('bulk-export-container').style.display = selectedLeads.size > 0 ? 'block' : 'none';
+      document.getElementById('bulk-assign-controls').style.display = selectedLeads.size > 0 ? 'block' : 'none';
       toggleExportVisibility();
     });
     checkboxTd.appendChild(checkbox);
@@ -677,7 +677,7 @@ async function assignLeads(agentId) {
   // Reset selection and refresh data
   selectedLeads.clear();
   document.getElementById('selected-count').textContent = '0';
-  document.getElementById('bulk-export-container').style.display = 'none';
+  document.getElementById('bulk-assign-controls').style.display = 'none';
   await loadLeadsWithFilters();
   await loadAssignmentHistory();
 }
