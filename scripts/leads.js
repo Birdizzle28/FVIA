@@ -113,7 +113,7 @@ document.querySelectorAll('input[name="lead-phone"]').forEach(formatPhoneInput);
 async function geocodeAddress(address) {
   const apiKey = 'AIzaSyD5nGhz1mUXK1aGsoQSzo4MXYcI-uoxPa4'; // 🔁 Replace with your actual API key
   const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
-
+  console.log(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`);
   try {
     const response = await fetch(url);
     const data = await response.json();
@@ -129,7 +129,6 @@ async function geocodeAddress(address) {
     console.error('Error during geocoding:', error);
     return { lat: null, lng: null };
   }
-  console.log(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`);
 }
 // Lead submission
 async function populateProductTypeDropdown(dropdownId) {
