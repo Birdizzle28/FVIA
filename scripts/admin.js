@@ -105,6 +105,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Adjust product filter when selecting an agent for bulk assignment
   document.getElementById('bulk-assign-agent').addEventListener('change', e => {
     const agentId = e.target.value;
+    if (agentId) {
+      const agent = allAgents.find(a => a.id === agentId);
+      if (agent && agent.product_types) {
+        allowedProductsFilter = Array.isArray(agent.product_types) ? agent.product_types.slice() : [agent.product_types];
+      } else {
+        allowedProductsFilter = null;
+      }
+    } else {
+      allowedProductsFilter = null;
+    }
     currentPage = 1;
     loadLeadsWithFilters();
   });
@@ -440,7 +450,7 @@ async function loadLeadsWithFilters() {
   } else if (assignedVal === 'false') {
     query = query.is('assigned_to', null);
   }
-  if (allowedProductsFilter && Array.isArray(allowedProductsFilter)) {
+  /*if (allowedProductsFilter && Array.isArray(allowedProductsFilter)) {
     if (allowedProductsFilter.length === 0) {
       // Agent has no eligible products: no leads should show
       tbody.innerHTML = '<tr><td colspan="14">No leads available for the selected agent.</td></tr>';
@@ -451,7 +461,7 @@ async function loadLeadsWithFilters() {
     } else {
       query = query.in('lead_type', allowedProductsFilter);
     }
-  }
+  }*/
   const from = (currentPage - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
   const { data: leads, error, count } = await query.order(sortBy, { ascending: orderDir === 'asc' }).range(from, to);
