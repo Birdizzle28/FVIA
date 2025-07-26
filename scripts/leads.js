@@ -158,6 +158,11 @@ console.log('lead-product-type options:', [...document.getElementById('lead-prod
 await populateProductTypeDropdown('filter-product-type');  // Lead request form
 await fetchAgentProfile();
 document.getElementById('lead-form')?.addEventListener('submit', async (e) => {
+  const stateValue = document.getElementById('lead-state').value;
+  if (!stateValue) {
+    alert("Please select a valid state before submitting.");
+    return;
+  }
   e.preventDefault();
   const assignedAt = new Date().toISOString();
   const productType = document.getElementById('lead-product-type').value;
