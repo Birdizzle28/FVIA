@@ -629,4 +629,28 @@ button:disabled {
   cursor: not-allowed;
 }
 
-/* ... (keep other styles unchanged below) ... */
+/* Admin page navigation bar */
+#admin-page-nav {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin: 10px auto;
+  width: 90%;
+}
+#admin-page-nav button {
+  background-color: #ed9ea5;
+  color: #353468;
+  border: none;
+  padding: 8px 16px;
+  font-weight: bold;
+  border-radius: 4px;
+  cursor: pointer;
+}
+#admin-page-nav button.active {
+  background-color: #353468;
+  color: #fff;
+}
+.admin-section {
+  /* hide all sections by default; the script will show the first one */
+  display: none;
+}
