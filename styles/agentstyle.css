@@ -512,7 +512,7 @@ button:disabled {
 /* Header - style Agent Hub button to match theme */
 button#agent-hub-toggle {
   background-color: #ed9ea5;
-  color: #fff;
+  color: #5e2a4b;
   border: none;
   padding: 8px 12px;
   border-radius: 4px;
