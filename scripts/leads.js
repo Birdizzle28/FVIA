@@ -638,7 +638,7 @@ function showSection(name) {
 }
   //Active page highlight tab
   const agentHubBtn = document.getElementById('agent-hub-toggle');
-  const hubPages = ['leads.html', 'maps.html', 'scheduling.html', 'calculator.html']; // Add more if needed
+  const hubPages = ['leads', 'maps', 'scheduling', 'calculator']; // Add more if needed 
   console.log("Page Path:", window.location.pathname); // debug
   console.log("Found Agent Hub Button:", agentHubBtn); // debug
   if (hubPages.some(page => window.location.pathname.includes(page))) {
