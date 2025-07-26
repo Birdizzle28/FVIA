@@ -520,6 +520,7 @@ async function loadLeadsWithFilters() {
       td.textContent = text;
       tr.appendChild(td);
     }
+    tbody.appendChild(tr);
   });
 }
 const selectAllBox = document.getElementById('select-all');
