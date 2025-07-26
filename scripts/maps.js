@@ -585,4 +585,15 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('start-route').disabled = true;
   document.getElementById('optimize-route').disabled = true;
   if (exportBtn) exportBtn.disabled = true;
+
+  //Active page highlight tab
+  const agentHubBtn = document.getElementById('maps-tab');
+  const hubPages = ['maps']; // Add more if needed 
+  console.log("Page Path:", window.location.pathname); // debug
+  console.log("Found Agent Hub Button:", agentHubBtn); // debug
+  if (hubPages.some(page => window.location.pathname.includes(page))) {
+    agentHubBtn?.classList.add('active-page');
+  } else {
+    agentHubBtn?.classList.remove('active-page');
+  }
 });
