@@ -25,7 +25,7 @@
     </div>
     <div id="navcontainer">
       <nav class="header-flex-container">
-        <a href="profile.html">Profile</a>
+        <a id="profile-tab" href="profile.html">Profile</a>
         <div class="dropdown">
           <button id="agent-hub-toggle" class="dropbtn">Agent Hub ▾</button>
           <div id="agent-hub-menu" class="dropdown-content">
@@ -35,9 +35,8 @@
             <a href="calculator.html">Insurance Calculator</a>
           </div>
         </div>
-        <a href="thread.html">Thread</a>
-        <a href="admin.html" class="admin-only">Admin</a>
-        <a href="#" id="logout-btn">Logout</a>
+        <a id="thread-tab" href="thread.html">Thread</a>
+        <a id="admin-tab"href="admin.html" class="admin-only">Admin</a>
       </nav>
     </div>
   </header>
@@ -66,6 +65,7 @@
         <p id="edit-profile-message"></p>
       </form>
     </section>
+    <button href="#" id="logout-btn">Logout</a>
   </main>
 
   <!-- Footer -->
