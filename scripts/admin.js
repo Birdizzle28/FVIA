@@ -107,8 +107,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const agentId = e.target.value;
     if (agentId) {
       const agent = allAgents.find(a => a.id === agentId);
-      if (agent && agent.products) {
-        allowedProductsFilter = Array.isArray(agent.products) ? agent.products.slice() : [agent.products];
+      if (agent && agent.product_types) {
+        allowedProductsFilter = Array.isArray(agent.product_types) ? agent.product_types.slice() : [agent.product_types];
       } else {
         allowedProductsFilter = null;
       }
@@ -133,12 +133,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     // Validate product eligibility for selected leads
     const agentInfo = allAgents.find(a => a.id === agentId);
-    if (agentInfo && agentInfo.products) {
+    if (agentInfo && agentInfo.product_types) {
       let ineligibleFound = false;
       for (let id of selectedIds) {
         const row = document.querySelector(`input[data-lead-id="${id}"]`)?.closest('tr');
         const leadType = row?.querySelector('.lead-type')?.textContent.trim();
-        if (leadType && !agentInfo.products.includes(leadType)) {
+        if (leadType && !agentInfo.product_types.includes(leadType)) {
           ineligibleFound = true;
           break;
         }
