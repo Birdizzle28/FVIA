@@ -421,8 +421,6 @@ async function loadLeadsWithFilters() {
   if (!tbody) return;
   selectedLeads.clear();
   document.getElementById('selected-count').textContent = '0';
-  document.getElementById('bulk-assign-controls').style.display = 'none';
-  document.getElementById('bulk-export-invisible-container').style.display = 'none';
   tbody.innerHTML = '';
   // Build query based on filters
   let query = supabase.from('leads').select('*', { count: 'exact' });
@@ -492,7 +490,6 @@ async function loadLeadsWithFilters() {
       }
       document.getElementById('selected-count').textContent = selectedLeads.size;
       document.getElementById('bulk-assign-controls').style.display = selectedLeads.size > 0 ? 'block' : 'none';
-      document.getElementById('bulk-export-invisible-container').style.display = 'block';
       toggleExportVisibility();
     });
     checkboxTd.appendChild(checkbox);
@@ -679,8 +676,6 @@ async function assignLeads(agentId) {
   // Reset selection and refresh data
   selectedLeads.clear();
   document.getElementById('selected-count').textContent = '0';
-  document.getElementById('bulk-assign-controls').style.display = 'none';
-  document.getElementById('bulk-export-invisible-container').style.display = 'none';
   await loadLeadsWithFilters();
   await loadAssignmentHistory();
 }
