@@ -8,6 +8,13 @@ let sortField = 'created_at';
 let sortAsc = false;
 let notesFilterTimeout;
 
+const { data: sessionData } = await supabase.auth.getSession();
+if (!sessionData?.session) {
+  console.warn("No session — forcing logout and redirect");
+  await supabase.auth.signOut();
+  window.location.href = 'login.html';
+}
+
 function updateAgentPaginationControls() {
   document.getElementById('agent-current-page').textContent = `Page ${agentCurrentPage}`;
   document.getElementById('agent-prev-page').disabled = agentCurrentPage === 1;
