@@ -522,7 +522,7 @@ button#agent-hub-toggle {
 button#agent-hub-toggle:hover {
   background-color: #482039;
 }
-button#agent-hub-button.active-page {
+button#agent-hub-toggle.active-page {
   background-color: #5e2a4b;
   color: white;
 }
