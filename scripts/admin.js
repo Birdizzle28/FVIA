@@ -496,6 +496,7 @@ async function loadLeadsWithFilters() {
     checkboxTd.appendChild(checkbox);
     tr.appendChild(checkboxTd);
     // Assigned agent name (or Unassigned)
+    const productTd = document.createElement('td');
     const agentName = lead.assigned_to ? (allAgents.find(a => a.id === lead.assigned_to)?.full_name || 'Unassigned') : 'Unassigned';
     // Other fields
     const cellMap = {
@@ -510,7 +511,8 @@ async function loadLeadsWithFilters() {
       'lead-state': lead.state || '',
       'lead-zip': lead.zip || '',
       'lead-type': lead.lead_type || '',
-      'lead-notes': lead.notes || ''
+      'lead-notes': lead.notes || '',
+      productTd.textContent = lead.product_type || '';
     };
     for (const [cls, text] of Object.entries(cellMap)) {
       const td = document.createElement('td');
@@ -525,7 +527,15 @@ async function loadLeadsWithFilters() {
     tbody.appendChild(tr);
   });
 }
-
+const selectAllBox = document.getElementById('select-all');
+selectAllBox?.addEventListener('change', (e) => {
+  const checked = e.target.checked;
+  document.querySelectorAll('.lead-checkbox').forEach(cb => {
+    cb.checked = checked;
+    // fire the change event to update selectedLeads and UI
+    cb.dispatchEvent(new Event('change'));
+  });
+});
 // Load lead requests list (admin view of all requests)
 async function loadRequestedLeads() {
   const container = document.getElementById('requested-leads-container');
