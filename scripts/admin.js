@@ -350,6 +350,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   navButtons.history.addEventListener('click', () => showAdminSection('history'));
   navButtons.stats.addEventListener('click', () => showAdminSection('stats'));
 
+  // Hook up pagination buttons (place near the bottom of admin.js or inside DOMContentLoaded)
+  const nextBtn = document.getElementById('next-page');
+  const prevBtn = document.getElementById('prev-page');
+  
+  nextBtn?.addEventListener('click', async () => {
+    // You can optionally check currentPage against the totalPages, but the disabled
+    // attribute already prevents clicks when at the last page.
+    currentPage++;
+    await loadLeadsWithFilters();
+  });
+  
+  prevBtn?.addEventListener('click', async () => {
+    if (currentPage > 1) {
+      currentPage--;
+      await loadLeadsWithFilters();
+    }
+  });
 }); // end DOMContentLoaded
 
 // Load active agents and populate filters
