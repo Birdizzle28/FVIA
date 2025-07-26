@@ -773,6 +773,7 @@ button:disabled {
 
 #bulk-assign-controls,
 #export-controls {
+  margin: auto;
   width: 100%;
   display: flex;
   flex-direction: column;
