@@ -524,8 +524,8 @@ button:disabled {
   background-color: #482039;
 }
 #agent-hub-toggle.active-page {
-  background-color: #5e2a4b;
-  color: white;
+  background-color: #5e2a4b !important;
+  color: white !important;
 }
 /* Leads page sections styling */
 .lead-section {
