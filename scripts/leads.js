@@ -154,6 +154,7 @@ async function populateProductTypeDropdown(dropdownId) {
   }
 }
 await populateProductTypeDropdown('lead-product-type');    // Lead submission form
+console.log('lead-product-type options:', [...document.getElementById('lead-product-type').options].map(o => o.value));
 await populateProductTypeDropdown('filter-product-type');  // Lead request form
 await fetchAgentProfile();
 document.getElementById('lead-form')?.addEventListener('submit', async (e) => {
@@ -164,6 +165,7 @@ document.getElementById('lead-form')?.addEventListener('submit', async (e) => {
   const session = await supabase.auth.getSession();
   const user = session.data.session.user;
   const phones = Array.from(document.querySelectorAll('[name="lead-phone"]')).map(p => p.value);
+  console.log("Submitting with product type:", productType);
   const { data, error } = await supabase.from('leads').insert({
     first_name: document.getElementById('lead-first').value,
     last_name: document.getElementById('lead-last').value,
