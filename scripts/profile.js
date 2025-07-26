@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
   //Active page highlight tab
-  const agentHubBtn = document.getElementById('agent-hub-toggle');
+  const agentHubBtn = document.getElementById('profile-tab');
   const hubPages = ['profile']; // Add more if needed 
   console.log("Page Path:", window.location.pathname); // debug
   console.log("Found Agent Hub Button:", agentHubBtn); // debug
