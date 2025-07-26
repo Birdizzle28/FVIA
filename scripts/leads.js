@@ -111,7 +111,7 @@ function formatPhoneInput(input) {
 }
 document.querySelectorAll('input[name="lead-phone"]').forEach(formatPhoneInput);
 async function geocodeAddress(address) {
-  const apiKey = 'AIzaSyD5nGhz1mUXK1aGsoQSzo4MXYcI-uoxPa4'; // 🔁 Replace with your actual API key
+  const apiKey = 'AIzaSyCFVLjqLqrSuOcGlTJzqYRM4yrsCcaYZzA'; // 🔁 Replace with your actual API key
   const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
   console.log(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`);
   try {
