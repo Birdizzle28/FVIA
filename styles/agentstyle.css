@@ -101,10 +101,22 @@
   flex-wrap: wrap;
 }
 .header-flex-container a {
-  font-weight: bold;
   text-decoration: none;
-  font-size: 1rem;
+  background-color: #ed9ea5;
   color: #353468;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-weight: bold;
+  cursor: pointer;
+  font-size: 1rem;
+}
+.header-flex-container a:hover {
+  background-color: #482039;
+}
+.header-flex-container a.active-page {
+  background-color: #5e2a4b !important;
+  color: white !important;
 }
 
 /* Profile section card */
