@@ -1,4 +1,4 @@
-// Import Supabase client
+//// Import Supabase client
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 const supabase = createClient('https://ddlbgkolnayqrxslzsxn.supabase.co', 'eyJh...TDT5Ho');  // keys truncated for brevity
 
@@ -434,6 +434,16 @@ document.addEventListener('DOMContentLoaded', async () => {
       e.target.parentElement.remove();
     }
   });
+  //Active page highlight tab
+  const agentHubBtn = document.getElementById('admin-tab');
+  const hubPages = ['admin']; // Add more if needed 
+  console.log("Page Path:", window.location.pathname); // debug
+  console.log("Found Agent Hub Button:", agentHubBtn); // debug
+  if (hubPages.some(page => window.location.pathname.includes(page))) {
+    agentHubBtn?.classList.add('active-page');
+  } else {
+    agentHubBtn?.classList.remove('active-page');
+  }
 });
 
 // Logout button handler
