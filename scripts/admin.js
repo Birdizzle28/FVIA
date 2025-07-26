@@ -1,77 +1,28 @@
-//// Import Supabase client
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-const supabase = createClient('https://ddlbgkolnayqrxslzsxn.supabase.co', 'eyJh...TDT5Ho');  // keys truncated for brevity
+const supabase = createClient(
+  'https://ddlbgkolnayqrxslzsxn.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
+);
 
-// Global state variables
-let agentLeadsAll = [];
-let sortField = 'created_at';
-let sortAsc = false;
-let notesFilterTimeout;
+let userId = null;
+let userRole = null;
+let allAgents = [];
+let selectedLeads = new Set();
+let currentPage = 1;
+const PAGE_SIZE = 25;
+let rangeStart = null;
+let rangeEnd = null;
+let allowedProductsFilter = null;
 
-const { data: sessionData } = await supabase.auth.getSession();
-if (!sessionData?.session) {
-  console.warn("No session — forcing logout and redirect");
-  await supabase.auth.signOut();
-  window.location.href = 'login.html';
-}
-console.log(document.getElementById('agent-hub-toggle'))
-function updateAgentPaginationControls() {
-  document.getElementById('agent-current-page').textContent = `Page ${agentCurrentPage}`;
-  document.getElementById('agent-prev-page').disabled = agentCurrentPage === 1;
-  document.getElementById('agent-next-page').disabled = agentCurrentPage === agentTotalPages;
-}
-let agentCurrentPage = 1;
-let agentTotalPages = 1;
-const pageSize = 25;
-let agentProfile = null;
-
-async function fetchAgentProfile() {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) {
-    console.error("User not found or not logged in.");
-    return;
-  }
-  const { data, error } = await supabase.from('agents').select('*').eq('id', user.id).single();
-  if (error) {
-    console.error('Error fetching agent profile:', error);
-  } else {
-    agentProfile = data;
-  }
-}
-
-// Populate product type dropdown (for lead forms and filters)
-async function populateProductTypeDropdown(dropdownId) {
-  const { data: userRes } = await supabase.auth.getUser();
-  const { data: profile } = await supabase.from('agents').select('product_types').eq('id', userRes.data.user.id).single();
-  const dropdown = document.getElementById(dropdownId);
-  if (!dropdown) return;
-  if (dropdownId.includes('filter') || dropdownId.includes('agent-product-type')) {
-    dropdown.innerHTML = '<option value="">Any</option>';
-  } else {
-    dropdown.innerHTML = '<option value="">Select product type</option>';
-  }
-  if (profile?.product_types?.length > 0) {
-    profile.product_types.forEach(type => {
-      const option = document.createElement('option');
-      option.value = type;
-      option.textContent = type;
-      dropdown.appendChild(option);
-    });
-  }
-}
-
-// ✅ Session check and initial setup
 document.addEventListener('DOMContentLoaded', async () => {
-  const stateSelect1 = document.getElementById('lead-state');
-  const stateSelect2 = document.getElementById('request-state');
-
   const toggle = document.getElementById("agent-hub-toggle");
   const menu = document.getElementById("agent-hub-menu");
-  // Ensure dropdown menu hidden initially
+
+  // Initialize dropdown menu (Agent Hub) behavior
   menu.style.display = "none";
   toggle?.addEventListener("click", (e) => {
     e.stopPropagation();
-    menu.style.display = menu.style.display === "block" ? "none" : "block";
+    menu.style.display = (menu.style.display === "block") ? "none" : "block";
   });
   document.addEventListener("click", (e) => {
     if (!e.target.closest(".dropdown")) {
@@ -79,790 +30,583 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  if (stateSelect1) new Choices(stateSelect1, {
-    searchEnabled: true,
-    shouldSort: false,
-    placeholder: true,
-    searchPlaceholderValue: 'Type to filter…'
-  });
-  if (stateSelect2) new Choices(stateSelect2, {
-    searchEnabled: true,
-    shouldSort: false,
-    placeholder: true,
-    searchPlaceholderValue: 'Type to filter…'
-  });
-
+  // Require login session
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     window.location.href = 'login.html';
     return;
   }
-  const user = session.user;
-
-  // Load profile info and populate dropdowns
-  const { data: profile } = await supabase.from('agents').select('*').eq('id', user.id).single();
-  console.log("Fetched profile:", profile);
-  if (!profile.is_admin) {
-    const adminLink = document.querySelector('.admin-only');
-    if (adminLink) adminLink.style.display = 'none';
+  userId = session.user.id;
+  // Check if current user is admin
+  const { data: profile, error: profileError } = await supabase.from('agents').select('is_admin').eq('id', userId).single();
+  if (profileError) {
+    console.error('Failed to check admin status:', profileError);
   }
-
-  // Populate product type options for forms and filters
-  await populateProductTypeDropdown('lead-product-type');    // Lead submission form
-  await populateProductTypeDropdown('filter-product-type');  // Lead request form
-  await populateProductTypeDropdown('agent-product-type-filter');  // Lead viewer filter
-  await fetchAgentProfile();
-
-  // Format phone number inputs as (123) 456-7890 while typing
-  function formatPhoneInput(input) {
-    input.addEventListener('input', () => {
-      let numbers = input.value.replace(/\D/g, '');
-      if (numbers.length > 10) numbers = numbers.slice(0, 10);
-      const parts = [];
-      if (numbers.length > 0) parts.push('(' + numbers.slice(0, 3));
-      if (numbers.length >= 4) parts.push(') ' + numbers.slice(3, 6));
-      if (numbers.length >= 7) parts.push('-' + numbers.slice(6, 10));
-      input.value = parts.join('');
-    });
+  if (!profile || profile.is_admin !== true) {
+    alert('Access denied.');
+    window.location.href = 'profile.html';
+    return;
   }
-  document.querySelectorAll('input[name="lead-phone"]').forEach(formatPhoneInput);
-
-  async function geocodeAddress(address) {
-    const apiKey = 'AIzaSyC...';  // 🔁 Replace with actual API key
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
-    try {
-      const response = await fetch(url);
-      const data = await response.json();
-      if (data.status === 'OK' && data.results.length > 0) {
-        const location = data.results[0].geometry.location;
-        return { lat: location.lat, lng: location.lng };
-      } else {
-        console.warn('Geocoding failed:', data.status);
-        return { lat: null, lng: null };
-      }
-    } catch (error) {
-      console.error('Error during geocoding:', error);
-      return { lat: null, lng: null };
-    }
-  }
-
-  // Lead submission form handler (insert or update)
-  document.getElementById('lead-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const stateValue = document.getElementById('lead-state').value;
-    if (!stateValue) {
-      alert("Please select a valid state before submitting.");
-      return;
-    }
-    const editingId = document.getElementById('editing-lead-id').value;
-    if (editingId) {
-      // Update existing lead
-      const productType = document.getElementById('lead-product-type').value;
-      const fullAddress = `${document.getElementById('lead-address').value}, ${document.getElementById('lead-city').value}, ${document.getElementById('lead-state').value} ${document.getElementById('lead-zip').value}`;
-      const { lat, lng } = await geocodeAddress(fullAddress);
-      const session = await supabase.auth.getSession();
-      const user = session.data.session.user;
-      const phones = Array.from(document.querySelectorAll('[name="lead-phone"]')).map(p => p.value);
-      console.log("Updating lead ID:", editingId);
-      const { error: updateError } = await supabase.from('leads').update({
-        first_name: document.getElementById('lead-first').value,
-        last_name: document.getElementById('lead-last').value,
-        age: parseInt(document.getElementById('lead-age').value),
-        address: document.getElementById('lead-address').value,
-        city: document.getElementById('lead-city').value,
-        state: document.getElementById('lead-state').value,
-        zip: document.getElementById('lead-zip').value,
-        phone: phones,
-        lead_type: document.getElementById('lead-type').value,
-        notes: document.getElementById('lead-notes').value,
-        product_type: productType,
-        lat, lng
-      }).eq('id', editingId);
-      document.getElementById('lead-message').textContent = updateError ? 'Failed to update lead.' : 'Lead updated!';
-      if (!updateError) {
-        await loadAgentLeads();  // Refresh the leads table
-        // Reset form and editing state
-        document.getElementById('lead-form').reset();
-        document.querySelectorAll('#phone-inputs .phone-line').forEach((line, idx) => {
-          if (idx > 0) line.remove();
-        });
-        document.getElementById('submit-section').style.display = 'none';
-        document.getElementById('view-section').style.display = 'block';
-        document.getElementById('nav-submit').classList.remove('active');
-        document.getElementById('nav-view').classList.add('active');
-        document.getElementById('editing-lead-id').value = '';
-        document.querySelector('#submit-section h3').textContent = 'Submit a Lead';
-      }
-      return;
-    }
-    // Insert new lead
-    const assignedAt = new Date().toISOString();
-    const productType = document.getElementById('lead-product-type').value;
-    const fullAddress = `${document.getElementById('lead-address').value}, ${document.getElementById('lead-city').value}, ${document.getElementById('lead-state').value} ${document.getElementById('lead-zip').value}`;
-    const { lat, lng } = await geocodeAddress(fullAddress);
-    const session = await supabase.auth.getSession();
-    const user = session.data.session.user;
-    const phones = Array.from(document.querySelectorAll('[name="lead-phone"]')).map(p => p.value);
-    console.log("Submitting with product type:", productType);
-    const { error } = await supabase.from('leads').insert({
-      first_name: document.getElementById('lead-first').value,
-      last_name: document.getElementById('lead-last').value,
-      age: parseInt(document.getElementById('lead-age').value),
-      address: document.getElementById('lead-address').value,
-      city: document.getElementById('lead-city').value,
-      state: document.getElementById('lead-state').value,
-      zip: document.getElementById('lead-zip').value,
-      phone: phones,
-      lead_type: document.getElementById('lead-type').value,
-      notes: document.getElementById('lead-notes').value,
-      assigned_to: user.id,
-      submitted_by: user.id,
-      submitted_by_name: agentProfile?.full_name || 'Unknown',
-      product_type: productType,
-      lat,
-      lng,
-      assigned_at: assignedAt
-    });
-    document.getElementById('lead-message').textContent = error ? 'Failed to submit lead.' : 'Lead submitted!';
-  });
-
-  // Lead request form submit handler
-  document.getElementById('lead-request-form')?.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const stateValue = document.getElementById('request-state').value;
-    if (!stateValue) {
-      alert("Please select a valid state before submitting.");
-      return;
-    }
-    const messageEl = document.getElementById('request-message');
-    messageEl.textContent = '';
-    try {
-      const { data: sessionData } = await supabase.auth.getSession();
-      const user = sessionData.session?.user;
-      if (!user) {
-        messageEl.textContent = '❌ You must be logged in.';
-        return;
-      }
-      const requestData = {
-        submitted_by: user.id,
-        city: document.getElementById('request-city').value,
-        state: document.getElementById('request-state').value,
-        zip: document.getElementById('request-zip').value,
-        lead_type: document.getElementById('request-type').value,
-        product_type: document.getElementById('filter-product-type').value,
-        requested_count: parseInt(document.getElementById('request-count').value),
-        notes: document.getElementById('request-notes').value
-      };
-      const { error } = await supabase.from('lead_requests').insert(requestData);
-      if (error) {
-        console.error('❌ Request insert failed:', error);
-        messageEl.textContent = '❌ Failed to submit request.';
-      } else {
-        messageEl.textContent = '✅ Request submitted!';
-      }
-    } catch (err) {
-      console.error('Unexpected error:', err);
-      messageEl.textContent = '❌ Something went wrong.';
-    }
-  });
-
-  // Load agent leads (with filters, sorting, and pagination)
-  async function loadAgentLeads() {
-    const session = await supabase.auth.getSession();
-    const user = session.data.session.user;
-    let query = supabase.from('leads').select('*').eq('assigned_to', user.id).eq('archived', false);
-
-    // ✅ Gather filter values
-    const filters = {
-      first_name: document.getElementById('agent-first-name-filter')?.value.trim(),
-      last_name: document.getElementById('agent-last-name-filter')?.value.trim(),
-      zip: document.getElementById('agent-zip-filter')?.value.trim(),
-      city: document.getElementById('agent-city-filter')?.value.trim(),
-      state: document.getElementById('agent-state-filter')?.value.trim(),
-      lead_type: document.getElementById('agent-lead-type-filter')?.value.trim(),
-      product_type: document.getElementById('agent-product-type-filter')?.value.trim(),
-      notes: document.getElementById('agent-notes-filter')?.value.trim()
-    };
-    const dateRange = document.getElementById('agent-date-range')?.value;
-    const order = document.getElementById('agent-date-order')?.value || 'desc';
-
-    // ✅ Apply string filters (case-insensitive partial match)
-    for (const [key, value] of Object.entries(filters)) {
-      if (value) query = query.ilike(key, `%${value}%`);
-    }
-
-    // ✅ Apply date range if selected
-    if (dateRange && dateRange.includes(' to ')) {
-      const [start, end] = dateRange.split(/\s*to\s*/);
-      const startDate = new Date(start);
-      const endDate = new Date(end);
-      endDate.setHours(23, 59, 59, 999);
-      if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-        console.warn('⛔ Invalid date format detected');
-      } else if (startDate > endDate) {
-        console.warn('⛔ Start date is after end date!');
-      } else {
-        query = query.gte('created_at', startDate.toISOString()).lte('created_at', endDate.toISOString());
-      }
-    }
-
-    // ✅ Apply default order (by date created)
-    query = query.order('created_at', { ascending: order === 'asc' });
-
-    // ✅ Fetch data
-    const { data: leads, error } = await query;
-    if (error) {
-      console.error('❌ Error loading leads:', error);
-      return;
-    }
-
-    // ✅ Prepare data for display (apply any custom sorting)
-    agentLeadsAll = leads || [];
-    if (sortField && sortField !== 'created_at') {
-      agentLeadsAll.sort((a, b) => {
-        let aVal = a[sortField], bVal = b[sortField];
-        if (aVal === null || aVal === undefined) aVal = '';
-        if (bVal === null || bVal === undefined) bVal = '';
-        if (sortField === 'created_at') {
-          // Compare by date
-          return sortAsc ? new Date(aVal) - new Date(bVal) : new Date(bVal) - new Date(aVal);
-        }
-        if (typeof aVal === 'string' && typeof bVal === 'string') {
-          return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
-        }
-        // numeric or other types
-        return sortAsc ? aVal - bVal : bVal - aVal;
-      });
-    }
-
-    // ✅ Paginate and render table
-    agentTotalPages = Math.ceil(agentLeadsAll.length / pageSize) || 1;
-    if (agentCurrentPage > agentTotalPages) agentCurrentPage = agentTotalPages;
-    const start = (agentCurrentPage - 1) * pageSize;
-    const paginatedLeads = agentLeadsAll.slice(start, start + pageSize);
-    const tbody = document.querySelector('#agent-leads-table tbody');
-    tbody.innerHTML = '';
-    paginatedLeads.forEach(lead => {
-      const row = document.createElement('tr');
-      row.innerHTML = `
-        <td><input type="checkbox" class="lead-checkbox" data-lead-id="${lead.id}"></td>
-        <td class="lead-date">${new Date(lead.created_at).toLocaleDateString()}</td>
-        <td class="lead-agent">${lead.submitted_by_name || ''}</td>
-        <td class="lead-name">${lead.first_name || ''}</td>
-        <td class="lead-last">${lead.last_name || ''}</td>
-        <td class="lead-age">${lead.age ?? ''}</td>
-        <td class="lead-phone">${(lead.phone || []).join(', ')}</td>
-        <td class="lead-address">${lead.address || ''}</td>
-        <td class="lead-city">${lead.city || ''}</td>
-        <td class="lead-state">${lead.state || ''}</td>
-        <td class="lead-zip">${lead.zip || ''}</td>
-        <td class="lead-type">${lead.lead_type || ''}</td>
-        <td class="lead-product-type">${lead.product_type || ''}</td>
-        <td class="lead-notes">${lead.notes || ''}</td>
-      `;
-      tbody.appendChild(row);
-    });
-    updateAgentPaginationControls();
-    console.log('Date range value:', document.getElementById('agent-date-range').value);
-    // Uncheck master checkbox after reload
-    const selectAllCb = document.getElementById('select-all');
-    if (selectAllCb) selectAllCb.checked = false;
-  }
-
-  // Initial load
-  await loadAgentLeads();
+  userRole = 'admin';
 
   // Initialize date range picker
-  flatpickr("#agent-date-range", {
-    mode: "range",
-    dateFormat: "Y-m-d",
-    rangeSeparator: " to "
-  });
-
-  // Filter apply/reset event handlers
-  document.getElementById('agent-apply-filters')?.addEventListener('click', async () => {
-    agentCurrentPage = 1;
-    await loadAgentLeads();
-  });
-  document.getElementById('agent-reset-filters')?.addEventListener('click', () => {
-    document.getElementById('agent-date-range').value = '';
-    document.getElementById('agent-date-order').value = 'desc';
-    document.getElementById('agent-zip-filter').value = '';
-    document.getElementById('agent-city-filter').value = '';
-    document.getElementById('agent-state-filter').value = '';
-    document.getElementById('agent-first-name-filter').value = '';
-    document.getElementById('agent-last-name-filter').value = '';
-    document.getElementById('agent-lead-type-filter').value = '';
-    document.getElementById('agent-product-type-filter').value = '';
-    document.getElementById('agent-notes-filter').value = '';
-    agentCurrentPage = 1;
-    loadAgentLeads();
-  });
-
-  // Enable Choices.js for state filter dropdown
-  const agentStateFilter = document.getElementById('agent-state-filter');
-  if (agentStateFilter) new Choices(agentStateFilter, {
-    searchEnabled: true,
-    shouldSort: false,
-    placeholder: true,
-    searchPlaceholderValue: 'Type to filter…'
-  });
-
-  // Pagination controls
-  document.getElementById('agent-next-page')?.addEventListener('click', async () => {
-    if (agentCurrentPage < agentTotalPages) {
-      agentCurrentPage++;
-      await loadAgentLeads();
+  flatpickr('#date-range', {
+    mode: 'range',
+    dateFormat: 'Y-m-d',
+    onChange: function(selectedDates) {
+      rangeStart = selectedDates[0] ? selectedDates[0].toISOString().split('T')[0] : null;
+      rangeEnd = selectedDates[1] ? selectedDates[1].toISOString().split('T')[0] : null;
+      loadLeadsWithFilters();
     }
   });
-  document.getElementById('agent-prev-page')?.addEventListener('click', async () => {
-    if (agentCurrentPage > 1) {
-      agentCurrentPage--;
-      await loadAgentLeads();
+  // Enhance state filter with Choices.js
+  new Choices('#state-filter', { searchEnabled: true, itemSelectText: '' });
+
+  // Load agents list and populate dropdowns
+  await loadAgentsForAdmin();
+  // Initial data load
+  await loadLeadsWithFilters();
+  await loadRequestedLeads();
+  await loadAssignmentHistory();
+
+  // Filter change events
+  document.querySelectorAll('#admin-filters input, #admin-filters select').forEach(el => {
+    el.addEventListener('change', loadLeadsWithFilters);
+  });
+  document.getElementById('apply-filters').addEventListener('click', () => loadLeadsWithFilters());
+  document.getElementById('reset-filters').addEventListener('click', () => {
+    document.querySelectorAll('#admin-filters input, #admin-filters select').forEach(el => {
+      if (el.tagName === 'SELECT') el.selectedIndex = 0;
+      else el.value = '';
+    });
+    rangeStart = null;
+    rangeEnd = null;
+    allowedProductsFilter = null;
+    loadLeadsWithFilters();
+  });
+  // Column header sorting
+  let currentSortColumn = null;
+  let currentSortDirection = 'asc';
+  document.querySelectorAll('#leads-table th[data-column]').forEach(th => {
+    th.addEventListener('click', () => {
+      const column = th.getAttribute('data-column');
+      if (currentSortColumn === column) {
+        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+      } else {
+        currentSortColumn = column;
+        currentSortDirection = 'asc';
+      }
+      document.getElementById('sort-by').value = column;
+      document.getElementById('date-order').value = currentSortDirection;
+      loadLeadsWithFilters();
+    });
+  });
+
+  // Adjust product filter when selecting an agent for bulk assignment
+  document.getElementById('bulk-assign-agent').addEventListener('change', e => {
+    const agentId = e.target.value;
+    if (agentId) {
+      const agent = allAgents.find(a => a.id === agentId);
+      if (agent && agent.product_types) {
+        allowedProductsFilter = Array.isArray(agent.product_types) ? agent.product_types.slice() : [agent.product_types];
+      } else {
+        allowedProductsFilter = null;
+      }
+    } else {
+      allowedProductsFilter = null;
+    }
+    currentPage = 1;
+    loadLeadsWithFilters();
+  });
+
+  // Bulk assign leads button
+  document.getElementById('bulk-assign-btn').addEventListener('click', async () => {
+    const selectedIds = Array.from(selectedLeads);
+    if (selectedIds.length === 0) {
+      alert('⚠️ No leads selected');
+      return;
+    }
+    const agentId = document.getElementById('bulk-assign-agent').value;
+    if (!agentId) {
+      alert('⚠️ No agent selected');
+      return;
+    }
+    // Validate product eligibility for selected leads
+    const agentInfo = allAgents.find(a => a.id === agentId);
+    if (agentInfo && agentInfo.product_types) {
+      let ineligibleFound = false;
+      for (let id of selectedIds) {
+        const row = document.querySelector(`input[data-lead-id="${id}"]`)?.closest('tr');
+        const leadType = row?.querySelector('.lead-type')?.textContent.trim();
+        if (leadType && !agentInfo.product_types.includes(leadType)) {
+          ineligibleFound = true;
+          break;
+        }
+      }
+      if (ineligibleFound) {
+        alert('❌ One or more selected leads have product types this agent is not eligible for.');
+        return;
+      }
+    }
+    // Check if any selected lead is already assigned to someone (reassign warning)
+    const needsReassignConfirm = selectedIds.some(id => {
+      const row = document.querySelector(`input[data-lead-id="${id}"]`)?.closest('tr');
+      const currentAgent = row?.querySelector('td:nth-child(3)')?.textContent;
+      return currentAgent && currentAgent !== 'Unassigned';
+    });
+    if (needsReassignConfirm) {
+      // Show confirmation modal
+      document.getElementById('reassign-warning-modal').style.display = 'flex';
+    } else {
+      alert('✅ Assigning leads to agent ID: ' + agentId);
+      await assignLeads(agentId);
+    }
+  });
+  // Modal confirmation handlers
+  document.getElementById('submit-anyway-btn').addEventListener('click', async () => {
+    const agentId = document.getElementById('bulk-assign-agent').value;
+    await assignLeads(agentId);
+    document.getElementById('reassign-warning-modal').style.display = 'none';
+  });
+  document.getElementById('cancel-reassign-btn').addEventListener('click', () => {
+    document.getElementById('reassign-warning-modal').style.display = 'none';
+  });
+
+  // Export dropdown toggle
+  const exportBtn = document.getElementById('export-btn');
+  const exportOptions = document.getElementById('export-options');
+  exportBtn.addEventListener('click', () => {
+    exportOptions.style.display = exportOptions.style.display === 'block' ? 'none' : 'block';
+  });
+  // Hide export options when clicking outside
+  document.addEventListener('click', e => {
+    if (!exportBtn.contains(e.target) && !exportOptions.contains(e.target)) {
+      exportOptions.style.display = 'none';
     }
   });
 
-  // Phone field add/remove (already formatted via formatPhoneInput)
-  document.querySelector('.add-phone-btn')?.addEventListener('click', () => {
-    const phoneInputs = document.getElementById('phone-inputs');
-    const div = document.createElement('div');
-    div.className = 'phone-line';
-    div.innerHTML = `
-      <input type="tel" name="lead-phone" placeholder="(123) 456-7890" maxlength="14" required />
-      <button type="button" class="remove-phone-btn">-</button>
-    `;
-    phoneInputs.appendChild(div);
-    // Apply formatter to new input
-    const newInput = div.querySelector('input');
-    formatPhoneInput(newInput);
-  });
-  document.getElementById('phone-inputs')?.addEventListener('click', (e) => {
-    if (e.target.classList.contains('remove-phone-btn')) {
-      e.target.parentElement.remove();
+  // CSV Export
+  document.getElementById('export-csv').addEventListener('click', () => {
+    const leads = getSelectedLeadsData();
+    if (!leads.length) {
+      alert('No leads selected.');
+      return;
     }
+    const headers = Object.keys(leads[0]).join(',');
+    const rows = leads.map(lead => Object.values(lead).map(v => `"${v}"`).join(','));
+    const csvContent = [headers, ...rows].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = 'leads.csv';
+    link.click();
   });
-  //Active page highlight tab
-  const agentHubBtn = document.getElementById('admin-tab');
-  const hubPages = ['admin']; // Add more if needed 
-  console.log("Page Path:", window.location.pathname); // debug
-  console.log("Found Agent Hub Button:", agentHubBtn); // debug
-  if (hubPages.some(page => window.location.pathname.includes(page))) {
-    agentHubBtn?.classList.add('active-page');
-  } else {
-    agentHubBtn?.classList.remove('active-page');
-  }
-});
+  // Print Export
+  document.getElementById('export-print').addEventListener('click', () => {
+    const leads = getSelectedLeadsData();
+    if (!leads.length) {
+      alert('No leads selected.');
+      return;
+    }
+    const printWindow = window.open('', '_blank');
+    printWindow.document.write(`
+      <html>
+        <head>
+          <link href="https://fonts.googleapis.com/css2?family=Bellota+Text&display=swap" rel="stylesheet">
+          <style>
+            body { font-family: 'Bellota Text', sans-serif; padding: 30px; text-align: center; }
+            .logo { width: 60px; height: 60px; object-fit: contain; display: block; margin: 0 auto 10px auto; }
+            .label { display: inline-block; font-weight: bold; width: 150px; text-align: right; margin-right: 10px; }
+            .value { display: inline-block; text-align: left; }
+            p { text-align: left; margin: 6px 0 6px 100px; }
+            .footer { margin-top: 30px; font-size: 10px; text-align: center; color: #777; }
+            .lead-page { page-break-after: always; }
+          </style>
+        </head>
+        <body>
+          ${leads.map(lead => `
+            <div class="lead-page">
+              <img src="/Pics/img6.png" class="logo" />
+              <h2>Family Values Insurance Agency</h2>
+              <h4>Lead Confirmation Form</h4>
+              <p><span class="label">First Name:</span> <span class="value">${lead.first_name}</span></p>
+              <p><span class="label">Last Name:</span> <span class="value">${lead.last_name}</span></p>
+              <p><span class="label">Age:</span> <span class="value">${lead.age}</span></p>
+              <p><span class="label">Phone:</span> <span class="value">${lead.phone}</span></p>
+              <p><span class="label">Lead Type:</span> <span class="value">${lead.leadType}</span></p>
+              <p><span class="label">City:</span> <span class="value">${lead.city}</span></p>
+              <p><span class="label">State:</span> <span class="value">${lead.state}</span></p>
+              <p><span class="label">ZIP:</span> <span class="value">${lead.zip}</span></p>
+              <p><span class="label">Address:</span> <span class="value">${lead.address}</span></p>
+              <p><span class="label">Agent Assigned:</span> <span class="value">${lead.agent}</span></p>
+              <p><span class="label">Submitted At:</span> <span class="value">${lead.submittedAt}</span></p>
+              <div class="footer">Generated on ${new Date().toLocaleDateString()}</div>
+            </div>
+          `).join('')}
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.print();
+  });
+  // PDF Export
+  document.getElementById('export-pdf').addEventListener('click', () => {
+    const leads = getSelectedLeadsData();
+    if (!leads.length) {
+      alert('No leads selected.');
+      return;
+    }
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const logoImg = new Image();
+    logoImg.src = '/Pics/img6.png';
+    logoImg.onload = () => {
+      leads.forEach((lead, index) => {
+        if (index !== 0) doc.addPage();
+        doc.addImage(logoImg, 'PNG', 90, 10, 30, 30);
+        doc.setFontSize(18);
+        doc.setFont('helvetica', 'bold');
+        doc.text('Family Values Insurance Agency', 105, 50, { align: 'center' });
+        doc.setFontSize(14);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Lead Confirmation Form', 105, 60, { align: 'center' });
+        const startY = 80;
+        const lineHeight = 10;
+        const labelX = 20;
+        const valueX = 70;
+        const fields = [
+          ['First Name', lead.first_name],
+          ['Last Name', lead.last_name],
+          ['Age', lead.age],
+          ['Phone', lead.phone],
+          ['Lead Type', lead.leadType],
+          ['City', lead.city],
+          ['State', lead.state],
+          ['ZIP', lead.zip],
+          ['Address', lead.address],
+          ['Agent Assigned', lead.agent],
+          ['Submitted At', lead.submittedAt]
+        ];
+        fields.forEach(([label, value], i) => {
+          const y = startY + i * lineHeight;
+          doc.setFont('helvetica', 'bold');
+          doc.text(`${label}:`, labelX, y);
+          doc.setFont('helvetica', 'normal');
+          doc.text(value || '—', valueX, y);
+        });
+        doc.setFontSize(10);
+        doc.setTextColor(120);
+        doc.text(`Generated on ${new Date().toLocaleDateString()}`, 105, 285, { align: 'center' });
+      });
+      doc.save('FVIA_Leads.pdf');
+    };
+    logoImg.onerror = () => alert('❌ Failed to load logo for PDF.');
+  });
+}); // end DOMContentLoaded
 
-// Logout button handler
-document.getElementById('logout-btn')?.addEventListener('click', async (e) => {
-  e.preventDefault();
-  const { error } = await supabase.auth.signOut();
+// Load active agents and populate filters
+async function loadAgentsForAdmin() {
+  // Try to select allowed product categories if such field exists
+  let { data, error } = await supabase.from('agents').select('id, full_name, product_types').eq('is_active', true);
   if (error) {
-    alert('Logout failed!');
-    console.error(error);
-  } else {
-    window.location.href = '../index.html';
-  }
-});
-
-// === New Event Handlers for Navigation, Sorting, Filters ===
-
-// Cached element references for nav and sections
-const navView = document.getElementById('nav-view');
-const navSubmit = document.getElementById('nav-submit');
-const navRequest = document.getElementById('nav-request');
-const viewSection = document.getElementById('view-section');
-const submitSection = document.getElementById('submit-section');
-const requestSection = document.getElementById('request-section');
-const editingLeadIdInput = document.getElementById('editing-lead-id');
-
-// Navigation tab click events
-navView?.addEventListener('click', () => {
-  viewSection.style.display = 'block';
-  submitSection.style.display = 'none';
-  requestSection.style.display = 'none';
-  navView.classList.add('active');
-  navSubmit.classList.remove('active');
-  navRequest.classList.remove('active');
-  // Cancel edit mode if leaving submit section
-  if (editingLeadIdInput.value) {
-    editingLeadIdInput.value = '';
-    document.querySelector('#submit-section h3').textContent = 'Submit a Lead';
-  }
-});
-navSubmit?.addEventListener('click', () => {
-  viewSection.style.display = 'none';
-  submitSection.style.display = 'block';
-  requestSection.style.display = 'none';
-  navView.classList.remove('active');
-  navSubmit.classList.add('active');
-  navRequest.classList.remove('active');
-  if (editingLeadIdInput.value) {
-    // If an edit was in progress and user explicitly clicked "Submit", reset form to fresh
-    editingLeadIdInput.value = '';
-    document.querySelector('#submit-section h3').textContent = 'Submit a Lead';
-    document.getElementById('lead-form').reset();
-    // Remove extra phone fields except the first one
-    const phoneLines = document.querySelectorAll('#phone-inputs .phone-line');
-    phoneLines.forEach((line, idx) => {
-      if (idx > 0) line.remove();
-      else line.querySelector('input').value = '';
-    });
-  }
-});
-navRequest?.addEventListener('click', () => {
-  viewSection.style.display = 'none';
-  submitSection.style.display = 'none';
-  requestSection.style.display = 'block';
-  navView.classList.remove('active');
-  navSubmit.classList.remove('active');
-  navRequest.classList.add('active');
-  if (editingLeadIdInput.value) {
-    // Cancel any edit mode if switching to Request section
-    editingLeadIdInput.value = '';
-    document.querySelector('#submit-section h3').textContent = 'Submit a Lead';
-    document.getElementById('lead-form').reset();
-    document.querySelectorAll('#phone-inputs .phone-line').forEach((line, idx) => {
-      if (idx > 0) line.remove();
-      else line.querySelector('input').value = '';
-    });
-  }
-});
-
-// Master checkbox event
-document.getElementById('select-all')?.addEventListener('change', (e) => {
-  const checked = e.target.checked;
-  document.querySelectorAll('.lead-checkbox').forEach(cb => { cb.checked = checked; });
-});
-
-// Dynamic notes filter: filter leads as user types
-document.getElementById('agent-notes-filter')?.addEventListener('input', () => {
-  clearTimeout(notesFilterTimeout);
-  notesFilterTimeout = setTimeout(() => {
-    agentCurrentPage = 1;
-    loadAgentLeads();
-  }, 300);
-});
-
-// Clickable column sorting
-function sortAgentLeadsBy(field) {
-  if (field === sortField) {
-    // Toggle sort direction if same field clicked
-    sortAsc = !sortAsc;
-  } else {
-    // New sort field
-    sortField = field;
-    sortAsc = true;
-  }
-  // Apply sorting on the full list and re-render
-  agentLeadsAll.sort((a, b) => {
-    let aVal = a[field], bVal = b[field];
-    if (aVal === null || aVal === undefined) aVal = '';
-    if (bVal === null || bVal === undefined) bVal = '';
-    if (field === 'created_at') {
-      return sortAsc ? new Date(aVal) - new Date(bVal) : new Date(bVal) - new Date(aVal);
+    // Fallback without products field if query failed
+    const { data: dataFallback, error: err2 } = await supabase.from('agents').select('id, full_name').eq('is_active', true);
+    if (err2) {
+      console.error('Error loading agents:', err2);
+      return;
     }
-    if (typeof aVal === 'string' && typeof bVal === 'string') {
-      return sortAsc ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal);
+    data = dataFallback;
+  }
+  allAgents = data || [];
+  // Normalize products field to array of strings
+  allAgents.forEach(agent => {
+    if (agent.products) {
+      if (Array.isArray(agent.products)) {
+        // already an array
+      } else if (typeof agent.products === 'string') {
+        agent.products = agent.products.split(',').map(s => s.trim());
+      } else {
+        agent.products = null;
+      }
     }
-    return sortAsc ? aVal - bVal : bVal - aVal;
   });
-  agentCurrentPage = 1;
-  // Re-render current page of sorted data
-  const tbody = document.querySelector('#agent-leads-table tbody');
-  tbody.innerHTML = '';
-  agentTotalPages = Math.ceil(agentLeadsAll.length / pageSize) || 1;
-  const paginatedLeads = agentLeadsAll.slice(0, pageSize);
-  paginatedLeads.forEach(lead => {
-    const row = document.createElement('tr');
-    row.innerHTML = `
-      <td><input type="checkbox" class="lead-checkbox" data-lead-id="${lead.id}"></td>
-      <td class="lead-date">${new Date(lead.created_at).toLocaleDateString()}</td>
-      <td class="lead-agent">${lead.submitted_by_name || ''}</td>
-      <td class="lead-name">${lead.first_name || ''}</td>
-      <td class="lead-last">${lead.last_name || ''}</td>
-      <td class="lead-age">${lead.age ?? ''}</td>
-      <td class="lead-phone">${(lead.phone || []).join(', ')}</td>
-      <td class="lead-address">${lead.address || ''}</td>
-      <td class="lead-city">${lead.city || ''}</td>
-      <td class="lead-state">${lead.state || ''}</td>
-      <td class="lead-zip">${lead.zip || ''}</td>
-      <td class="lead-type">${lead.lead_type || ''}</td>
-      <td class="lead-product-type">${lead.product_type || ''}</td>
-      <td class="lead-notes">${lead.notes || ''}</td>
-    `;
-    tbody.appendChild(row);
+  // Populate agent filter and bulk-assign dropdowns
+  const agentFilterEl = document.getElementById('agent-filter');
+  const bulkAssignEl = document.getElementById('bulk-assign-agent');
+  agentFilterEl.innerHTML = '<option value="">All Agents</option>';
+  bulkAssignEl.innerHTML = '<option value="">Select Agent</option>';
+  allAgents.forEach(agent => {
+    const opt1 = document.createElement('option');
+    opt1.value = agent.id;
+    opt1.textContent = agent.full_name;
+    agentFilterEl.appendChild(opt1);
+    const opt2 = document.createElement('option');
+    opt2.value = agent.id;
+    opt2.textContent = agent.full_name;
+    bulkAssignEl.appendChild(opt2);
   });
-  updateAgentPaginationControls();
-  document.getElementById('select-all').checked = false;
+  // Enhance selects with Choices.js
+  new Choices(agentFilterEl, { shouldSort: false, searchEnabled: true, placeholder: true, itemSelectText: '' });
+  new Choices(bulkAssignEl, { shouldSort: false, searchEnabled: true, placeholder: true, itemSelectText: '' });
 }
 
-// Attach sorting event to all table headers (except the master checkbox column)
-const headerCells = document.querySelectorAll('#agent-leads-table thead th');
-headerCells.forEach(th => {
-  const colName = th.textContent.trim();
-  let field;
-  switch (colName) {
-    case 'Submitted': field = 'created_at'; break;
-    case 'Agent': field = 'submitted_by_name'; break;
-    case 'First': field = 'first_name'; break;
-    case 'Last': field = 'last_name'; break;
-    case 'Age': field = 'age'; break;
-    case 'Phone(s)': field = 'phone'; break;
-    case 'Address': field = 'address'; break;
-    case 'City': field = 'city'; break;
-    case 'State': field = 'state'; break;
-    case 'ZIP': field = 'zip'; break;
-    case 'Type': field = 'lead_type'; break;
-    case 'Product Type': field = 'product_type'; break;
-    case 'Notes': field = 'notes'; break;
-    default: field = null;
+// Load leads with current filters and pagination
+async function loadLeadsWithFilters() {
+  const tbody = document.querySelector('#leads-table tbody');
+  if (!tbody) return;
+  selectedLeads.clear();
+  document.getElementById('selected-count').textContent = '0';
+  document.getElementById('bulk-assign-controls').style.display = 'none';
+  tbody.innerHTML = '';
+  // Build query based on filters
+  let query = supabase.from('leads').select('*', { count: 'exact' });
+  const orderDir = document.getElementById('date-order').value;
+  const sortBy = document.getElementById('sort-by').value || 'created_at';
+  const agentVal = document.getElementById('agent-filter').value;
+  const zip = document.getElementById('zip-filter').value.trim();
+  const city = document.getElementById('city-filter').value.trim();
+  const state = document.getElementById('state-filter').value;
+  const first = document.getElementById('first-name-filter').value.trim();
+  const last = document.getElementById('last-name-filter').value.trim();
+  const type = document.getElementById('lead-type-filter').value;
+  const assignedVal = document.getElementById('assigned-filter').value;
+  if (agentVal) query = query.eq('assigned_to', agentVal);
+  if (rangeStart) query = query.gte('created_at', rangeStart);
+  if (rangeEnd) query = query.lte('created_at', rangeEnd);
+  if (zip) query = query.ilike('zip', `%${zip}%`);
+  if (city) query = query.ilike('city', `%${city}%`);
+  if (state) query = query.ilike('state', `%${state}%`);
+  if (first) query = query.ilike('first_name', `%${first}%`);
+  if (last) query = query.ilike('last_name', `%${last}%`);
+  if (type) query = query.ilike('lead_type', `%${type}%`);
+  if (assignedVal === 'true') {
+    query = query.not('assigned_to', 'is', null);
+  } else if (assignedVal === 'false') {
+    query = query.is('assigned_to', null);
   }
-  if (field) {
-    th.style.cursor = 'pointer';
-    th.addEventListener('click', () => sortAgentLeadsBy(field));
-  }
-});
-
-// Edit and Archive actions for selected leads
-document.getElementById('agent-edit-btn')?.addEventListener('click', () => {
-  const checkboxes = document.querySelectorAll('.lead-checkbox:checked');
-  if (!checkboxes.length) {
-    alert("No leads selected.");
-    return;
-  }
-  if (checkboxes.length > 1) {
-    alert("Please select only one lead to edit at a time.");
-    return;
-  }
-  const leadId = checkboxes[0].dataset.leadId;
-  const lead = agentLeadsAll.find(l => l.id === leadId);
-  if (!lead) {
-    alert("Lead data not found.");
-    return;
-  }
-  // Switch to Submit section for editing
-  navSubmit.click();
-  document.querySelector('#submit-section h3').textContent = 'Edit Lead';
-  editingLeadIdInput.value = leadId;
-  // Populate form fields with lead data
-  document.getElementById('lead-first').value = lead.first_name || '';
-  document.getElementById('lead-last').value = lead.last_name || '';
-  document.getElementById('lead-age').value = lead.age ?? '';
-  document.getElementById('lead-address').value = lead.address || '';
-  document.getElementById('lead-city').value = lead.city || '';
-  document.getElementById('lead-state').value = lead.state || '';
-  document.getElementById('lead-zip').value = lead.zip || '';
-  document.getElementById('lead-type').value = lead.lead_type || '';
-  document.getElementById('lead-product-type').value = lead.product_type || '';
-  document.getElementById('lead-notes').value = lead.notes || '';
-  // Reset phone inputs and populate phone numbers
-  const phoneInputsDiv = document.getElementById('phone-inputs');
-  phoneInputsDiv.querySelectorAll('.phone-line').forEach((line, idx) => {
-    if (idx > 0) line.remove();
-  });
-  const firstPhoneInput = phoneInputsDiv.querySelector('input[name="lead-phone"]');
-  if (lead.phone && lead.phone.length > 0) {
-    firstPhoneInput.value = lead.phone[0] || '';
-    for (let i = 1; i < lead.phone.length; i++) {
-      document.querySelector('.add-phone-btn').click();
-      const phoneFields = phoneInputsDiv.querySelectorAll('input[name="lead-phone"]');
-      phoneFields[phoneFields.length - 1].value = lead.phone[i];
+  if (allowedProductsFilter && Array.isArray(allowedProductsFilter)) {
+    if (allowedProductsFilter.length === 0) {
+      // Agent has no eligible products: no leads should show
+      tbody.innerHTML = '<tr><td colspan="14">No leads available for the selected agent.</td></tr>';
+      document.getElementById('current-page').textContent = 'Page 1 of 1';
+      document.getElementById('prev-page').disabled = true;
+      document.getElementById('next-page').disabled = true;
+      return;
+    } else {
+      query = query.in('lead_type', allowedProductsFilter);
     }
-  } else {
-    firstPhoneInput.value = '';
   }
-});
-document.getElementById('agent-archive-btn')?.addEventListener('click', async () => {
-  const checkboxes = document.querySelectorAll('.lead-checkbox:checked');
-  if (!checkboxes.length) {
-    alert("No leads selected.");
-    return;
-  }
-  if (!confirm("Archive selected leads?")) {
-    return;
-  }
-  const ids = Array.from(checkboxes).map(cb => cb.dataset.leadId);
-  const { error } = await supabase.from('leads').update({ archived: true }).in('id', ids);
+  const from = (currentPage - 1) * PAGE_SIZE;
+  const to = from + PAGE_SIZE - 1;
+  const { data: leads, error, count } = await query.order(sortBy, { ascending: orderDir === 'asc' }).range(from, to);
   if (error) {
-    console.error('Error archiving leads:', error);
-    alert('Failed to archive selected leads.');
-  } else {
-    await loadAgentLeads();
-    alert('Selected leads archived.');
+    console.error('Error loading leads:', error);
+    tbody.innerHTML = '<tr><td colspan="14">Error loading leads.</td></tr>';
+    return;
   }
-});
+  const totalCount = count || 0;
+  const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
+  document.getElementById('current-page').textContent = `Page ${currentPage} of ${totalPages}`;
+  document.getElementById('prev-page').disabled = currentPage <= 1;
+  document.getElementById('next-page').disabled = currentPage >= totalPages;
+  // Populate leads table
+  (leads || []).forEach(lead => {
+    const tr = document.createElement('tr');
+    // Selection checkbox cell
+    const checkboxTd = document.createElement('td');
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    checkbox.classList.add('lead-checkbox');
+    checkbox.dataset.leadId = lead.id;
+    checkbox.addEventListener('change', e => {
+      if (e.target.checked) {
+        selectedLeads.add(lead.id);
+      } else {
+        selectedLeads.delete(lead.id);
+      }
+      document.getElementById('selected-count').textContent = selectedLeads.size;
+      document.getElementById('bulk-assign-controls').style.display = selectedLeads.size > 0 ? 'block' : 'none';
+      toggleExportVisibility();
+    });
+    checkboxTd.appendChild(checkbox);
+    tr.appendChild(checkboxTd);
+    // Assigned agent name (or Unassigned)
+    const agentName = lead.assigned_to ? (allAgents.find(a => a.id === lead.assigned_to)?.full_name || 'Unassigned') : 'Unassigned';
+    // Other fields
+    const cellMap = {
+      'lead-date': new Date(lead.created_at).toLocaleDateString(),
+      'lead-agent': agentName,
+      'lead-name': lead.first_name || '',
+      'lead-last': lead.last_name || '',
+      'lead-age': lead.age || '',
+      'lead-phone': (lead.phone || []).join(', '),
+      'lead-address': lead.address || '',
+      'lead-city': lead.city || '',
+      'lead-state': lead.state || '',
+      'lead-zip': lead.zip || '',
+      'lead-type': lead.lead_type || '',
+      'lead-notes': lead.notes || ''
+    };
+    for (const [cls, text] of Object.entries(cellMap)) {
+      const td = document.createElement('td');
+      td.classList.add(cls);
+      td.textContent = text;
+      tr.appendChild(td);
+    }
+    // Empty Actions cell (reserved for future use)
+    const actionsTd = document.createElement('td');
+    actionsTd.textContent = '';
+    tr.appendChild(actionsTd);
+    tbody.appendChild(tr);
+  });
+}
 
-// Extend data export to include Product Type
-window.getSelectedLeadsData = function () {
-  return Array.from(document.querySelectorAll('input[type="checkbox"].lead-checkbox:checked')).map(cb => {
-    const row = cb.closest("tr");
+// Load lead requests list (admin view of all requests)
+async function loadRequestedLeads() {
+  const container = document.getElementById('requested-leads-container');
+  if (!container) return;
+  container.innerHTML = 'Loading...';
+  const { data: requests, error } = await supabase.from('lead_requests').select('*').order('created_at', { ascending: false });
+  if (error) {
+    console.error('Error loading requests:', error);
+    container.innerHTML = '<p>Error loading requests.</p>';
+    return;
+  }
+  if (!requests || requests.length === 0) {
+    container.innerHTML = '<p>No lead requests found.</p>';
+    return;
+  }
+  container.innerHTML = requests.map(req => `
+    <div class="lead-request-box" data-request-id="${req.id}">
+      <strong>Requested By:</strong> ${req.submitted_by_name || 'Unknown'}<br>
+      <strong>City:</strong> ${req.city || 'N/A'}<br>
+      <strong>ZIP:</strong> ${req.zip || 'N/A'}<br>
+      <strong>State:</strong> ${req.state || 'N/A'}<br>
+      <strong>Lead Type:</strong> ${req.lead_type || 'N/A'}<br>
+      <strong>How many:</strong> ${req.requested_count || 'N/A'}<br>
+      <strong>Notes:</strong> ${req.notes || 'None'}<br>
+      <em>Submitted: ${req.created_at ? new Date(req.created_at).toLocaleString() : 'N/A'}</em><br>
+      <button class="delete-request-btn">Delete</button>
+      <hr>
+    </div>
+  `).join('') || '<p>No lead requests found.</p>';
+  // Delete request handlers
+  document.querySelectorAll('.delete-request-btn').forEach(btn => {
+    btn.addEventListener('click', async e => {
+      const box = e.target.closest('.lead-request-box');
+      const requestId = box?.getAttribute('data-request-id');
+      if (!requestId) return;
+      if (!confirm('Are you sure you want to delete this request?')) return;
+      const { error: deleteError } = await supabase.from('lead_requests').delete().eq('id', requestId);
+      if (deleteError) {
+        alert('❌ Failed to delete request.');
+        console.error(deleteError);
+      } else {
+        box.remove();
+        alert('✅ Request deleted.');
+      }
+    });
+  });
+}
+
+// Load assignment history table
+async function loadAssignmentHistory() {
+  const tbody = document.querySelector('#assignment-history-table tbody');
+  if (!tbody) return;
+  tbody.innerHTML = 'Loading...';
+  const { data: history, error } = await supabase.from('lead_assignments')
+    .select(`
+      lead_id,
+      assigned_at,
+      assigned_to_agent:assigned_to(full_name),
+      assigned_by_agent:assigned_by(full_name)
+    `)
+    .order('assigned_at', { ascending: false });
+  if (error) {
+    console.error('Error loading history:', error);
+    tbody.innerHTML = '<tr><td colspan="4">Error loading history.</td></tr>';
+    return;
+  }
+  if (!history || history.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="4">No assignment history yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = '';
+  history.forEach(entry => {
+    const tr = document.createElement('tr');
+    const assignedToName = entry.assigned_to_agent?.full_name || entry.assigned_to;
+    const assignedByName = entry.assigned_by_agent?.full_name || entry.assigned_by;
+    tr.innerHTML = `
+      <td>${entry.assigned_at ? new Date(entry.assigned_at).toLocaleString() : ''}</td>
+      <td>${entry.lead_id}</td>
+      <td>${assignedToName}</td>
+      <td>${assignedByName}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// Toggle export controls visibility
+function toggleExportVisibility() {
+  const anyChecked = document.querySelectorAll('input.lead-checkbox:checked').length > 0;
+  document.getElementById('export-controls').style.display = anyChecked ? 'block' : 'none';
+}
+
+// Collect selected leads data for export
+function getSelectedLeadsData() {
+  return Array.from(document.querySelectorAll('input.lead-checkbox:checked')).map(cb => {
+    const row = cb.closest('tr');
     return {
-      first_name: row.querySelector(".lead-name")?.textContent.trim() || "",
-      last_name: row.querySelector(".lead-last")?.textContent.trim() || "",
-      age: row.querySelector(".lead-age")?.textContent.trim() || "",
-      phone: row.querySelector(".lead-phone")?.textContent.trim() || "",
-      leadType: row.querySelector(".lead-type")?.textContent.trim() || "",
-      productType: row.querySelector(".lead-product-type")?.textContent.trim() || "",
-      city: row.querySelector(".lead-city")?.textContent.trim() || "",
-      state: row.querySelector(".lead-state")?.textContent.trim() || "",
-      zip: row.querySelector(".lead-zip")?.textContent.trim() || "",
-      address: row.querySelector(".lead-address")?.textContent.trim() || "",
-      agent: row.querySelector(".lead-agent")?.textContent.trim() || "",
-      submittedAt: row.querySelector(".lead-date")?.textContent.trim() || ""
+      first_name: row.querySelector('.lead-name')?.textContent.trim() || '',
+      last_name: row.querySelector('.lead-last')?.textContent.trim() || '',
+      age: row.querySelector('.lead-age')?.textContent.trim() || '',
+      phone: row.querySelector('.lead-phone')?.textContent.trim() || '',
+      leadType: row.querySelector('.lead-type')?.textContent.trim() || '',
+      city: row.querySelector('.lead-city')?.textContent.trim() || '',
+      state: row.querySelector('.lead-state')?.textContent.trim() || '',
+      zip: row.querySelector('.lead-zip')?.textContent.trim() || '',
+      address: row.querySelector('.lead-address')?.textContent.trim() || '',
+      agent: row.querySelector('.lead-agent')?.textContent.trim() || '',
+      submittedAt: row.querySelector('.lead-date')?.textContent.trim() || ''
     };
   });
-};
+}
 
-// CSV Export
-const csvBtn = document.getElementById('agent-export-csv');
-const printBtn = document.getElementById('agent-export-print');
-const pdfBtn = document.getElementById('agent-export-pdf');
-const exportBtn = document.getElementById('agent-export-btn');
-const exportOptions = document.getElementById('agent-export-options');
-
-exportBtn?.addEventListener('click', (e) => {
-  e.stopPropagation();
-  exportOptions.style.display = exportOptions.style.display === 'block' ? 'none' : 'block';
-});
-document.addEventListener('click', (e) => {
-  if (!e.target.closest('#agent-export-controls') && exportOptions) {
-    exportOptions.style.display = 'none';
+// Assign selected leads to the given agent and log the assignments
+async function assignLeads(agentId) {
+  if (!agentId || selectedLeads.size === 0) {
+    alert('Please select leads and an agent.');
+    return;
   }
-});
-if (!exportOptions) console.warn("exportOptions not found on this page");
-csvBtn?.addEventListener("click", () => {
-  const leads = getSelectedLeadsData();
-  if (!leads.length) return alert("No leads selected.");
-  const headers = Object.keys(leads[0]).join(",");
-  const rows = leads.map(lead => Object.values(lead).map(v => `"${v}"`).join(","));
-  const csv = [headers, ...rows].join("\n");
-  const blob = new Blob([csv], { type: "text/csv" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.download = "leads.csv";
-  link.click();
-});
-
-// Print Export
-printBtn?.addEventListener("click", () => {
-  const leads = getSelectedLeadsData();
-  if (!leads.length) return alert("No leads selected.");
-  const printWindow = window.open("", "_blank");
-  const content = leads.map(lead => `
-    <div class="page">
-      <img src="/Pics/img6.png" class="logo" />
-      <div class="title">Family Values Insurance Agency</div>
-      <div class="subtitle">Lead Confirmation Form</div>
-      <p><span class="label">First Name:</span> ${lead.first_name}</p>
-      <p><span class="label">Last Name:</span> ${lead.last_name}</p>
-      <p><span class="label">Age:</span> ${lead.age}</p>
-      <p><span class="label">Phone:</span> ${lead.phone}</p>
-      <p><span class="label">Lead Type:</span> ${lead.leadType}</p>
-      <p><span class="label">Product Type:</span> ${lead.productType}</p>
-      <p><span class="label">City:</span> ${lead.city}</p>
-      <p><span class="label">State:</span> ${lead.state}</p>
-      <p><span class="label">ZIP:</span> ${lead.zip}</p>
-      <p><span class="label">Address:</span> ${lead.address}</p>
-      <p><span class="label">Agent Assigned:</span> ${lead.agent}</p>
-      <p><span class="label">Submitted At:</span> ${lead.submittedAt}</p>
-      <div class="footer">Generated on ${new Date().toLocaleDateString()}</div>
-    </div>
-  `).join("");
-  printWindow.document.write(`
-    <html>
-      <head>
-        <link href="https://fonts.googleapis.com/css2?family=Bellota+Text&display=swap" rel="stylesheet">
-        <style>
-          body {
-            font-family: 'Bellota Text', sans-serif;
-            padding: 30px;
-            text-align: center;
-          }
-          .logo {
-            width: 60px;
-            height: 60px;
-            object-fit: contain;
-            display: block;
-            margin: 0 auto 10px auto;
-          }
-          .title {
-            font-size: 20px;
-            font-weight: bold;
-          }
-          .subtitle {
-            font-size: 16px;
-            margin-bottom: 20px;
-          }
-          .label {
-            display: inline-block;
-            font-weight: bold;
-            width: 150px;
-            text-align: right;
-            margin-right: 10px;
-          }
-          p {
-            text-align: left;
-            margin: 6px 0 6px 100px;
-          }
-          .footer {
-            margin-top: 30px;
-            font-size: 10px;
-            text-align: center;
-            color: #777;
-          }
-          .lead-page {
-            page-break-after: always;
-          }
-        </style>
-      </head>
-      <body>
-        ${leads.map(lead => `
-          <div class="lead-page">
-            <img src="/Pics/img6.png" class="logo" />
-            <h2>Family Values Insurance Agency</h2>
-            <h3>Lead Confirmation Form</h3>
-            <p><span class="label">First Name:</span> ${lead.first_name}</p>
-            <p><span class="label">Last Name:</span> ${lead.last_name}</p>
-            <p><span class="label">Age:</span> ${lead.age}</p>
-            <p><span class="label">Phone:</span> ${lead.phone}</p>
-            <p><span class="label">Lead Type:</span> ${lead.leadType}</p>
-            <p><span class="label">Product Type:</span> ${lead.productType}</p>
-            <p><span class="label">City:</span> ${lead.city}</p>
-            <p><span class="label">State:</span> ${lead.state}</p>
-            <p><span class="label">ZIP:</span> ${lead.zip}</p>
-            <p><span class="label">Address:</span> ${lead.address}</p>
-            <p><span class="label">Agent Assigned:</span> ${lead.agent}</p>
-            <p><span class="label">Submitted At:</span> ${lead.submittedAt}</p>
-            <div class="footer">Generated on ${new Date().toLocaleDateString()}</div>
-          </div>
-        `).join("")}
-      </body>
-    </html>
-  `);
-  printWindow.document.close();
-  printWindow.focus();
-  setTimeout(() => {
-    printWindow.print();
-    printWindow.close();
-  }, 1000);
-});
-
-// PDF Export (using jsPDF and autoTable)
-pdfBtn?.addEventListener("click", async () => {
-  const leads = getSelectedLeadsData();
-  if (!leads.length) return alert("No leads selected.");
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-  const columns = [
-    "First Name", "Last Name", "Age", "Phone", "Lead Type", "Product Type",
-    "City", "State", "ZIP", "Address", "Agent", "Submitted At"
-  ];
-  const rows = leads.map(lead => [
-    lead.first_name, lead.last_name, lead.age, lead.phone, lead.leadType, lead.productType,
-    lead.city, lead.state, lead.zip, lead.address, lead.agent, lead.submittedAt
-  ]);
-  doc.autoTable({ head: [columns], body: rows, startY: 20 });
-  doc.text("Leads Export", 14, 15);
-  doc.save("leads.pdf");
-});
+  const leadIds = Array.from(selectedLeads);
+  const now = new Date().toISOString();
+  // Update leads table
+  const { error: updateError } = await supabase.from('leads')
+    .update({ assigned_to: agentId, assigned_at: now })
+    .in('id', leadIds);
+  if (updateError) {
+    alert('❌ Failed to assign leads: ' + updateError.message);
+    return;
+  }
+  // Log assignment history
+  const { data: sessionData } = await supabase.auth.getSession();
+  const currentUserId = sessionData?.session?.user?.id || userId;
+  const logs = leadIds.map(leadId => ({
+    lead_id: leadId,
+    assigned_to: agentId,
+    assigned_by: currentUserId,
+    assigned_at: now
+  }));
+  const { error: logError } = await supabase.from('lead_assignments').insert(logs);
+  if (logError) {
+    alert('⚠️ Leads assigned, but failed to log history: ' + logError.message);
+  } else {
+    alert('✅ Lead(s) successfully assigned.');
+  }
+  // Reset selection and refresh data
+  selectedLeads.clear();
+  document.getElementById('selected-count').textContent = '0';
+  document.getElementById('bulk-assign-controls').style.display = 'none';
+  await loadLeadsWithFilters();
+  await loadAssignmentHistory();
+}
