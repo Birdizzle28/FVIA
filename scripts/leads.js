@@ -637,16 +637,17 @@ function showSection(name) {
   navButtons[name].classList.add('active');
 }
   //Active page highlight tab
-    document.addEventListener('DOMContentLoaded', () => {
-      const agentHubBtn = document.getElementById('agent-hub-toggle');
-      const hubPages = ['leads.html', 'maps.html', 'scheduling.html', 'calculator.html']; // Add more if needed
-  
-      if (hubPages.some(page => window.location.pathname.includes(page))) {
-        agentHubBtn?.classList.add('active-page');
-      } else {
-        agentHubBtn?.classList.remove('active-page');
-      }
-    });
+  document.addEventListener('DOMContentLoaded', () => {
+    const agentHubBtn = document.getElementById('agent-hub-toggle');
+    const hubPages = ['leads.html', 'maps.html', 'scheduling.html', 'calculator.html']; // Add more if needed
+    console.log("Page Path:", window.location.pathname); // debug
+    console.log("Found Agent Hub Button:", agentHubBtn); // debug
+    if (hubPages.some(page => window.location.pathname.includes(page))) {
+      agentHubBtn?.classList.add('active-page');
+    } else {
+      agentHubBtn?.classList.remove('active-page');
+    }
+  });
 // Initial state: show View
 showSection('view');
 
