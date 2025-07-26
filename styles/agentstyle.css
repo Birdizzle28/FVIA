@@ -100,7 +100,7 @@
   justify-content: center;
   flex-wrap: wrap;
 }
-.header-flex-container a {
+.header-flex-container > a {
   text-decoration: none;
   background-color: #ed9ea5;
   color: #353468;
