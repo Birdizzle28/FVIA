@@ -197,6 +197,11 @@ document.getElementById('lead-form')?.addEventListener('submit', async (e) => {
 // LEAD REQUEST SUBMIT (fixed to match your Supabase schema)
 document.getElementById('lead-request-form')?.addEventListener('submit', async (e) => {
   e.preventDefault();
+  const stateValue = document.getElementById('request-state').value;
+  if (!stateValue) {
+    alert("Please select a valid state before submitting.");
+    return;
+  }
   const messageEl = document.getElementById('request-message');
   messageEl.textContent = ''; // Clear any previous message
 
