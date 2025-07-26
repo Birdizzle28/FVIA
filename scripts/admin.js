@@ -302,6 +302,15 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
     logoImg.onerror = () => alert('❌ Failed to load logo for PDF.');
   });
+  const agentHubBtn = document.getElementById('admin-tab');
+  const hubPages = ['admin']; // Add more if needed 
+  console.log("Page Path:", window.location.pathname); // debug
+  console.log("Found Agent Hub Button:", agentHubBtn); // debug
+  if (hubPages.some(page => window.location.pathname.includes(page))) {
+    agentHubBtn?.classList.add('active-page');
+  } else {
+    agentHubBtn?.classList.remove('active-page');
+  }
 }); // end DOMContentLoaded
 
 // Load active agents and populate filters
