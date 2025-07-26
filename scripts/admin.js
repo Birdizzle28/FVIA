@@ -105,16 +105,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Adjust product filter when selecting an agent for bulk assignment
   document.getElementById('bulk-assign-agent').addEventListener('change', e => {
     const agentId = e.target.value;
-    if (agentId) {
-      const agent = allAgents.find(a => a.id === agentId);
-      if (agent && agent.product_types) {
-        allowedProductsFilter = Array.isArray(agent.product_types) ? agent.product_types.slice() : [agent.product_types];
-      } else {
-        allowedProductsFilter = null;
-      }
-    } else {
-      allowedProductsFilter = null;
-    }
     currentPage = 1;
     loadLeadsWithFilters();
   });
