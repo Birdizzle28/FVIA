@@ -421,7 +421,7 @@ async function loadLeadsWithFilters() {
   if (!tbody) return;
   selectedLeads.clear();
   document.getElementById('selected-count').textContent = '0';
-  document.getElementById('bulk-assign-container').style.display = 'none';
+  document.getElementById('bulk-export-container').style.display = 'none';
   tbody.innerHTML = '';
   // Build query based on filters
   let query = supabase.from('leads').select('*', { count: 'exact' });
