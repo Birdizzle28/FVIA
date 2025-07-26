@@ -489,7 +489,6 @@ async function loadLeadsWithFilters() {
         selectedLeads.delete(lead.id);
       }
       document.getElementById('selected-count').textContent = selectedLeads.size;
-      document.getElementById('bulk-assign-controls').style.display = 'block';
       toggleExportVisibility();
     });
     checkboxTd.appendChild(checkbox);
