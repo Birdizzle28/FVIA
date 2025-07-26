@@ -307,7 +307,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Load active agents and populate filters
 async function loadAgentsForAdmin() {
   // Try to select allowed product categories if such field exists
-  let { data, error } = await supabase.from('agents').select('id, full_name, products').eq('is_active', true);
+  let { data, error } = await supabase.from('agents').select('id, full_name, product_types').eq('is_active', true);
   if (error) {
     // Fallback without products field if query failed
     const { data: dataFallback, error: err2 } = await supabase.from('agents').select('id, full_name').eq('is_active', true);
