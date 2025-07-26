@@ -636,7 +636,17 @@ function showSection(name) {
   sections[name].style.display = 'block';
   navButtons[name].classList.add('active');
 }
-
+  //Active page highlight tab
+    document.addEventListener('DOMContentLoaded', () => {
+      const agentHubBtn = document.getElementById('agent-hub-toggle');
+      const hubPages = ['leads.html', 'maps.html', 'scheduling.html', 'calculator.html']; // Add more if needed
+  
+      if (hubPages.some(page => window.location.pathname.includes(page))) {
+        agentHubBtn?.classList.add('active-page');
+      } else {
+        agentHubBtn?.classList.remove('active-page');
+      }
+    });
 // Initial state: show View
 showSection('view');
 
