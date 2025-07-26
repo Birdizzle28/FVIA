@@ -14,7 +14,7 @@ if (!sessionData?.session) {
   await supabase.auth.signOut();
   window.location.href = 'login.html';
 }
-
+document.getElementById('agent-hub-toggle')
 function updateAgentPaginationControls() {
   document.getElementById('agent-current-page').textContent = `Page ${agentCurrentPage}`;
   document.getElementById('agent-prev-page').disabled = agentCurrentPage === 1;
