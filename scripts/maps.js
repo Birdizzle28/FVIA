@@ -587,7 +587,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (exportBtn) exportBtn.disabled = true;
 
   //Active page highlight tab
-  const agentHubBtn = document.getElementById('maps-tab');
+  const agentHubBtn = document.getElementById('agent-hub-toggle');
   const hubPages = ['maps']; // Add more if needed 
   console.log("Page Path:", window.location.pathname); // debug
   console.log("Found Agent Hub Button:", agentHubBtn); // debug
