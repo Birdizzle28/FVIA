@@ -1,2 +1,6 @@
-[functions]
-  directory = "netlify/functions"
+[build]
+  functions = "netlify/functions"
+  publish = "."
+
+[dev]
+  functionsPort = 8888
