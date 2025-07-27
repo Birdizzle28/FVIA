@@ -137,11 +137,16 @@ if (chatBubble && chatWindow) {
     chatWindow.style.display = chatWindow.style.display === "none" ? "block" : "none";
   });
 }
-const chatInput = document.querySelector("#chat-input input");
+const chatBubble = document.getElementById("chat-bubble");
+const chatWindow = document.getElementById("chat-window");
 const chatBody = document.getElementById("chat-body");
+const chatInput = document.querySelector("#chat-input input");
 
-// Replace this with your real API key
-const OPENAI_API_KEY = "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";
+if (chatBubble && chatWindow) {
+  chatBubble.addEventListener("click", () => {
+    chatWindow.style.display = chatWindow.style.display === "none" ? "block" : "none";
+  });
+}
 
 chatInput.addEventListener("keypress", async function (e) {
   if (e.key === "Enter" && chatInput.value.trim() !== "") {
@@ -153,20 +158,16 @@ chatInput.addEventListener("keypress", async function (e) {
     chatBody.scrollTop = chatBody.scrollHeight;
 
     try {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+      const response = await fetch("/.netlify/functions/chatgpt", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${OPENAI_API_KEY}`,
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          model: "gpt-3.5-turbo",
-          messages: [{ role: "user", content: userMessage }],
-        }),
+        body: JSON.stringify({ prompt: userMessage })
       });
 
       const data = await response.json();
-      const botMessage = data.choices?.[0]?.message?.content || "Sorry, I didn’t understand that.";
+      const botMessage = data.response || "Sorry, I didn’t understand that.";
 
       chatBody.innerHTML += `<p><strong>Kuma:</strong> ${botMessage}</p>`;
       chatBody.scrollTop = chatBody.scrollHeight;
