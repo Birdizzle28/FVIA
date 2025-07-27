@@ -156,7 +156,7 @@ chatInput.addEventListener("keypress", async function (e) {
     chatBody.scrollTop = chatBody.scrollHeight;
 
     try {
-      const response = await fetch("/.netlify/functions/chatgpt.js", {
+      const response = await fetch("/.netlify/functions/chatgpt", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -176,7 +176,6 @@ chatInput.addEventListener("keypress", async function (e) {
 });
 
   document.addEventListener('DOMContentLoaded', async () => {
-  alert("✅ SCRIPT IS RUNNING");
 
   const container = document.getElementById("agent-cards-container");
   if (!container) {
