@@ -711,3 +711,59 @@ html, #indexbody {
     color: #777;
   }
 }
+#free-quote-form {
+  width: 90%;
+  max-width: 600px;
+  margin: 2em auto;
+  padding: 2em;
+  background-color: #fefefe;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  font-family: inherit;
+}
+
+#free-quote-form h2 {
+  text-align: center;
+  font-size: 1.8em;
+  margin-bottom: 1em;
+}
+
+#free-quote-form form {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
+
+#free-quote-form label,
+#free-quote-form fieldset {
+  display: flex;
+  flex-direction: column;
+  font-size: 1em;
+}
+
+#free-quote-form input[type="text"],
+#free-quote-form input[type="email"],
+#free-quote-form input[type="tel"],
+#free-quote-form input[type="number"],
+#free-quote-form input[type="date"],
+#free-quote-form select {
+  padding: 0.6em;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin-top: 0.4em;
+  font-size: 1em;
+}
+
+#free-quote-form button {
+  padding: 0.75em;
+  background-color: #0066cc;
+  color: white;
+  font-size: 1em;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+#free-quote-form button:hover {
+  background-color: #004999;
+}
