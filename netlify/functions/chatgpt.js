@@ -6,18 +6,12 @@ const configuration = new Configuration({
 const openai = new OpenAIApi(configuration);
 
 exports.handler = async function (event) {
-  return {
-    statusCode: 200,
-    body: JSON.stringify({ response: "🧪 GPT test bypassed. Function works!" }),
-  };
-};
-exports.handler = async function (event) {
   const body = JSON.parse(event.body);
   const prompt = body.prompt;
 
   try {
     const completion = await openai.createChatCompletion({
-      model: "gpt-3.5-turbo", // or "gpt-3.5-turbo"
+      model: "gpt-3.5-turbo",
       messages: [{ role: "user", content: prompt }],
     });
 
