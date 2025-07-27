@@ -5,7 +5,7 @@
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
 	<title>Login | Family Values Group</title>
 	<link rel="stylesheet" href="styles/style.css">
-  <script type="module" src="scripts/login.js"></script>
+	<script type="module" src="scripts/freequote.js"></script>
 	<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet">
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
@@ -23,9 +23,58 @@
 			</nav>
 			<hr>
 		</header>
+<main class="auth-container">
+<section id="free-quote-form">
+  <h2>Free Quote</h2>
+  <form id="quote-form">
+    <label>First Name:
+      <input type="text" name="first-name" required>
+    </label>
 
- <main class="auth-container">
-    
+    <label>Last Name:
+      <input type="text" name="last-name" required>
+    </label>
+
+    <label>Age:
+      <input type="number" name="age" min="0" required>
+    </label>
+
+    <label>Phone Number:
+      <input type="tel" name="phone" required>
+    </label>
+
+    <label>Email:
+      <input type="email" name="email" required>
+    </label>
+
+    <label>Address:
+      <input type="text" name="address" required>
+    </label>
+
+    <fieldset>
+      <legend>Who is this quote for?</legend>
+      <label><input type="checkbox" name="quote-for" value="Me"> Me</label>
+      <label><input type="checkbox" name="quote-for" value="Spouse"> Spouse</label>
+      <label><input type="checkbox" name="quote-for" value="Other" id="otherCheckbox"> Other</label>
+      <input type="text" name="other-text" id="otherTextInput" placeholder="Please specify" style="display:none; margin-top: 8px;">
+    </fieldset>
+
+    <label>When is best to contact you?
+      <input type="date" name="contact-date">
+    </label>
+
+    <label>How did you find out about us?
+      <select name="referral-source">
+        <option value="">-- Please select --</option>
+        <option value="Facebook">Facebook</option>
+        <option value="Google">Google</option>
+        <option value="Other">Other</option>
+      </select>
+    </label>
+
+    <button type="submit">Submit</button>
+  </form>
+</section>
 </main>
 
 	<footer class="index-grid-footer">
