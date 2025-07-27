@@ -137,8 +137,6 @@ if (chatBubble && chatWindow) {
     chatWindow.style.display = chatWindow.style.display === "none" ? "block" : "none";
   });
 }
-const chatBubble = document.getElementById("chat-bubble");
-const chatWindow = document.getElementById("chat-window");
 const chatBody = document.getElementById("chat-body");
 const chatInput = document.querySelector("#chat-input input");
 
