@@ -601,6 +601,10 @@ html, #indexbody {
 }
 /* Auth Page Styles (Signup/Login) */
 .auth-container {
+  display: flex;
+  justify-content: center;  /* centers child horizontally */
+  align-items: center;      /* optional: vertical centering */
+  flex-direction: column;
   background-color: #ffffff;
   padding: 25px 30px;
   border-radius: 12px;
