@@ -141,7 +141,7 @@ const chatInput = document.querySelector("#chat-input input");
 const chatBody = document.getElementById("chat-body");
 
 // Replace this with your real API key
-const OPENAI_API_KEY = "sk-...";
+const OPENAI_API_KEY = "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";
 
 chatInput.addEventListener("keypress", async function (e) {
   if (e.key === "Enter" && chatInput.value.trim() !== "") {
