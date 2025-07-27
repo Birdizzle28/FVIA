@@ -77,7 +77,7 @@ html, #indexbody {
 }
 
 #active-nav {
-	background-color: black;
+	background-color: black !important;
 }
 
 /*Main*/
