@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "dependencies": {
-    "@supabase/supabase-js": "^2.39.5"
+    "@supabase/supabase-js": "^2.39.5",
     "openai": "^4.20.0"
   }
 }
