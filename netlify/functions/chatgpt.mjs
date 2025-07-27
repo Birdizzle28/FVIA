@@ -1,24 +1,22 @@
-import { Configuration, OpenAIApi } from "openai";
+import OpenAI from "openai";
 
-const configuration = new Configuration({
+const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
-const openai = new OpenAIApi(configuration);
 
 export async function handler(event) {
-  try {
-    const { prompt } = JSON.parse(event.body);
+  const body = JSON.parse(event.body);
+  const prompt = body.prompt;
 
-    const completion = await openai.createChatCompletion({
+  try {
+    const chatCompletion = await openai.chat.completions.create({
       model: "gpt-3.5-turbo",
       messages: [{ role: "user", content: prompt }],
     });
 
     return {
       statusCode: 200,
-      body: JSON.stringify({
-        response: completion.data.choices[0].message.content,
-      }),
+      body: JSON.stringify({ response: chatCompletion.choices[0].message.content }),
     };
   } catch (err) {
     return {
