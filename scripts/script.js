@@ -156,7 +156,7 @@ chatInput.addEventListener("keypress", async function (e) {
     chatBody.scrollTop = chatBody.scrollHeight;
 
     try {
-      const response = await fetch("/.netlify/functions/chatgpt", {
+      const response = await fetch("/.netlify/functions/chatgpt.js", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
