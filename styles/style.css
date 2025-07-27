@@ -76,6 +76,9 @@ html, #indexbody {
 	background-color: #272727;
 }
 
+#active-nav {
+	background-color: black;
+}
 
 /*Main*/
 .index-grid-main {
