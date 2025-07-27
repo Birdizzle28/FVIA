@@ -64,7 +64,8 @@ html, #indexbody {
 }
 .header-flex-container > a {
 	font-size: 1.6vw;
-	padding: auto 1vw;
+	height: 1.6vw
+	padding: auto 2vw;
 	margin: 0;
 	flex-basis: 33%;
 	text-align: center;
