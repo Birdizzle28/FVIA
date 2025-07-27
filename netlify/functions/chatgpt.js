@@ -11,7 +11,7 @@ module.exports.handler = async function (event) {
 
   try {
     const completion = await openai.createChatCompletion({
-      model: "gpt-4o", // or "gpt-3.5-turbo"
+      model: "gpt-3.5", // or "gpt-3.5-turbo"
       messages: [{ role: "user", content: prompt }],
     });
 
