@@ -1,9 +1,9 @@
-/*const { Configuration, OpenAIApi } = require("openai");
+const { Configuration, OpenAIApi } = require("openai");
 
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
 });
-const openai = new OpenAIApi(configuration);*/
+const openai = new OpenAIApi(configuration);
 
 exports.handler = async function (event) {
   return {
@@ -11,7 +11,7 @@ exports.handler = async function (event) {
     body: JSON.stringify({ response: "🧪 GPT test bypassed. Function works!" }),
   };
 };
-/*exports.handler = async function (event) {
+exports.handler = async function (event) {
   const body = JSON.parse(event.body);
   const prompt = body.prompt;
 
@@ -32,4 +32,3 @@ exports.handler = async function (event) {
     };
   }
 };
-*/
