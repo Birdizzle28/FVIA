@@ -5,7 +5,7 @@ const configuration = new Configuration({
 });
 const openai = new OpenAIApi(configuration);
 
-exports.handler = async function (event) {
+module.exports.handler = async function (event) {
   const body = JSON.parse(event.body);
   const prompt = body.prompt;
 
