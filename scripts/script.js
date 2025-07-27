@@ -1,3 +1,10 @@
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+const supabase = createClient(
+  'https://ddlbgkolnayqrxslzsxn.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
+);
+
 window.addEventListener("load", () => {
   const slides = document.querySelector(".carousel");
   const thumbWrapper = document.querySelector(".thumbnail-wrapper");
@@ -130,15 +137,44 @@ if (chatBubble && chatWindow) {
     chatWindow.style.display = chatWindow.style.display === "none" ? "block" : "none";
   });
 }
+const chatInput = document.querySelector("#chat-input input");
+const chatBody = document.getElementById("chat-body");
 
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+// Replace this with your real API key
+const OPENAI_API_KEY = "sk-...";
 
+chatInput.addEventListener("keypress", async function (e) {
+  if (e.key === "Enter" && chatInput.value.trim() !== "") {
+    const userMessage = chatInput.value.trim();
 
+    // Show user message
+    chatBody.innerHTML += `<p><strong>You:</strong> ${userMessage}</p>`;
+    chatInput.value = "";
+    chatBody.scrollTop = chatBody.scrollHeight;
 
-const supabase = createClient(
-  'https://ddlbgkolnayqrxslzsxn.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
-);
+    try {
+      const response = await fetch("https://api.openai.com/v1/chat/completions", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${OPENAI_API_KEY}`,
+        },
+        body: JSON.stringify({
+          model: "gpt-3.5-turbo",
+          messages: [{ role: "user", content: userMessage }],
+        }),
+      });
+
+      const data = await response.json();
+      const botMessage = data.choices?.[0]?.message?.content || "Sorry, I didn’t understand that.";
+
+      chatBody.innerHTML += `<p><strong>Kuma:</strong> ${botMessage}</p>`;
+      chatBody.scrollTop = chatBody.scrollHeight;
+    } catch (err) {
+      chatBody.innerHTML += `<p><strong>Kuma:</strong> There was an error talking to me 😢</p>`;
+    }
+  }
+});
 
   document.addEventListener('DOMContentLoaded', async () => {
   alert("✅ SCRIPT IS RUNNING");
