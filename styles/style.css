@@ -64,12 +64,13 @@ html, #indexbody {
 }
 .header-flex-container > a {
 	font-size: 1.6vw;
-	padding: 0;
+	padding: auto 1vw;
 	margin: 0;
 	flex-basis: 33%;
 	text-align: center;
 	color: white;
 	text-decoration: none;
+	border-radius: 4%;
 }
 .header-flex-container > a:hover {
 	background-color: #272727;
