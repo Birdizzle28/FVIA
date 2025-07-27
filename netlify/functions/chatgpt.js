@@ -6,6 +6,12 @@ const configuration = new Configuration({
 const openai = new OpenAIApi(configuration);
 
 exports.handler = async function (event) {
+  return {
+    statusCode: 200,
+    body: JSON.stringify({ response: "🧪 GPT test bypassed. Function works!" }),
+  };
+};
+/*exports.handler = async function (event) {
   const body = JSON.parse(event.body);
   const prompt = body.prompt;
 
@@ -26,3 +32,4 @@ exports.handler = async function (event) {
     };
   }
 };
+*/
