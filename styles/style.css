@@ -27,10 +27,7 @@ html, #indexbody {
 		"indexfooter";
 }
 
-
-
-
-
+/*Header*/
 .index-grid-header {
 	display: flex;
 	flex-direction: column;
@@ -75,10 +72,7 @@ html, #indexbody {
 	text-decoration: none;
 }
 
-
-
-
-
+/*Main*/
 .index-grid-main {
 	grid-area: indexmain;
 	min-height: 100vh;
