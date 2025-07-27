@@ -1,11 +1,11 @@
-import { Configuration, OpenAIApi } from "openai";
+const { Configuration, OpenAIApi } = require("openai");
 
 const configuration = new Configuration({
   apiKey: process.env.OPENAI_API_KEY,
 });
 const openai = new OpenAIApi(configuration);
 
-exports.handler = async function (event) {
+module.exports.handler = async function (event) {
   const body = JSON.parse(event.body);
   const prompt = body.prompt;
 
