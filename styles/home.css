@@ -29,6 +29,7 @@
 	padding: 0 2vw 0 2vw;
 	transition: transform 0.3s ease, opacity 0.3s ease;
 	box-sizing: content-box;
+	overflow: hidden;
 }
 .mimg {
 	position: relative;
@@ -309,6 +310,12 @@ form, label, input, select, textarea, fieldset, button {
 	border-radius: 13%;
 	padding: 10px;
 }
+.mfcont button, 
+.mfcont2 button, 
+.mfcont3 button {
+	font-size: clamp(15px, 1.5vw, 20px);
+	overflow: hidden;
+}
 #testdiv {
 	margin: 0;
 }
@@ -331,4 +338,17 @@ form, label, input, select, textarea, fieldset, button {
 .testcontainer.active * {
   transform: scale(1.05);
 }
+.test-container p:nth-of-type(1) {
+	font-weight: 900;
+	font-size: 16px;
+}
+.test-container p:nth-of-type(2) {
+	width: 75%;
+}
+.test-container img {
+	min-width: 50px;
+    	min-height: 50px;
+}
+#testdiv > p {
+	font-size: 20px;
 }
