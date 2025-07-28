@@ -4,32 +4,7 @@ const supabase = createClient(
   'https://ddlbgkolnayqrxslzsxn.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
 );
-  if (window.innerWidth <= 768) {
-  const allCards = document.querySelectorAll('.mfcont, .mfcont2, .mfcont3');
-
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      const card = entry.target;
-      if (entry.intersectionRatio === 1) {
-        // Fully visible – make active
-        allCards.forEach(c => c.classList.remove('active'));
-        card.classList.add('active');
-      } else if (!entry.isIntersecting && card.classList.contains('active')) {
-        // Not even partially visible – remove active if another is fully visible
-        const anotherFullyVisible = [...allCards].some(c =>
-          c !== card &&
-          c.getBoundingClientRect().top >= 0 &&
-          c.getBoundingClientRect().bottom <= window.innerHeight
-        );
-        if (anotherFullyVisible) card.classList.remove('active');
-      }
-    });
-  }, {
-    threshold: 1.0 // Full visibility required
-  });
-
-  allCards.forEach(card => observer.observe(card));
-}
+  
 window.addEventListener("load", () => {
   const slides = document.querySelector(".carousel");
   const thumbWrapper = document.querySelector(".thumbnail-wrapper");
@@ -202,6 +177,46 @@ chatInput.addEventListener("keypress", async function (e) {
 
   document.addEventListener('DOMContentLoaded', async () => {
 
+  if (window.innerWidth <= 768) {
+  const cards = document.querySelectorAll('.mfcont, .mfcont2, .mfcont3');
+  let lastScrollTop = window.scrollY;
+
+  function checkHighlight() {
+    const scrollTop = window.scrollY;
+    const goingDown = scrollTop > lastScrollTop;
+    const screenCenter = window.innerHeight / 2;
+
+    let activeCard = null;
+
+    cards.forEach((card) => {
+      const rect = card.getBoundingClientRect();
+      const top = rect.top;
+      const bottom = rect.bottom;
+
+      if (goingDown) {
+        if (top <= screenCenter && bottom >= screenCenter) {
+          activeCard = card;
+        }
+      } else {
+        if (bottom >= screenCenter && top <= screenCenter) {
+          activeCard = card;
+        }
+      }
+    });
+
+    cards.forEach((c) => c.classList.remove('active'));
+    if (activeCard) activeCard.classList.add('active');
+
+    lastScrollTop = scrollTop;
+  }
+
+  // Trigger once on load to highlight the first card
+  window.addEventListener('load', () => {
+    if (cards.length > 0) cards[0].classList.add('active');
+  });
+
+  window.addEventListener('scroll', checkHighlight);
+}
   const container = document.getElementById("agent-cards-container");
   if (!container) {
     alert("❌ Container not found!");
