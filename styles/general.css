@@ -26,6 +26,9 @@
 	max-width: 30px;
 	margin-top: 10px;
 }
+#menu-toggle {
+	display: none;
+}
 .header-flex-container {
 	display: flex;
 	flex-direction: row;
@@ -141,7 +144,7 @@
 @media (max-width: 768px) {
   /* Header layout: logo left, hamburger right */
   .index-grid-header {
-    position: relative;               /* enable absolute positioning inside */
+    position: sticky;               /* enable absolute positioning inside */
     display: flex !important;        /* flex container for header */
     flex-direction: row !important;  /* row layout */
     justify-content: space-between;  /* logo on left, hamburger on right  [oai_citation:3‡stackoverflow.com](https://stackoverflow.com/questions/70370519/how-can-i-turn-my-navbar-into-hamburger-menu-for-mobile-using-responsive-design#:~:text=With%20%60justify,to%20vertically%20align%20your%20items) */
@@ -154,14 +157,14 @@
   }
 
   /* Hamburger icon styles */
-  #hamburger {
+  #menu-toggle {
     display: block;                  /* show hamburger on mobile (hidden by default on desktop) */
     cursor: pointer;
     color: white;                    /* white icon on dark header */
-    font-size: 6vw;                  /* make icon larger for tap (e.g. ~20-24px on small screens) */
+    font-size: 10pv;                  /* make icon larger for tap (e.g. ~20-24px on small screens) */
     /* Position at top-right corner: */
     position: absolute;
-    top: 15px;
+    top: 20px;
     right: 20px;
   }
 
