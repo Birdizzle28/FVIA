@@ -184,9 +184,12 @@ html, #indexbody {
 	min-width: 30px
 }
 #footercontact {
-	margin: 10px;
-	text-decoration: none;
-}
+    display: flex;
+    flex-direction: row;
+    justify-content: center;
+    align-items: center;
+    gap: 20px;
+  }
 #footercontact > p {
 	color: white;
 }
@@ -264,7 +267,7 @@ html, #indexbody {
     margin: 5px 0;
   }
 }
-
+  
 /* --- Mobile Responsive Styles (max-width: 768px) --- */
 /* Mobile styles (max-width: 768px) */
 @media (max-width: 768px) {
