@@ -337,14 +337,14 @@ form, label, input, select, textarea, fieldset, button {
 .testcontainer.active * {
   transform: scale(1.05);
 }
-.test-container p:nth-of-type(1) {
+.testcontainer p:nth-of-type(1) {
 	font-weight: 900;
 	font-size: 16px;
 }
-.test-container p:nth-of-type(2) {
+.testcontainer p:nth-of-type(2) {
 	width: 75%;
 }
-.test-container img {
+.testcontainer img {
 	min-width: 50px;
     	min-height: 50px;
 }
