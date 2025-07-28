@@ -242,7 +242,26 @@ form, label, input, select, textarea, fieldset, button {
 	border: none;
 	opacity: 1;
 	padding: 5px 0;
+	will-change: transform;
   }
+  .mfcont *, .mfcont2 *, .mfcont3 * {
+    transition: transform 0.3s ease;
+  }
+  /* Mobile-only spotlight effect */
+  .mfcont.active,
+  .mfcont2.active,
+  .mfcont3.active {
+    transform: scale(1.03);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    z-index: 2;
+  }
+
+  .mfcont.active *, 
+  .mfcont2.active *, 
+  .mfcont3.active * {
+    transform: scale(1.05);
+  }
+
   .main-flex-container > div, .main-flex-container2 > div {
     /* Each feature box fills the full width of its parent */
     width: 100% !important;
