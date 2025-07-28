@@ -15,7 +15,7 @@
 .main-flex-container > div, .main-flex-container2 > div {
 	position: relative;
 	top: -20px;
-	flex-basis: 33%;
+	flex-basis: 26%;
 	border-radius: 4%;
 	box-shadow: 0 0 20px 6px #545454;
 }
@@ -28,6 +28,7 @@
 	text-align: center;
 	padding: 0 2vw 0 2vw;
 	transition: transform 0.3s ease, opacity 0.3s ease;
+	box-sizing: content-box;
 }
 .mimg {
 	position: relative;
