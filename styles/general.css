@@ -235,7 +235,7 @@ html, #indexbody {
     width: 100%;
   }
   .index-grid-header.scrolled {
-  background-color: black !important;
+  background-color: rgba(0, 0, 0, 0.7) !important;
   transition: background-color 0.3s ease;
 }
   /* Hide original nav and <hr> for mobile */
