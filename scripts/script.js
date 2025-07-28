@@ -178,7 +178,7 @@ chatInput.addEventListener("keypress", async function (e) {
   document.addEventListener('DOMContentLoaded', async () => {
 
   if (window.innerWidth <= 768) {
-  const cards = document.querySelectorAll('.mfcont, .mfcont2, .mfcont3');
+  const cards = document.querySelectorAll('.mfcont, .mfcont2, .mfcont3, .testcontainer');
   let lastScrollTop = window.scrollY;
 
   function checkHighlight() {
