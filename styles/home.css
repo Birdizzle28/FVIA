@@ -315,7 +315,13 @@ form, label, input, select, textarea, fieldset, button {
 	border-radius: 1%;
 	padding: 3px;
 }
+#testwrapper {
+  flex-direction: column !important;
+  align-items: center !important;
+}
+
 .testcontainer {
-	align-items: stretch;
+  width: 90% !important;
+  margin: 10px 0 !important;
 }
 }
