@@ -208,6 +208,7 @@ html, #indexbody {
 	width: 50vw;
 }
 .fab, .fa {
+	box-sizing: content-box;
 	padding: 1vw;
 	font-size: 1.9vw;
 	width: 2vw;
