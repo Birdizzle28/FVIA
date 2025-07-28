@@ -342,16 +342,18 @@ html, #indexbody {
 .fab, fa {
 	min-width: 50px;
 	min-height: 50px;
-	font-size: clamp(45px, 1.9vw, 45px);
+	font-size: clamp(30px, 1.9vw, 45px);
 }
 .footerhr {
 	display: none;
 }
 #footercontact {
+	display: flex;
 	width: 100% !important;
 	margin: 0 !important;
 	flex-direction: column !important; 
 	align-items: stretch !important;
+	font-size: clamp(25px, 1vw, 25px);
 }
 #footercontact > p {
 	display: inline-block;
