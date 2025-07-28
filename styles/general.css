@@ -50,9 +50,6 @@ html, #indexbody {
 #menu-toggle {
 	display: none;
 }
-#mobile-menu {
-	display: none;
-}
 .header-flex-container {
 	display: flex;
 	flex-direction: row;
