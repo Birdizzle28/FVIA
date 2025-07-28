@@ -34,8 +34,8 @@
 	margin: 0;
 }
 .header-flex-container > a {
-	font-size: 1.6vw;
-	height: 1.6vw;
+	font-size: 16px;
+	height: auto;
 	padding: auto 2vw;
 	margin: 0;
 	flex-basis: 33%;
@@ -75,6 +75,9 @@
 	color: #e9e7ed;
 	margin: 0;
 	padding: 0;
+}
+.contactcontainer:hover span {
+    color: #ffc107;
 }
 .contactcontcontacts {
 	text-decoration: none;
