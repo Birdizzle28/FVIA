@@ -144,7 +144,7 @@
 /* Mobile styles (max-width: 768px) */
 @media (max-width: 768px) {
     .index-grid-header {
-	display: sticky;
+	position: sticky;
     }
     /* Hide original horizontal nav and its HR separators on mobile */
     .header-flex-container, .index-grid-header > hr {
