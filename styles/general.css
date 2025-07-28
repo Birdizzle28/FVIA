@@ -42,6 +42,9 @@ html, #indexbody {
   background: linear-gradient(90deg, #7fabbf, #ed9ea5);
   background-clip: text;
   -webkit-background-clip: text;
+  margin-top: 4px;
+  margin-bottom: 0;
+  padding: 0;
 }
 
 .index-grid-header > p::after {
