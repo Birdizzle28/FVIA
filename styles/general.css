@@ -358,7 +358,7 @@ html, #indexbody {
 	align-items: stretch !important;
 	font-size: clamp(25px, 1vw, 25px);
 	padding: 0;
-	text-align; center;
+	text-align: center;
 }
 #footercontact > p {
 	display: inline-block;
