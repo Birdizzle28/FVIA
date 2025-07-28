@@ -32,7 +32,10 @@ html, #indexbody {
 	border-style: solid;
 }
 .index-grid-header > hr:last-child {
-	margin-bottom: 60px;
+	margin-bottom: 0 auto 60px auto;
+}
+.index-grid-header > hr:first-child {
+	margin-bottom: 0;
 }
 .index-grid-header > p {
   position: relative;
