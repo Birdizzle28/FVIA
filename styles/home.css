@@ -291,6 +291,11 @@ form, label, input, select, textarea, fieldset, button {
 .mfcont3 > p:nth-of-type(2) {
 	top: 0;
 }
+.mfcont > p:nth-of-type(2), 
+.mfcont2 > p:nth-of-type(2), 
+.mfcont3 > p:nth-of-type(2) {
+	width: 75%;
+}
 .mfcont button, .mfcont2 button, .mfcont3 button {
 	margin-bottom: 10px;
 	background-color: #545454;
