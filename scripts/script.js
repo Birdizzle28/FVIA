@@ -5,35 +5,31 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
 );
   if (window.innerWidth <= 768) {
-    const allCards = document.querySelectorAll('.mfcont, .mfcont2, .mfcont3');
+  const allCards = document.querySelectorAll('.mfcont, .mfcont2, .mfcont3');
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        let mostCentered = null;
-        let closestToCenter = Infinity;
-
-        entries.forEach(entry => {
-          const rect = entry.target.getBoundingClientRect();
-          const cardCenter = rect.top + rect.height / 2;
-          const screenCenter = window.innerHeight / 2;
-          const distance = Math.abs(cardCenter - screenCenter);
-
-          if (entry.isIntersecting && distance < closestToCenter) {
-            closestToCenter = distance;
-            mostCentered = entry.target;
-          }
-        });
-
-        allCards.forEach(card => card.classList.remove('active'));
-        if (mostCentered) mostCentered.classList.add('active');
-      },
-      {
-        threshold: 0.5,
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const card = entry.target;
+      if (entry.intersectionRatio === 1) {
+        // Fully visible – make active
+        allCards.forEach(c => c.classList.remove('active'));
+        card.classList.add('active');
+      } else if (!entry.isIntersecting && card.classList.contains('active')) {
+        // Not even partially visible – remove active if another is fully visible
+        const anotherFullyVisible = [...allCards].some(c =>
+          c !== card &&
+          c.getBoundingClientRect().top >= 0 &&
+          c.getBoundingClientRect().bottom <= window.innerHeight
+        );
+        if (anotherFullyVisible) card.classList.remove('active');
       }
-    );
+    });
+  }, {
+    threshold: 1.0 // Full visibility required
+  });
 
-    allCards.forEach(card => observer.observe(card));
-  }
+  allCards.forEach(card => observer.observe(card));
+}
 window.addEventListener("load", () => {
   const slides = document.querySelector(".carousel");
   const thumbWrapper = document.querySelector(".thumbnail-wrapper");
