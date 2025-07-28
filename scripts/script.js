@@ -34,9 +34,6 @@ const supabase = createClient(
 
     allCards.forEach(card => observer.observe(card));
   }
-
-    allCards.forEach(card => observer.observe(card));
-  }
 window.addEventListener("load", () => {
   const slides = document.querySelector(".carousel");
   const thumbWrapper = document.querySelector(".thumbnail-wrapper");
