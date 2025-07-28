@@ -1,133 +1,151 @@
 #indexbody {
-	background-color: #e3d3c4;
+	font-family: Bellota Text;
+	background-color: #e9e7ed;
 	margin: 0;
-	padding: 0;
-	font-family: 'Bellota Text', sans-serif;
+	background-image: radial-gradient(#ed9ea5, #7fabbf);
+	z-index: -5;
 }
 
-.index-body {
-	width: 90%;
+.main-flex-container, .main-flex-container2 {
+	display: flex;
+	flex-direction: row;
+	justify-content: space-between;
+	width: 70%;
 	margin: auto;
 }
 
-.index-grid-main {
-	padding-bottom: 50px;
+.blue {
+	background-color: #7fabbf; 
 }
 
-.main-flex-container,
-.main-flex-container2 {
-	display: flex;
-	justify-content: space-between;
-	flex-wrap: wrap;
-	gap: 20px;
-	margin: 40px auto;
+.pink {
+	background-color: #ed9ea5;
 }
 
 .mfcont, .mfcont2, .mfcont3 {
-	background-color: #ffffff;
-	border: 1px solid #ccc;
-	border-radius: 10px;
-	padding: 20px;
-	width: 30%;
-	box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
+	border: solid white 2px;
+	opacity: .9;
 	text-align: center;
-}
-
-.push-down {
-	margin-top: 20px;
+	padding: 0 2vw 0 2vw;
 }
 
 .mimg {
-	max-width: 100%;
-	height: auto;
-	border-radius: 8px;
-	margin-bottom: 10px;
+	position: relative;
+	top: -2.5vw;
+	width: 5vw;
+	height: 5vw;
+	background: #e9e7ed;
+	padding: 0;
+	border-radius: 50%;
+	border: solid 2px #545454;
 }
 
-button {
-	background-color: #383838;
-	color: white;
-	border: none;
-	padding: 10px 20px;
-	margin-top: 10px;
-	border-radius: 5px;
-	cursor: pointer;
+.push-down {
+	margin-top: 7vw;
 }
 
-button:hover {
-	background-color: #222;
-}
-
-/* Carousel */
-.carousel-container {
-	width: 100%;
-	overflow: hidden;
-	margin: 40px auto;
+#nflb {
+	font-size: 5vw;
+	font-weight: bold;
+	margin: 6vw auto 0 auto;
 	text-align: center;
 }
 
+.carousel-container {
+	width: 50vw;
+	aspect-ratio: 8/5;
+	margin: 5px auto 0 auto;
+	box-shadow: 0 0 20px 6px #545454;
+	border-radius: 1%;
+	padding: 0;
+	border: solid 2px;
+	overflow: hidden;
+	position: relative;
+}
+
 .carousel {
+	position: relative;
 	display: flex;
-	animation: scroll 20s linear infinite;
+	width: 500%;
+	height: 100%;
+	margin: 0;
+	padding: 0;
+	left: 0;
 }
 
 .slide {
-	width: 200px;
-	margin-right: 20px;
-	border-radius: 10px;
-}
-
-@keyframes scroll {
-	0% {
-		transform: translateX(0);
-	}
-	100% {
-		transform: translateX(-100%);
-	}
+	position: relative;
+	width: 100%;
+	height: 100%;
+	background-color: white;
 }
 
 .thumbnail-wrapper {
 	display: flex;
-	justify-content: center;
-	gap: 10px;
-	margin-top: 10px;
+	width: 50%;
+	justify-content: space-between;
+	margin: 15px auto 15px auto;
 }
 
-/* Testimonials */
+.thumbnail-wrapper {
+	display: flex !important;
+}
+
 #testdiv {
-	padding: 40px 0;
-	text-align: center;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 100vw;
+	background-color: #e9e7ed;
+	margin: 20px auto 0;
 }
 
 #testwrapper {
 	display: flex;
-	flex-wrap: wrap;
-	justify-content: center;
-	gap: 20px;
+	flex-direction: row;
+	justify-content: space-around;
 }
 
 .testcontainer {
-	width: 300px;
-	background-color: #f6f6f6;
-	border-radius: 10px;
-	padding: 20px;
-	text-align: center;
+	box-sizing: border-box;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 26%;
+	background-color: white;
+	border-radius: 12px;
+	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+	padding: 1.5vw;
+	transition: transform 0.3s;
+	margin-bottom: 15px;
 }
 
-.testcontainer img {
-	width: 100%;
-	height: auto;
-	border-radius: 10px;
-	margin-bottom: 10px;
+.index-grid-footer {
+	display: flex;
+	background-color: #545454;
+	grid-area: indexfooter;
+	flex-direction: column;
+	align-items: center;
 }
 
-/* "No Family Left Behind" */
-#nflb {
-	text-align: center;
-	font-size: 1.5em;
-	font-weight: bold;
-	margin: 20px 0;
+
+#chat-header {
+  background-color: #7fabbf;
+  color: white;
+  padding: 10px;
+  text-align: center;
+  font-weight: bold;
+}
+
+
+#chat-body {
+  height: 85%;
+  overflow-y: auto;
+}
+
+#chat-input {
+	border-top: 1px solid #ccc;
 }
