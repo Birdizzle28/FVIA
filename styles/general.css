@@ -342,14 +342,20 @@ html, #indexbody {
 .fab, fa {
 	min-width: 50px;
 	min-height: 50px;
+	font-size: clamp(45px, 1.9vw, 45px);
 }
 .footerhr {
 	display: none;
 }
-.index-grid-footer {
+#footercontact {
 	width: 100% !important;
 	margin: 0 !important;
 	flex-direction: column !important; 
 	align-items: stretch !important;
+}
+#footercontact > p {
+	display: inline-block;
+  	transform-origin: center;
+  	transform: rotate(90deg);
 }
 }
