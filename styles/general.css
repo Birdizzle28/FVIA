@@ -145,10 +145,8 @@
 @media (max-width: 768px) {
     .index-grid-header {
 	position: sticky;
-    }
-    #headerlogo {
-	display: inline;
-	float: left;
+	top: 0;
+	flex-direction: row;
     }
     /* Hide original horizontal nav and its HR separators on mobile */
     .header-flex-container, .index-grid-header > hr {
