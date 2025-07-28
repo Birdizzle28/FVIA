@@ -206,6 +206,7 @@ html, #indexbody {
 .contactcontainer {
 	text-decoration: none;
 	color: inherit; /* optional: makes it match surrounding text */
+	display: inline;
 }
 .footerhr {
 	width: 50vw;
