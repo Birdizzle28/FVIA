@@ -4,20 +4,36 @@ const supabase = createClient(
   'https://ddlbgkolnayqrxslzsxn.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
 );
-if (window.innerWidth <= 768) {
+  if (window.innerWidth <= 768) {
     const allCards = document.querySelectorAll('.mfcont, .mfcont2, .mfcont3');
 
     const observer = new IntersectionObserver(
       (entries) => {
+        let mostCentered = null;
+        let closestToCenter = Infinity;
+
         entries.forEach(entry => {
-          if (entry.isIntersecting && entry.intersectionRatio >= 0.6) {
-            allCards.forEach(card => card.classList.remove('active'));
-            entry.target.classList.add('active');
+          const rect = entry.target.getBoundingClientRect();
+          const cardCenter = rect.top + rect.height / 2;
+          const screenCenter = window.innerHeight / 2;
+          const distance = Math.abs(cardCenter - screenCenter);
+
+          if (entry.isIntersecting && distance < closestToCenter) {
+            closestToCenter = distance;
+            mostCentered = entry.target;
           }
         });
+
+        allCards.forEach(card => card.classList.remove('active'));
+        if (mostCentered) mostCentered.classList.add('active');
       },
-      { threshold: 0.6 }
+      {
+        threshold: 0.5,
+      }
     );
+
+    allCards.forEach(card => observer.observe(card));
+  }
 
     allCards.forEach(card => observer.observe(card));
   }
