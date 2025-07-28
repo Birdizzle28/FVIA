@@ -226,8 +226,8 @@ form, label, input, select, textarea, fieldset, button {
   .mimg {
     position: relative;
     top: 0 !important;
-    min-width: 40px;
-    min-height: 40px;
+    min-width: 50px;
+    min-height: 50px;
   }
   /* Stack feature sections vertically, full width */
   .main-flex-container, .main-flex-container2 {
