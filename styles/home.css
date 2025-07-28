@@ -15,7 +15,7 @@
 .main-flex-container > div, .main-flex-container2 > div {
 	position: relative;
 	top: -20px;
-	flex-basis: 26%;
+	flex-basis: 30%;
 	border-radius: 4%;
 	box-shadow: 0 0 20px 6px #545454;
 }
