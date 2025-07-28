@@ -23,6 +23,7 @@
 	display: inline-block;
 	height: 8vw;
 	width: 8vw;
+	max-width: 
 	margin-top: 10px;
 }
 .header-flex-container {
@@ -61,8 +62,8 @@
 }
 #footerlogo {
 	display: inline-block;
-	height: 5vw;
-	width: 5vw;
+	width: 10vw;
+	aspect-ratio: 1/1;
 	margin: 10px auto;
 }
 #footercontact {
