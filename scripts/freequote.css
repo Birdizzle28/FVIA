@@ -1,0 +1,125 @@
+.auth-container {
+  display: flex;
+  justify-content: center;  /* centers child horizontally */
+  align-items: center;      /* optional: vertical centering */
+  flex-direction: column;
+  background-color: #ffffff;
+  padding: 25px 30px;
+  border-radius: 12px;
+  box-shadow: 0 0 15px 5px #545454;
+  width: 90%;
+  max-width: 400px;
+  margin: 80px auto;
+  text-align: center;
+  font-family: 'Bellota Text', sans-serif;
+}
+
+.auth-container h2 {
+  color: #545454;
+  margin-bottom: 20px;
+}
+
+.auth-container form {
+  display: flex;
+  flex-direction: column;
+}
+
+.auth-container input {
+  padding: 10px;
+  margin-bottom: 15px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  font-size: 16px;
+}
+
+.auth-container button {
+  padding: 10px;
+  background-color: #545454;
+  color: #e9e7ed;
+  border: none;
+  border-radius: 10px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.2s ease-in-out;
+}
+
+.auth-container button:hover {
+  background-color: #333;
+}
+#free-quote-form {
+  width: 90%;
+  max-width: 600px;
+  margin: 2em auto;
+  padding: 2em;
+  background-color: #fefefe;
+  border-radius: 12px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+  font-family: inherit;
+}
+
+#free-quote-form h2 {
+  text-align: center;
+  font-size: 1.8em;
+  margin-bottom: 1em;
+}
+
+#free-quote-form form {
+  display: flex;
+  flex-direction: column;
+  gap: 1em;
+}
+
+#free-quote-form label,
+#free-quote-form fieldset {
+  display: flex;
+  flex-direction: column;
+  font-size: 1em;
+}
+
+#free-quote-form input[type="text"],
+#free-quote-form input[type="email"],
+#free-quote-form input[type="tel"],
+#free-quote-form input[type="number"],
+#free-quote-form input[type="date"],
+#free-quote-form select {
+  padding: 0.6em;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  margin-top: 0.4em;
+  font-size: 1em;
+}
+
+#free-quote-form button {
+  padding: 0.75em;
+  background-color: #0066cc;
+  color: white;
+  font-size: 1em;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+#free-quote-form button:hover {
+  background-color: #004999;
+}
+form, label, input, select, textarea, fieldset, button {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  font-family: inherit;
+  font-size: 1em;
+}
+#free-quote-form form {
+  padding: 0;
+  margin: 0;
+  box-sizing: border-box;
+}
+.auth-container {
+  text-align: left;
+}
+
+#free-quote-form {
+  box-sizing: border-box;
+  margin-left: auto;
+  margin-right: auto;
+}
