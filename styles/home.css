@@ -223,6 +223,9 @@ form, label, input, select, textarea, fieldset, button {
     }
 }
 @media (max-width: 768px) {
+  .family {
+    display: none
+  }
   /* Feature card image: no overlap on mobile */
   .mimg {
     position: relative;
@@ -241,6 +244,7 @@ form, label, input, select, textarea, fieldset, button {
     border: none;
     padding: 0;
     overflow-x: hidden;
+    justify-content: flex-start;
   }
   .mfcont, .mfcont2, .mfcont3 {
 	border: none;
@@ -292,6 +296,11 @@ form, label, input, select, textarea, fieldset, button {
 .mfcont3 > p:nth-of-type(2) {
 	top: 0;
 }
+.mfcont > p:nth-of-type(1), 
+.mfcont2 > p:nth-of-type(1), 
+.mfcont3 > p:nth-of-type(1) {
+	font-weight: 900;
+}
 .mfcont > p:nth-of-type(2), 
 .mfcont2 > p:nth-of-type(2), 
 .mfcont3 > p:nth-of-type(2) {
@@ -305,5 +314,8 @@ form, label, input, select, textarea, fieldset, button {
 	color: #e9e7ed;
 	border-radius: 1%;
 	padding: 3px;
+}
+.testcontainer {
+	align-items: stretch;
 }
 }
