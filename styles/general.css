@@ -37,7 +37,7 @@ html, #indexbody {
 }
 .index-grid-header > p {
   position: relative;
-  font-size: 3vw;
+  font-size: clamp(12, 3vw, 20);
   font-weight: bold;
   color: transparent;
   background: linear-gradient(90deg, #7fabbf, #ed9ea5);
@@ -69,7 +69,7 @@ html, #indexbody {
 	display: inline-block;
 	aspect-ratio: 1/1;
 	width: 8vw;
-	max-width: 30px;
+	max-width: 80px;
 	margin-top: 10px;
 }
 #menu-toggle {
