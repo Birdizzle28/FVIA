@@ -141,55 +141,50 @@
 }
 
 /* --- Mobile Responsive Styles (max-width: 768px) --- */
+/* Mobile styles (max-width: 768px) */
 @media (max-width: 768px) {
-  /* Header layout: logo left, hamburger right */
-  .index-grid-header {
-    position: sticky;               /* enable absolute positioning inside */
-    display: flex !important;        /* flex container for header */
-    flex-direction: row !important;  /* row layout */
-    justify-content: space-between;  /* logo on left, hamburger on right  [oai_citation:3‡stackoverflow.com](https://stackoverflow.com/questions/70370519/how-can-i-turn-my-navbar-into-hamburger-menu-for-mobile-using-responsive-design#:~:text=With%20%60justify,to%20vertically%20align%20your%20items) */
-    align-items: center;             /* vertically center elements */
-    padding: 0 1em;                  /* optional: padding for side spacing */
-  }
-  .index-grid-header > p,
-  .index-grid-header > hr {
-    display: none;                   /* hide title text and separators on mobile */
-  }
-
-  /* Hamburger icon styles */
-  #menu-toggle {
-    display: block;                  /* show hamburger on mobile (hidden by default on desktop) */
-    cursor: pointer;
-    color: white;                    /* white icon on dark header */
-    font-size: 10pv;                  /* make icon larger for tap (e.g. ~20-24px on small screens) */
-    /* Position at top-right corner: */
-    position: absolute;
-    top: 20px;
-    right: 20px;
-  }
-
-  /* Hide nav links container by default (collapsed menu) */
-  .header-flex-container {
-    flex-direction: column;        /* stack nav links vertically when shown */
-    align-items: flex-start;       /* align links to left */
-    width: 100%;                   /* allow nav to cover full width */
-    max-height: 0;                 /* collapsed (no height) by default */
-    overflow: hidden;              /* hide links when collapsed */
-    transition: max-height 0.3s ease-out;  /* animate dropdown open/close */
-  }
-  /* Nav links styling for mobile dropdown */
-  .header-flex-container a {
-    /* Override desktop nav link styling for better mobile display: */
-    flex: none;
-    display: block;
-    width: 100%;
-    font-size: 5vw;               /* larger text (e.g. ~16px on phone) */
-    padding: 10px 15px;
-    text-align: left;
-    border-radius: 0;             /* no rounded hover background on mobile */
-  }
-  /* Active state: expand nav menu when hamburger is clicked */
-  .header-flex-container.open {
-    max-height: 200px;   /* expand to show links (adjust value as needed to fit all links) */
-  }
+    /* Hide original horizontal nav and its HR separators on mobile */
+    .header-flex-container, .index-grid-header > hr {
+        display: none;
+    }
+    /* Show and style the hamburger toggle button */
+    #menu-toggle {
+        display: block;
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        background: none;
+        border: none;
+        color: #fff;
+        font-size: 1.5rem;    /* make icon larger for easy tap */
+        cursor: pointer;
+    }
+    /* Slide-out menu container (hidden off-screen by default) */
+    #mobile-menu {
+        position: fixed;
+        top: 0;
+        right: 0;
+        width: 80vw;               /* panel width (80% of viewport) */
+        max-width: 300px;          /* limit width on larger mobile */
+        background: #545454;       /* match header background */
+        transform: translateX(100%);   /* hide off-screen to the right */
+        transition: transform 0.3s ease;
+        z-index: 999;             /* just below header (header is 1000) */
+        max-height: 100vh;
+        overflow-y: auto;         /* allow scroll if menu is very tall */
+    }
+    /* Visible state when menu is toggled open */
+    #mobile-menu.open {
+        transform: translateX(0);
+    }
+    /* Menu link styling (vertical list) */
+    #mobile-menu a {
+        display: block;
+        padding: 10px 20px;
+        color: #fff;
+        text-decoration: none;
+    }
+    #mobile-menu a:hover {
+        background: #272727;      /* dark hover highlight */
+    }
 }
