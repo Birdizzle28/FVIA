@@ -1,1 +1,57 @@
+.careers-container {
+  padding: 2rem;
+  max-width: 900px;
+  margin: auto;
+}
 
+.careers-intro,
+.job-openings,
+.careers-cta {
+  margin-bottom: 3rem;
+}
+
+.job-listing {
+  background-color: #f8f8f8;
+  padding: 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+.job-listing h4 {
+  margin-top: 0;
+}
+
+.job-listing button {
+  background-color: #0077cc;
+  color: #fff;
+  padding: 0.6rem 1.2rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 1rem;
+  cursor: pointer;
+  margin-top: 1rem;
+}
+
+.job-listing button:hover {
+  background-color: #005fa3;
+}
+
+.apply-button {
+  display: inline-block;
+  background-color: #28a745;
+  color: white;
+  padding: 0.75rem 1.5rem;
+  border-radius: 5px;
+  text-decoration: none;
+}
+
+.apply-button:hover {
+  background-color: #218838;
+}
+
+@media (max-width: 600px) {
+  .careers-container {
+    padding: 1rem;
+  }
+}
