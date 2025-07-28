@@ -24,16 +24,15 @@ document.addEventListener('click', (e) => {
     }
 });
 
+  if (window.innerWidth <= 768) {
   const header = document.querySelector('.index-grid-header');
 
-  const observer = new IntersectionObserver(
-    ([e]) => {
-      if (e.intersectionRatio < 1) {
-        header.classList.add('scrolled');
-      } else {
-        header.classList.remove('scrolled');
-      }
-    },
-    { threshold: [1] }
-  );
-
+  window.addEventListener('scroll', () => {
+    const scrolledPast = window.scrollY > 10;
+    if (scrolledPast) {
+      header.classList.add('scrolled');
+    } else {
+      header.classList.remove('scrolled');
+    }
+  });
+}
