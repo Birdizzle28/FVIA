@@ -4,6 +4,7 @@
 html, #indexbody {
 	height: 100%;
 	min-height: 100vh;
+	overflow-x: hidden;
 }
 #indexbody {
 	font-family: Bellota Text;
@@ -48,6 +49,9 @@ html, #indexbody {
 	margin-top: 10px;
 }
 #menu-toggle {
+	display: none;
+}
+#mobile-menu {
 	display: none;
 }
 .header-flex-container {
