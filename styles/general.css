@@ -158,7 +158,10 @@
     padding: 10px;
     width: 100%;
   }
-
+  .index-grid-header.scrolled {
+  background-color: black !important;
+  transition: background-color 0.3s ease;
+}
   /* Hide original nav and <hr> for mobile */
   .header-flex-container,
   .index-grid-header > hr {
@@ -178,7 +181,7 @@
     order: 2;
     flex-grow: 1;
     text-align: center;
-    font-size: clamp(10px, 5vw, 15px);
+    font-size: clamp(10px, 5vw, 20px); 
     margin: 0;
     padding: 0;
   }
