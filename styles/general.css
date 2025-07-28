@@ -166,7 +166,7 @@
   #headerlogo {
     order: 1;
     width: 12vw;
-    max-width: none;
+    max-width: 50px;
     margin-top: 0;
   }
 
