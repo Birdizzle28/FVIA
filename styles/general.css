@@ -50,6 +50,9 @@ html, #indexbody {
 #menu-toggle {
 	display: none;
 }
+#mobile-menu {
+	display: none;
+}
 .header-flex-container {
 	display: flex;
 	flex-direction: row;
@@ -276,6 +279,7 @@ html, #indexbody {
   /* Slide-out menu */
   #mobile-menu {
     position: fixed;
+    display: inline;
     top: 0;
     right: 0;
     width: 30vw;
