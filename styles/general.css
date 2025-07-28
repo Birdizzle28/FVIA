@@ -365,4 +365,7 @@ html, #indexbody {
   	transform-origin: center;
   	transform: rotate(90deg);
 }
+.contactcontainer span {
+	font-size: clamp(25px, 1vw, 25px);
+}
 }
