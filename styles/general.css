@@ -354,8 +354,8 @@ html, #indexbody {
     background: #272727;
   }
 .fab, fa {
-	min-width: 50px;
-	min-height: 50px;
+	min-width: 35px;
+	min-height: 35px;
 	font-size: clamp(30px, 1.9vw, 45px);
 }
 .footerhr {
