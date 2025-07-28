@@ -242,7 +242,7 @@ form, label, input, select, textarea, fieldset, button {
   }
   .mfcont, .mfcont2, .mfcont3 {
 	border: none;
-	opacity: 1;
+	opacity: .7;
 	padding: 5px 0;
 	will-change: transform;
   }
@@ -256,6 +256,7 @@ form, label, input, select, textarea, fieldset, button {
     transform: scale(1.03);
     box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
     z-index: 2;
+    opacity: 1;
   }
 
   .mfcont.active *, 
