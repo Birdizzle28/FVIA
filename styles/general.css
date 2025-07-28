@@ -1,3 +1,6 @@
+* {
+  box-sizing: border-box;
+}
 /*Header*/
 .index-grid-header {
 	display: flex;
