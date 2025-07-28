@@ -51,9 +51,11 @@ html, #indexbody {
 	position: relative;
 	top: -2.5vw;
 	height: 5vw;
+	width: 5vw;
 	background: #e9e7ed;
 	padding: 0;
-	min-width: 25px;
+	min-width: 35px;
+	min-height: 35px;
 	aspect-ratio: 1/1;
 	border-radius: 50%;
 	border: solid 2px #545454;
@@ -332,4 +334,24 @@ form, label, input, select, textarea, fieldset, button {
   .push-down {
     margin-top: 0 !important;           /* eliminate extra spacing between rows */
   }
+.mfcont > p:nth-of-type(1), 
+.mfcont2 > p:nth-of-type(1), 
+.mfcont3 > p:nth-of-type(1),
+.mfcont > hr, 
+.mfcont2 > hr, 
+.mfcont3 > hr,
+.mfcont > p:nth-of-type(2), 
+.mfcont2 > p:nth-of-type(2), 
+.mfcont3 > p:nth-of-type(2) {
+	top: 0;
+}
+.mfcont button, .mfcont2 button, .mfcont3 button {
+	margin-bottom: 10px;
+	background-color: #545454;
+	border: solid 1px #e9e7ed;
+	font-size: 10px;
+	color: #e9e7ed;
+	border-radius: 1%;
+	padding: 3px;
+}
 }
