@@ -148,6 +148,7 @@
     }
     #headerlogo {
 	display: inline;
+	float: left;
     }
     /* Hide original horizontal nav and its HR separators on mobile */
     .header-flex-container, .index-grid-header > hr {
