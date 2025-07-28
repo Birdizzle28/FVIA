@@ -36,34 +36,32 @@ html, #indexbody {
 }
 .index-grid-header > p {
   position: relative;
-  display: inline-block;
   font-size: 3vw;
   font-weight: bold;
+  color: transparent;
   background: linear-gradient(90deg, #7fabbf, #ed9ea5);
+  background-clip: text;
   -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  overflow: hidden;
 }
+
 .index-grid-header > p::after {
   content: '';
   position: absolute;
-  top: 0;
-  left: -75%;
-  width: 200%;
-  height: 100%;
-  background: linear-gradient(
-    120deg,
-    transparent 0%,
-    rgba(255, 255, 255, 0.6) 50%,
-    transparent 100%
-  );
-  animation: shimmer 2.5s infinite;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  background: linear-gradient(120deg, transparent 0%, white 50%, transparent 100%);
+  background-size: 200% 100%;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: shimmerText 2.5s infinite;
   pointer-events: none;
 }
 
-@keyframes shimmer {
-  0% { left: -75%; }
-  100% { left: 100%; }
+@keyframes shimmerText {
+  0%   { background-position: -100% 0; }
+  100% { background-position: 200% 0; }
 }
 
 #headerlogo {
