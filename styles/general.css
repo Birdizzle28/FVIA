@@ -358,15 +358,20 @@ html, #indexbody {
 	width: 100% !important;
 	margin: 0 !important;
 	flex-direction: column !important; 
-	align-items: stretch !important;
+	align-items: center !important;
 	font-size: clamp(25px, 1vw, 25px);
 	padding: 0;
 	text-align: center;
+	gap: 10px; /* Controls spacing */
 }
+
 #footercontact > p {
+	transform: rotate(90deg);
+	transform-origin: center;
 	display: inline-block;
-  	transform-origin: center;
-  	transform: rotate(90deg);
+	margin: 0;
+	padding: 0;
+	line-height: 1; /* Shrinks extra spacing */
 }
 .contactcontainer span {
 	font-size: clamp(15px, 1vw, 25px);
