@@ -47,17 +47,14 @@ html, #indexbody {
 	padding: 0 2vw 0 2vw;
 	transition: transform 0.3s ease, opacity 0.3s ease;
 }
-.mfcont:hover, .mfcont2:hover, .mfcont3:hover {
-    opacity: 1;
-    transform: scale(1.07);
-}
 .mimg {
 	position: relative;
 	top: -2.5vw;
-	width: 5vw;
 	height: 5vw;
 	background: #e9e7ed;
 	padding: 0;
+	min-width: 25px;
+	aspect-ratio: 1/1;
 	border-radius: 50%;
 	border: solid 2px #545454;
 }
@@ -294,23 +291,33 @@ form, label, input, select, textarea, fieldset, button {
 	font-family: inherit;
 	font-size: 1em;
 }
-
+@media (hover: hover) {
+    .mfcont:hover, .mfcont2:hover, .mfcont3:hover {
+    opacity: 1;
+    transform: scale(1.07);
+    }
+}
 @media (max-width: 768px) {
-  /* ... (header styles from above) ... */
-
   /* Feature card image: no overlap on mobile */
   .mimg {
     position: relative;
     top: 0 !important;   /* reset the upward offset (was -2.5vw on desktop) */
-    /* You may also adjust size if needed – e.g., width/height – 
-       but keeping the existing 5vw may be acceptable for now. */
   }
   /* Stack feature sections vertically, full width */
   .main-flex-container, .main-flex-container2 {
     width: 100% !important;
     margin: 0 !important;
     flex-direction: column !important;   /* stack the child sections */
-    align-items: stretch !important;     /* stretch children to fill container width */
+    align-items: stretch !important;  
+    border-radius: 0%;
+    box-shadow: none;
+    border: none;
+    padding: 0;
+  }
+  .mfcont, .mfcont2, .mfcont3 {
+	border: none;
+	opacity: 1;
+	padding: 5px 0;
   }
   .main-flex-container > div, .main-flex-container2 > div {
     /* Each feature box fills the full width of its parent */
@@ -319,7 +326,8 @@ form, label, input, select, textarea, fieldset, button {
     /* Remove the slight upward offset that was used for desktop layout */
     top: 0 !important;
     margin: 0 !important;
-    border-radius: 0 !important;        /* no rounded corners on mobile */
+    border-radius: 0 !important;
+    box-shadow: none;
   }
   .push-down {
     margin-top: 0 !important;           /* eliminate extra spacing between rows */
