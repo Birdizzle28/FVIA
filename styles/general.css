@@ -362,7 +362,7 @@ html, #indexbody {
 	font-size: clamp(25px, 1vw, 25px);
 	padding: 0;
 	text-align: center;
-	gap: 10px; /* Controls spacing */
+	gap: 5px; /* Controls spacing */
 }
 
 #footercontact > p {
