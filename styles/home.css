@@ -207,66 +207,6 @@
 	text-align: center;
 }
 
-/* Chat bubble and chat window */
-#chat-bubble {
-	position: fixed;
-	bottom: 20px;
-	right: 20px;
-	background-color: #7fabbf;
-	color: white;
-	border: none;
-	border-radius: 50%;
-	width: 60px;
-	height: 60px;
-	font-size: 24px;
-	cursor: pointer;
-	box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-	z-index: 9999;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	border: 3px solid white;
-}
-
-#chat-window {
-	display: none;
-	position: fixed;
-	bottom: 90px;
-	right: 20px;
-	width: 300px;
-	aspect-ratio: 3/5;
-	background-color: white;
-	border: 1px solid #ccc;
-	border-radius: 10px;
-	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-	z-index: 9999;
-	overflow: hidden;
-}
-
-#chat-header {
-	background-color: #7fabbf;
-	color: white;
-	padding: 10px;
-	text-align: center;
-	font-weight: bold;
-}
-
-#chat-body {
-	height: 85%;
-	overflow-y: auto;
-}
-#chat-input {
-	border-top: 1px solid #ccc;
-}
-#chat-input input {
-	display: inline-block;
-	width: 100%;
-	align-items: center;
-	margin: auto;
-	border: 0;
-	border-radius: 0;
-}
-
 /* Global form/input styles (applicable outside header/footer on index page) */
 form, label, input, select, textarea, fieldset, button {
 	box-sizing: border-box;
