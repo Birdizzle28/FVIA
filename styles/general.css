@@ -21,9 +21,9 @@
 }
 #headerlogo {
 	display: inline-block;
-	height: 8vw;
+	aspect-ratio: 1/1;
 	width: 8vw;
-	max-width: 
+	max-width: 30px;
 	margin-top: 10px;
 }
 .header-flex-container {
