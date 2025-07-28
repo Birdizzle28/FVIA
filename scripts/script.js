@@ -31,6 +31,19 @@ document.addEventListener('click', (e) => {
     }
 });
 
+  const header = document.querySelector('.index-grid-header');
+
+  const observer = new IntersectionObserver(
+    ([e]) => {
+      if (e.intersectionRatio < 1) {
+        header.classList.add('scrolled');
+      } else {
+        header.classList.remove('scrolled');
+      }
+    },
+    { threshold: [1] }
+  );
+
 window.addEventListener("load", () => {
   const slides = document.querySelector(".carousel");
   const thumbWrapper = document.querySelector(".thumbnail-wrapper");
