@@ -339,4 +339,17 @@ html, #indexbody {
   #mobile-menu a:hover {
     background: #272727;
   }
+.fab, fa {
+	min-width: 50px;
+	min-height: 50px;
+}
+.footerhr {
+	display: none;
+}
+.index-grid-footer {
+	width: 100% !important;
+	margin: 0 !important;
+	flex-direction: column !important; 
+	align-items: stretch !important;
+}
 }
