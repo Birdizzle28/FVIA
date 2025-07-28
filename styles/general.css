@@ -187,6 +187,9 @@ html, #indexbody {
 	margin: 10px;
 	text-decoration: none;
 }
+#footercontact > p {
+	color: white;
+}
 .contactcontainer span {
 	font-size: 1.8vw;
 	text-decoration: none;
@@ -366,6 +369,6 @@ html, #indexbody {
   	transform: rotate(90deg);
 }
 .contactcontainer span {
-	font-size: clamp(25px, 1vw, 25px);
+	font-size: clamp(15px, 1vw, 25px);
 }
 }
