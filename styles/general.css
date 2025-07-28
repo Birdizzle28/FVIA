@@ -163,7 +163,9 @@
   .header-flex-container.show {
     display: flex;
   }
-
+  hr {
+    display: none;
+  }
   .menu-toggle {
     display: block;
     font-size: 24px;
