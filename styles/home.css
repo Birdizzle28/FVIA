@@ -246,6 +246,7 @@ form, label, input, select, textarea, fieldset, button {
 	opacity: .7;
 	padding: 5px 0;
 	will-change: transform;
+	box-sizing: content-box;
   }
   .mfcont *, .mfcont2 *, .mfcont3 * {
     transition: transform 0.3s ease;
