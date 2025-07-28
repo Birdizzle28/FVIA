@@ -145,6 +145,7 @@
 @media (max-width: 768px) {
     .index-grid-header {
 	position: sticky;
+	display: inline;
     }
     /* Hide original horizontal nav and its HR separators on mobile */
     .header-flex-container, .index-grid-header > hr {
