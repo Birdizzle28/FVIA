@@ -260,16 +260,10 @@ form, label, input, select, textarea, fieldset, button {
   .mfcont.active,
   .mfcont2.active,
   .mfcont3.active {
-    transform: scale(1.03);
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+    transform: scale(1.05);
+    box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
     z-index: 2;
     opacity: 1;
-  }
-
-  .mfcont.active *, 
-  .mfcont2.active *, 
-  .mfcont3.active * {
-    transform: scale(1.05);
   }
 
   .main-flex-container > div, .main-flex-container2 > div {
@@ -312,8 +306,11 @@ form, label, input, select, textarea, fieldset, button {
 	border: solid 1px #e9e7ed;
 	font-size: 10px;
 	color: #e9e7ed;
-	border-radius: 1%;
-	padding: 3px;
+	border-radius: 13%;
+	padding: 10px;
+}
+#testdiv {
+	margin: 0;
 }
 #testwrapper {
   flex-direction: column !important;
@@ -323,5 +320,15 @@ form, label, input, select, textarea, fieldset, button {
 .testcontainer {
   width: 90% !important;
   margin: 10px 0 !important;
+}
+.testcontainer.active {
+  transform: scale(1.03);
+  box-shadow: 0 0 20px rgba(0, 0, 0, 0.3);
+  z-index: 2;
+  opacity: 1;
+}
+
+.testcontainer.active * {
+  transform: scale(1.05);
 }
 }
