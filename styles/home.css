@@ -63,11 +63,12 @@
 }
 .mfcont button, .mfcont2 button, .mfcont3 button {
 	margin-bottom: 10px;
-	background-color: #545454;
+	background-color: black;
 	border: solid 1px #e9e7ed;
 	font-size: 1.5vw;
 	color: #e9e7ed;
-	border-radius: 13%;
+	padding: 6px;
+	font-weight: 900;
 	transition: transform 0.3s ease, box-shadow 0.3s ease;
 }
 /* Hover state for feature card buttons */
