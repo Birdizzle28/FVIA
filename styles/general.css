@@ -101,6 +101,7 @@ html, #indexbody {
 	text-decoration: none;
 	margin: 0;
 	padding: 10px;
+	min-width: 40px;
 }
 .header-flex-container > a:hover {
 	background-color: #272727;
