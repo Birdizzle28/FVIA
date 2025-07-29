@@ -315,11 +315,8 @@ form, label, input, select, textarea, fieldset, button {
 }
 .mfcont button, .mfcont2 button, .mfcont3 button {
 	margin-bottom: 10px;
-	background-color: #545454;
 	border: solid 1px #e9e7ed;
 	font-size: 10px;
-	color: #e9e7ed;
-	border-radius: 13%;
 	padding: 10px;
 }
 .mfcont button, 
