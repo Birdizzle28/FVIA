@@ -228,7 +228,7 @@ html, #indexbody {
 	height: 2vw;
 	text-align: center;
 	text-decoration: none;
-	margin: auto;
+	margin: auto auto 10px;
 	border-radius: 50%;
 }
 .fa-facebook-f {
@@ -359,6 +359,7 @@ html, #indexbody {
 	background-color: #545454;
 	color: transparent;
   	-webkit-text-stroke: 1px black;
+	margin-bottom: 0px;
 }
 .footerhr {
 	display: none;
