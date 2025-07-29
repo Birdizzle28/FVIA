@@ -337,7 +337,21 @@ html, #indexbody {
     max-height: 100vh;
     overflow-y: auto;
   }
-
+  #mobile-menu a:nth-of-type(1) {
+	  order: 2;
+  }
+  #mobile-menu a:nth-of-type(2) {
+	  order: 3;
+  }
+  #mobile-menu a:nth-of-type(3) {
+	  order: 1;
+  }
+  #mobile-menu a:nth-of-type(4) {
+	  order: 4;
+  }
+  #mobile-menu a:nth-of-type(5) {
+	  order: 5;
+  }
   #mobile-menu.open {
     transform: translateX(0);
   }
