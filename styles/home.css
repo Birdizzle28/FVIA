@@ -188,6 +188,7 @@
 	padding: 1.5vw;
 	transition: transform 0.3s;
 	margin-bottom: 15px;
+	
 }
 .testcontainer img {
 	width: 8vw;
@@ -228,6 +229,11 @@ form, label, input, select, textarea, fieldset, button {
     opacity: 1;
     transform: scale(1.07);
     }
+    .testcontainer:hover {
+	  transform: scale(1.03) rotate(-0.3deg);
+	  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+	  z-index: 5;
+	}
 }
 @media (max-width: 768px) {
   .family {
