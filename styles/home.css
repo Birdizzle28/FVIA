@@ -245,6 +245,7 @@ form, label, input, select, textarea, fieldset, button {
     top: 0 !important;
     min-width: 50px;
     min-height: 50px;
+    margin-top: 10px;
   }
   /* Stack feature sections vertically, full width */
   .main-flex-container, .main-flex-container2 {
