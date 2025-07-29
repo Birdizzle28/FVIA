@@ -8,14 +8,14 @@ body {
 .privacy-container {
   background-color: white;
   padding: 5vw;
-  margin: 5vh auto;
+  margin: auto 5vh;
   max-width: 800px;
   border-radius: 15px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
 .privacy-container h1, .privacy-container h2 {
-  color: #7fabbf;
+  color: black;
 }
 
 .privacy-container ul {
