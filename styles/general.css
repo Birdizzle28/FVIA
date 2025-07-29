@@ -47,7 +47,7 @@ html, #indexbody {
   background-clip: text;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent; /* move this here */
-  -webkit-text-stroke: 1px black; /* ADD: black outline */
+  -webkit-text-stroke: .3px black; /* ADD: black outline */
   margin-top: 4px;
   margin-bottom: 0;
   padding: 0;
