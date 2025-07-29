@@ -356,7 +356,7 @@ html, #indexbody {
 .fab, fa {
 	min-width: 35px;
 	min-height: 35px;
-	font-size: clamp(30px, 1.9vw, 45px);
+	font-size: 28px;
 }
 .footerhr {
 	display: none;
