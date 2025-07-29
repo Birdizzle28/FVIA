@@ -357,7 +357,8 @@ html, #indexbody {
 	min-height: 35px;
 	font-size: 28px;
 	background-color: #545454;
-	color: #7fabbf;
+	color: transparent;
+  	-webkit-text-stroke: 1px black;
 }
 .footerhr {
 	display: none;
