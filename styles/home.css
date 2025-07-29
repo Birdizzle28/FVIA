@@ -67,7 +67,13 @@
 	border: solid 1px #e9e7ed;
 	font-size: 1.5vw;
 	color: #e9e7ed;
-	border-radius: 4px;
+	border-radius: 13%;
+	transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+/* Hover state for feature card buttons */
+.mfcont button:hover, .mfcont2 button:hover, .mfcont3 button:hover {
+  transform: scale(1.05) rotate(-2deg);              /* Slightly larger and tilted */
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);          /* Subtle shadow on hover */
 }
 #nflb {
 	font-size: 5vw;
