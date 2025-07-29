@@ -1,0 +1,39 @@
+body {
+  font-family: Bellota Text;
+  background: radial-gradient(#ed9ea5, #7fabbf);
+  margin: 0;
+  color: #333;
+}
+
+.privacy-container {
+  background-color: white;
+  padding: 5vw;
+  margin: 5vh auto;
+  max-width: 800px;
+  border-radius: 15px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+}
+
+.privacy-container h1, .privacy-container h2 {
+  color: #7fabbf;
+}
+
+.privacy-container ul {
+  padding-left: 20px;
+  line-height: 1.7;
+}
+
+.form-consent {
+  margin-top: 15px;
+  font-size: 0.95rem;
+}
+
+.form-consent input {
+  margin-right: 8px;
+}
+
+.tcpa-disclaimer {
+  font-size: 0.8rem;
+  color: gray;
+  margin-top: 10px;
+}
