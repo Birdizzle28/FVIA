@@ -100,6 +100,7 @@ html, #indexbody {
 	text-decoration: none;
 	margin: 0;
 	padding: 10px;
+	width: 100px;
 	min-width: 40px;
 }
 .header-flex-container > a:hover {
