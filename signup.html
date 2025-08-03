@@ -155,5 +155,18 @@
 		    }
 		  });
 		</script>
+		<script>
+		  const allowed = sessionStorage.getItem("siteAccess");
+		
+		  if (!allowed) {
+		    const pass = prompt("Enter password to view the site:");
+		    if (pass !== "BigBirdleWordle") {
+		      document.write("Access Denied");
+		      throw new Error("Wrong password");
+		    } else {
+		      sessionStorage.setItem("siteAccess", "true");
+		    }
+		  }
+		</script>
 </body>
 </html>
