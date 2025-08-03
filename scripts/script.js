@@ -128,53 +128,6 @@ window.addEventListener("load", () => {
   });
 });
 
-// Chat toggle
-const chatBubble = document.getElementById("chat-bubble");
-const chatWindow = document.getElementById("chat-window");
-
-if (chatBubble && chatWindow) {
-  chatBubble.addEventListener("click", () => {
-    chatWindow.style.display = chatWindow.style.display === "none" ? "block" : "none";
-  });
-}
-const chatBody = document.getElementById("chat-body");
-const chatInput = document.querySelector("#chat-input input");
-
-if (chatBubble && chatWindow) {
-  chatBubble.addEventListener("click", () => {
-    chatWindow.style.display = chatWindow.style.display === "none" ? "block" : "none";
-  });
-}
-
-chatInput.addEventListener("keypress", async function (e) {
-  if (e.key === "Enter" && chatInput.value.trim() !== "") {
-    const userMessage = chatInput.value.trim();
-
-    // Show user message
-    chatBody.innerHTML += `<p><strong>You:</strong> ${userMessage}</p>`;
-    chatInput.value = "";
-    chatBody.scrollTop = chatBody.scrollHeight;
-
-    try {
-      const response = await fetch("/.netlify/functions/chatgpt", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({ prompt: userMessage })
-      });
-
-      const data = await response.json();
-      const botMessage = data.response || "Sorry, I didn’t understand that.";
-
-      chatBody.innerHTML += `<p><strong>Kuma:</strong> ${botMessage}</p>`;
-      chatBody.scrollTop = chatBody.scrollHeight;
-    } catch (err) {
-      chatBody.innerHTML += `<p><strong>Kuma:</strong> There was an error talking to me 😢</p>`;
-    }
-  }
-});
-
   document.addEventListener('DOMContentLoaded', async () => {
 
   if (window.innerWidth <= 768) {
