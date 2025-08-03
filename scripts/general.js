@@ -36,3 +36,60 @@ document.addEventListener('click', (e) => {
     }
   });
 }
+
+const chatBubble = document.getElementById("chat-bubble");
+const chatWindow = document.getElementById("chat-window");
+const chatBody = document.getElementById("chat-body");
+const chatInput = document.querySelector("#chat-input input");
+const sendBtn = document.getElementById("send-btn");
+
+// Toggle chat window
+if (chatBubble && chatWindow) {
+  chatWindow.style.display = "none"; // Start hidden
+  chatBubble.addEventListener("click", () => {
+    chatWindow.style.display = chatWindow.style.display === "none" ? "flex" : "none";
+    chatWindow.style.flexDirection = "column";
+  });
+}
+
+// Function to add chat bubbles
+function addMessage(sender, message) {
+  const bubble = document.createElement("div");
+  bubble.className = `chat-bubble ${sender}`;
+  bubble.innerHTML = sender === "bot" ? `<strong>Kuma:</strong> ${message}` : message;
+  chatBody.appendChild(bubble);
+  chatBody.scrollTop = chatBody.scrollHeight;
+}
+
+// Function to send user message
+async function handleSend() {
+  const userMessage = chatInput.value.trim();
+  if (!userMessage) return;
+
+  addMessage("user", userMessage);
+  chatInput.value = "";
+
+  try {
+    const response = await fetch("/.netlify/functions/chatgpt", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({ prompt: userMessage })
+    });
+
+    const data = await response.json();
+    const botMessage = data.response || "Sorry, I didn’t understand that.";
+    addMessage("bot", botMessage);
+  } catch (err) {
+    addMessage("bot", "There was an error talking to me 😢");
+  }
+}
+
+// Enter key
+chatInput?.addEventListener("keypress", function (e) {
+  if (e.key === "Enter") handleSend();
+});
+
+// Send button click
+sendBtn?.addEventListener("click", handleSend);
