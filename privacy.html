@@ -127,15 +127,29 @@
 	
 	<!-- Chat Window -->
 	<div id="chat-window">
-		<div id="chat-header">Chat with us</div>
-		<div id="chat-body">
-			<p><strong>Kuma:</strong> Hello! How can I help you today?</p>
-		</div>
-		<div id="chat-input">
-			<input type="text" placeholder="Type a message..." />
-		</div>
-	</div> 
+	  <div id="chat-header">Chat with us</div>
+	  <div id="chat-body">
+	    <div class="chat-bubble bot"><strong>Kuma:</strong> Hello! How can I help you today?</div>
+	  </div>
+	  <div id="chat-input">
+	    <input type="text" placeholder="Type a message..." />
+	    <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
+	  </div>
+	</div>
 	<script type="module" src="scripts/privacy.js"></script>
 	<script type="module" src="scripts/general.js"></script>
+	<script>
+	  const allowed = sessionStorage.getItem("siteAccess");
+	
+	  if (!allowed) {
+	    const pass = prompt("Enter password to view the site:");
+	    if (pass !== "BigBirdleWordle") {
+	      document.write("Access Denied");
+	      throw new Error("Wrong password");
+	    } else {
+	      sessionStorage.setItem("siteAccess", "true");
+	    }
+	  }
+	</script>
 </body>
 </html>
