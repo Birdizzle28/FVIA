@@ -47,16 +47,16 @@
 			</div>
 			<div class="mfcont2 blue">
 				<img class="mimg" src="Pics/img13.png" alt="">
-				<p>LegalShield/p>
+				<p>LegalShield</p>
 				<hr>
-				<p>Imagine having a lawyer in your pocket—ready to fight for you whenever life throws legal issues your way. Whether it’s reviewing contracts, handling traffic tickets, or dealing with unexpected disputes, LegalShield has your back 24/7. No hourly fees, no guesswork—just real legal help when you need it most. See how affordable legal protection can be.</p>
+				<p>Whether it’s reviewing contracts, handling traffic tickets, or dealing with unexpected disputes, LegalShield has your back 24/7. No hourly fees, no guesswork—just real legal help when you need it most. See how affordable legal protection can be.</p>
 				<button>Get Help</button>
 			</div>
 			<div class="mfcont3 pink">
 				<img class="mimg" src="Pics/img15.png" alt="">
 				<p>IDShield</p>
 				<hr>
-				<p>Identity theft is no longer a matter of if, but when. IDShield monitors your personal data in real-time and gives you full access to licensed private investigators if anything goes wrong. With instant alerts, full recovery services, and $1 million protection, your identity is safe—day and night. Lock down your identity before someone else does.</p>
+				<p>IDShield monitors your personal data in real-time and gives you full access to licensed private investigators if anything goes wrong. With instant alerts, full recovery services, and $1 million protection, your identity is safe. Lock down your identity.</p>
 				<button>Protect Yourself</button>
 			</div>
 		</div>
@@ -171,17 +171,17 @@
 	<script type="module" src="scripts/script.js"></script>
 	<script type="module" src="scripts/general.js"></script>
 	<script>
-  const allowed = sessionStorage.getItem("siteAccess");
-
-  if (!allowed) {
-    const pass = prompt("Enter password to view the site:");
-    if (pass !== "BigBirdleWordle") {
-      document.write("Access Denied");
-      throw new Error("Wrong password");
-    } else {
-      sessionStorage.setItem("siteAccess", "true");
-    }
-  }
-</script>
+	  const allowed = sessionStorage.getItem("siteAccess");
+	
+	  if (!allowed) {
+	    const pass = prompt("Enter password to view the site:");
+	    if (pass !== "BigBirdleWordle") {
+	      document.write("Access Denied");
+	      throw new Error("Wrong password");
+	    } else {
+	      sessionStorage.setItem("siteAccess", "true");
+	    }
+	  }
+	</script>
 </body>
 </html>
