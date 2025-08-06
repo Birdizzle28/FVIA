@@ -55,6 +55,25 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // Hide Fields in Referral mode
+  const hideInReferralFields = document.querySelectorAll(".hide-in-referral");
+
+  function updateReferralView() {
+    const isMeChecked = meCheckbox.checked;
+    leadTypeInput.value = isMeChecked ? originalLeadType : "Referral";
+  
+    hideInReferralFields.forEach(el => {
+      el.style.display = isMeChecked ? "block" : "none";
+    });
+  }
+  
+  // Call this on load too (in case URL opens in referral mode)
+  updateReferralView();
+  
+  // Update event
+  quoteForCheckboxes.forEach((checkbox) => {
+    checkbox.addEventListener("change", updateReferralView);
+  });
   // Limiting age to numbers
   const ageInput = document.querySelector('input[name="age"]');
   ageInput.addEventListener("input", () => {
