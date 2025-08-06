@@ -1,26 +1,26 @@
 <!doctype html>
 <html lang="en">
-<head>
-	<meta charset="utf-8">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link rel="stylesheet" href="styles/general.css">
-	<link rel="stylesheet" href="styles/freequote.css">
-	<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-	<script type="module" src="scripts/general.js"></script>
-	<script type="module" src="scripts/freequote.js"></script>
-	<title>Free Quote | Family Values Group</title>
-</head>
-<body id="indexbody">
-	<img class="family" src="Pics/img.jpeg" alt="">
-	<div class="index-body">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="stylesheet" href="styles/general.css">
+		<link rel="stylesheet" href="styles/freequote.css">
+		<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet">
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+		<script type="module" src="scripts/general.js"></script>
+		<script type="module" src="scripts/freequote.js"></script>
+		<title>Free Quote | Family Values Group</title>
+	</head>
+	<body id="indexbody">
+		<img class="family" src="Pics/img.jpeg" alt="">
+		<div class="index-body">
 		<header class="index-grid-header">
 			<a href="index.html"><img id="headerlogo" src="Pics/img6.png" alt=""></a>
 			<p><strong>Family Values Group</strong></p>
 			<button id="menu-toggle" aria-label="Toggle menu">
-		 		<i class="fas fa-bars"></i>
-		        </button>
+				<i class="fas fa-bars"></i>
+			</button>
 			<hr>
 			<nav class="header-flex-container">
 				<a href="about.html">About</a>
@@ -32,120 +32,135 @@
 			<hr>
 		</header>
 		<div id="mobile-menu">
-		    <a href="about.html">About</a>
-		    <a href="contact.html">Support</a>
-		    <a href="index.html" id="active-nav">Home</a>
-		    <a href="careers.html">Careers</a>
-		    <a href="login.html">Login</a>
+			<a href="about.html">About</a>
+			<a href="contact.html">Support</a>
+			<a href="index.html" id="active-nav">Home</a>
+			<a href="careers.html">Careers</a>
+			<a href="login.html">Login</a>
 		</div>
-<main class="auth-container">
-<section id="free-quote-form">
-  <h2>Free Quote</h2>
-  <div class="product-type-selector">
-    <label for="product-type-dropdown"><strong>Select Product:</strong></label>
-    <select id="product-type-dropdown" name="product-type">
-      <option value="life">Life Insurance</option>
-      <option value="legalshield">LegalShield / IDShield</option>
-    </select>
-  </div>
-  <form id="quote-form">
-    <fieldset>
-      <legend>Who is this quote for?</legend>
-      <label><input type="checkbox" name="quote-for" value="Me" checked> Me</label>
-      <label><input type="checkbox" name="quote-for" value="Spouse"> Spouse</label>
-      <label><input type="checkbox" name="quote-for" value="Other" id="otherCheckbox"> Other</label>
-      <input type="text" name="other-text" id="otherTextInput" placeholder="Please specify" style="display:none; margin-top: 8px;">
-    </fieldset>
-	  
-    <label>First Name:
-      <input type="text" name="first-name" required>
-    </label>
-
-    <label>Last Name:
-      <input type="text" name="last-name" required>
-    </label>
-
-    <label>Age:
-      <input type="number" name="age" min="0" required>
-    </label>
-
-    <label>Phone Number:
-      <input type="tel" name="phone" required>
-    </label>
-
-    <label>Email:
-      <input type="email" name="email" required>
-    </label>
-
-    <label>Address:
-      <input type="text" name="address" required>
-    </label>
-
-    <label>When is best to contact you?
-      <input type="date" name="contact-date">
-    </label>
-    <!-- Hidden inputs to track source and product -->
-    <input type="hidden" name="lead_type" id="lead_type">
-    <input type="hidden" name="product_type" id="product_type">
-    <button type="submit">Submit</button>
-	<p class="tcpa-disclaimer">
-	  By submitting this form, you agree to receive text messages and/or calls from Family Values Group or its agents at the number you provided, including through automated systems. Consent is not a condition of purchase. Message & data rates may apply.
-	</p>
-  </form>
-</section>
-</main>
-
-	<footer class="index-grid-footer">
-		<img id="footerlogo" src="Pics/img6.png">
-		<hr class="footerhr">
-		<div id="footercontact">
-			<a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
-				<span class="fa fa-envelope"></span>
-				<span class="contactcontcontacts">fvinsuranceagency@gmail.com</span>
-			</a>
-			<p> | </p>
-			<a class="contactcontainer" href="tel:+17316934739">
-				<span class="fa fa-phone"></span>
-				<span class="contactcontcontacts">(731) 693-4739</span>
-			</a>
-		</div>
-		<hr class="footerhr">
-		<div id="footersocial">
-			<a class="fab fa-facebook-f" href="#"></a>
-			<a class="fab fa-linkedin-in" href="#"></a>
-			<a class="fab fa-instagram" href="#"></a>
-			<a class="fab fa-youtube" href="#"></a>
-			<a class="fab fa-google" href="#"></a>
-		</div>
-		<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+		<main class="auth-container">
+			<section id="free-quote-form">
+				<h2>Free Quote</h2>
+				<div class="product-type-selector">
+					<label for="product-type-dropdown"><strong>Select Product:</strong></label>
+					<select id="product-type-dropdown" name="product-type">
+						<option value="life">Life Insurance</option>
+						<option value="legalshield">LegalShield / IDShield</option>
+					</select>
+				</div>
+				<form id="quote-form">
+					<fieldset>
+						<legend>Who is this quote for?</legend>
+						<label><input type="checkbox" name="quote-for" value="Me" checked> Me</label>
+						<label><input type="checkbox" name="quote-for" value="Spouse"> Spouse</label>
+						<label><input type="checkbox" name="quote-for" value="Other" id="otherCheckbox"> Other</label>
+						<input type="text" name="other-text" id="otherTextInput" placeholder="Please specify" style="display:none; margin-top: 8px;">
+					</fieldset>
+					
+					<div id="referral-fields" style="display: none; margin-top: 15px;">
+						<label>Referrer's Name:
+							<input type="text" name="referrer-name" id="referrer-name">
+						</label>
+						
+						<label>Referrer's Phone Number:
+							<input type="tel" name="referrer-phone" id="referrer-phone">
+						</label>
+						
+						<label>Relationship to You:
+							<input type="text" name="referrer-relationship" id="referrer-relationship">
+						</label>
+					</div>  
+					
+					<label>First Name:
+						<input type="text" name="first-name" required>
+					</label>
+					
+					<label>Last Name:
+						<input type="text" name="last-name" required>
+					</label>
+					
+					<label>Age:
+						<input type="number" name="age" min="0" required>
+					</label>
+					
+					<label>Phone Number:
+						<input type="tel" name="phone" required>
+					</label>
+					
+					<label>Email:
+						<input type="email" name="email" required>
+					</label>
+					
+					<label>Address:
+						<input type="text" name="address" required>
+					</label>
+					
+					<label>When is best to contact you?
+						<input type="date" name="contact-date">
+					</label>
+					
+					<!-- Hidden inputs to track source and product -->
+					<input type="hidden" name="lead_type" id="lead_type">
+					<input type="hidden" name="product_type" id="product_type">
+					<button type="submit">Submit</button>
+					<p class="tcpa-disclaimer">
+					By submitting this form, you agree to receive text messages and/or calls from Family Values Group or its agents at the number you provided, including through automated systems. Consent is not a condition of purchase. Message & data rates may apply.
+					</p>
+				</form>
+			</section>
+		</main>
 		
-		<!-- Chat Bubble Button -->
-		<button id="chat-bubble"><i class="fas fa-comment-dots"></i></button>
+		<footer class="index-grid-footer">
+			<img id="footerlogo" src="Pics/img6.png">
+			<hr class="footerhr">
+			<div id="footercontact">
+				<a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
+					<span class="fa fa-envelope"></span>
+					<span class="contactcontcontacts">fvinsuranceagency@gmail.com</span>
+				</a>
+				<p> | </p>
+				<a class="contactcontainer" href="tel:+17316934739">
+					<span class="fa fa-phone"></span>
+					<span class="contactcontcontacts">(731) 693-4739</span>
+				</a>
+			</div>
+			<hr class="footerhr">
+			<div id="footersocial">
+				<a class="fab fa-facebook-f" href="#"></a>
+				<a class="fab fa-linkedin-in" href="#"></a>
+				<a class="fab fa-instagram" href="#"></a>
+				<a class="fab fa-youtube" href="#"></a>
+				<a class="fab fa-google" href="#"></a>
+			</div>
+			<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+			
+			<!-- Chat Bubble Button -->
+			<button id="chat-bubble"><i class="fas fa-comment-dots"></i></button>
 		
-		<!-- Chat Window -->
-		<div id="chat-window">
-		  <div id="chat-header">Chat with us</div>
-		  <div id="chat-body">
-		    <div class="chat-bubble bot"><strong>Kuma:</strong> Hello! How can I help you today?</div>
-		  </div>
-		  <div id="chat-input">
-		    <input type="text" placeholder="Type a message..." />
-		    <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
-		  </div>
-		</div>
-	</footer>
-	<script>
-	  const allowed = sessionStorage.getItem("siteAccess");
-	
-	  if (!allowed) {
-	    const pass = prompt("Enter password to view the site:");
-	    if (pass !== "BigBirdleWordle") {
-	      document.write("Access Denied");
-	      throw new Error("Wrong password");
-	    } else {
-	      sessionStorage.setItem("siteAccess", "true");
-	    }
-	  }
-	</script>
-</body>
+			<!-- Chat Window -->
+			<div id="chat-window">
+				<div id="chat-header">Chat with us</div>
+				<div id="chat-body">
+					<div class="chat-bubble bot"><strong>Kuma:</strong> Hello! How can I help you today?</div>
+				</div>
+				<div id="chat-input">
+					<input type="text" placeholder="Type a message..." />
+					<button id="send-btn"><i class="fas fa-paper-plane"></i></button>
+				</div>
+			</div>
+		</footer>
+		<script>
+			const allowed = sessionStorage.getItem("siteAccess");
+			
+			if (!allowed) {
+				const pass = prompt("Enter password to view the site:");
+				if (pass !== "BigBirdleWordle") {
+					document.write("Access Denied");
+					throw new Error("Wrong password");
+				} else {
+				sessionStorage.setItem("siteAccess", "true");
+				}
+			}
+		</script>
+	</body>
 </html>
