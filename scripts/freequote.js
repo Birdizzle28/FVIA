@@ -13,6 +13,11 @@ document.addEventListener("DOMContentLoaded", () => {
   const quoteForCheckboxes = document.querySelectorAll('input[name="quote-for"]');
   const meCheckbox = document.querySelector('input[name="quote-for"][value="Me"]');
   const referralFields = document.getElementById("referral-fields");
+  
+  const quoteHeading = document.getElementById("quote-heading");
+  quoteHeading.textContent = productTypeParam === "legalshield"
+  ? "LegalShield/IDShield Quote"
+  : "Life Insurance Quote";
 
   // Save original source (Facebook, Google, etc.)
   let originalLeadType = leadTypeParam;
