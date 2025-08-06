@@ -19,6 +19,14 @@ document.addEventListener("DOMContentLoaded", () => {
   ? "LegalShield/IDShield Quote"
   : "Life Insurance Quote";
 
+  function updateURLParams(leadType, productType) {
+    const newParams = new URLSearchParams(window.location.search);
+    newParams.set("lead_type", leadType);
+    newParams.set("product_type", productType);
+    const newUrl = `${window.location.pathname}?${newParams.toString()}`;
+    history.replaceState({}, "", newUrl);
+  }
+  
   // Save original source (Facebook, Google, etc.)
   let originalLeadType = leadTypeParam;
   leadTypeInput.value = leadTypeParam;
@@ -43,15 +51,29 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ✅ Event: Update product_type when dropdown changes
   productDropdown.addEventListener("change", () => {
-    productTypeInput.value = productDropdown.value;
+    const selectedProduct = productDropdown.value;
+    productTypeInput.value = selectedProduct;
+  
+    // ✅ Update heading
+    quoteHeading.textContent = selectedProduct === "legalshield"
+      ? "LegalShield/IDShield Quote"
+      : "Life Insurance Quote";
+  
+    // ✅ Update URL
+    updateURLParams(leadTypeInput.value, selectedProduct);
   });
 
   // ✅ Event: Switch to Referral if "Me" is unchecked
   quoteForCheckboxes.forEach((checkbox) => {
     checkbox.addEventListener("change", () => {
       const isMeChecked = meCheckbox.checked;
-      leadTypeInput.value = isMeChecked ? originalLeadType : "Referral";
+      const newLeadType = isMeChecked ? originalLeadType : "Referral";
+  
+      leadTypeInput.value = newLeadType;
       referralFields.style.display = isMeChecked ? "none" : "block";
+  
+      updateReferralView(); // keep hiding/showing fields
+      updateURLParams(newLeadType, productDropdown.value); // ✅ Update URL
     });
   });
 
