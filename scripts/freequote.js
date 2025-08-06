@@ -11,42 +11,45 @@ document.addEventListener("DOMContentLoaded", () => {
   const otherTextInput = document.getElementById("otherTextInput");
 
   const quoteForCheckboxes = document.querySelectorAll('input[name="quote-for"]');
+  const meCheckbox = document.querySelector('input[name="quote-for"][value="Me"]');
 
   let originalLeadType = leadTypeParam;
   leadTypeInput.value = leadTypeParam;
   productTypeInput.value = productTypeParam;
   productDropdown.value = productTypeParam;
 
-  // Toggle other textbox visibility
+  // Toggle "Other" textbox
   otherCheckbox.addEventListener("change", () => {
     otherTextInput.style.display = otherCheckbox.checked ? "block" : "none";
   });
 
-  // Update product_type on dropdown change
+  // Change product_type when dropdown changes
   productDropdown.addEventListener("change", () => {
     productTypeInput.value = productDropdown.value;
   });
 
-  // Handle lead_type override based on "Me" checkbox
-  quoteForCheckboxes.forEach((checkbox) => {
-    checkbox.addEventListener("change", () => {
-      const isMeChecked = Array.from(quoteForCheckboxes).some(cb => cb.value === "Me" && cb.checked);
-      if (!isMeChecked) {
-        leadTypeInput.value = "Referral";
-      } else {
-        leadTypeInput.value = originalLeadType;
-      }
-    });
+  // Adjust lead_type when "Me" is unchecked
+  meCheckbox.addEventListener("change", () => {
+    leadTypeInput.value = meCheckbox.checked ? originalLeadType : "Referral";
   });
 
-  // TEMPORARY: Handle static form submission
+  // Form submission
   quoteForm.addEventListener("submit", (e) => {
     e.preventDefault();
+
+    // TEMP handling
     alert("Quote submitted successfully! (Static only for now)");
+
+    // Reset form
     quoteForm.reset();
-    otherTextInput.style.display = "none";
-    leadTypeInput.value = originalLeadType; // reset lead_type
-    productTypeInput.value = productDropdown.value;
+
+    // Restore logic-sensitive values
+    leadTypeInput.value = originalLeadType;
+    productTypeInput.value = productTypeParam;
     productDropdown.value = productTypeParam;
+    otherTextInput.style.display = "none";
+
+    // Re-check "Me" after reset
+    meCheckbox.checked = true;
   });
 });
