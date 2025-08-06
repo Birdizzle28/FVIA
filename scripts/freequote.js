@@ -19,20 +19,28 @@ document.addEventListener("DOMContentLoaded", () => {
   productTypeInput.value = productTypeParam;
   productDropdown.value = productTypeParam;
 
-  // Helper: toggle "Other" input field visibility
+  // ✅ Helper: toggle "Other" input field visibility
   function toggleOtherText() {
-    otherTextInput.style.display = otherCheckbox.checked ? "block" : "none";
+    if (otherCheckbox.checked) {
+      otherTextInput.style.display = "block";
+    } else {
+      otherTextInput.style.display = "none";
+      otherTextInput.value = "";
+    }
   }
 
-  // Event: show/hide "Other" text box
+  // ✅ Initial state (in case it's pre-checked)
+  toggleOtherText();
+
+  // ✅ Event: show/hide "Other" text box
   otherCheckbox.addEventListener("change", toggleOtherText);
 
-  // Event: Update product_type when dropdown changes
+  // ✅ Event: Update product_type when dropdown changes
   productDropdown.addEventListener("change", () => {
     productTypeInput.value = productDropdown.value;
   });
 
-  // Event: Switch to Referral if "Me" is unchecked
+  // ✅ Event: Switch to Referral if "Me" is unchecked
   quoteForCheckboxes.forEach((checkbox) => {
     checkbox.addEventListener("change", () => {
       const isMeChecked = meCheckbox.checked;
@@ -40,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
-  // TEMPORARY SUBMISSION HANDLER
+  // ✅ TEMPORARY SUBMISSION HANDLER
   quoteForm.addEventListener("submit", (e) => {
     e.preventDefault();
     alert("Quote submitted successfully! (Static only for now)");
@@ -54,7 +62,7 @@ document.addEventListener("DOMContentLoaded", () => {
     productTypeInput.value = productTypeParam;
     meCheckbox.checked = true;
 
-    // Re-hide "Other" input
+    // ✅ Manually update dynamic elements after reset
     toggleOtherText();
   });
 });
