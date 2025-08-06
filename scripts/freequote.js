@@ -55,6 +55,12 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   });
 
+  // Limiting age to numbers
+  const ageInput = document.querySelector('input[name="age"]');
+  ageInput.addEventListener("input", () => {
+    ageInput.value = ageInput.value.replace(/\D/g, "");
+  });
+  
   // ✅ TEMPORARY SUBMISSION HANDLER
   quoteForm.addEventListener("submit", (e) => {
     e.preventDefault();
