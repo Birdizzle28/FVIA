@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const quoteForCheckboxes = document.querySelectorAll('input[name="quote-for"]');
   const meCheckbox = document.querySelector('input[name="quote-for"][value="Me"]');
+  const referralFields = document.getElementById("referral-fields");
 
   // Save original source (Facebook, Google, etc.)
   let originalLeadType = leadTypeParam;
@@ -45,6 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
     checkbox.addEventListener("change", () => {
       const isMeChecked = meCheckbox.checked;
       leadTypeInput.value = isMeChecked ? originalLeadType : "Referral";
+      referralFields.style.display = isMeChecked ? "none" : "block";
     });
   });
 
@@ -61,7 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
     productDropdown.value = productTypeParam;
     productTypeInput.value = productTypeParam;
     meCheckbox.checked = true;
-
+    referralFields.style.display = "none";
     // ✅ Manually update dynamic elements after reset
     toggleOtherText();
   });
