@@ -20,6 +20,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const addReferralBtn = document.getElementById("add-referral-btn");
   const referralSlider = document.getElementById("referral-container");
   const referralTemplate = document.getElementById("referral-template");
+  const formFields = document.getElementById("form-fields");
   
   const quoteHeading = document.getElementById("quote-heading");
   quoteHeading.textContent = productTypeParam === "legalshield"
@@ -227,32 +228,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("form-fields").style.display = "none";
     document.getElementById("summary-screen").style.display = "block";
   });
-  
-  // === Referral Slider Logic ===
-  function createReferralCard() {
-    const clone = referralTemplate.content.cloneNode(true);
-    const card = clone.querySelector(".referral-card");
-  
-    // Add delete functionality
-    const deleteBtn = card.querySelector(".delete-referral");
-    if (deleteBtn) {
-      deleteBtn.addEventListener("click", () => {
-        card.remove();
-    });
-  }
-
-  // Enforce numeric input for age (optional but helpful)
-  const ageInput = card.querySelector('input[name="referral_age[]"]');
-  if (ageInput) {
-    ageInput.addEventListener("input", () => {
-      ageInput.value = ageInput.value.replace(/\D/g, "");
-    });
-  }
-
-  referralSlider.appendChild(card);
-}
-  
-  addReferralBtn.addEventListener("click", createReferralCard);
   
   // Referral slider
   let currentReferralIndex = 0;
