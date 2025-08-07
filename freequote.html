@@ -52,9 +52,16 @@
 					<fieldset>
 						<legend>Who is this quote for?</legend>
 						<label><input type="checkbox" name="quote-for" value="Me" checked> Me</label>
-						<label><input type="checkbox" name="quote-for" value="Spouse"> Spouse</label>
-						<label><input type="checkbox" name="quote-for" value="Other" id="otherCheckbox"> Other</label>
-						<input type="text" name="other-text" id="otherTextInput" placeholder="Please specify" style="display:none; margin-top: 8px;">
+						<label><input type="checkbox" name="quote-for" value="Someone Else" id="someoneElseCheckbox"> Someone Else</label>
+
+						<!-- Contact dropdown that appears when "Someone Else" is selected -->
+						<div id="contactDropdownWrapper" style="display: none; margin-top: 8px;">
+						  <label for="contactPreference">Who do we contact?:</label>
+						  <select id="contactPreference" name="contactPreference">
+						    <option value="You">You</option>
+						    <option value="Referral">Referral</option>
+						  </select>
+						</div>					
 					</fieldset>
 					
 					<!-- Referrer Info -->
@@ -115,7 +122,15 @@
 							<input type="date" name="contact-date">
 						</label>
 					</div>
-					
+					<!-- Loved one fields shown only when Contact = You -->
+					<div id="lovedOneFields" style="display: none; margin-top: 16px;">
+					  <label>Loved One's Name:
+					    <input type="text" name="loved_one_name" />
+					  </label>
+					  <label>Loved One's Age:
+					    <input type="number" name="loved_one_age" min="0" />
+					  </label>
+					</div>
 					<!-- Hidden inputs to track source and product -->
 					<input type="hidden" name="lead_type" id="lead_type">
 					<input type="hidden" name="product_type" id="product_type">
