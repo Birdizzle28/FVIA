@@ -65,7 +65,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Hide Fields in Referral mode
   const hideInReferralFields = document.querySelectorAll(".hide-in-referral");
-
+  
+  // Track originally required fields
+  const originalRequiredMap = new Map();
+  hideInReferralFields.forEach(container => {
+    const inputs = container.querySelectorAll("input, select, textarea");
+    inputs.forEach(input => {
+      originalRequiredMap.set(input, input.hasAttribute("required"));
+    });
+  });
   function updateReferralView() {
     const isMeChecked = meCheckbox.checked;
   
@@ -86,7 +94,8 @@ document.addEventListener("DOMContentLoaded", () => {
       el.style.display = isMeChecked ? "block" : "none";
       const inputs = el.querySelectorAll("input, select, textarea");
       inputs.forEach(input => {
-        if (isMeChecked) {
+        const wasOriginallyRequired = originalRequiredMap.get(input);
+        if (isMeChecked && wasOriginallyRequired) {
           input.setAttribute("required", "required");
         } else {
           input.removeAttribute("required");
