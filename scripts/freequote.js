@@ -17,6 +17,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const contactDropdownWrapper = document.getElementById("contactDropdownWrapper");
   const contactPreference = document.getElementById("contactPreference");
   const lovedOneFields = document.getElementById("lovedOneFields");
+  const addReferralBtn = document.getElementById("add-referral-btn");
+  const referralSlider = document.getElementById("referral-container");
+  const referralTemplate = document.getElementById("referral-template");
   
   const quoteHeading = document.getElementById("quote-heading");
   quoteHeading.textContent = productTypeParam === "legalshield"
@@ -49,39 +52,37 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
   function updateContactPreferences() {
-    const isSomeoneElseChecked = someoneElseCheckbox?.checked;
+    const isSomeoneElseChecked = !!someoneElseCheckbox?.checked;
+    const contactValue = contactPreference?.value || "You";
+    const referrerInfoSection = document.getElementById("referrer-info");
+    const isMeChecked = !!meCheckbox?.checked;
+  
+    // Toggle the “who do we contact?” dropdown
     contactDropdownWrapper.style.display = isSomeoneElseChecked ? "block" : "none";
   
     if (!isSomeoneElseChecked) {
-      contactDropdownWrapper.style.display = "none"; // Hide dropdown too
-      referralFields.style.display = "none";
+      // Fully reset when "Someone Else" is OFF
       lovedOneFields.style.display = "none";
-      const referrerInfoSection = document.getElementById("referrer-info");
+      referralFields.style.display = "none";
       referrerInfoSection.style.display = "block";
-    } else {
-      contactDropdownWrapper.style.display = "block"; // Show dropdown
-      const contactValue = contactPreference.value;
-    
-      if (contactValue === "You") {
-        lovedOneFields.style.display = "block";
-        referralFields.style.display = "none";
-      } else {
-        lovedOneFields.style.display = "none";
-        referralFields.style.display = "block";
-        if (referralSlider.children.length === 0) createReferralCard();
-      }
-    
-      const isMeChecked = meCheckbox.checked;
-      const isReferral = contactValue === "Referral";
-      const referrerInfoSection = document.getElementById("referrer-info");
-      referrerInfoSection.style.display = isMeChecked && isReferral ? "none" : "block";
+      return;
     }
   
-    // ✅ Always evaluate referrer-info visibility regardless of which path above ran
-    const referrerInfoSection = document.getElementById("referrer-info");
-    const isMeChecked = meCheckbox.checked;
-    const isReferral = contactPreference.value === "Referral";
-    referrerInfoSection.style.display = isMeChecked && isReferral ? "none" : "block";
+    // Someone Else is ON → switch by contactPreference
+    if (contactValue === "You") {
+      lovedOneFields.style.display = "block";
+      referralFields.style.display = "none";
+    } else { // "Referral"
+      lovedOneFields.style.display = "none";
+      referralFields.style.display = "block";
+      if (typeof referralSlider !== "undefined" && referralSlider && referralSlider.children.length === 0) {
+        createReferralCard();
+      }
+    }
+  
+    // Show/Hide "Your Info" within referral mode
+    const hideReferrerInfo = isMeChecked && isSomeoneElseChecked && contactValue === "Referral";
+    referrerInfoSection.style.display = hideReferrerInfo ? "none" : "block";
   }
   
     // Handle lead_type: only set to "Referral" if *just* Referral mode
@@ -221,21 +222,13 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   
   // ✅ TEMPORARY SUBMISSION HANDLER
-  quoteForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-
-    // Hide entire form section
-    document.getElementById("quote-form").style.display = "none";
-    
-    // Generate summary screen
+  document.getElementById("preview-summary").addEventListener("click", () => {
     generateSummaryScreen();
+    document.getElementById("form-fields").style.display = "none";
+    document.getElementById("summary-screen").style.display = "block";
   });
   
   // === Referral Slider Logic ===
-  const addReferralBtn = document.getElementById("add-referral-btn");
-  const referralSlider = document.getElementById("referral-container");
-  const referralTemplate = document.getElementById("referral-template");
-  
   function createReferralCard() {
     const clone = referralTemplate.content.cloneNode(true);
     const card = clone.querySelector(".referral-card");
@@ -365,51 +358,51 @@ document.addEventListener("DOMContentLoaded", () => {
   
     // --- PERSONAL INFO SECTION ---
     if (meCheckbox.checked) {
-      const fullName = document.querySelector('input[name="first_name"]').value + " " +
-                       document.querySelector('input[name="last_name"]').value;
-      const age = document.querySelector('input[name="age"]').value;
-      const phone = document.querySelector('input[name="phone"]').value;
-      const email = document.querySelector('input[name="email"]').value;
-      const city = document.querySelector('input[name="city"]').value;
-      const zip = document.querySelector('input[name="zip"]').value;
+      const firstName = document.querySelector('input[name="first-name"]')?.value || "";
+      const lastName  = document.querySelector('input[name="last-name"]')?.value || "";
+      const fullName  = `${firstName} ${lastName}`.trim();
+  
+      const age   = document.querySelector('input[name="age"]')?.value || "";
+      const phone = document.querySelector('input[name="phone"]')?.value || "";
+      const email = document.querySelector('input[name="email"]')?.value || "";
+      const city  = document.querySelector('input[name="city"]')?.value || "";
+      const state = document.querySelector('input[name="state"]')?.value || "";
   
       personalSummary.innerHTML = `
         <h3>Your Info</h3>
         <strong>${fullName}</strong><br/>
-        Age: ${age}<br/>
-        Phone: ${phone}<br/>
-        Email: ${email}<br/>
-        City: ${city}<br/>
-        ZIP: ${zip}<br/>
+        ${age ? `Age: ${age}<br/>` : ""}
+        ${phone ? `Phone: ${phone}<br/>` : ""}
+        ${email ? `Email: ${email}<br/>` : ""}
+        ${(city || state) ? `Location: ${city}${city && state ? ", " : ""}${state}<br/>` : ""}
         <hr/>
       `;
     }
   
     // --- REFERRAL INFO SECTION ---
     referralCards.forEach((card, index) => {
-      const firstName = card.querySelector('input[name="referral_first_name[]"]').value;
-      const lastName = card.querySelector('input[name="referral_last_name[]"]').value;
-      const age = card.querySelector('input[name="referral_age[]"]').value;
-      const phone = card.querySelector('input[name="referral_phone[]"]').value;
-      const relationship = card.querySelector('input[name="referral_relationship[]"]').value;
+      const firstName = card.querySelector('input[name="referral_first_name[]"]')?.value || "";
+      const lastName  = card.querySelector('input[name="referral_last_name[]"]')?.value || "";
+      const age       = card.querySelector('input[name="referral_age[]"]')?.value || "";
+      const phone     = card.querySelector('input[name="referral_phone[]"]')?.value || "";
+      const relationship = card.querySelector('input[name="referral_relationship[]"]')?.value || "";
   
       const item = document.createElement("div");
       item.classList.add("summary-item");
       item.innerHTML = `
         <strong>${firstName} ${lastName}</strong><br/>
-        Age: ${age} <br/>
-        Phone: ${phone} <br/>
-        Relationship: ${relationship} <br/>
+        ${age ? `Age: ${age} <br/>` : ""}
+        ${phone ? `Phone: ${phone} <br/>` : ""}
+        ${relationship ? `Relationship: ${relationship} <br/>` : ""}
         <button type="button" class="edit-referral" data-index="${index}">Edit</button>
         <button type="button" class="delete-referral" data-index="${index}">Delete</button>
         <hr/>
       `;
-  
       summaryList.appendChild(item);
     });
   
-    // Hide form, show summary
-    document.getElementById("quote-form").style.display = "none";
+    // Hide fields, show summary (IMPORTANT: hide #form-fields, not the whole form)
+    formFields.style.display = "none";
     summaryScreen.style.display = "block";
   }
 
@@ -434,10 +427,6 @@ document.addEventListener("DOMContentLoaded", () => {
   
   document.getElementById("edit-referrals").addEventListener("click", () => {
     document.getElementById("summary-screen").style.display = "none";
-    document.getElementById("referral-fields").style.display = "block";
-  });
-  
-  document.getElementById("submit-final").addEventListener("click", () => {
-    quoteForm.submit(); // Final legit submit
+    document.getElementById("form-fields").style.display = "block";
   });
 });
