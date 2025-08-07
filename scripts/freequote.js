@@ -13,6 +13,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const quoteForCheckboxes = document.querySelectorAll('input[name="quote-for"]');
   const meCheckbox = document.querySelector('input[name="quote-for"][value="Me"]');
   const referralFields = document.getElementById("referral-fields");
+  const someoneElseCheckbox = document.getElementById("someoneElseCheckbox");
+  const contactDropdownWrapper = document.getElementById("contactDropdownWrapper");
+  const contactPreference = document.getElementById("contactPreference");
+  const lovedOneFields = document.getElementById("lovedOneFields");
   
   const quoteHeading = document.getElementById("quote-heading");
   quoteHeading.textContent = productTypeParam === "legalshield"
@@ -42,7 +46,31 @@ document.addEventListener("DOMContentLoaded", () => {
       otherTextInput.value = "";
     }
   }
-
+  function updateContactPreferences() {
+    const isSomeoneElseChecked = someoneElseCheckbox?.checked;
+    contactDropdownWrapper.style.display = isSomeoneElseChecked ? "block" : "none";
+  
+    if (!isSomeoneElseChecked) {
+      lovedOneFields.style.display = "none";
+      referralFields.style.display = meCheckbox.checked ? "none" : "block"; // original logic fallback
+    } else {
+      const contactValue = contactPreference.value;
+  
+      if (contactValue === "You") {
+        lovedOneFields.style.display = "block";
+        referralFields.style.display = "none";
+      } else {
+        lovedOneFields.style.display = "none";
+        referralFields.style.display = "block";
+        if (referralSlider.children.length === 0) createReferralCard();
+      }
+    }
+  
+    // Handle lead_type: only set to "Referral" if *just* Referral mode
+    const isOnlyReferral = !meCheckbox.checked && (!someoneElseCheckbox || !someoneElseCheckbox.checked);
+    leadTypeInput.value = isOnlyReferral ? "Referral" : originalLeadType;
+    updateURLParams(leadTypeInput.value, productDropdown.value);
+  }
   // ✅ Initial state (in case it's pre-checked)
   toggleOtherText();
 
@@ -106,11 +134,16 @@ document.addEventListener("DOMContentLoaded", () => {
   
   // Call this on load too (in case URL opens in referral mode)
   updateReferralView();
+  updateContactPreferences();
   
   // Update event
   quoteForCheckboxes.forEach((checkbox) => {
     checkbox.addEventListener("change", updateReferralView);
   });
+  if (someoneElseCheckbox) {
+    someoneElseCheckbox.addEventListener("change", updateContactPreferences);
+    contactPreference.addEventListener("change", updateContactPreferences);
+  }
   // Limiting age to numbers
   const ageInput = document.querySelector('input[name="age"]');
   ageInput.addEventListener("input", () => {
