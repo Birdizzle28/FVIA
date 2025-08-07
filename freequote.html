@@ -57,18 +57,26 @@
 						<input type="text" name="other-text" id="otherTextInput" placeholder="Please specify" style="display:none; margin-top: 8px;">
 					</fieldset>
 					
-					<div id="referral-fields" style="display: none; margin-top: 15px;">
-						<label>Your Name:
-							<input type="text" name="referrer-name" id="referrer-name">
-						</label>
-						
-						<label>Your Phone Number:
-							<input type="tel" name="referrer-phone" id="referrer-phone">
-						</label>
-						
-						<label>Relationship to You:
-							<input type="text" name="referrer-relationship" id="referrer-relationship">
-						</label>
+					<!-- Referrer Info -->
+					<div id="referral-fields" style="display: none;">
+					  <h3>Your Info</h3>
+					  <div>
+					    <label for="referrer_name">Your Name</label>
+					    <input type="text" id="referrer_name" name="referrer_name" />
+					  </div>
+					  <div>
+					    <label for="referrer_phone">Your Phone Number</label>
+					    <input type="tel" id="referrer_phone" name="referrer_phone" />
+					  </div>
+					
+					  <hr />
+					
+					  <!-- Referral Cards -->
+					  <div id="referral-container">
+					    <!-- Referral card template will be cloned into here -->
+					  </div>
+					
+					  <button type="button" id="add-referral-btn">+ Add Another Referral</button>
 					</div>  
 					
 					<label>First Name:
@@ -116,6 +124,34 @@
 					<p class="tcpa-disclaimer">
 					By submitting this form, you agree to receive text messages and/or calls from Family Values Group or its agents at the number you provided, including through automated systems. Consent is not a condition of purchase. Message & data rates may apply.
 					</p>
+					
+					<!-- Hidden referral template -->
+					<template id="referral-template">
+					  <div class="referral-card">
+					    <h4>Referral</h4>
+					    <div>
+					      <label>First Name</label>
+					      <input type="text" name="referral_first_name[]" />
+					    </div>
+					    <div>
+					      <label>Last Name</label>
+					      <input type="text" name="referral_last_name[]" />
+					    </div>
+					    <div>
+					      <label>Age</label>
+					      <input type="number" name="referral_age[]" min="0" />
+					    </div>
+					    <div>
+					      <label>Phone Number</label>
+					      <input type="tel" name="referral_phone[]" />
+					    </div>
+					    <div>
+					      <label>Their Relationship to You</label>
+					      <input type="text" name="referral_relationship[]" />
+					    </div>
+					    <hr />
+					  </div>
+					</template>
 				</form>
 			</section>
 		</main>
