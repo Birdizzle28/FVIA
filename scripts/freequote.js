@@ -155,7 +155,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // Referral slider
   let currentReferralIndex = 0;
   const referralCards = [];
-  const referralSlider = document.getElementById("referral-slider");
   
   // Create navigation elements
   const navContainer = document.createElement("div");
