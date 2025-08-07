@@ -73,6 +73,13 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   
+    // ✅ Always evaluate referrer-info visibility regardless of which path above ran
+    const referrerInfoSection = document.getElementById("referrer-info");
+    const isMeChecked = meCheckbox.checked;
+    const isReferral = contactPreference.value === "Referral";
+    referrerInfoSection.style.display = isMeChecked && isReferral ? "none" : "block";
+  }
+  
     // Handle lead_type: only set to "Referral" if *just* Referral mode
     const isOnlyReferral = !meCheckbox.checked && (!someoneElseCheckbox || !someoneElseCheckbox.checked);
     // Final lead_type determination
