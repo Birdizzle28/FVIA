@@ -94,10 +94,14 @@ document.addEventListener("DOMContentLoaded", () => {
     updateURLParams(leadTypeInput.value, productDropdown.value);
   }
   // ✅ Initial state (in case it's pre-checked)
-  toggleOtherText();
+  if (otherCheckbox) {
+    toggleOtherText();
+  }
 
   // ✅ Event: show/hide "Other" text box
-  otherCheckbox.addEventListener("change", toggleOtherText);
+  if (otherCheckbox) {
+    otherCheckbox.addEventListener("change", toggleOtherText);
+  }
 
   // ✅ Event: Update product_type when dropdown changes
   productDropdown.addEventListener("change", () => {
