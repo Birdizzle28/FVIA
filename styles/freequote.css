@@ -123,3 +123,13 @@ form, label, input, select, textarea, fieldset, button {
   margin-left: auto;
   margin-right: auto;
 }
+#referral-slider {
+  position: relative;
+  width: 100%;
+  min-height: 300px;
+}
+
+.referral-card {
+  display: none;
+  transition: transform 0.3s ease-in-out;
+}
