@@ -79,26 +79,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const isReferral = contactPreference.value === "Referral";
     referrerInfoSection.style.display = isMeChecked && isReferral ? "none" : "block";
   }
-  
-    // Handle lead_type: only set to "Referral" if *just* Referral mode
-    const isOnlyReferral = !meCheckbox.checked && (!someoneElseCheckbox || !someoneElseCheckbox.checked);
-    // Final lead_type determination
-    let leadTypeValue = originalLeadType;
-    
-    if (!meCheckbox.checked && someoneElseCheckbox.checked && contactPreference.value === "Referral") {
-      // Only Referral selected
-      leadTypeValue = "Referral";
-    } else if (meCheckbox.checked && someoneElseCheckbox.checked && contactPreference.value === "Referral") {
-      // Both selected, treat as dual lead
-      leadTypeValue = originalLeadType; // Me is primary, Referral extracted separately
-    } else if (!meCheckbox.checked && someoneElseCheckbox.checked && contactPreference.value === "You") {
-      // Just a Loved One you're covering
-      leadTypeValue = originalLeadType;
-    }
-    
-    leadTypeInput.value = leadTypeValue;
-    updateURLParams(leadTypeValue, productDropdown.value);
-    updateURLParams(leadTypeInput.value, productDropdown.value);
   }
   // ✅ Initial state (in case it's pre-checked)
   if (otherCheckbox) {
