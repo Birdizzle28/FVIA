@@ -75,7 +75,12 @@
 					  <div id="referral-container">
 					    <!-- Referral card template will be cloned into here -->
 					  </div>
-					
+						<div class="referral-slider-wrapper">
+						  <button type="button" id="prev-referral">← Previous</button>
+						  <div id="referral-slider" class="referral-slider"></div>
+						  <button type="button" id="next-referral">Next →</button>
+						</div>
+						<p id="referral-counter">Referral 1 of 1</p>
 					  <button type="button" id="add-referral-btn">+ Add Another Referral</button>
 					</div>  
 					
@@ -157,6 +162,13 @@
 					  </div>
 					</template>
 				</form>
+				<!-- Review Screen -->
+				<div id="referral-review-screen" style="display: none;">
+				  <h3>Review Your Referrals</h3>
+				  <div id="referral-review-list"></div>
+				  <button type="button" id="edit-referrals">Edit Referrals</button>
+				  <button type="submit" form="quote-form">Submit All</button>
+				</div>
 			</section>
 		</main>
 		
