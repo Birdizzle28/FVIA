@@ -209,12 +209,24 @@ document.addEventListener("DOMContentLoaded", () => {
   updateContactPreferences();
   
   // Update event
+  // Update event
   quoteForCheckboxes.forEach((checkbox) => {
-    checkbox.addEventListener("change", updateReferralView);
+    checkbox.addEventListener("change", () => {
+      updateReferralView();
+      updateContactPreferences(); // ensure referrer-info toggles correctly
+    });
   });
+  
   if (someoneElseCheckbox) {
-    someoneElseCheckbox.addEventListener("change", updateContactPreferences);
-    contactPreference.addEventListener("change", updateContactPreferences);
+    someoneElseCheckbox.addEventListener("change", () => {
+      updateContactPreferences();
+      updateReferralView(); // keep both views in sync
+    });
+  
+    contactPreference.addEventListener("change", () => {
+      updateContactPreferences();
+      updateReferralView(); // keep both views in sync
+    });
   }
   // Limiting age to numbers
   const ageInput = document.querySelector('input[name="age"]');
