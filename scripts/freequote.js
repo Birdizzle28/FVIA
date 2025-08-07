@@ -120,20 +120,11 @@ document.addEventListener("DOMContentLoaded", () => {
   // ✅ TEMPORARY SUBMISSION HANDLER
   quoteForm.addEventListener("submit", (e) => {
     e.preventDefault();
-    alert("Quote submitted successfully! (Static only for now)");
-
-    // Reset form
-    quoteForm.reset();
-
-    // Reapply product_type + lead_type
-    leadTypeInput.value = originalLeadType;
-    productDropdown.value = productTypeParam;
-    productTypeInput.value = productTypeParam;
-    meCheckbox.checked = true;
-    referralFields.style.display = "none";
-    // ✅ Manually update dynamic elements after reset
-    toggleOtherText();
+  
+    // Generate summary screen
+    generateReferralSummary();
   });
+  
   // === Referral Slider Logic ===
   const addReferralBtn = document.getElementById("add-referral-btn");
   const referralSlider = document.getElementById("referral-container");
@@ -255,4 +246,67 @@ document.addEventListener("DOMContentLoaded", () => {
   
   // Call update if any default referrals exist (future-proof)
   updateReferralVisibility();
+
+  //Generate Referral Summary
+  function generateReferralSummary() {
+    const summaryScreen = document.getElementById("summary-screen");
+    const summaryList = document.getElementById("summary-list");
+  
+    // Clear previous summary if any
+    summaryList.innerHTML = "";
+  
+    referralCards.forEach((card, index) => {
+      const firstName = card.querySelector('input[name="referral_first_name[]"]').value;
+      const lastName = card.querySelector('input[name="referral_last_name[]"]').value;
+      const age = card.querySelector('input[name="referral_age[]"]').value;
+      const phone = card.querySelector('input[name="referral_phone[]"]').value;
+      const relationship = card.querySelector('input[name="referral_relationship[]"]').value;
+  
+      const item = document.createElement("div");
+      item.classList.add("summary-item");
+      item.innerHTML = `
+        <strong>${firstName} ${lastName}</strong><br/>
+        Age: ${age} <br/>
+        Phone: ${phone} <br/>
+        Relationship: ${relationship} <br/>
+        <button type="button" class="edit-referral" data-index="${index}">Edit</button>
+        <button type="button" class="delete-referral" data-index="${index}">Delete</button>
+        <hr/>
+      `;
+  
+      summaryList.appendChild(item);
+    });
+  
+    // Toggle visibility
+    document.getElementById("referral-fields").style.display = "none";
+    summaryScreen.style.display = "block";
+  }
+
+  //Handle Edit, Delete, Final Submit
+  document.getElementById("summary-list").addEventListener("click", (e) => {
+    if (e.target.classList.contains("edit-referral")) {
+      const index = parseInt(e.target.dataset.index);
+      currentReferralIndex = index;
+      updateReferralVisibility();
+      document.getElementById("summary-screen").style.display = "none";
+      document.getElementById("referral-fields").style.display = "block";
+    }
+  
+    if (e.target.classList.contains("delete-referral")) {
+      const index = parseInt(e.target.dataset.index);
+      referralCards[index].remove();
+      referralCards.splice(index, 1);
+      updateReferralVisibility();
+      generateReferralSummary(); // refresh summary
+    }
+  });
+  
+  document.getElementById("edit-referrals").addEventListener("click", () => {
+    document.getElementById("summary-screen").style.display = "none";
+    document.getElementById("referral-fields").style.display = "block";
+  });
+  
+  document.getElementById("submit-final").addEventListener("click", () => {
+    quoteForm.submit(); // Final legit submit
+  });
 });
