@@ -120,8 +120,8 @@ document.addEventListener("DOMContentLoaded", () => {
     toggleOtherText();
   });
   // === Referral Slider Logic ===
-  const addReferralBtn = document.getElementById("add-referral");
-  const referralSlider = document.getElementById("referral-slider");
+  const addReferralBtn = document.getElementById("add-referral-button");
+  const referralSlider = document.getElementById("referral-container");
   const referralTemplate = document.getElementById("referral-template");
   
   function createReferralCard() {
