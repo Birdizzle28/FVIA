@@ -122,10 +122,23 @@ document.addEventListener("DOMContentLoaded", () => {
   
   // Track originally required fields
   const originalRequiredMap = new Map();
-  hideInReferralFields.forEach(container => {
-    const inputs = container.querySelectorAll("input, select, textarea");
+  hideInReferralFields.forEach(el => {
+    // Show personal fields if:
+    // 1. "Me" is selected, OR
+    // 2. "Me + Referral" is selected
+    const shouldShowPersonalFields =
+      meCheckbox.checked || (meCheckbox.checked && someoneElseCheckbox.checked && contactPreference.value === "Referral");
+  
+    el.style.display = shouldShowPersonalFields ? "block" : "none";
+  
+    const inputs = el.querySelectorAll("input, select, textarea");
     inputs.forEach(input => {
-      originalRequiredMap.set(input, input.hasAttribute("required"));
+      const wasOriginallyRequired = originalRequiredMap.get(input);
+      if (shouldShowPersonalFields && wasOriginallyRequired) {
+        input.setAttribute("required", "required");
+      } else {
+        input.removeAttribute("required");
+      }
     });
   });
   function updateReferralView() {
