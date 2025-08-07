@@ -39,6 +39,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // ✅ Helper: toggle "Other" input field visibility
   function toggleOtherText() {
+    if (!otherCheckbox || !otherTextInput) return; // ✅ Safe check
+  
     if (otherCheckbox.checked) {
       otherTextInput.style.display = "block";
     } else {
@@ -52,7 +54,12 @@ document.addEventListener("DOMContentLoaded", () => {
   
     if (!isSomeoneElseChecked) {
       lovedOneFields.style.display = "none";
-      referralFields.style.display = meCheckbox.checked ? "none" : "block"; // original logic fallback
+      if (contactPreference.value === "Referral") {
+        referralFields.style.display = "block";
+        if (referralSlider.children.length === 0) createReferralCard();
+      } else {
+        referralFields.style.display = "none";
+      }
     } else {
       const contactValue = contactPreference.value;
   
@@ -68,7 +75,22 @@ document.addEventListener("DOMContentLoaded", () => {
   
     // Handle lead_type: only set to "Referral" if *just* Referral mode
     const isOnlyReferral = !meCheckbox.checked && (!someoneElseCheckbox || !someoneElseCheckbox.checked);
-    leadTypeInput.value = isOnlyReferral ? "Referral" : originalLeadType;
+    // Final lead_type determination
+    let leadTypeValue = originalLeadType;
+    
+    if (!meCheckbox.checked && someoneElseCheckbox.checked && contactPreference.value === "Referral") {
+      // Only Referral selected
+      leadTypeValue = "Referral";
+    } else if (meCheckbox.checked && someoneElseCheckbox.checked && contactPreference.value === "Referral") {
+      // Both selected, treat as dual lead
+      leadTypeValue = originalLeadType; // Me is primary, Referral extracted separately
+    } else if (!meCheckbox.checked && someoneElseCheckbox.checked && contactPreference.value === "You") {
+      // Just a Loved One you're covering
+      leadTypeValue = originalLeadType;
+    }
+    
+    leadTypeInput.value = leadTypeValue;
+    updateURLParams(leadTypeValue, productDropdown.value);
     updateURLParams(leadTypeInput.value, productDropdown.value);
   }
   // ✅ Initial state (in case it's pre-checked)
@@ -107,11 +129,31 @@ document.addEventListener("DOMContentLoaded", () => {
   
     // ✅ Fix lead_type value
     const newLeadType = isMeChecked ? originalLeadType : "Referral";
-    leadTypeInput.value = newLeadType;
+    // Final lead_type determination
+    let leadTypeValue = originalLeadType;
+    
+    if (!meCheckbox.checked && someoneElseCheckbox.checked && contactPreference.value === "Referral") {
+      // Only Referral selected
+      leadTypeValue = "Referral";
+    } else if (meCheckbox.checked && someoneElseCheckbox.checked && contactPreference.value === "Referral") {
+      // Both selected, treat as dual lead
+      leadTypeValue = originalLeadType; // Me is primary, Referral extracted separately
+    } else if (!meCheckbox.checked && someoneElseCheckbox.checked && contactPreference.value === "You") {
+      // Just a Loved One you're covering
+      leadTypeValue = originalLeadType;
+    }
+    
+    leadTypeInput.value = leadTypeValue;
+    updateURLParams(leadTypeValue, productDropdown.value);
     updateURLParams(newLeadType, productDropdown.value);
   
     // ✅ Show/hide fields
-    referralFields.style.display = isMeChecked ? "none" : "block";
+    if (contactPreference.value === "Referral") {
+      referralFields.style.display = "block";
+      if (referralSlider.children.length === 0) createReferralCard();
+    } else {
+      referralFields.style.display = "none";
+    }
   
     if (!isMeChecked && referralSlider.children.length === 0) {
       createReferralCard();
