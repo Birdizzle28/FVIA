@@ -223,7 +223,10 @@ document.addEventListener("DOMContentLoaded", () => {
   // ✅ TEMPORARY SUBMISSION HANDLER
   quoteForm.addEventListener("submit", (e) => {
     e.preventDefault();
-  
+
+    // Hide entire form section
+    document.getElementById("quote-form").style.display = "none";
+    
     // Generate summary screen
     generateReferralSummary();
   });
