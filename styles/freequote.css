@@ -47,13 +47,10 @@
   background-color: #333;
 }
 #free-quote-form {
-  width: 90%;
-  max-width: 600px;
+  width: 100%;
   margin: 2em auto;
   padding: 2em;
   background-color: #fefefe;
-  border-radius: 12px;
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   font-family: inherit;
 }
 
