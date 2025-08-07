@@ -123,7 +123,7 @@ document.addEventListener("DOMContentLoaded", () => {
     toggleOtherText();
   });
   // === Referral Slider Logic ===
-  const addReferralBtn = document.getElementById("add-referral-button");
+  const addReferralBtn = document.getElementById("add-referral-btn");
   const referralSlider = document.getElementById("referral-container");
   const referralTemplate = document.getElementById("referral-template");
   
