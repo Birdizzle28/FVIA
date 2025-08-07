@@ -124,40 +124,28 @@ document.addEventListener("DOMContentLoaded", () => {
   const referralSlider = document.getElementById("referral-slider");
   const referralTemplate = document.getElementById("referral-template");
   
-  function formatReferralName(index) {
-    return `referrals[${index}]`;
-  }
-  
-  function updateReferralInputNames() {
-    const cards = referralSlider.querySelectorAll(".referral-card");
-    cards.forEach((card, index) => {
-      card.querySelectorAll("input, select, textarea").forEach((input) => {
-        const field = input.getAttribute("data-field");
-        input.name = `${formatReferralName(index)}[${field}]`;
-      });
-    });
-  }
-  
   function createReferralCard() {
-    const clone = referralTemplate.content.cloneNode(true);
-    const card = clone.querySelector(".referral-card");
-  
-    // Add delete functionality
-    const deleteBtn = card.querySelector(".delete-referral");
+  const clone = referralTemplate.content.cloneNode(true);
+  const card = clone.querySelector(".referral-card");
+
+  // Add delete functionality
+  const deleteBtn = card.querySelector(".delete-referral");
+  if (deleteBtn) {
     deleteBtn.addEventListener("click", () => {
       card.remove();
-      updateReferralInputNames();
     });
-  
-    // Enforce numeric input for age
-    const ageInput = card.querySelector('input[data-field="age"]');
+  }
+
+  // Enforce numeric input for age (optional but helpful)
+  const ageInput = card.querySelector('input[name="referral_age[]"]');
+  if (ageInput) {
     ageInput.addEventListener("input", () => {
       ageInput.value = ageInput.value.replace(/\D/g, "");
     });
-  
-    referralSlider.appendChild(card);
-    updateReferralInputNames();
   }
+
+  referralSlider.appendChild(card);
+}
   
   addReferralBtn.addEventListener("click", createReferralCard);
 });
