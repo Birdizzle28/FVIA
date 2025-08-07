@@ -49,129 +49,130 @@
 					</select>
 				</div>
 				<form id="quote-form">
-					<fieldset>
-						<legend>Who is this quote for?</legend>
-						<label><input type="checkbox" name="quote-for" value="Me" checked> Me</label>
-						<label><input type="checkbox" name="quote-for" value="Someone Else" id="someoneElseCheckbox"> Someone Else</label>
-
-						<!-- Contact dropdown that appears when "Someone Else" is selected -->
-						<div id="contactDropdownWrapper" style="display: none; margin-top: 8px;">
-						  <label for="contactPreference">Who do we contact?:</label>
-						  <select id="contactPreference" name="contactPreference">
-						    <option value="You">You</option>
-						    <option value="Referral">Referral</option>
-						  </select>
-						</div>					
-					</fieldset>  
-					
-					<div class="hide-in-referral">
-						<label>First Name:
-							<input type="text" name="first-name" required>
-						</label>
+					<div id="form-fields">
+						<fieldset>
+							<legend>Who is this quote for?</legend>
+							<label><input type="checkbox" name="quote-for" value="Me" checked> Me</label>
+							<label><input type="checkbox" name="quote-for" value="Someone Else" id="someoneElseCheckbox"> Someone Else</label>
+	
+							<!-- Contact dropdown that appears when "Someone Else" is selected -->
+							<div id="contactDropdownWrapper" style="display: none; margin-top: 8px;">
+							  <label for="contactPreference">Who do we contact?:</label>
+							  <select id="contactPreference" name="contactPreference">
+							    <option value="You">You</option>
+							    <option value="Referral">Referral</option>
+							  </select>
+							</div>					
+						</fieldset>  
 						
-						<label>Last Name:
-							<input type="text" name="last-name" required>
-						</label>
+						<div class="hide-in-referral">
+							<label>First Name:
+								<input type="text" name="first-name" required>
+							</label>
+							
+							<label>Last Name:
+								<input type="text" name="last-name" required>
+							</label>
+							
+							<label>Age:
+								<input type="number" name="age" min="0" required>
+							</label>
+							
+							<label>Phone Number:
+								<input type="tel" name="phone" required>
+							</label>
+							
+						  <label>Email:
+						    <input type="email" name="email">
+						  </label>
 						
-						<label>Age:
-							<input type="number" name="age" min="0" required>
-						</label>
+						  <label>Address:
+						    <input type="text" name="address" required>
+						  </label>
 						
-						<label>Phone Number:
-							<input type="tel" name="phone" required>
-						</label>
+						  <label>City:
+						    <input type="text" name="city" required>
+						  </label>
 						
-					  <label>Email:
-					    <input type="email" name="email">
-					  </label>
-					
-					  <label>Address:
-					    <input type="text" name="address" required>
-					  </label>
-					
-					  <label>City:
-					    <input type="text" name="city" required>
-					  </label>
-					
-					  <label>State:
-					    <input type="text" name="state" required>
-					  </label>
+						  <label>State:
+						    <input type="text" name="state" required>
+						  </label>
+							
+							<label>When is best to contact you?
+								<input type="date" name="contact-date">
+							</label>
+						</div>
 						
-						<label>When is best to contact you?
-							<input type="date" name="contact-date">
-						</label>
+						<!-- Referrer Info -->
+						<div id="referral-fields" style="display: none;">
+						  <div id="referrer-info">
+						  <h3>Your Info</h3>
+						  <div>
+						    <label for="referrer_name">Your Name</label>
+						    <input type="text" id="referrer_name" name="referrer_name" />
+						  </div>
+						  <div>
+						    <label for="referrer_phone">Your Phone Number</label>
+						    <input type="tel" id="referrer_phone" name="referrer_phone" />
+						  </div>
+						  <hr />
+						</div>
+						
+						  <!-- Referral Cards -->
+						  <div id="referral-container">
+						    <!-- Referral card template will be cloned into here -->
+						  </div>
+						  <button type="button" id="add-referral-btn">+ Add Another Referral</button>
+						</div>
+						<!-- Loved one fields shown only when Contact = You -->
+						<div id="lovedOneFields" style="display: none; margin-top: 16px;">
+						  <label>Loved One's Name:
+						    <input type="text" name="loved_one_name" />
+						  </label>
+						  <label>Loved One's Age:
+						    <input type="number" name="loved_one_age" min="0" />
+						  </label>
+						</div>
+						<!-- Hidden inputs to track source and product -->
+						<input type="hidden" name="lead_type" id="lead_type">
+						<input type="hidden" name="product_type" id="product_type">
+						<button type="button" id="preview-summary">Submit</button>
+						<p class="tcpa-disclaimer">
+						By submitting this form, you agree to receive text messages and/or calls from Family Values Group or its agents at the number you provided, including through automated systems. Consent is not a condition of purchase. Message & data rates may apply.
+						</p>
+						
+						<!-- Hidden referral template -->
+						<template id="referral-template">
+						  <div class="referral-card">
+						    <h4>Referral</h4>
+						    <div>
+						      <label>First Name</label>
+						      <input type="text" name="referral_first_name[]" />
+						    </div>
+						    <div>
+						      <label>Last Name</label>
+						      <input type="text" name="referral_last_name[]" />
+						    </div>
+						    <div>
+						      <label>Age</label>
+						      <input type="number" name="referral_age[]" min="0" />
+						    </div>
+						    <div>
+						      <label>Phone Number</label>
+						      <input type="tel" name="referral_phone[]" />
+						    </div>
+						    <div>
+						      <label>Their Relationship to You</label>
+						      <input type="text" name="referral_relationship[]" />
+						    </div>
+						
+						    <!-- 🗑️ Delete Button -->
+						    <button type="button" class="delete-referral">🗑️ Remove</button>
+						
+						    <hr />
+						  </div>
+						</template>
 					</div>
-					
-					<!-- Referrer Info -->
-					<div id="referral-fields" style="display: none;">
-					  <div id="referrer-info">
-					  <h3>Your Info</h3>
-					  <div>
-					    <label for="referrer_name">Your Name</label>
-					    <input type="text" id="referrer_name" name="referrer_name" />
-					  </div>
-					  <div>
-					    <label for="referrer_phone">Your Phone Number</label>
-					    <input type="tel" id="referrer_phone" name="referrer_phone" />
-					  </div>
-					  <hr />
-					</div>
-					
-					  <!-- Referral Cards -->
-					  <div id="referral-container">
-					    <!-- Referral card template will be cloned into here -->
-					  </div>
-					  <button type="button" id="add-referral-btn">+ Add Another Referral</button>
-					</div>
-					<!-- Loved one fields shown only when Contact = You -->
-					<div id="lovedOneFields" style="display: none; margin-top: 16px;">
-					  <label>Loved One's Name:
-					    <input type="text" name="loved_one_name" />
-					  </label>
-					  <label>Loved One's Age:
-					    <input type="number" name="loved_one_age" min="0" />
-					  </label>
-					</div>
-					<!-- Hidden inputs to track source and product -->
-					<input type="hidden" name="lead_type" id="lead_type">
-					<input type="hidden" name="product_type" id="product_type">
-					<button type="button" id="preview-summary">Submit</button>
-					<p class="tcpa-disclaimer">
-					By submitting this form, you agree to receive text messages and/or calls from Family Values Group or its agents at the number you provided, including through automated systems. Consent is not a condition of purchase. Message & data rates may apply.
-					</p>
-					
-					<!-- Hidden referral template -->
-					<template id="referral-template">
-					  <div class="referral-card">
-					    <h4>Referral</h4>
-					    <div>
-					      <label>First Name</label>
-					      <input type="text" name="referral_first_name[]" />
-					    </div>
-					    <div>
-					      <label>Last Name</label>
-					      <input type="text" name="referral_last_name[]" />
-					    </div>
-					    <div>
-					      <label>Age</label>
-					      <input type="number" name="referral_age[]" min="0" />
-					    </div>
-					    <div>
-					      <label>Phone Number</label>
-					      <input type="tel" name="referral_phone[]" />
-					    </div>
-					    <div>
-					      <label>Their Relationship to You</label>
-					      <input type="text" name="referral_relationship[]" />
-					    </div>
-					
-					    <!-- 🗑️ Delete Button -->
-					    <button type="button" class="delete-referral">🗑️ Remove</button>
-					
-					    <hr />
-					  </div>
-					</template>
-					
 					<!-- SUMMARY SCREEN (including both personal & referrals) -->
 				  <div id="summary-screen" style="display: none;">
 				    <div id="personal-summary" style="margin-bottom: 2rem;"></div>
