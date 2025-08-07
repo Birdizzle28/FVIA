@@ -71,6 +71,9 @@ document.addEventListener("DOMContentLoaded", () => {
   
       leadTypeInput.value = newLeadType;
       referralFields.style.display = isMeChecked ? "none" : "block";
+      if (!isMeChecked && referralSlider.children.length === 0) {
+        createReferralCard(); // ⬅️ Only adds one card the first time
+      }
   
       updateReferralView(); // keep hiding/showing fields
       updateURLParams(newLeadType, productDropdown.value); // ✅ Update URL
