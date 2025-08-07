@@ -63,34 +63,27 @@ document.addEventListener("DOMContentLoaded", () => {
     updateURLParams(leadTypeInput.value, selectedProduct);
   });
 
-  // ✅ Event: Switch to Referral if "Me" is unchecked
-  quoteForCheckboxes.forEach((checkbox) => {
-    checkbox.addEventListener("change", () => {
-      const isMeChecked = meCheckbox.checked;
-      const newLeadType = isMeChecked ? originalLeadType : "Referral";
-  
-      leadTypeInput.value = newLeadType;
-      referralFields.style.display = isMeChecked ? "none" : "block";
-      if (!isMeChecked && referralSlider.children.length === 0) {
-        createReferralCard(); // ⬅️ Only adds one card the first time
-      }
-  
-      updateReferralView(); // keep hiding/showing fields
-      updateURLParams(newLeadType, productDropdown.value); // ✅ Update URL
-    });
-  });
-
   // Hide Fields in Referral mode
   const hideInReferralFields = document.querySelectorAll(".hide-in-referral");
 
   function updateReferralView() {
     const isMeChecked = meCheckbox.checked;
-    leadTypeInput.value = isMeChecked ? originalLeadType : "Referral";
   
+    // ✅ Fix lead_type value
+    const newLeadType = isMeChecked ? originalLeadType : "Referral";
+    leadTypeInput.value = newLeadType;
+    updateURLParams(newLeadType, productDropdown.value);
+  
+    // ✅ Show/hide fields
+    referralFields.style.display = isMeChecked ? "none" : "block";
+  
+    if (!isMeChecked && referralSlider.children.length === 0) {
+      createReferralCard();
+    }
+  
+    // ✅ Toggle visibility and required fields
     hideInReferralFields.forEach(el => {
       el.style.display = isMeChecked ? "block" : "none";
-  
-      // Make inputs inside the container required or not
       const inputs = el.querySelectorAll("input, select, textarea");
       inputs.forEach(input => {
         if (isMeChecked) {
