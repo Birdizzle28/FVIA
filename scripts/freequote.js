@@ -228,7 +228,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("quote-form").style.display = "none";
     
     // Generate summary screen
-    generateReferralSummary();
+    generateSummaryScreen();
   });
   
   // === Referral Slider Logic ===
@@ -237,14 +237,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const referralTemplate = document.getElementById("referral-template");
   
   function createReferralCard() {
-  const clone = referralTemplate.content.cloneNode(true);
-  const card = clone.querySelector(".referral-card");
-
-  // Add delete functionality
-  const deleteBtn = card.querySelector(".delete-referral");
-  if (deleteBtn) {
-    deleteBtn.addEventListener("click", () => {
-      card.remove();
+    const clone = referralTemplate.content.cloneNode(true);
+    const card = clone.querySelector(".referral-card");
+  
+    // Add delete functionality
+    const deleteBtn = card.querySelector(".delete-referral");
+    if (deleteBtn) {
+      deleteBtn.addEventListener("click", () => {
+        card.remove();
     });
   }
 
@@ -354,13 +354,38 @@ document.addEventListener("DOMContentLoaded", () => {
   updateReferralVisibility();
 
   //Generate Referral Summary
-  function generateReferralSummary() {
+  function generateSummaryScreen() {
     const summaryScreen = document.getElementById("summary-screen");
     const summaryList = document.getElementById("summary-list");
+    const personalSummary = document.getElementById("personal-summary");
   
-    // Clear previous summary if any
+    // Clear previous summaries
     summaryList.innerHTML = "";
+    personalSummary.innerHTML = "";
   
+    // --- PERSONAL INFO SECTION ---
+    if (meCheckbox.checked) {
+      const fullName = document.querySelector('input[name="first_name"]').value + " " +
+                       document.querySelector('input[name="last_name"]').value;
+      const age = document.querySelector('input[name="age"]').value;
+      const phone = document.querySelector('input[name="phone"]').value;
+      const email = document.querySelector('input[name="email"]').value;
+      const city = document.querySelector('input[name="city"]').value;
+      const zip = document.querySelector('input[name="zip"]').value;
+  
+      personalSummary.innerHTML = `
+        <h3>Your Info</h3>
+        <strong>${fullName}</strong><br/>
+        Age: ${age}<br/>
+        Phone: ${phone}<br/>
+        Email: ${email}<br/>
+        City: ${city}<br/>
+        ZIP: ${zip}<br/>
+        <hr/>
+      `;
+    }
+  
+    // --- REFERRAL INFO SECTION ---
     referralCards.forEach((card, index) => {
       const firstName = card.querySelector('input[name="referral_first_name[]"]').value;
       const lastName = card.querySelector('input[name="referral_last_name[]"]').value;
@@ -383,6 +408,11 @@ document.addEventListener("DOMContentLoaded", () => {
       summaryList.appendChild(item);
     });
   
+    // Hide form, show summary
+    document.getElementById("quote-form").style.display = "none";
+    summaryScreen.style.display = "block";
+  }
+  
     // Toggle visibility
     document.getElementById("referral-fields").style.display = "none";
     summaryScreen.style.display = "block";
@@ -403,7 +433,7 @@ document.addEventListener("DOMContentLoaded", () => {
       referralCards[index].remove();
       referralCards.splice(index, 1);
       updateReferralVisibility();
-      generateReferralSummary(); // refresh summary
+      generateSummaryScreen(); // refresh summary
     }
   });
   
