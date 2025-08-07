@@ -412,11 +412,6 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("quote-form").style.display = "none";
     summaryScreen.style.display = "block";
   }
-  
-    // Toggle visibility
-    document.getElementById("referral-fields").style.display = "none";
-    summaryScreen.style.display = "block";
-  }
 
   //Handle Edit, Delete, Final Submit
   document.getElementById("summary-list").addEventListener("click", (e) => {
