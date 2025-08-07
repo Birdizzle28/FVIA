@@ -53,16 +53,15 @@ document.addEventListener("DOMContentLoaded", () => {
     contactDropdownWrapper.style.display = isSomeoneElseChecked ? "block" : "none";
   
     if (!isSomeoneElseChecked) {
+      contactDropdownWrapper.style.display = "none"; // Hide dropdown too
+      referralFields.style.display = "none";
       lovedOneFields.style.display = "none";
-      if (contactPreference.value === "Referral") {
-        referralFields.style.display = "block";
-        if (referralSlider.children.length === 0) createReferralCard();
-      } else {
-        referralFields.style.display = "none";
-      }
+      const referrerInfoSection = document.getElementById("referrer-info");
+      referrerInfoSection.style.display = "block";
     } else {
+      contactDropdownWrapper.style.display = "block"; // Show dropdown
       const contactValue = contactPreference.value;
-  
+    
       if (contactValue === "You") {
         lovedOneFields.style.display = "block";
         referralFields.style.display = "none";
@@ -71,6 +70,11 @@ document.addEventListener("DOMContentLoaded", () => {
         referralFields.style.display = "block";
         if (referralSlider.children.length === 0) createReferralCard();
       }
+    
+      const isMeChecked = meCheckbox.checked;
+      const isReferral = contactValue === "Referral";
+      const referrerInfoSection = document.getElementById("referrer-info");
+      referrerInfoSection.style.display = isMeChecked && isReferral ? "none" : "block";
     }
   
     // ✅ Always evaluate referrer-info visibility regardless of which path above ran
