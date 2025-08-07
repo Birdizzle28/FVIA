@@ -151,4 +151,97 @@ document.addEventListener("DOMContentLoaded", () => {
 }
   
   addReferralBtn.addEventListener("click", createReferralCard);
+  
+  // Referral slider
+  let currentReferralIndex = 0;
+  const referralCards = [];
+  const referralSlider = document.getElementById("referral-slider");
+  
+  // Create navigation elements
+  const navContainer = document.createElement("div");
+  navContainer.id = "referral-nav";
+  
+  const prevBtn = document.createElement("button");
+  prevBtn.id = "prev-referral";
+  prevBtn.textContent = "←";
+  
+  const nextBtn = document.createElement("button");
+  nextBtn.id = "next-referral";
+  nextBtn.textContent = "→";
+  
+  const indexDisplay = document.createElement("div");
+  indexDisplay.id = "referral-index";
+  
+  navContainer.append(prevBtn, indexDisplay, nextBtn);
+  referralSlider.after(navContainer);
+  
+  function updateReferralVisibility() {
+    referralCards.forEach((card, index) => {
+      card.style.display = index === currentReferralIndex ? "block" : "none";
+    });
+  
+    if (referralCards.length > 0) {
+      indexDisplay.textContent = `Referral ${currentReferralIndex + 1} of ${referralCards.length}`;
+      prevBtn.disabled = currentReferralIndex === 0;
+      nextBtn.disabled = currentReferralIndex === referralCards.length - 1;
+    } else {
+      indexDisplay.textContent = "No referrals yet.";
+      prevBtn.disabled = true;
+      nextBtn.disabled = true;
+    }
+  }
+  
+  prevBtn.addEventListener("click", () => {
+    if (currentReferralIndex > 0) {
+      currentReferralIndex--;
+      updateReferralVisibility();
+    }
+  });
+  
+  nextBtn.addEventListener("click", () => {
+    if (currentReferralIndex < referralCards.length - 1) {
+      currentReferralIndex++;
+      updateReferralVisibility();
+    }
+  });
+  
+  // Modified addReferral logic to integrate with slider
+  function createReferralCard() {
+    const clone = referralTemplate.content.cloneNode(true);
+    const card = clone.querySelector(".referral-card");
+  
+    // Delete button logic
+    const deleteBtn = card.querySelector(".delete-referral");
+    deleteBtn?.addEventListener("click", () => {
+      const idx = referralCards.indexOf(card);
+      if (idx > -1) {
+        referralCards.splice(idx, 1);
+        card.remove();
+  
+        if (currentReferralIndex >= referralCards.length) {
+          currentReferralIndex = Math.max(0, referralCards.length - 1);
+        }
+  
+        updateReferralVisibility();
+      }
+    });
+  
+    // Enforce numeric age input
+    const ageInput = card.querySelector('input[name="referral_age[]"]');
+    ageInput?.addEventListener("input", () => {
+      ageInput.value = ageInput.value.replace(/\D/g, "");
+    });
+  
+    referralCards.push(card);
+    referralSlider.appendChild(card);
+    currentReferralIndex = referralCards.length - 1;
+    updateReferralVisibility();
+  }
+  
+  // Replace original event bind
+  addReferralBtn.removeEventListener("click", createReferralCard); // Just in case
+  addReferralBtn.addEventListener("click", createReferralCard);
+  
+  // Call update if any default referrals exist (future-proof)
+  updateReferralVisibility();
 });
