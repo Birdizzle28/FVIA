@@ -89,6 +89,16 @@ document.addEventListener("DOMContentLoaded", () => {
   
     hideInReferralFields.forEach(el => {
       el.style.display = isMeChecked ? "block" : "none";
+  
+      // Make inputs inside the container required or not
+      const inputs = el.querySelectorAll("input, select, textarea");
+      inputs.forEach(input => {
+        if (isMeChecked) {
+          input.setAttribute("required", "required");
+        } else {
+          input.removeAttribute("required");
+        }
+      });
     });
   }
   
