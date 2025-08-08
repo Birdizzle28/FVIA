@@ -235,9 +235,9 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   
   // ✅ TEMPORARY SUBMISSION HANDLER
-  document.getElementById("preview-summary").addEventListener("click", () => {
-    // trigger native required/validation
-    if (!quoteForm.reportValidity()) return;
+  quoteForm.addEventListener("submit", (e) => {
+    e.preventDefault();                 // keep it from actually posting yet
+    if (!quoteForm.reportValidity()) return;  // run native validation
   
     generateSummaryScreen();
     document.getElementById("form-fields").style.display = "none";
