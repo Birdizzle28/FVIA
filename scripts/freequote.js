@@ -146,10 +146,17 @@ document.addEventListener("DOMContentLoaded", () => {
   
     const inputs = el.querySelectorAll("input, select, textarea");
     inputs.forEach(input => {
+      // remember original required once
+      if (!originalRequiredMap.has(input)) {
+        originalRequiredMap.set(input, input.hasAttribute("required"));
+      }
       const wasOriginallyRequired = originalRequiredMap.get(input);
-      if (shouldShowPersonalFields && wasOriginallyRequired) {
-        input.setAttribute("required", "required");
+    
+      if (shouldShowPersonalFields) {
+        // restore if it used to be required
+        if (wasOriginallyRequired) input.setAttribute("required", "required");
       } else {
+        // hide path -> not required
         input.removeAttribute("required");
       }
     });
@@ -194,9 +201,13 @@ document.addEventListener("DOMContentLoaded", () => {
       el.style.display = isMeChecked ? "block" : "none";
       const inputs = el.querySelectorAll("input, select, textarea");
       inputs.forEach(input => {
+        if (!originalRequiredMap.has(input)) {
+          originalRequiredMap.set(input, input.hasAttribute("required"));
+        }
         const wasOriginallyRequired = originalRequiredMap.get(input);
-        if (isMeChecked && wasOriginallyRequired) {
-          input.setAttribute("required", "required");
+      
+        if (isMeChecked) {
+          if (wasOriginallyRequired) input.setAttribute("required", "required");
         } else {
           input.removeAttribute("required");
         }
