@@ -99,7 +99,7 @@
 						  </label>
 							
 							<label>When is best to contact you?
-								<input type="date" name="contact-date">
+								<input type="date" name="contact-date" required>
 							</label>
 						</div>
 						
@@ -109,11 +109,11 @@
 						  <h3>Your Info</h3>
 						  <div>
 						    <label for="referrer_name">Your Name</label>
-						    <input type="text" id="referrer_name" name="referrer_name" />
+						    <input type="text" id="referrer_name" name="referrer_name" required />
 						  </div>
 						  <div>
 						    <label for="referrer_phone">Your Phone Number</label>
-						    <input type="tel" id="referrer_phone" name="referrer_phone" />
+						    <input type="tel" id="referrer_phone" name="referrer_phone" required />
 						  </div>
 						  <hr />
 						</div>
@@ -127,10 +127,10 @@
 						<!-- Loved one fields shown only when Contact = You -->
 						<div id="lovedOneFields" style="display: none; margin-top: 16px;">
 						  <label>Loved One's Name:
-						    <input type="text" name="loved_one_name" />
+						    <input type="text" name="loved_one_name" required />
 						  </label>
 						  <label>Loved One's Age:
-						    <input type="number" name="loved_one_age" min="0" />
+						    <input type="number" name="loved_one_age" min="0" required />
 						  </label>
 						</div>
 						<!-- Hidden inputs to track source and product -->
@@ -147,23 +147,23 @@
 						    <h4>Referral</h4>
 						    <div>
 						      <label>First Name</label>
-						      <input type="text" name="referral_first_name[]" />
+						      <input type="text" name="referral_first_name[]" required/>
 						    </div>
 						    <div>
 						      <label>Last Name</label>
-						      <input type="text" name="referral_last_name[]" />
+						      <input type="text" name="referral_last_name[]" required/>
 						    </div>
 						    <div>
 						      <label>Age</label>
-						      <input type="number" name="referral_age[]" min="0" />
+						      <input type="number" name="referral_age[]" min="0" required />
 						    </div>
 						    <div>
 						      <label>Phone Number</label>
-						      <input type="tel" name="referral_phone[]" />
+						      <input type="tel" name="referral_phone[]" required/>
 						    </div>
 						    <div>
 						      <label>Their Relationship to You</label>
-						      <input type="text" name="referral_relationship[]" />
+						      <input type="text" name="referral_relationship[]" required />
 						    </div>
 						
 						    <!-- 🗑️ Delete Button -->
