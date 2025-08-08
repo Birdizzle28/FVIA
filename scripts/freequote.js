@@ -235,7 +235,10 @@ document.addEventListener("DOMContentLoaded", () => {
   });
   
   // ✅ TEMPORARY SUBMISSION HANDLER
-  document.getElementById("preview-summary").addEventListener("click", () => {
+  quoteForm.addEventListener("submit", (e) => {
+    e.preventDefault();                 // keep it from actually posting yet
+    if (!quoteForm.reportValidity()) return;  // run native validation
+  
     generateSummaryScreen();
     document.getElementById("form-fields").style.display = "none";
     document.getElementById("summary-screen").style.display = "block";
