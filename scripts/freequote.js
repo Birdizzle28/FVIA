@@ -25,18 +25,22 @@ document.addEventListener("DOMContentLoaded", () => {
   const quoteHeading = document.getElementById("quote-heading");
 
   function formatPhoneNumber(value) {
-    // Remove all non-digit characters
-    const cleaned = value.replace(/\D/g, "");
+    const cleaned = value.replace(/\D/g, "").slice(0, 10); // only digits, max 10
+    const len = cleaned.length;
   
-    // Apply formatting based on length
-    if (cleaned.length <= 3) {
-      return `(${cleaned}`;
-    } else if (cleaned.length <= 6) {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
-    } else {
-      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
-    }
+    if (len === 0) return "";
+    if (len < 4) return `(${cleaned}`;
+    if (len < 7) return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
+    return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
   }
+  
+  // Apply formatting live
+  document.querySelectorAll('input[name="phone"], input[name="referrer_phone"], input[name="referral_phone[]"]').forEach(input => {
+    input.addEventListener("input", (e) => {
+      const rawValue = e.target.value;
+      e.target.value = formatPhoneNumber(rawValue);
+    });
+  });
   
   // Apply formatting as the user types
   document.querySelectorAll('input[name="phone"], input[name="referrer_phone"], input[name="referral_phone[]"]').forEach(input => {
