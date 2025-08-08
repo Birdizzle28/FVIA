@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", () => {
   
   const quoteHeading = document.getElementById("quote-heading");
 
+  // ---- ADD: phone mask helpers ----
   function formatPhoneNumber(value) {
     const cleaned = value.replace(/\D/g, "").slice(0, 10); // only digits, max 10
     const len = cleaned.length;
@@ -34,22 +35,29 @@ document.addEventListener("DOMContentLoaded", () => {
     return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6)}`;
   }
   
-  // Apply formatting live
-  document.querySelectorAll('input[name="phone"], input[name="referrer_phone"], input[name="referral_phone[]"]').forEach(input => {
-    input.addEventListener("input", (e) => {
-      const rawValue = e.target.value;
-      e.target.value = formatPhoneNumber(rawValue);
-    });
-  });
+  function bindPhoneMask(input) {
+    if (!input) return;
+    input.addEventListener("input", () => {
+      // keep caret by counting digits before caret, then restoring
+      const start = input.selectionStart ?? input.value.length;
+      const digitsBefore = (input.value.slice(0, start).match(/\d/g) || []).length;
   
-  // Apply formatting as the user types
-  document.querySelectorAll('input[name="phone"], input[name="referrer_phone"], input[name="referral_phone[]"]').forEach(input => {
-    input.addEventListener("input", (e) => {
-      const cursorPos = e.target.selectionStart;
-      e.target.value = formatPhoneNumber(e.target.value);
-      e.target.setSelectionRange(cursorPos, cursorPos);
+      const formatted = formatPhoneNumber(input.value);
+      input.value = formatted;
+  
+      let pos = 0, seen = 0;
+      while (pos < formatted.length && seen < digitsBefore) {
+        if (/\d/.test(formatted[pos])) seen++;
+        pos++;
+      }
+      input.setSelectionRange(pos, pos);
     });
-  });
+  }
+  // Bind mask to existing fields on load
+  bindPhoneMask(document.querySelector('input[name="phone"]'));          // main phone
+  bindPhoneMask(document.querySelector('#referrer_phone'));              // "Your Phone" in referral section
+  document.querySelectorAll('input[name="referral_phone[]"]').forEach(bindPhoneMask); // any pre-rendered referrals
+  
   quoteHeading.textContent = productTypeParam === "legalshield"
   ? "LegalShield/IDShield Quote"
   : "Life Insurance Quote";
@@ -338,7 +346,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function createReferralCard() {
     const clone = referralTemplate.content.cloneNode(true);
     const card = clone.querySelector(".referral-card");
-  
+
+    // Bind mask for this new card's phone input
+    bindPhoneMask(card.querySelector('input[name="referral_phone[]"]'));
+    
     // Delete button logic
     const deleteBtn = card.querySelector(".delete-referral");
     deleteBtn?.addEventListener("click", () => {
