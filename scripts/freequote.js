@@ -23,6 +23,29 @@ document.addEventListener("DOMContentLoaded", () => {
   const formFields = document.getElementById("form-fields");
   
   const quoteHeading = document.getElementById("quote-heading");
+
+  function formatPhoneNumber(value) {
+    // Remove all non-digit characters
+    const cleaned = value.replace(/\D/g, "");
+  
+    // Apply formatting based on length
+    if (cleaned.length <= 3) {
+      return `(${cleaned}`;
+    } else if (cleaned.length <= 6) {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
+    } else {
+      return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3, 6)}-${cleaned.slice(6, 10)}`;
+    }
+  }
+  
+  // Apply formatting as the user types
+  document.querySelectorAll('input[name="phone"], input[name="referrer_phone"], input[name="referral_phone[]"]').forEach(input => {
+    input.addEventListener("input", (e) => {
+      const cursorPos = e.target.selectionStart;
+      e.target.value = formatPhoneNumber(e.target.value);
+      e.target.setSelectionRange(cursorPos, cursorPos);
+    });
+  });
   quoteHeading.textContent = productTypeParam === "legalshield"
   ? "LegalShield/IDShield Quote"
   : "Life Insurance Quote";
