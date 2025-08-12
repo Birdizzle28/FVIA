@@ -88,8 +88,10 @@ document.addEventListener("DOMContentLoaded", () => {
   
   // Next from personal
   document.getElementById("next-from-personal").addEventListener("click", () => {
-    // validate only fields inside personal panel
-    const inputs = panelPersonal.querySelectorAll("input, select, textarea");
+    // validate only VISIBLE fields inside the personal panel
+    const inputs = Array.from(panelPersonal.querySelectorAll("input, select, textarea"))
+      .filter(el => el.offsetParent !== null && !el.disabled); // visible & enabled
+  
     for (const el of inputs) {
       if (!el.checkValidity()) {
         el.reportValidity();
@@ -101,24 +103,16 @@ document.addEventListener("DOMContentLoaded", () => {
     console.log("[next-from-personal] path =", path);
   
     if (path === "C") {
-      // Me + Referral -> referral next (without "Your Info")
+      // Me + Referral -> go to referral panel, hide "Your Info"
       const refInfo = document.getElementById("referrer-info");
       if (refInfo) refInfo.style.display = "none";
   
-      if (!panelReferral) {
-        console.warn("[next-from-personal] panelReferral not found (#referral-fields)");
-        return;
-      }
-  
-      // ensure at least one referral card exists
       if (referralSlider && referralSlider.children.length === 0) {
-        console.log("[next-from-personal] creating first referral card");
         createReferralCard();
       }
   
       showPanel(panelReferral);
-      // extra safety in case some CSS fights us
-      panelReferral.style.display = "block";
+      panelReferral.style.display = "block"; // belt & suspenders
       panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
