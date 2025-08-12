@@ -30,7 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
   
   // helper to show one panel
   function showPanel(panel) {
-    [panelChooser, panelPersonal, panelReferral].forEach(p => p.style.display = "none");
+    [panelChooser, panelPersonal, panelReferral].filter(Boolean).forEach(p => p.style.display = "none");
     summaryScreen.style.display = "none";
     if (panel) panel.style.display = "block";
   }
@@ -91,19 +91,24 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
     }
-    if (!valid) return;
   
     const path = determinePath();
     if (path === "C") {
       // Me + Referral -> referral next (without "Your Info")
       document.getElementById("referrer-info").style.display = "none";
+      // make sure there’s at least one referral card before showing the panel
+      if (referralSlider && referralSlider.children.length === 0) {
+        createReferralCard();
+      }
+  
       showPanel(panelReferral);
-    } else if (path === "B" || path === "D" || path === "A") {
-      // A,B,D -> go straight to summary
-      generateSummaryScreen();
-      showPanel(null);
-      summaryScreen.style.display = "block";
+      return;
     }
+  
+    // A, B, D -> go straight to summary
+    generateSummaryScreen();
+    showPanel(null);
+    summaryScreen.style.display = "block";
   });
   
   // Next from referral -> summary
