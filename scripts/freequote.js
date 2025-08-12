@@ -539,7 +539,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   
     // --- REFERRAL INFO SECTION ---
-    const referralTitle = document.getElementById("referral-summary-title");
     // Only show referrals for C (Me + Referral) or E (Referral only)
     if (path === "C" || path === "E") {
       referralTitle && (referralTitle.style.display = "block");
