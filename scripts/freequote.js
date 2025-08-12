@@ -398,16 +398,19 @@ document.addEventListener("DOMContentLoaded", () => {
     ageInput.value = ageInput.value.replace(/\D/g, "");
   });
   
-  // ✅ TEMPORARY SUBMISSION HANDLER (show summary)
+  // ✅ TEMPORARY SUBMISSION HANDLER
   quoteForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    if (!quoteForm.reportValidity()) return;
+    e.preventDefault();                 // keep it from actually posting yet
+    if (!quoteForm.reportValidity()) return;  // run native validation
   
     generateSummaryScreen();
-    showPanel(null);
-    summaryScreen.style.display = "block";
+    showPanel(panelReferral);
   });
-    
+  
+  // Referral slider
+  let currentReferralIndex = 0;
+  const referralCards = [];
+  
   // Create navigation elements
   const navContainer = document.createElement("div");
   navContainer.id = "referral-nav";
@@ -502,9 +505,6 @@ document.addEventListener("DOMContentLoaded", () => {
   //Generate Referral Summary
   function generateSummaryScreen() {
     const summaryScreen   = document.getElementById("summary-screen");
-      // Referral slider
-    let currentReferralIndex = 0;
-    const referralCards = [];
     const summaryList     = document.getElementById("summary-list");
     const personalSummary = document.getElementById("personal-summary");
     const referralTitle   = document.getElementById("referral-summary-title");
