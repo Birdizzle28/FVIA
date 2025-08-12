@@ -25,7 +25,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const quoteHeading = document.getElementById("quote-heading");
   const panelChooser  = document.getElementById("panel-chooser");
   const panelPersonal = document.getElementById("panel-personal");
-  const panelReferral = document.getElementById("panel-referral");
+  const panelReferral = document.getElementById("referral-fields");
   const summaryScreen = document.getElementById("summary-screen");
   
   // helper to show one panel
