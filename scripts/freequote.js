@@ -98,19 +98,32 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   
     const path = determinePath();
+    console.log("[next-from-personal] path =", path);
+  
     if (path === "C") {
       // Me + Referral -> referral next (without "Your Info")
-      document.getElementById("referrer-info").style.display = "none";
-      // make sure there’s at least one referral card before showing the panel
+      const refInfo = document.getElementById("referrer-info");
+      if (refInfo) refInfo.style.display = "none";
+  
+      if (!panelReferral) {
+        console.warn("[next-from-personal] panelReferral not found (#referral-fields)");
+        return;
+      }
+  
+      // ensure at least one referral card exists
       if (referralSlider && referralSlider.children.length === 0) {
+        console.log("[next-from-personal] creating first referral card");
         createReferralCard();
       }
   
       showPanel(panelReferral);
+      // extra safety in case some CSS fights us
+      panelReferral.style.display = "block";
+      panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
   
-    // A, B, D -> go straight to summary
+    // A, B, D -> straight to summary
     generateSummaryScreen();
     showPanel(null);
     summaryScreen.style.display = "block";
