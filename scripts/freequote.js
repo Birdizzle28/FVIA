@@ -495,9 +495,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   //Generate Referral Summary
   function generateSummaryScreen() {
-    const summaryScreen = document.getElementById("summary-screen");
-    const summaryList = document.getElementById("summary-list");
+    const summaryScreen   = document.getElementById("summary-screen");
+    const summaryList     = document.getElementById("summary-list");
     const personalSummary = document.getElementById("personal-summary");
+    const referralTitle   = document.getElementById("referral-summary-title");
+    const path            = determinePath(); // A/B/C/D/E
   
     // Clear previous summaries
     summaryList.innerHTML = "";
@@ -527,28 +529,41 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   
     // --- REFERRAL INFO SECTION ---
-    referralCards.forEach((card, index) => {
-      const firstName = card.querySelector('input[name="referral_first_name[]"]')?.value || "";
-      const lastName  = card.querySelector('input[name="referral_last_name[]"]')?.value || "";
-      const age       = card.querySelector('input[name="referral_age[]"]')?.value || "";
-      const phone     = card.querySelector('input[name="referral_phone[]"]')?.value || "";
-      const relationship = card.querySelector('input[name="referral_relationship[]"]')?.value || "";
+    // Only show referrals for C (Me + Referral) or E (Referral only)
+    if (path === "C" || path === "E") {
+      referralTitle.style.display = "block";
   
-      const item = document.createElement("div");
-      item.classList.add("summary-item");
-      item.innerHTML = `
-        <strong>${firstName} ${lastName}</strong><br/>
-        ${age ? `Age: ${age} <br/>` : ""}
-        ${phone ? `Phone: ${phone} <br/>` : ""}
-        ${relationship ? `Relationship: ${relationship} <br/>` : ""}
-        <button type="button" class="edit-referral" data-index="${index}">Edit</button>
-        <button type="button" class="delete-referral" data-index="${index}">Delete</button>
-        <hr/>
-      `;
-      summaryList.appendChild(item);
-    });
+      referralCards.forEach((card, index) => {
+        const firstName    = card.querySelector('input[name="referral_first_name[]"]')?.value || "";
+        const lastName     = card.querySelector('input[name="referral_last_name[]"]')?.value || "";
+        const age          = card.querySelector('input[name="referral_age[]"]')?.value || "";
+        const phone        = card.querySelector('input[name="referral_phone[]"]')?.value || "";
+        const relationship = card.querySelector('input[name="referral_relationship[]"]')?.value || "";
   
-    // Hide fields, show summary (IMPORTANT: hide #form-fields, not the whole form)
+        const item = document.createElement("div");
+        item.classList.add("summary-item");
+        item.innerHTML = `
+          <strong>${firstName} ${lastName}</strong><br/>
+          ${age ? `Age: ${age} <br/>` : ""}
+          ${phone ? `Phone: ${phone} <br/>` : ""}
+          ${relationship ? `Relationship: ${relationship} <br/>` : ""}
+          <button type="button" class="edit-referral" data-index="${index}">Edit</button>
+          <button type="button" class="delete-referral" data-index="${index}">Delete</button>
+          <hr/>
+        `;
+        summaryList.appendChild(item);
+      });
+  
+      // If in C/E but there are no referral cards, hide the title too
+      if (referralCards.length === 0) {
+        referralTitle.style.display = "none";
+      }
+    } else {
+      // Not C/E → hide referral section UI
+      referralTitle.style.display = "none";
+    }
+  
+    // Show summary
     formFields.style.display = "none";
     summaryScreen.style.display = "block";
   }
