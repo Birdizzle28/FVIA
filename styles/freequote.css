@@ -130,3 +130,15 @@ form, label, input, select, textarea, fieldset, button {
   display: none;
   transition: transform 0.3s ease-in-out;
 }
+
+.panel { 
+  display: none; 
+}
+.panel.active { 
+  display: block; 
+}
+.panel-nav { 
+  margin-top: 12px; 
+  display:flex; 
+  gap:8px; 
+}
