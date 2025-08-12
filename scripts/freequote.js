@@ -27,7 +27,17 @@ document.addEventListener("DOMContentLoaded", () => {
   const panelPersonal = document.getElementById("panel-personal");
   const panelReferral = document.getElementById("referral-fields");
   const summaryScreen = document.getElementById("summary-screen");
-  
+
+  async function getZipFromCityState(city, state) {
+    try {
+      const response = await fetch(`https://api.zippopotam.us/us/${state}/${city}`);
+      if (!response.ok) return "";
+      const data = await response.json();
+      return data.places?.[0]?.['post code'] || "";
+    } catch {
+      return "";
+    }
+  }
   // helper to show one panel
   function showPanel(panel) {
     [panelChooser, panelPersonal, panelReferral].filter(Boolean).forEach(p => p.style.display = "none");
@@ -523,26 +533,50 @@ document.addEventListener("DOMContentLoaded", () => {
   
     // --- PERSONAL INFO SECTION ---
     if (meCheckbox.checked) {
-      const firstName = document.querySelector('input[name="first-name"]')?.value || "";
-      const lastName  = document.querySelector('input[name="last-name"]')?.value || "";
-      const fullName  = `${firstName} ${lastName}`.trim();
+    const firstName = document.querySelector('input[name="first-name"]')?.value || "";
+    const lastName  = document.querySelector('input[name="last-name"]')?.value || "";
+    const fullName  = `${firstName} ${lastName}`.trim();
   
-      const age   = document.querySelector('input[name="age"]')?.value || "";
-      const phone = document.querySelector('input[name="phone"]')?.value || "";
-      const email = document.querySelector('input[name="email"]')?.value || "";
-      const city  = document.querySelector('input[name="city"]')?.value || "";
-      const state = document.querySelector('input[name="state"]')?.value || "";
+    const age     = document.querySelector('input[name="age"]')?.value || "";
+    const phone   = document.querySelector('input[name="phone"]')?.value || "";
+    const email   = document.querySelector('input[name="email"]')?.value || "";
+    const address = document.querySelector('input[name="address"]')?.value || "";
+    const city    = document.querySelector('input[name="city"]')?.value || "";
+    const state   = document.querySelector('input[name="state"]')?.value || "";
   
-      personalSummary.innerHTML = `
-        <h3>Your Info</h3>
-        <strong>${fullName}</strong><br/>
-        ${age ? `Age: ${age}<br/>` : ""}
-        ${phone ? `Phone: ${phone}<br/>` : ""}
-        ${email ? `Email: ${email}<br/>` : ""}
-        ${(city || state) ? `Location: ${city}${city && state ? ", " : ""}${state}<br/>` : ""}
-        <hr/>
-      `;
+    // put a quick placeholder (no ZIP yet)
+    personalSummary.innerHTML = `
+      <h3>Your Info</h3>
+      <strong>${fullName}</strong><br/>
+      ${age ? `Age: ${age}<br/>` : ""}
+      ${phone ? `Phone: ${phone}<br/>` : ""}
+      ${email ? `Email: ${email}<br/>` : ""}
+      ${
+        (address || city || state)
+          ? `Address: ${[
+              address,
+              [city, state].filter(Boolean).join(", ")
+            ].filter(Boolean).join("<br/>")}
+            <span class="zip-wait" style="display:none;"></span><br/>`
+          : ""
+      }
+      <hr/>
+    `;
+  
+    // fetch ZIP (only if we have both city+state), then append it
+    if (city && state) {
+      getZipFromCityState(city.trim(), state.trim()).then(zip => {
+        if (zip) {
+          // add ZIP at the end of the address line
+          const html = personalSummary.innerHTML.replace(
+            /(<br\/>\s*<\/?hr>)/i, // insert before the <hr/>
+            ` ${zip}$1`
+          );
+          personalSummary.innerHTML = html;
+        }
+      });
     }
+  }
   
     // --- REFERRAL INFO SECTION ---
     // Only show referrals for C (Me + Referral) or E (Referral only)
