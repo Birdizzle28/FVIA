@@ -23,6 +23,108 @@ document.addEventListener("DOMContentLoaded", () => {
   const formFields = document.getElementById("form-fields");
   
   const quoteHeading = document.getElementById("quote-heading");
+  const panelChooser  = document.getElementById("panel-chooser");
+  const panelPersonal = document.getElementById("panel-personal");
+  const panelReferral = document.getElementById("panel-referral");
+  const summaryScreen = document.getElementById("summary-screen");
+  
+  // helper to show one panel
+  function showPanel(panel) {
+    [panelChooser, panelPersonal, panelReferral].forEach(p => p.style.display = "none");
+    summaryScreen.style.display = "none";
+    if (panel) panel.style.display = "block";
+  }
+  // start on chooser
+  showPanel(panelChooser);
+  
+  // react to chooser inputs toggling (so "contactPreference" shows/hides etc)
+  quoteForCheckboxes.forEach(cb => {
+    cb.addEventListener("change", () => {
+      updateContactPreferences();
+    });
+  });
+  contactPreference.addEventListener("change", updateContactPreferences);
+  
+  // Next from chooser
+  document.getElementById("next-from-chooser").addEventListener("click", () => {
+    const path = determinePath();
+  
+    // show/hide referrer-info based on path
+    const refInfo = document.getElementById("referrer-info");
+  
+    if (path === "A") {
+      // Me only -> Personal
+      document.getElementById("lovedOneFields").style.display = "none";
+      showPanel(panelPersonal);
+    } else if (path === "B") {
+      // Me + You -> Personal (with loved-one subfields)
+      document.getElementById("lovedOneFields").style.display = "block";
+      showPanel(panelPersonal);
+    } else if (path === "C") {
+      // Me + Referral -> Personal first, referral later; hide "Your Info" in referral panel
+      refInfo.style.display = "none";
+      document.getElementById("lovedOneFields").style.display = "none";
+      showPanel(panelPersonal);
+    } else if (path === "D") {
+      // Someone Else + You -> Personal (with loved-ones), no referrer panel later
+      document.getElementById("lovedOneFields").style.display = "block";
+      showPanel(panelPersonal);
+    } else if (path === "E") {
+      // Referral only -> Referral (with "Your Info")
+      refInfo.style.display = "block";
+      showPanel(panelReferral);
+    }
+  });
+  
+  // Back buttons
+  document.querySelectorAll('[data-back]').forEach(btn => {
+    btn.addEventListener("click", () => showPanel(panelChooser));
+  });
+  
+  // Next from personal
+  document.getElementById("next-from-personal").addEventListener("click", () => {
+    // validate only fields inside personal panel
+    const valid = panelPersonal.querySelector("input,select,textarea")?.form?.reportValidity();
+    if (!valid) return;
+  
+    const path = determinePath();
+    if (path === "C") {
+      // Me + Referral -> referral next (without "Your Info")
+      document.getElementById("referrer-info").style.display = "none";
+      showPanel(panelReferral);
+    } else if (path === "B" || path === "D" || path === "A") {
+      // A,B,D -> go straight to summary
+      generateSummaryScreen();
+      showPanel(null);
+      summaryScreen.style.display = "block";
+    }
+  });
+  
+  // Next from referral -> summary
+  document.getElementById("next-from-referral").addEventListener("click", () => {
+    // (optional) add any referral-only validation here
+    generateSummaryScreen();
+    showPanel(null);
+    summaryScreen.style.display = "block";
+  });
+  
+  // "Back to Edit" on summary -> chooser (or personal if you want)
+  document.getElementById("edit-referrals").addEventListener("click", () => {
+    showPanel(panelChooser);
+  });
+  // path detector (A/B/C/D/E)
+  function determinePath() {
+    const me = !!meCheckbox?.checked;
+    const se = !!someoneElseCheckbox?.checked;
+    const contact = contactPreference?.value || "You";
+  
+    if (me && !se) return "A";                          // Me only
+    if (me && se && contact === "You") return "B";      // Me + You
+    if (me && se && contact === "Referral") return "C"; // Me + Referral
+    if (!me && se && contact === "You") return "D";     // Someone Else + You
+    if (!me && se && contact === "Referral") return "E";// Referral only
+    return "A";
+  }
 
   // ---- ADD: phone mask helpers ----
   function formatPhoneNumber(value) {
