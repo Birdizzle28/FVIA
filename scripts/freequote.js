@@ -404,8 +404,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!quoteForm.reportValidity()) return;  // run native validation
   
     generateSummaryScreen();
-    document.getElementById("form-fields").style.display = "none";
-    document.getElementById("summary-screen").style.display = "block";
+    showPanel(panelReferral);
   });
   
   // Referral slider
