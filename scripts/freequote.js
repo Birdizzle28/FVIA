@@ -201,7 +201,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!isSomeoneElseChecked) {
       // Fully reset when "Someone Else" is OFF
       lovedOneFields.style.display = "none";
-      referralFields.style.display = "none";
       referrerInfoSection.style.display = "block";
       return;
     }
@@ -209,10 +208,8 @@ document.addEventListener("DOMContentLoaded", () => {
     // Someone Else is ON → switch by contactPreference
     if (contactValue === "You") {
       lovedOneFields.style.display = "block";
-      referralFields.style.display = "none";
     } else { // "Referral"
       lovedOneFields.style.display = "none";
-      referralFields.style.display = "block";
       if (typeof referralSlider !== "undefined" && referralSlider && referralSlider.children.length === 0) {
         createReferralCard();
       }
@@ -323,10 +320,8 @@ document.addEventListener("DOMContentLoaded", () => {
   
     // ✅ Show/hide fields
     if (contactPreference.value === "Referral") {
-      referralFields.style.display = "block";
       if (referralSlider.children.length === 0) createReferralCard();
     } else {
-      referralFields.style.display = "none";
     }
   
     if (!isMeChecked && referralSlider.children.length === 0) {
