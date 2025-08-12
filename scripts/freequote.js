@@ -84,7 +84,13 @@ document.addEventListener("DOMContentLoaded", () => {
   // Next from personal
   document.getElementById("next-from-personal").addEventListener("click", () => {
     // validate only fields inside personal panel
-    const valid = panelPersonal.querySelector("input,select,textarea")?.form?.reportValidity();
+    const inputs = panelPersonal.querySelectorAll("input, select, textarea");
+    for (const el of inputs) {
+      if (!el.checkValidity()) {
+        el.reportValidity();
+        return;
+      }
+    }
     if (!valid) return;
   
     const path = determinePath();
