@@ -38,16 +38,21 @@ document.addEventListener("DOMContentLoaded", () => {
   showPanel(panelChooser);
   
   // react to chooser inputs toggling (so "contactPreference" shows/hides etc)
-  quoteForCheckboxes.forEach(cb => {
+  quoteForCheckboxes.forEach((cb) => {
     cb.addEventListener("change", () => {
       updateContactPreferences();
+      clearReferralsIfNotNeeded(determinePath()); // <-- add
     });
   });
-  contactPreference.addEventListener("change", updateContactPreferences);
+  contactPreference.addEventListener("change", () => {
+    updateContactPreferences();
+    clearReferralsIfNotNeeded(determinePath()); // <-- add
+  });
   
   // Next from chooser
   document.getElementById("next-from-chooser").addEventListener("click", () => {
     const path = determinePath();
+    clearReferralsIfNotNeeded(path); // <-- add this line
   
     // show/hide referrer-info based on path
     const refInfo = document.getElementById("referrer-info");
@@ -369,7 +374,6 @@ document.addEventListener("DOMContentLoaded", () => {
   updateContactPreferences();
   
   // Update event
-  // Update event
   quoteForCheckboxes.forEach((checkbox) => {
     checkbox.addEventListener("change", () => {
       updateReferralView();
@@ -535,17 +539,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   
     // --- REFERRAL INFO SECTION ---
+    const referralTitle = document.getElementById("referral-summary-title");
     // Only show referrals for C (Me + Referral) or E (Referral only)
     if (path === "C" || path === "E") {
-      referralTitle.style.display = "block";
-  
+      referralTitle && (referralTitle.style.display = "block");
+    
       referralCards.forEach((card, index) => {
         const firstName    = card.querySelector('input[name="referral_first_name[]"]')?.value || "";
         const lastName     = card.querySelector('input[name="referral_last_name[]"]')?.value || "";
         const age          = card.querySelector('input[name="referral_age[]"]')?.value || "";
         const phone        = card.querySelector('input[name="referral_phone[]"]')?.value || "";
         const relationship = card.querySelector('input[name="referral_relationship[]"]')?.value || "";
-  
+    
         const item = document.createElement("div");
         item.classList.add("summary-item");
         item.innerHTML = `
@@ -559,14 +564,14 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
         summaryList.appendChild(item);
       });
-  
+    
       // If in C/E but there are no referral cards, hide the title too
-      if (referralCards.length === 0) {
+      if (referralCards.length === 0 && referralTitle) {
         referralTitle.style.display = "none";
       }
     } else {
       // Not C/E → hide referral section UI
-      referralTitle.style.display = "none";
+      referralTitle && (referralTitle.style.display = "none");
     }
   
     // Show summary
