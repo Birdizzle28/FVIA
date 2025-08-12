@@ -136,7 +136,13 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!me && se && contact === "Referral") return "E";// Referral only
     return "A";
   }
-
+  function clearReferralsIfNotNeeded(path) {
+    if (path === "A" || path === "B" || path === "D") {
+      // Clear array and DOM so no stale data shows up
+      referralCards.length = 0;
+      if (referralSlider) referralSlider.innerHTML = "";
+    }
+  }
   // ---- ADD: phone mask helpers ----
   function formatPhoneNumber(value) {
     const cleaned = value.replace(/\D/g, "").slice(0, 10); // only digits, max 10
