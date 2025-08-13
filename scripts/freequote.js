@@ -29,49 +29,21 @@ document.addEventListener("DOMContentLoaded", () => {
   const summaryScreen = document.getElementById("summary-screen");
 
   // --- Google Geocoding (ZIP + lat/lng) ---
-  const GOOGLE_API_KEY = "AIzaSyD5nGhz1mUXK1aGsoQSzo4MXYcI-uoxPa4"; // lock this to your domain (HTTP referrer restriction)
-  
   async function geocodeAddressGoogle(fullAddress) {
     if (!fullAddress) return { zip: "", lat: "", lng: "" };
-  
-    const url = 
-      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${GOOGLE_API_KEY}`;
-    console.log("[geocode] fetching:", url);
+    
+      // Netlify functions endpoint
+      const endpoint = "/.netlify/functions/geocode";
+    
     try {
-      const res = await fetch(url);
-      console.log("[geocode] HTTP status:", res.status);
-      if (!res.ok) return { zip: "", lat: "", lng: "" };
-  
-      const data = await res.json();
-      console.log("[geocode] API status:", data.status, data.error_message || "");
-      if (data.status !== "OK" || !data.results?.length) return { zip: "", lat: "", lng: "" };
-  
-      const result = data.results[0];
-  
-      // pull ZIP (postal_code) from address_components
-      let zip = "";
-      for (const comp of result.address_components) {
-        if (comp.types?.includes("postal_code")) {
-          zip = comp.long_name || comp.short_name || "";
-          break;
-        }
-      }
-  
-      const { lat, lng } = result.geometry?.location || {};
-      return { zip: zip || "", lat: lat ?? "", lng: lng ?? "" };
-    } catch (err) {
-      console.error("[geocode] fetch error:", err);
-      return { zip: "", lat: "", lng: "" };
-    }
-  }
-  async function getZipFromCityState(city, state) {
-    try {
-      const response = await fetch(`https://api.zippopotam.us/us/${state}/${city}`);
-      if (!response.ok) return "";
-      const data = await response.json();
-      return data.places?.[0]?.['post code'] || "";
+      const r = await fetch(`${endpoint}?address=${encodeURIComponent(fullAddress)}`, {
+        headers: { "Accept": "application/json" }
+      });
+      if (!r.ok) return { zip: "", lat: "", lng: "" };
+    const data = await r.json();
+      return { zip: data.zip || "", lat: data.lat ?? "", lng: data.lng ?? "" };
     } catch {
-      return "";
+      return { zip: "", lat: "", lng: "" };
     }
   }
   // helper to show one panel
