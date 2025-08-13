@@ -34,13 +34,16 @@ document.addEventListener("DOMContentLoaded", () => {
   async function geocodeAddressGoogle(fullAddress) {
     if (!fullAddress) return { zip: "", lat: "", lng: "" };
   
-    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${GOOGLE_API_KEY}`;
-  
+    const url = 
+      `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${GOOGLE_API_KEY}`;
+    console.log("[geocode] fetching:", url);
     try {
       const res = await fetch(url);
+      console.log("[geocode] HTTP status:", res.status);
       if (!res.ok) return { zip: "", lat: "", lng: "" };
   
       const data = await res.json();
+      console.log("[geocode] API status:", data.status, data.error_message || "");
       if (data.status !== "OK" || !data.results?.length) return { zip: "", lat: "", lng: "" };
   
       const result = data.results[0];
