@@ -546,7 +546,7 @@ document.addEventListener("DOMContentLoaded", () => {
   
     // Build summary with a ZIP placeholder span
     personalSummary.innerHTML = `
-      <h3>Your Info</h3>
+      <h3>Your Info<button type="button" id="edit-personal-btn">Edit</button></h3>
       <strong>${fullName}</strong><br/>
       ${age ? `Age: ${age}<br/>` : ""}
       ${phone ? `Phone: ${phone}<br/>` : ""}
@@ -615,7 +615,40 @@ document.addEventListener("DOMContentLoaded", () => {
     formFields.style.display = "none";
     summaryScreen.style.display = "block";
   }
+  document.getElementById("summary-screen").addEventListener("click", () => {}, { once: false });
 
+  document.getElementById("summary-screen").addEventListener("click", (e) => {
+    // Edit personal (Your Info)
+    if (e.target && e.target.id === "edit-personal-btn") {
+      const path = determinePath(); // A/B/C/D/E
+      summaryScreen.style.display = "none";
+      formFields.style.display = "block";
+  
+      // Show the personal panel; toggle Loved Ones if B/D
+      lovedOneFields.style.display = (path === "B" || path === "D") ? "block" : "none";
+      showPanel(panelPersonal);
+      panelPersonal.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  
+    // Edit referrals
+    if (e.target && e.target.id === "edit-referrals-btn") {
+      const path = determinePath(); // A/B/C/D/E
+      summaryScreen.style.display = "none";
+      formFields.style.display = "block";
+  
+      // C = Me+Referral (hide "Your Info"), E = Referral only (show "Your Info")
+      const refInfo = document.getElementById("referrer-info");
+      if (refInfo) refInfo.style.display = (path === "E") ? "block" : "none";
+  
+      // make sure a card exists
+      if (referralSlider && referralSlider.children.length === 0) {
+        createReferralCard();
+      }
+  
+      showPanel(panelReferral);
+      panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  });
   //Handle Edit, Delete, Final Submit
   document.getElementById("summary-list").addEventListener("click", (e) => {
     if (e.target.classList.contains("edit-referral")) {
@@ -634,9 +667,3 @@ document.addEventListener("DOMContentLoaded", () => {
       generateSummaryScreen(); // refresh summary
     }
   });
-  
-  document.getElementById("edit-referrals").addEventListener("click", () => {
-    document.getElementById("summary-screen").style.display = "none";
-    document.getElementById("form-fields").style.display = "block";
-  });
-});
