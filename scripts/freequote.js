@@ -544,7 +544,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const city    = document.querySelector('input[name="city"]')?.value || "";
     const state   = document.querySelector('input[name="state"]')?.value || "";
   
-    // put a quick placeholder (no ZIP yet)
+    // Build summary with a ZIP placeholder span
     personalSummary.innerHTML = `
       <h3>Your Info</h3>
       <strong>${fullName}</strong><br/>
@@ -553,26 +553,24 @@ document.addEventListener("DOMContentLoaded", () => {
       ${email ? `Email: ${email}<br/>` : ""}
       ${
         (address || city || state)
-          ? `Address: ${[
-              address,
-              [city, state].filter(Boolean).join(", ")
-            ].filter(Boolean).join("<br/>")}
-            <span class="zip-wait" style="display:none;"></span><br/>`
+          ? `Address: ${
+              address ? `${address}<br/>` : ""
+            }${
+              (city || state)
+                ? `${city}${city && state ? ", " : ""}${state} <span id="zip-span"></span><br/>`
+                : ""
+            }`
           : ""
       }
       <hr/>
     `;
   
-    // fetch ZIP (only if we have both city+state), then append it
+    // Fill the ZIP span when we have it
     if (city && state) {
       getZipFromCityState(city.trim(), state.trim()).then(zip => {
-        if (zip) {
-          // add ZIP at the end of the address line
-          const html = personalSummary.innerHTML.replace(
-            /(<br\/>\s*<\/?hr>)/i, // insert before the <hr/>
-            ` ${zip}$1`
-          );
-          personalSummary.innerHTML = html;
+        const zipSpan = document.getElementById("zip-span");
+        if (zipSpan && zip) {
+          zipSpan.textContent = ` ${zip}`;
         }
       });
     }
