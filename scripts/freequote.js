@@ -28,6 +28,38 @@ document.addEventListener("DOMContentLoaded", () => {
   const panelReferral = document.getElementById("referral-fields");
   const summaryScreen = document.getElementById("summary-screen");
 
+  // --- Google Geocoding (ZIP + lat/lng) ---
+  const GOOGLE_API_KEY = "AIzaSyD5nGhz1mUXK1aGsoQSzo4MXYcI-uoxPa4"; // lock this to your domain (HTTP referrer restriction)
+  
+  async function geocodeAddressGoogle(fullAddress) {
+    if (!fullAddress) return { zip: "", lat: "", lng: "" };
+  
+    const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(fullAddress)}&key=${GOOGLE_API_KEY}`;
+  
+    try {
+      const res = await fetch(url);
+      if (!res.ok) return { zip: "", lat: "", lng: "" };
+  
+      const data = await res.json();
+      if (data.status !== "OK" || !data.results?.length) return { zip: "", lat: "", lng: "" };
+  
+      const result = data.results[0];
+  
+      // pull ZIP (postal_code) from address_components
+      let zip = "";
+      for (const comp of result.address_components) {
+        if (comp.types?.includes("postal_code")) {
+          zip = comp.long_name || comp.short_name || "";
+          break;
+        }
+      }
+  
+      const { lat, lng } = result.geometry?.location || {};
+      return { zip: zip || "", lat: lat ?? "", lng: lng ?? "" };
+    } catch {
+      return { zip: "", lat: "", lng: "" };
+    }
+  }
   async function getZipFromCityState(city, state) {
     try {
       const response = await fetch(`https://api.zippopotam.us/us/${state}/${city}`);
@@ -562,12 +594,27 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   
     // Fill the ZIP span when we have it
-    if (city && state) {
-      getZipFromCityState(city.trim(), state.trim()).then(zip => {
+    const fullAddress = [address, city && state ? `${city}, ${state}` : (city || state)]
+      .filter(Boolean)
+      .join(", ");
+    
+    if (fullAddress) {
+      geocodeAddressGoogle(fullAddress).then(({ zip, lat, lng }) => {
+        // 1) Update on-screen ZIP cleanly
         const zipSpan = document.getElementById("zip-span");
         if (zipSpan && zip) {
           zipSpan.textContent = ` ${zip}`;
         }
+    
+        // 2) Store for later submit
+        const zipEl = document.getElementById("zip");
+        const latEl = document.getElementById("lat");
+        const lngEl = document.getElementById("lng");
+        if (zipEl) zipEl.value = zip || "";
+        if (latEl) latEl.value = lat ?? "";
+        if (lngEl) lngEl.value = lng ?? "";
+      }).catch(() => {
+        /* ignore lookup errors for preview */
       });
     }
   }
