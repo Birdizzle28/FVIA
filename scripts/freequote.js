@@ -141,10 +141,6 @@ document.addEventListener("DOMContentLoaded", () => {
     summaryScreen.style.display = "block";
   });
   
-  // "Back to Edit" on summary -> chooser (or personal if you want)
-  document.getElementById("edit-referrals").addEventListener("click", () => {
-    showPanel(panelChooser);
-  });
   // path detector (A/B/C/D/E)
   function determinePath() {
     const me = !!meCheckbox?.checked;
