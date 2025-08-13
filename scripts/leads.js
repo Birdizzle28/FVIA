@@ -110,20 +110,15 @@ function formatPhoneInput(input) {
 }
 document.querySelectorAll('input[name="lead-phone"]').forEach(formatPhoneInput);
 async function geocodeAddress(address) {
-  const apiKey = 'AIzaSyCFVLjqLqrSuOcGlTJzqYRM4yrsCcaYZzA'; // 🔁 Replace with your actual API key
-  const url = `https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`;
-  console.log(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(address)}&key=${apiKey}`);
-  try {
-    const response = await fetch(url);
-    const data = await response.json();
+  if (!address) return { lat: null, lng: null };
 
-    if (data.status === 'OK' && data.results.length > 0) {
-      const location = data.results[0].geometry.location;
-      return { lat: location.lat, lng: location.lng };
-    } else {
-      console.warn('Geocoding failed:', data.status);
-      return { lat: null, lng: null };
-    }
+  try {
+    const res = await fetch(`/.netlify/functions/geocode?address=${encodeURIComponent(address)}`);
+    const data = await res.json();
+    return {
+      lat: data.lat ?? null,
+      lng: data.lng ?? null
+    };
   } catch (error) {
     console.error('Error during geocoding:', error);
     return { lat: null, lng: null };
