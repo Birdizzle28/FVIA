@@ -59,6 +59,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch {
       return { zip: "", lat: "", lng: "" };
     }
+    console.log('Geocode status:', data.status, data.error_message, data);
   }
   async function getZipFromCityState(city, state) {
     try {
