@@ -56,10 +56,10 @@ document.addEventListener("DOMContentLoaded", () => {
   
       const { lat, lng } = result.geometry?.location || {};
       return { zip: zip || "", lat: lat ?? "", lng: lng ?? "" };
-    } catch {
+    } catch (err) {
+      console.error("[geocode] fetch error:", err);
       return { zip: "", lat: "", lng: "" };
     }
-    console.log('Geocode status:', data.status, data.error_message, data);
   }
   async function getZipFromCityState(city, state) {
     try {
