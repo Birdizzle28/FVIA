@@ -667,3 +667,4 @@ document.addEventListener("DOMContentLoaded", () => {
       generateSummaryScreen(); // refresh summary
     }
   });
+}
