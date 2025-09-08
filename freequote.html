@@ -54,9 +54,20 @@
 						</div>
 					    <fieldset>
 					      <legend>Who is this quote for?</legend>
-					      <label><input type="checkbox" name="quote-for" value="Me" checked> Me</label>
-					      <label><input type="checkbox" name="quote-for" value="Someone Else" id="someoneElseCheckbox"> Someone Else</label>
-					
+  
+							  <!-- HIDDEN checkboxes -->
+							  <label style="display: none;">
+							    <input type="checkbox" id="meCheckbox" name="quoteFor" value="Me">
+							  </label>
+							  <label style="display: none;">
+							    <input type="checkbox" id="someoneElseCheckbox" name="quoteFor" value="Someone Else">
+							  </label>
+							
+							  <!-- Visible fake boxes -->
+							  <div id="quote-options">
+							    <div class="quote-option" data-checkbox="meCheckbox">Me</div>
+							    <div class="quote-option" data-checkbox="someoneElseCheckbox">Someone Else</div>
+							  </div>	
 					      <div id="contactDropdownWrapper" style="display: none; margin-top: 8px;">
 					        <label for="contactPreference">Who do we contact?:</label>
 					        <select id="contactPreference" name="contactPreference">
