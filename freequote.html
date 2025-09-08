@@ -54,10 +54,16 @@
 						</div>
 					    <fieldset id="quoteForSelection">
 						  <legend>Who is this quote for?</legend>
-						  <div class="quote-option" data-value="Me">Me</div>
-						  <div class="quote-option" data-value="Someone Else">Someone Else</div>
 						
-						  <input type="hidden" name="quote-for" id="quoteForInput" value="Me">
+						  <label class="quote-label">
+						    <input type="checkbox" name="quote-for" value="Me" id="quote-me" checked hidden>
+						    <div class="quote-option">Me</div>
+						  </label>
+						
+						  <label class="quote-label">
+						    <input type="checkbox" name="quote-for" value="Someone Else" id="quote-someone" hidden>
+						    <div class="quote-option">Someone Else</div>
+						  </label>
 						
 						  <div id="contactDropdownWrapper" style="display: none; margin-top: 8px;">
 						    <label for="contactPreference">Who do we contact?:</label>
