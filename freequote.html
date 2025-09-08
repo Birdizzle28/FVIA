@@ -15,222 +15,233 @@
 	<body id="indexbody">
 		<img class="family" src="Pics/img.jpeg" alt="">
 		<div class="index-body">
-			<header class="index-grid-header">
-				<a href="index.html"><img id="headerlogo" src="Pics/img6.png" alt=""></a>
-				<p><strong>Family Values Group</strong></p>
-				<button id="menu-toggle" aria-label="Toggle menu">
-					<i class="fas fa-bars"></i>
-				</button>
-				<hr>
-				<nav class="header-flex-container">
-					<a href="about.html">About</a>
-					<a href="contact.html">Support</a>
-					<a href="index.html">Home</a>
-					<a href="careers.html">Careers</a>
-					<a href="login.html">Login</a>
-				</nav>
-				<hr>
-			</header>
-			<div id="mobile-menu">
+		<header class="index-grid-header">
+			<a href="index.html"><img id="headerlogo" src="Pics/img6.png" alt=""></a>
+			<p><strong>Family Values Group</strong></p>
+			<button id="menu-toggle" aria-label="Toggle menu">
+				<i class="fas fa-bars"></i>
+			</button>
+			<hr>
+			<nav class="header-flex-container">
 				<a href="about.html">About</a>
 				<a href="contact.html">Support</a>
-				<a href="index.html" id="active-nav">Home</a>
+				<a href="index.html">Home</a>
 				<a href="careers.html">Careers</a>
 				<a href="login.html">Login</a>
-			</div>
-			<main class="auth-container">
-				<section id="free-quote-form">
-					<h2 id="quote-heading">Free Quote</h2>
-					<form id="quote-form">
-						<div id="form-fields">
-							<!-- PANEL 1: chooser -->
-							<section class="panel" id="panel-chooser">
-								<div class="product-type-selector">
-									<label for="product-type-dropdown"><strong>Select Product:</strong></label>
-									<select id="product-type-dropdown" name="product-type">
-										<option value="life">Life Insurance</option>
-										<option value="legalshield">LegalShield / IDShield</option>
-									</select>
-								</div>
-								<fieldset id="quoteForSelection">
-									<legend>Who is this quote for?</legend>
-									<div class="quote-option" data-value="Me">Me</div>
-									<div class="quote-option" data-value="Someone Else">Someone Else</div>
-									<div id="contactDropdownWrapper" style="display: none; margin-top: 8px;">
-										<label for="contactPreference">Who do we contact?:</label>
-										<select id="contactPreference" name="contactPreference">
-											<option value="You">You</option>
-											<option value="Referral">Referral</option>
-										</select>
-									</div>
-									<input type="hidden" id="quoteForInput" name="quote_for" value="Me">
-								</fieldset>
-								<div class="panel-nav">
-									<button type="button" id="next-from-chooser">Next</button>
-								</div>
-							</section>
-							<!-- PANEL 2: personal -->
-							<section class="panel" id="panel-personal" style="display:none;">
-								<div class="hide-in-referral">
-									<label>First Name:
-										<input type="text" name="first-name" required>
-									</label>
-									<label>Last Name:
-										<input type="text" name="last-name" required>
-									</label>
-									<label>Age:
-										<input type="number" name="age" min="0" required>
-									</label>
-									<label>Phone Number:
-										<input type="tel" name="phone" required>
-									</label>
-									<label>Email:
-										<input type="email" name="email">
-									</label>
-									<label>Address:
-										<input type="text" name="address" required>
-									</label>
-									<label>City:
-										<input type="text" name="city" required>
-									</label>
-									<label>State:
-										<input type="text" name="state" required>
-									</label>
-									<label>When is best to contact you?
-										<input type="date" name="contact-date">
-									</label>
-								</div>
-								<!-- Loved one fields (only for path B/D) -->
-								<div id="lovedOneFields" style="display:none; margin-top:16px;">
-									<label>Loved One's Name:
-										<input type="text" name="loved_one_name" required/>
-									</label>
-									<label>Loved One's Age:
-										<input type="number" name="loved_one_age" min="0" required/>
-									</label>
-								</div>
-								<div class="panel-nav">
-									<button type="button" data-back>Back</button>
-									<button type="button" id="next-from-personal">Next</button>
-								</div>
-							</section>
-							<!-- PANEL 3: referral -->
-							<section class="panel" id="referral-fields" style="display:none;">
-								<div id="referrer-info">
-									<h3>Your Info</h3>
-									<div>
-										<label for="referrer_name">Your Name</label>
-										<input type="text" id="referrer_name" name="referrer_name" required/>
-									</div>
-									<div>
-										<label for="referrer_phone">Your Phone Number</label>
-										<input type="tel" id="referrer_phone" name="referrer_phone" required/>
-									</div>
-									<hr />
-								</div>
-								<div id="referral-container"></div>
-								<button type="button" id="add-referral-btn">+ Add Another Referral</button>
-								<template id="referral-template">
-									<div class="referral-card">
-										<h4>Referral</h4>
-										<div>
-											<label>First Name</label>
-											<input type="text" name="referral_first_name[]" required/>
-										</div>
-										<div>
-											<label>Last Name</label>
-											<input type="text" name="referral_last_name[]" required/>
-										</div>
-										<div>
-											<label>Age</label>
-											<input type="number" name="referral_age[]" min="0" required/>
-										</div>
-										<div>
-											<label>Phone Number</label>
-											<input type="tel" name="referral_phone[]" required/>
-										</div>
-										<div>
-											<label>Their Relationship to You</label>
-											<input type="text" name="referral_relationship[]" required/>
-										</div>
-										<button type="button" class="delete-referral">🗑️ Remove</button>
-										<hr />
-									</div>
-								</template>
-								<div class="panel-nav">
-									<button type="button" data-back>Back</button>
-									<button type="button" id="next-from-referral">Next</button>
-								</div>
-							</section>
-							<!-- keep your hidden inputs + TCPA + product dropdown where they are -->
-							<input type="hidden" name="lead_type" id="lead_type">
-							<input type="hidden" name="product_type" id="product_type">
-							<input type="hidden" name="zip" id="zip">
-							<input type="hidden" name="lat" id="lat">
-							<input type="hidden" name="lng" id="lng">
-						</div>
-						<!-- SUMMARY SCREEN (including both personal & referrals) -->
-						<div id="summary-screen" style="display: none;">
-							<div id="personal-summary" style="margin-bottom: 2rem;"></div>
-							<h3 id="referral-summary-title">
-								Review Your Referrals
-								<button type="button" id="edit-referrals-btn">Edit</button>
-							</h3>
-							<div id="summary-list"></div>
-							<button type="submit" id="submit-final">Submit Final Quote</button>
-						</div>
-					</form>
-				</section>
-			</main>
-			<footer class="index-grid-footer">
-				<img id="footerlogo" src="Pics/img6.png">
-				<hr class="footerhr">
-				<div id="footercontact">
-					<a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
-						<span class="fa fa-envelope"></span>
-						<span class="contactcontcontacts">fvinsuranceagency@gmail.com</span>
-					</a>
-					<p> | </p>
-					<a class="contactcontainer" href="tel:+17316934739">
-						<span class="fa fa-phone"></span>
-						<span class="contactcontcontacts">(731) 693-4739</span>
-					</a>
-				</div>
-				<hr class="footerhr">
-				<div id="footersocial">
-					<a class="fab fa-facebook-f" href="#"></a>
-					<a class="fab fa-linkedin-in" href="#"></a>
-					<a class="fab fa-instagram" href="#"></a>
-					<a class="fab fa-youtube" href="#"></a>
-					<a class="fab fa-google" href="#"></a>
-				</div>
-				<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
-				<!-- Chat Bubble Button -->
-				<button id="chat-bubble"><i class="fas fa-comment-dots"></i></button>
-				<!-- Chat Window -->
-				<div id="chat-window">
-					<div id="chat-header">Chat with us</div>
-					<div id="chat-body">
-						<div class="chat-bubble bot"><strong>Kuma:</strong> Hello! How can I help you today?</div>
-					</div>
-					<div id="chat-input">
-						<input type="text" placeholder="Type a message..." />
-						<button id="send-btn"><i class="fas fa-paper-plane"></i></button>
-					</div>
-				</div>
-			</footer>
-			<script>
-				const allowed = sessionStorage.getItem("siteAccess");
-				if (!allowed) {
-					const pass = prompt("Enter password to view the site:");
-					if (pass !== "BigBirdleWordle") {
-						document.write("Access Denied");
-						throw new Error("Wrong password");
-					} else {
-						sessionStorage.setItem("siteAccess", "true");
-					}
-				} 
-			</script>
+			</nav>
+			<hr>
+		</header>
+		<div id="mobile-menu">
+			<a href="about.html">About</a>
+			<a href="contact.html">Support</a>
+			<a href="index.html" id="active-nav">Home</a>
+			<a href="careers.html">Careers</a>
+			<a href="login.html">Login</a>
 		</div>
+		<main class="auth-container">
+			<section id="free-quote-form">
+				<h2 id="quote-heading">Free Quote</h2>
+				<form id="quote-form">
+					<div id="form-fields">
+					  <!-- PANEL 1: chooser -->
+					  <section class="panel" id="panel-chooser">
+						<div class="product-type-selector">
+							<label for="product-type-dropdown"><strong>Select Product:</strong></label>
+							<select id="product-type-dropdown" name="product-type">
+								<option value="life">Life Insurance</option>
+								<option value="legalshield">LegalShield / IDShield</option>
+							</select>
+						</div>
+					    <fieldset>
+					      <legend>Who is this quote for?</legend>
+					      <label><input type="checkbox" name="quote-for" value="Me" checked> Me</label>
+					      <label><input type="checkbox" name="quote-for" value="Someone Else" id="someoneElseCheckbox"> Someone Else</label>
+					
+					      <div id="contactDropdownWrapper" style="display: none; margin-top: 8px;">
+					        <label for="contactPreference">Who do we contact?:</label>
+					        <select id="contactPreference" name="contactPreference">
+					          <option value="You">You</option>
+					          <option value="Referral">Referral</option>
+					        </select>
+					      </div>
+					    </fieldset>
+					    <div class="panel-nav">
+					      <button type="button" id="next-from-chooser">Next</button>
+					    </div>
+					  </section>
+					
+					  <!-- PANEL 2: personal -->
+					  <section class="panel" id="panel-personal" style="display:none;">
+					    <div class="hide-in-referral">
+					      <label>First Name:
+					        <input type="text" name="first-name" required>
+					      </label>
+					      <label>Last Name:
+					        <input type="text" name="last-name" required>
+					      </label>
+					      <label>Age:
+					        <input type="number" name="age" min="0" required>
+					      </label>
+					      <label>Phone Number:
+					        <input type="tel" name="phone" required>
+					      </label>
+					      <label>Email:
+					        <input type="email" name="email">
+					      </label>
+					      <label>Address:
+					        <input type="text" name="address" required>
+					      </label>
+					      <label>City:
+					        <input type="text" name="city" required>
+					      </label>
+					      <label>State:
+					        <input type="text" name="state" required>
+					      </label>
+					      <label>When is best to contact you?
+					        <input type="date" name="contact-date">
+					      </label>
+					    </div>
+						
+					    <!-- Loved one fields (only for path B/D) -->
+					    <div id="lovedOneFields" style="display:none; margin-top:16px;">
+					      <label>Loved One's Name:
+					        <input type="text" name="loved_one_name" required/>
+					      </label>
+					      <label>Loved One's Age:
+					        <input type="number" name="loved_one_age" min="0" required/>
+					      </label>
+					    </div>
+					
+					    <div class="panel-nav">
+					      <button type="button" data-back>Back</button>
+					      <button type="button" id="next-from-personal">Next</button>
+					    </div>
+					  </section>
+					
+					  <!-- PANEL 3: referral -->
+					  <section class="panel" id="referral-fields" style="display:none;">
+					    <div id="referrer-info">
+					      <h3>Your Info</h3>
+					      <div>
+					        <label for="referrer_name">Your Name</label>
+					        <input type="text" id="referrer_name" name="referrer_name" required/>
+					      </div>
+					      <div>
+					        <label for="referrer_phone">Your Phone Number</label>
+					        <input type="tel" id="referrer_phone" name="referrer_phone" required/>
+					      </div>
+					      <hr />
+					    </div>
+					
+					    <div id="referral-container"></div>
+					    <button type="button" id="add-referral-btn">+ Add Another Referral</button>
+					
+					    <template id="referral-template">
+					      <div class="referral-card">
+					        <h4>Referral</h4>
+					        <div>
+					          <label>First Name</label>
+					          <input type="text" name="referral_first_name[]" required/>
+					        </div>
+					        <div>
+					          <label>Last Name</label>
+					          <input type="text" name="referral_last_name[]" required/>
+					        </div>
+					        <div>
+					          <label>Age</label>
+					          <input type="number" name="referral_age[]" min="0" required/>
+					        </div>
+					        <div>
+					          <label>Phone Number</label>
+					          <input type="tel" name="referral_phone[]" required/>
+					        </div>
+					        <div>
+					          <label>Their Relationship to You</label>
+					          <input type="text" name="referral_relationship[]" required/>
+					        </div>
+					        <button type="button" class="delete-referral">🗑️ Remove</button>
+					        <hr />
+					      </div>
+					    </template>
+					
+					    <div class="panel-nav">
+					      <button type="button" data-back>Back</button>
+					      <button type="button" id="next-from-referral">Next</button>
+					    </div>
+					  </section>
+					
+					  <!-- keep your hidden inputs + TCPA + product dropdown where they are -->
+					  <input type="hidden" name="lead_type" id="lead_type">
+					  <input type="hidden" name="product_type" id="product_type">
+					  <input type="hidden" name="zip" id="zip">
+					  <input type="hidden" name="lat" id="lat">
+						<input type="hidden" name="lng" id="lng">
+					</div>
+					<!-- SUMMARY SCREEN (including both personal & referrals) -->
+				  <div id="summary-screen" style="display: none;">
+				    <div id="personal-summary" style="margin-bottom: 2rem;"></div>
+				    <h3 id="referral-summary-title">
+							Review Your Referrals
+							<button type="button" id="edit-referrals-btn">Edit</button>
+						</h3>
+				    <div id="summary-list"></div>
+				    <button type="submit" id="submit-final">Submit Final Quote</button>
+				  </div>
+				</form>
+			</section>
+		</main>
+		
+		<footer class="index-grid-footer">
+			<img id="footerlogo" src="Pics/img6.png">
+			<hr class="footerhr">
+			<div id="footercontact">
+				<a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
+					<span class="fa fa-envelope"></span>
+					<span class="contactcontcontacts">fvinsuranceagency@gmail.com</span>
+				</a>
+				<p> | </p>
+				<a class="contactcontainer" href="tel:+17316934739">
+					<span class="fa fa-phone"></span>
+					<span class="contactcontcontacts">(731) 693-4739</span>
+				</a>
+			</div>
+			<hr class="footerhr">
+			<div id="footersocial">
+				<a class="fab fa-facebook-f" href="#"></a>
+				<a class="fab fa-linkedin-in" href="#"></a>
+				<a class="fab fa-instagram" href="#"></a>
+				<a class="fab fa-youtube" href="#"></a>
+				<a class="fab fa-google" href="#"></a>
+			</div>
+			<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+			
+			<!-- Chat Bubble Button -->
+			<button id="chat-bubble"><i class="fas fa-comment-dots"></i></button>
+		
+			<!-- Chat Window -->
+			<div id="chat-window">
+				<div id="chat-header">Chat with us</div>
+				<div id="chat-body">
+					<div class="chat-bubble bot"><strong>Kuma:</strong> Hello! How can I help you today?</div>
+				</div>
+				<div id="chat-input">
+					<input type="text" placeholder="Type a message..." />
+					<button id="send-btn"><i class="fas fa-paper-plane"></i></button>
+				</div>
+			</div>
+		</footer>
+		<script>
+			const allowed = sessionStorage.getItem("siteAccess");
+			
+			if (!allowed) {
+				const pass = prompt("Enter password to view the site:");
+				if (pass !== "BigBirdleWordle") {
+					document.write("Access Denied");
+					throw new Error("Wrong password");
+				} else {
+				sessionStorage.setItem("siteAccess", "true");
+				}
+			} 
+		</script>
 	</body>
 </html>
