@@ -153,18 +153,7 @@ form, label, input, select, textarea, fieldset, button {
   user-select: none;
 }
 
-.quote-option input[type="checkbox"] {
-  display: none;
-}
-
-.quote-option input[type="checkbox"]:checked + span {
-  background-color: #0066cc;
-  color: white;
-  border-color: #0066cc;
-  padding: 10px 18px;
-  border-radius: 4px;
-}
-
-.quote-option span:hover {
-  background-color: #f0f0f0;
+.quote-option.selected {
+  background-color: #cceeff;
+  border: 2px solid #3399ff;
 }
