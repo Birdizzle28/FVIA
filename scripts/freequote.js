@@ -686,13 +686,16 @@ document.addEventListener("DOMContentLoaded", () => {
       generateSummaryScreen(); // refresh summary
     }
   });
-    document.querySelectorAll('.quote-box').forEach(box => {
-    box.addEventListener('click', (e) => {
-      const checkbox = box.querySelector('input[type="checkbox"]');
+    document.querySelectorAll('.quote-option').forEach(box => {
+    box.addEventListener('click', () => {
+      const checkboxId = box.getAttribute('data-checkbox');
+      const checkbox = document.getElementById(checkboxId);
+      if (!checkbox) return;
+  
       checkbox.checked = !checkbox.checked;
-      
-      // Dispatch the event manually so your original JS sees it
-      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+      box.classList.toggle('selected', checkbox.checked); // optional visual feedback
+  
+      checkbox.dispatchEvent(new Event('change')); // triggers any existing JS logic tied to checkbox changes
     });
   });
 });
