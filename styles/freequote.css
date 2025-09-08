@@ -8,7 +8,6 @@
   border-radius: 12px;
   box-shadow: 0 0 15px 5px #545454;
   width: 90%;
-  
   margin: 80px auto;
   text-align: center;
   font-family: 'Bellota Text', sans-serif;
@@ -46,6 +45,7 @@
 .auth-container button:hover {
   background-color: #333;
 }
+
 #free-quote-form {
   width: 100%;
   margin: 2em auto;
@@ -99,6 +99,7 @@
 #free-quote-form button:hover {
   background-color: #004999;
 }
+
 form, label, input, select, textarea, fieldset, button {
   box-sizing: border-box;
   margin: 0;
@@ -106,11 +107,13 @@ form, label, input, select, textarea, fieldset, button {
   font-family: inherit;
   font-size: 1em;
 }
+
 #free-quote-form form {
   padding: 0;
   margin: 0;
   box-sizing: border-box;
 }
+
 .auth-container {
   text-align: left;
 }
@@ -120,6 +123,7 @@ form, label, input, select, textarea, fieldset, button {
   margin-left: auto;
   margin-right: auto;
 }
+
 #referral-slider {
   position: relative;
   width: 100%;
@@ -130,17 +134,21 @@ form, label, input, select, textarea, fieldset, button {
   display: none;
   transition: transform 0.3s ease-in-out;
 }
+
 .panel { 
   display: none; 
 }
+
 .panel.active { 
   display: block; 
 }
+
 .panel-nav { 
   margin-top: 12px; 
   display:flex; 
   gap:8px; 
 }
+
 #quoteForSelection {
   display: flex;
   flex-direction: column;
@@ -168,4 +176,17 @@ form, label, input, select, textarea, fieldset, button {
   background-color: #cce5ff;
   border-color: #007bff;
   color: #004085;
+}
+
+#free-quote-form {
+  position: relative;
+  overflow: hidden;
+}
+
+.panel, #summary-screen {
+  position: absolute;
+  width: 100%;
+  top: 0;
+  left: 0;
+  transition: transform 0.4s ease;
 }
