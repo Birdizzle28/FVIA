@@ -686,4 +686,13 @@ document.addEventListener("DOMContentLoaded", () => {
       generateSummaryScreen(); // refresh summary
     }
   });
+    document.querySelectorAll('.quote-box').forEach(box => {
+    box.addEventListener('click', (e) => {
+      const checkbox = box.querySelector('input[type="checkbox"]');
+      checkbox.checked = !checkbox.checked;
+      
+      // Dispatch the event manually so your original JS sees it
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+  });
 });
