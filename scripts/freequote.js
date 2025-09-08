@@ -686,16 +686,4 @@ document.addEventListener("DOMContentLoaded", () => {
       generateSummaryScreen(); // refresh summary
     }
   });
-    document.querySelectorAll('.quote-option').forEach(box => {
-    box.addEventListener('click', () => {
-      const checkboxId = box.getAttribute('data-checkbox');
-      const checkbox = document.getElementById(checkboxId);
-      if (!checkbox) return;
-  
-      checkbox.checked = !checkbox.checked;
-      box.classList.toggle('selected', checkbox.checked); // optional visual feedback
-  
-      checkbox.dispatchEvent(new Event('change')); // triggers any existing JS logic tied to checkbox changes
-    });
-  });
 });
