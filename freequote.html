@@ -53,26 +53,18 @@
 							</select>
 						</div>
 					    <fieldset>
-						  <legend>Who is this quote for?</legend>
-						  <div id="quote-options" class="quote-options-wrapper">
-						    <label class="quote-box">
-						      <input type="checkbox" name="quoteFor" value="Me" checked hidden>
-						      <div class="quote-box-label">Me</div>
-						    </label>
-						    <label class="quote-box">
-						      <input type="checkbox" name="quoteFor" value="Someone Else" hidden>
-						      <div class="quote-box-label">Someone Else</div>
-						    </label>
-						  </div>
-						
-						  <div id="contactDropdownWrapper" style="display: none; margin-top: 8px;">
-						    <label for="contactPreference">Who do we contact?:</label>
-						    <select id="contactPreference" name="contactPreference">
-						      <option value="You">You</option>
-						      <option value="Referral">Referral</option>
-						    </select>
-						  </div>
-						</fieldset>
+					      <legend>Who is this quote for?</legend>
+					      <label><input type="checkbox" name="quote-for" value="Me" checked> Me</label>
+					      <label><input type="checkbox" name="quote-for" value="Someone Else" id="someoneElseCheckbox"> Someone Else</label>
+					
+					      <div id="contactDropdownWrapper" style="display: none; margin-top: 8px;">
+					        <label for="contactPreference">Who do we contact?:</label>
+					        <select id="contactPreference" name="contactPreference">
+					          <option value="You">You</option>
+					          <option value="Referral">Referral</option>
+					        </select>
+					      </div>
+					    </fieldset>
 					    <div class="panel-nav">
 					      <button type="button" id="next-from-chooser">Next</button>
 					    </div>
