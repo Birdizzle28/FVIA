@@ -686,4 +686,31 @@ document.addEventListener("DOMContentLoaded", () => {
       generateSummaryScreen(); // refresh summary
     }
   });
+  const options = document.querySelectorAll('.quote-option');
+  const hiddenInput = document.getElementById('quoteForInput');
+  const dropdown = document.getElementById('contactDropdownWrapper');
+
+  options.forEach(option => {
+    option.addEventListener('click', () => {
+      // Remove selected class from all
+      options.forEach(o => o.classList.remove('selected'));
+
+      // Add selected class to clicked
+      option.classList.add('selected');
+
+      // Update hidden input value
+      const value = option.getAttribute('data-value');
+      hiddenInput.value = value;
+
+      // Show/hide dropdown
+      if (value === 'Someone Else') {
+        dropdown.style.display = 'block';
+      } else {
+        dropdown.style.display = 'none';
+      }
+    });
+  });
+
+  // Set default selection
+  document.querySelector('.quote-option[data-value="Me"]').classList.add('selected');
 });
