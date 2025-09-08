@@ -28,6 +28,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const panelReferral = document.getElementById("referral-fields");
   const summaryScreen = document.getElementById("summary-screen");
 
+  // Referral slider
+  let currentReferralIndex = 0;
+  const referralCards = [];
+  
   // --- Google Geocoding (ZIP + lat/lng) ---
   async function geocodeAddressGoogle(fullAddress) {
     if (!fullAddress) return { zip: "", lat: "", lng: "" };
@@ -427,10 +431,6 @@ document.addEventListener("DOMContentLoaded", () => {
     generateSummaryScreen();
     showPanel(panelReferral);
   });
-  
-  // Referral slider
-  let currentReferralIndex = 0;
-  const referralCards = [];
   
   // Create navigation elements
   const navContainer = document.createElement("div");
