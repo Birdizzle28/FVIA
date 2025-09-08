@@ -28,6 +28,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const panelReferral = document.getElementById("referral-fields");
   const summaryScreen = document.getElementById("summary-screen");
   const indexDisplay = document.createElement("div");
+  const prevBtn = document.createElement("button");
   // Referral slider
   let currentReferralIndex = 0;
   const referralCards = [];
@@ -436,7 +437,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const navContainer = document.createElement("div");
   navContainer.id = "referral-nav";
   
-  const prevBtn = document.createElement("button");
   prevBtn.id = "prev-referral";
   prevBtn.textContent = "←";
   
