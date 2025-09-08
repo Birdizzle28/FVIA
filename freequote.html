@@ -52,19 +52,21 @@
 								<option value="legalshield">LegalShield / IDShield</option>
 							</select>
 						</div>
-					    <fieldset>
-					      <legend>Who is this quote for?</legend>
-					      <label><input type="checkbox" name="quote-for" value="Me" checked> Me</label>
-					      <label><input type="checkbox" name="quote-for" value="Someone Else" id="someoneElseCheckbox"> Someone Else</label>
-					
-					      <div id="contactDropdownWrapper" style="display: none; margin-top: 8px;">
-					        <label for="contactPreference">Who do we contact?:</label>
-					        <select id="contactPreference" name="contactPreference">
-					          <option value="You">You</option>
-					          <option value="Referral">Referral</option>
-					        </select>
-					      </div>
-					    </fieldset>
+					    <fieldset id="quoteForSelection">
+						  <legend>Who is this quote for?</legend>
+						  <div class="quote-option" data-value="Me">Me</div>
+						  <div class="quote-option" data-value="Someone Else">Someone Else</div>
+						
+						  <input type="hidden" name="quote-for" id="quoteForInput" value="Me">
+						
+						  <div id="contactDropdownWrapper" style="display: none; margin-top: 8px;">
+						    <label for="contactPreference">Who do we contact?:</label>
+						    <select id="contactPreference" name="contactPreference">
+						      <option value="You">You</option>
+						      <option value="Referral">Referral</option>
+						    </select>
+						  </div>
+						</fieldset>
 					    <div class="panel-nav">
 					      <button type="button" id="next-from-chooser">Next</button>
 					    </div>
