@@ -142,19 +142,30 @@ form, label, input, select, textarea, fieldset, button {
   display:flex; 
   gap:8px; 
 }
-.quote-option {
-  display: inline-block;
-  padding: 10px 15px;
-  margin: 5px;
-  border: 2px solid #ccc;
-  border-radius: 5px;
-  cursor: pointer;
-  user-select: none;
-  transition: all 0.3s ease;
+.quote-options-wrapper {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
 }
 
-.quote-option.selected {
-  background-color: #007BFF;
-  color: white;
-  border-color: #007BFF;
+.quote-box {
+  position: relative;
+  cursor: pointer;
+  border: 2px solid #ccc;
+  border-radius: 8px;
+  padding: 12px 20px;
+  background-color: #f8f8f8;
+  transition: all 0.2s ease;
+}
+
+.quote-box input[type="checkbox"]:checked + .quote-box-label {
+  background-color: #cce5ff;
+  border-color: #007bff;
+  color: #004085;
+}
+
+.quote-box-label {
+  pointer-events: none;
+  font-weight: bold;
+  font-size: 1rem;
 }
