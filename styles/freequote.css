@@ -190,3 +190,11 @@ form, label, input, select, textarea, fieldset, button {
   gap: 10px;
   flex-wrap: wrap;
 }
+#panel-1-fieldset,
+#panel-1-fieldset > *,
+#quote-options,
+.product-type-selector {
+  padding: 0 !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
