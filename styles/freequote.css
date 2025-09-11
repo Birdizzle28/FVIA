@@ -228,14 +228,14 @@ select {
   color: #333;
   border: 1px solid #ccc;
   border-radius: 6px;
-  padding: 10px;
+  padding: 10px 40px 10px 12px;
   font-size: 1em;
   font-family: inherit;
   cursor: pointer;
-  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20fill%3D%22%23333%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20width%3D%2224%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cpath%20d%3D%22M7%2010l5%205%205-5z%22/%3E%3C/svg%3E");
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='14' height='14'><polygon points='0,0 14,0 7,7' style='fill:%23333;'/></svg>");
   background-repeat: no-repeat;
-  background-position: right 10px center;
-  background-size: 1em;
+  background-position: right 10px center; /* arrow position */
+  background-size: 12px;
 }
 
 select:focus {
