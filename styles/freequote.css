@@ -210,8 +210,3 @@ form, label, input, select, textarea, fieldset, button {
   margin-left: auto !important;
   margin-right: auto !important;
 }
-#panel-chooser,
-.panel-nav,
-.panel-nav button {
-  border: 1px solid red;
-}
