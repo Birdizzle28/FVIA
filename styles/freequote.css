@@ -214,3 +214,9 @@ form, label, input, select, textarea, fieldset, button {
 .product-type-selector {
   margin-bottom: 1em;
 }
+#contactDropdownWrapper {
+  margin-top: 0.5em; /* Half the spacing of the previous 1em */
+}
+#contactDropdownWrapper label {
+  font-weight: bold;
+}
