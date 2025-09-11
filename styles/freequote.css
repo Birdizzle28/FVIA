@@ -176,6 +176,7 @@ form, label, input, select, textarea, fieldset, button {
   padding: 0;
   margin: 0;
   border: none;
+  font-weight: bold;
 }
 #panel-chooser {
   display: flex;
@@ -209,4 +210,7 @@ form, label, input, select, textarea, fieldset, button {
   padding: 0 !important;
   margin-left: auto !important;
   margin-right: auto !important;
+}
+.product-type-selector {
+  margin-bottom: 1em;
 }
