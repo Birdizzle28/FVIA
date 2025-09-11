@@ -220,3 +220,26 @@ form, label, input, select, textarea, fieldset, button {
 #contactDropdownWrapper label {
   font-weight: bold;
 }
+select {
+  appearance: none; /* Remove default arrow styling */
+  -webkit-appearance: none; /* Safari */
+  -moz-appearance: none;    /* Firefox */
+  background-color: #ffffff;
+  color: #333;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 1em;
+  font-family: inherit;
+  cursor: pointer;
+  background-image: url("data:image/svg+xml;charset=US-ASCII,%3Csvg%20fill%3D%22%23333%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20width%3D%2224%22%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%3E%3Cpath%20d%3D%22M7%2010l5%205%205-5z%22/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  background-size: 1em;
+}
+
+select:focus {
+  outline: none;
+  border-color: #3399ff;
+  box-shadow: 0 0 0 2px rgba(51, 153, 255, 0.2);
+}
