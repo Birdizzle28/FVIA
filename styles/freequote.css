@@ -215,7 +215,7 @@ form, label, input, select, textarea, fieldset, button {
   margin-bottom: 1.5em;
 }
 #contactDropdownWrapper {
-  margin-top: 1.5em; /* Half the spacing of the previous 1em */
+  margin-top: 15em; /* Half the spacing of the previous 1em */
 }
 #contactDropdownWrapper label {
   font-weight: bold;
