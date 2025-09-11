@@ -233,13 +233,13 @@ select {
   font-family: inherit;
   cursor: pointer;
   background-image: url("data:image/svg+xml;utf8,\
-<svg xmlns='http://www.w3.org/2000/svg' width='50' height='20'>\
-<rect width='36' height='20' fill='transparent'/>\
-<polygon points='40,6 46,6 43,13' fill='%23333'/>\
+<svg xmlns='http://www.w3.org/2000/svg' width='60' height='20'>\
+<rect width='40' height='20' fill='transparent'/>\
+<polygon points='44,6 54,6 49,14' fill='%23333'/>\
 </svg>");
   background-repeat: no-repeat;
   background-position: right center;
-  background-size: 50px 20px;
+  background-size: 60px 20px;
 }
 
 select:focus {
