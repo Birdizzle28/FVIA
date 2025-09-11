@@ -212,10 +212,10 @@ form, label, input, select, textarea, fieldset, button {
   margin-right: auto !important;
 }
 .product-type-selector {
-  margin-bottom: 1em;
+  margin-bottom: 1.5em;
 }
 #contactDropdownWrapper {
-  margin-top: 0.5em; /* Half the spacing of the previous 1em */
+  margin-top: 1.5em; /* Half the spacing of the previous 1em */
 }
 #contactDropdownWrapper label {
   font-weight: bold;
