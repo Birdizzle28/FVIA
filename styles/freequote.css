@@ -140,7 +140,19 @@ form, label, input, select, textarea, fieldset, button {
 .panel-nav { 
   margin-top: 12px; 
   display:flex; 
-  gap:8px; 
+  gap:8px;
+  justify-content: center;
+  align-items: center;
+  padding-left: 0;
+  padding-right: 0;
+  margin-left: auto;
+  margin-right: auto;
+  width: 100%;
+}
+.panel-nav button {
+  margin: 0 auto;
+  display: block;
+  text-align: center;
 }
 .quote-option {
   display: inline-block;
@@ -197,4 +209,9 @@ form, label, input, select, textarea, fieldset, button {
   padding: 0 !important;
   margin-left: auto !important;
   margin-right: auto !important;
+}
+#panel-chooser,
+.panel-nav,
+.panel-nav button {
+  border: 1px solid red;
 }
