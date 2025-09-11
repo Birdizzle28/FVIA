@@ -160,3 +160,33 @@ form, label, input, select, textarea, fieldset, button {
 #panel-1-fieldset {
   border: none;
 }
+#panel-1-fieldset legend {
+  padding: 0;
+  margin: 0;
+  border: none;
+}
+#panel-chooser {
+  display: flex;
+  flex-direction: column;
+  align-items: center;  /* horizontal centering */
+  justify-content: center; /* optional: vertical centering */
+  text-align: center;
+  margin: 0 auto;
+  padding: 20px;
+}
+.product-type-selector,
+#panel-1-fieldset,
+.panel-nav {
+  width: 100%;
+  max-width: 500px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+#quote-options {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
