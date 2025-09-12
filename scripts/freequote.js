@@ -87,7 +87,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
   document.getElementById('next-from-personal').addEventListener('click', function(event) {
-    const stateDropdown = document.getElementById('state-dropdown');
+    const stateDropdown = document.getElementById('state-select');
     const stateError = document.getElementById('state-error');
   
     if (stateDropdown.value === '') {
