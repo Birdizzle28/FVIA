@@ -150,10 +150,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const se = !!someoneElseCheckbox?.checked;
     const contact = contactPreference?.value || "You";
     if (me && !se) return "A";
-    if (me && se && contact === "You") return "B";
-    if (me && se && contact === "Referral") return "C";
-    if (!me && se && contact === "You") return "D";
-    if (!me && se && contact === "Referral") return "E";
+    if (!me && se && contact === "Referral") return "B";
+    if (me && se && contact === "You") return "C";
+    if (me && se && contact === "Referral") return "D";
+    if (!me && se && contact === "You") return "E";
     return "A";
   }
 
