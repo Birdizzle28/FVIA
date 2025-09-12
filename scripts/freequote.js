@@ -273,7 +273,6 @@ document.addEventListener("DOMContentLoaded", () => {
   
     // Someone Else is ON → switch by contactPreference
     if (contactValue === "You") {
-      lovedOneFields.style.display = "block";
     } else { // "Referral"
       if (typeof referralSlider !== "undefined" && referralSlider && referralSlider.children.length === 0) {
         createReferralCard();
