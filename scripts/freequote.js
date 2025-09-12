@@ -73,16 +73,17 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
   // Choices.js init for state select
-  const stateSelect = document.getElementById("state-select");
-  if (stateSelect && window.Choices) {
-    // eslint-disable-next-line no-unused-vars
-    const stateChoice = new Choices(stateSelect, {
-      searchEnabled: true,
-      itemSelectText: '',        // remove weird “Press to select” text
-      shouldSort: false,          // keep your order
-      searchPlaceholderValue: 'Type to search state'
-    });
-  }
+  const stateSelect = document.getElementById("state-input");
+
+  new Choices(stateSelect, {
+    searchEnabled: true,
+    placeholder: true,
+    placeholderValue: "Select a state...",
+    shouldSort: false,
+    itemSelectText: "",      // hides the "Press to select" text
+    allowHTML: false,        // optional safety
+    position: "bottom",      // keep dropdown clean
+  });
   /******************
    * Phone mask
    ******************/
