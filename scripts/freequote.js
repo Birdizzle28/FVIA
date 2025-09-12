@@ -210,8 +210,8 @@ document.addEventListener("DOMContentLoaded", () => {
   document.querySelectorAll('input[name="referral_phone[]"]').forEach(bindPhoneMask); // any pre-rendered referrals
   
   quoteHeading.textContent = productTypeParam === "legalshield"
-  ? "LegalShield/IDShield Quote"
-  : "Life Insurance Quote";
+  ? "Legal/Identity Protection"
+  : "Life Insurance";
 
   function updateURLParams(leadType, productType) {
     const newParams = new URLSearchParams(window.location.search);
@@ -306,8 +306,8 @@ document.addEventListener("DOMContentLoaded", () => {
   
     // ✅ Update heading
     quoteHeading.textContent = selectedProduct === "legalshield"
-      ? "LegalShield/IDShield Quote"
-      : "Life Insurance Quote";
+      ? "Legal/Identity Protection"
+      : "Life Insurance";
   
     // ✅ Update URL
     updateURLParams(leadTypeInput.value, selectedProduct);
