@@ -79,8 +79,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const stateChoice = new Choices(stateSelect, {
       searchEnabled: true,
       itemSelectText: '',        // remove weird “Press to select” text
-      placeholder: true,
-      placeholderValue: 'Select State',
       shouldSort: false,          // keep your order
       searchPlaceholderValue: 'Type to search state'
     });
