@@ -153,7 +153,6 @@ form, label, input, select, textarea, fieldset, button {
   margin: 0 auto;
   display: block;
   text-align: center;
-  min-width: 100px;
 }
 .quote-option {
   display: inline-block;
