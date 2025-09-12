@@ -267,7 +267,6 @@ document.addEventListener("DOMContentLoaded", () => {
   
     if (!isSomeoneElseChecked) {
       // Fully reset when "Someone Else" is OFF
-      lovedOneFields.style.display = "none";
       referrerInfoSection.style.display = "block";
       return;
     }
@@ -276,7 +275,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (contactValue === "You") {
       lovedOneFields.style.display = "block";
     } else { // "Referral"
-      lovedOneFields.style.display = "none";
       if (typeof referralSlider !== "undefined" && referralSlider && referralSlider.children.length === 0) {
         createReferralCard();
       }
@@ -661,7 +659,6 @@ document.addEventListener("DOMContentLoaded", () => {
       formFields.style.display = "block";
   
       // Show the personal panel; toggle Loved Ones if B/D
-      lovedOneFields.style.display = (path === "B" || path === "D") ? "block" : "none";
       showPanel(panelPersonal);
       panelPersonal.scrollIntoView({ behavior: "smooth", block: "start" });
     }
