@@ -298,3 +298,22 @@ select:focus {
   color: black !important;
   box-shadow: none !important;
 }
+/* Make every panel's nav row horizontal & centered */
+#panel-chooser .panel-nav,
+#panel-personal .panel-nav,
+#referral-fields .panel-nav {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 12px !important;
+  flex-wrap: wrap;
+}
+
+/* Ensure buttons don't force a full-width block layout */
+#panel-chooser .panel-nav button,
+#panel-personal .panel-nav button,
+#referral-fields .panel-nav button {
+  display: inline-flex !important;
+  margin: 0 !important;
+}
