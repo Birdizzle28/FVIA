@@ -106,14 +106,12 @@ document.addEventListener("DOMContentLoaded", () => {
       showPanel(panelPersonal);
     } else if (path === "C") {
       // Me + Referral -> Personal first, referral later; hide "Your Info" in referral panel
-      refInfo.style.display = "none";
       showPanel(panelPersonal);
     } else if (path === "D") {
       // Someone Else + You -> Personal (with loved-ones), no referrer panel later
       showPanel(panelPersonal);
     } else if (path === "E") {
       // Referral only -> Referral (with "Your Info")
-      refInfo.style.display = "block";
       showPanel(panelReferral);
     }
   });
