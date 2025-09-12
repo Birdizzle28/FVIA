@@ -347,48 +347,64 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Fake selectable boxes sync
   document.querySelectorAll('.quote-option').forEach(box => {
-    box.addEventListener('click', () => {
-      const checkboxId = box.getAttribute('data-checkbox');
-      if (checkboxId === "bothOption") {
-        // toggle both
-        const bothSelected = meCheckbox.checked && someoneElseCheckbox.checked;
-        meCheckbox.checked = !bothSelected;
-        someoneElseCheckbox.checked = !bothSelected;
-        document.querySelectorAll('.quote-option').forEach(opt => {
-          const id = opt.getAttribute("data-checkbox");
-          if (id === "meCheckbox" || id === "someoneElseCheckbox") {
-            opt.classList.toggle("selected", !bothSelected);
-          }
-        });
-        box.classList.toggle("selected", !bothSelected);
-      } else {
-        const checkbox = document.getElementById(checkboxId);
-        if (!checkbox) return;
-        checkbox.checked = !checkbox.checked;
-        box.classList.toggle('selected', checkbox.checked);
-      }
-  
-      // reflect UI and button
-      updateChooserUI();
-      updateNextButtonState();
-    });
+  box.addEventListener('click', () => {
+    const target = box.getAttribute('data-checkbox');
+
+    if (target === 'bothOption') {
+      // Toggle both real checkboxes
+      const bothSelected = meCheckbox.checked && someoneElseCheckbox.checked;
+      meCheckbox.checked = !bothSelected;
+      someoneElseCheckbox.checked = !bothSelected;
+
+      // Fire change so listeners run (VERY important)
+      meCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+      someoneElseCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+    } else {
+      // Toggle just one
+      const checkbox = document.getElementById(target);
+      if (!checkbox) return;
+
+      checkbox.checked = !checkbox.checked;
+
+      // Fire change so listeners run (VERY important)
+      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+    }
+
+    // Keep the rest of the UI in sync
+    updateChooserUI();
+    updateNextButtonState();
   });
-// --- Keep "Me and Someone Else" synced visually ---
+});
+  
+// --- Keep all three boxes synced visually ---
 const bothOption = document.getElementById("bothOption");
+
 function syncBothOption() {
   if (!bothOption) return;
-  const bothOn = meCheckbox.checked && someoneElseCheckbox.checked;
+  const bothOn = !!meCheckbox.checked && !!someoneElseCheckbox.checked;
   bothOption.classList.toggle("selected", bothOn);
 }
 
-meCheckbox.addEventListener("change", syncBothOption);
-someoneElseCheckbox.addEventListener("change", syncBothOption);
+function updateFakeBoxSelection() {
+  const meBox = document.querySelector('.quote-option[data-checkbox="meCheckbox"]');
+  const seBox = document.querySelector('.quote-option[data-checkbox="someoneElseCheckbox"]');
+  if (meBox) meBox.classList.toggle('selected', !!meCheckbox.checked);
+  if (seBox) seBox.classList.toggle('selected', !!someoneElseCheckbox.checked);
+  syncBothOption();
+}
+
+meCheckbox.addEventListener("change", updateFakeBoxSelection);
+someoneElseCheckbox.addEventListener("change", updateFakeBoxSelection);
+
+// set initial state on load
+updateFakeBoxSelection();
 
   // Also respond to raw checkbox changes (if any)
   quoteForCheckboxes.forEach(cb => {
     cb.addEventListener("change", () => {
       updateChooserUI();
       updateNextButtonState();
+      updateFakeBoxSelection(); // keep visuals synced
     });
   });
   contactPreference.addEventListener("change", () => {
