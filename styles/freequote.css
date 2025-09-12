@@ -340,3 +340,8 @@ select:focus {
 .suggestions li:hover {
   background-color: #f0f0f0;
 }
+#state-error {
+  color: red;
+  font-size: 0.9em;
+  margin-left: 10px;
+}
