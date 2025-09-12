@@ -248,4 +248,4 @@ select:focus {
   box-shadow: 0 0 0 2px rgba(51, 153, 255, 0.2);
 }
 #quote-options {
-  margin-bottom: 8px; /* Add vertical spacing beneath the checkboxes */
+  margin-bottom: 1.5em; /* Add vertical spacing beneath the checkboxes */
