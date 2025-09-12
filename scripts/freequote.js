@@ -322,8 +322,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (rMode === "none") {
       // Skip referral → go straight to summary
       generateSummaryScreen();
-      showPanel(null);
-      summaryScreen.style.display = "block";
+      showPanel(summaryScreen);
       return;
     }
     // Need referral panel; ensure at least one card exists
@@ -415,8 +414,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Next from referral → summary
   nextFromReferralBtn.addEventListener("click", () => {
     generateSummaryScreen();
-    showPanel(null);
-    summaryScreen.style.display = "block";
+    showPanel(summaryScreen);
   });
 
   // Age input (main personal): numeric only
@@ -430,8 +428,7 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     if (!quoteForm.reportValidity()) return;
     generateSummaryScreen();
-    showPanel(null);
-    summaryScreen.style.display = "block";
+    showPanel(summaryScreen);
     // TODO: replace with real submit later
   });
 
