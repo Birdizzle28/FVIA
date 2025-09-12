@@ -16,7 +16,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const someoneElseCheckbox = document.getElementById("someoneElseCheckbox");
   const contactDropdownWrapper = document.getElementById("contactDropdownWrapper");
   const contactPreference = document.getElementById("contactPreference");
-  const lovedOneFields = document.getElementById("lovedOneFields");
   const addReferralBtn = document.getElementById("add-referral-btn");
   const referralSlider = document.getElementById("referral-container");
   const referralTemplate = document.getElementById("referral-template");
