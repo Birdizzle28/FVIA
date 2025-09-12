@@ -63,6 +63,15 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  // Flatpickr for contact date
+  if (window.flatpickr) {
+    flatpickr("#contact-date", {
+      dateFormat: "m/d/Y",
+      altInput: true,
+      altFormat: "F j, Y",
+      allowInput: true
+    });
+  }
   /******************
    * Phone mask
    ******************/
