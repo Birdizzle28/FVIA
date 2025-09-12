@@ -29,6 +29,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const indexDisplay = document.createElement("div");
   const prevBtn = document.createElement("button");
   const nextBtn = document.createElement("button");
+
   // Referral slider
   let currentReferralIndex = 0;
   const referralCards = [];
@@ -37,45 +38,38 @@ document.addEventListener("DOMContentLoaded", () => {
   // --- Google Geocoding (ZIP + lat/lng) ---
   async function geocodeAddressGoogle(fullAddress) {
     if (!fullAddress) return { zip: "", lat: "", lng: "" };
-    
-      // Netlify functions endpoint
-      const endpoint = "/.netlify/functions/geocode";
-    
+    const endpoint = "/.netlify/functions/geocode";
     try {
       const r = await fetch(`${endpoint}?address=${encodeURIComponent(fullAddress)}`, {
         headers: { "Accept": "application/json" }
       });
       if (!r.ok) return { zip: "", lat: "", lng: "" };
-    const data = await r.json();
+      const data = await r.json();
       return { zip: data.zip || "", lat: data.lat ?? "", lng: data.lng ?? "" };
     } catch {
       return { zip: "", lat: "", lng: "" };
     }
   }
+
   // helper to show one panel
   function showPanel(panelToShow) {
     const panels = [panelChooser, panelPersonal, panelReferral, summaryScreen];
-  
     panels.forEach(panel => {
-      if (panel) {
-        if (panel === panelToShow) {
-          panel.classList.add("slide-in");
-          panel.classList.remove("slide-out");
-          panel.style.display = "block";
-        } else {
-          if (panel.style.display === "block") {
-            panel.classList.add("slide-out");
-            panel.classList.remove("slide-in");
-  
-            // Hide the panel after animation ends
-            panel.addEventListener("animationend", () => {
-              panel.style.display = "none";
-            }, { once: true });
-          }
-        }
+      if (!panel) return;
+      if (panel === panelToShow) {
+        panel.classList.add("slide-in");
+        panel.classList.remove("slide-out");
+        panel.style.display = "block";
+      } else if (panel.style.display === "block") {
+        panel.classList.add("slide-out");
+        panel.classList.remove("slide-in");
+        panel.addEventListener("animationend", () => {
+          panel.style.display = "none";
+        }, { once: true });
       }
     });
   }
+
   // start on chooser
   showPanel(panelChooser);
   
@@ -83,35 +77,27 @@ document.addEventListener("DOMContentLoaded", () => {
   quoteForCheckboxes.forEach((cb) => {
     cb.addEventListener("change", () => {
       updateContactPreferences();
-      clearReferralsIfNotNeeded(determinePath()); // <-- add
+      clearReferralsIfNotNeeded(determinePath());
     });
   });
   contactPreference.addEventListener("change", () => {
     updateContactPreferences();
-    clearReferralsIfNotNeeded(determinePath()); // <-- add
+    clearReferralsIfNotNeeded(determinePath());
   });
   
   // Next from chooser
   document.getElementById("next-from-chooser").addEventListener("click", () => {
     const path = determinePath();
-    clearReferralsIfNotNeeded(path); // <-- add this line
-  
-    // show/hide referrer-info based on path
-  
+    clearReferralsIfNotNeeded(path);
     if (path === "A") {
-      // Me only -> Personal
       showPanel(panelPersonal);
     } else if (path === "B") {
-      // Me + You -> Personal (with loved-one subfields)
       showPanel(panelPersonal);
     } else if (path === "C") {
-      // Me + Referral -> Personal first, referral later; hide "Your Info" in referral panel
       showPanel(panelPersonal);
     } else if (path === "D") {
-      // Someone Else + You -> Personal (with loved-ones), no referrer panel later
       showPanel(panelPersonal);
     } else if (path === "E") {
-      // Referral only -> Referral (with "Your Info")
       showPanel(panelReferral);
     }
   });
@@ -135,17 +121,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   
     const path = determinePath();
-    console.log("[next-from-personal] path =", path);
-  
     if (path === "C") {
-      // Me + Referral -> go to referral panel, hide "Your Info"
-  
       if (referralSlider && referralSlider.children.length === 0) {
         createReferralCard();
       }
-  
       showPanel(panelReferral);
-      panelReferral.style.display = "block"; // belt & suspenders
+      panelReferral.style.display = "block";
       panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
@@ -158,7 +139,6 @@ document.addEventListener("DOMContentLoaded", () => {
   
   // Next from referral -> summary
   document.getElementById("next-from-referral").addEventListener("click", () => {
-    // (optional) add any referral-only validation here
     generateSummaryScreen();
     showPanel(null);
     summaryScreen.style.display = "block";
@@ -169,26 +149,25 @@ document.addEventListener("DOMContentLoaded", () => {
     const me = !!meCheckbox?.checked;
     const se = !!someoneElseCheckbox?.checked;
     const contact = contactPreference?.value || "You";
-  
-    if (me && !se) return "A";                          // Me only
-    if (me && se && contact === "You") return "B";      // Me + You
-    if (me && se && contact === "Referral") return "C"; // Me + Referral
-    if (!me && se && contact === "You") return "D";     // Someone Else + You
-    if (!me && se && contact === "Referral") return "E";// Referral only
+    if (me && !se) return "A";
+    if (me && se && contact === "You") return "B";
+    if (me && se && contact === "Referral") return "C";
+    if (!me && se && contact === "You") return "D";
+    if (!me && se && contact === "Referral") return "E";
     return "A";
   }
+
   function clearReferralsIfNotNeeded(path) {
     if (path === "A" || path === "B" || path === "D") {
-      // Clear array and DOM so no stale data shows up
       referralCards.length = 0;
       if (referralSlider) referralSlider.innerHTML = "";
     }
   }
-  // ---- ADD: phone mask helpers ----
+
+  // ---- phone mask helpers ----
   function formatPhoneNumber(value) {
-    const cleaned = value.replace(/\D/g, "").slice(0, 10); // only digits, max 10
+    const cleaned = value.replace(/\D/g, "").slice(0, 10);
     const len = cleaned.length;
-  
     if (len === 0) return "";
     if (len < 4) return `(${cleaned}`;
     if (len < 7) return `(${cleaned.slice(0, 3)}) ${cleaned.slice(3)}`;
@@ -198,13 +177,10 @@ document.addEventListener("DOMContentLoaded", () => {
   function bindPhoneMask(input) {
     if (!input) return;
     input.addEventListener("input", () => {
-      // keep caret by counting digits before caret, then restoring
       const start = input.selectionStart ?? input.value.length;
       const digitsBefore = (input.value.slice(0, start).match(/\d/g) || []).length;
-  
       const formatted = formatPhoneNumber(input.value);
       input.value = formatted;
-  
       let pos = 0, seen = 0;
       while (pos < formatted.length && seen < digitsBefore) {
         if (/\d/.test(formatted[pos])) seen++;
@@ -213,14 +189,14 @@ document.addEventListener("DOMContentLoaded", () => {
       input.setSelectionRange(pos, pos);
     });
   }
+
   // Bind mask to existing fields on load
-  bindPhoneMask(document.querySelector('input[name="phone"]'));          // main phone
-  bindPhoneMask(document.querySelector('#referrer_phone'));              // "Your Phone" in referral section
-  document.querySelectorAll('input[name="referral_phone[]"]').forEach(bindPhoneMask); // any pre-rendered referrals
+  bindPhoneMask(document.querySelector('input[name="phone"]')); // main phone
+  document.querySelectorAll('input[name="referral_phone[]"]').forEach(bindPhoneMask);
   
   quoteHeading.textContent = productTypeParam === "legalshield"
-  ? "Legal/Identity Protection"
-  : "Life Insurance";
+    ? "Legal/Identity Protection"
+    : "Life Insurance";
 
   function updateURLParams(leadType, productType) {
     const newParams = new URLSearchParams(window.location.search);
@@ -236,10 +212,9 @@ document.addEventListener("DOMContentLoaded", () => {
   productTypeInput.value = productTypeParam;
   productDropdown.value = productTypeParam;
 
-  // ✅ Helper: toggle "Other" input field visibility
+  // toggle "Other" input field visibility
   function toggleOtherText() {
-    if (!otherCheckbox || !otherTextInput) return; // ✅ Safe check
-  
+    if (!otherCheckbox || !otherTextInput) return;
     if (otherCheckbox.checked) {
       otherTextInput.style.display = "block";
     } else {
@@ -247,87 +222,57 @@ document.addEventListener("DOMContentLoaded", () => {
       otherTextInput.value = "";
     }
   }
+
   function updateContactPreferences() {
     const isSomeoneElseChecked = !!someoneElseCheckbox?.checked;
     const contactValue = contactPreference?.value || "You";
-    const referrerInfoSection = document.getElementById("referrer-info");
-    const isMeChecked = !!meCheckbox?.checked;
   
-    // Toggle the “who do we contact?” dropdown
-    contactDropdownWrapper.style.display = isSomeoneElseChecked ? "block" : "none";
-  
-    if (!isSomeoneElseChecked) {
-      // Fully reset when "Someone Else" is OFF
-      referrerInfoSection.style.display = "block";
-      return;
+    // Toggle the dropdown visibility
+    if (contactDropdownWrapper) {
+      contactDropdownWrapper.style.display = isSomeoneElseChecked ? "block" : "none";
     }
   
-    // Someone Else is ON → switch by contactPreference
-    if (contactValue === "You") {
-    } else { // "Referral"
-      if (typeof referralSlider !== "undefined" && referralSlider && referralSlider.children.length === 0) {
+    // If contacting the referral, ensure at least one referral card exists
+    if (isSomeoneElseChecked && contactValue === "Referral") {
+      if (referralSlider && referralSlider.children.length === 0) {
         createReferralCard();
       }
     }
-  
-    // Show/Hide "Your Info" within referral mode
-    const hideReferrerInfo = isMeChecked && isSomeoneElseChecked && contactValue === "Referral";
-    referrerInfoSection.style.display = hideReferrerInfo ? "none" : "block";
   }
   
-    // Handle lead_type: only set to "Referral" if *just* Referral mode
-    const isOnlyReferral = !meCheckbox.checked && (!someoneElseCheckbox || !someoneElseCheckbox.checked);
-    // Final lead_type determination
-    let leadTypeValue = originalLeadType;
-    
-    if (!meCheckbox.checked && someoneElseCheckbox.checked && contactPreference.value === "Referral") {
-      // Only Referral selected
-      leadTypeValue = "Referral";
-    } else if (meCheckbox.checked && someoneElseCheckbox.checked && contactPreference.value === "Referral") {
-      // Both selected, treat as dual lead
-      leadTypeValue = originalLeadType; // Me is primary, Referral extracted separately
-    } else if (!meCheckbox.checked && someoneElseCheckbox.checked && contactPreference.value === "You") {
-      // Just a Loved One you're covering
-      leadTypeValue = originalLeadType;
-    }
-    
-    leadTypeInput.value = leadTypeValue;
-    updateURLParams(leadTypeValue, productDropdown.value);
-    updateURLParams(leadTypeInput.value, productDropdown.value);
-  
-  // ✅ Initial state (in case it's pre-checked)
-  if (otherCheckbox) {
-    toggleOtherText();
+  // Handle lead_type at load
+  const isOnlyReferral = !meCheckbox?.checked && (!someoneElseCheckbox || !someoneElseCheckbox.checked);
+  let leadTypeValue = originalLeadType;
+  if (!meCheckbox?.checked && someoneElseCheckbox?.checked && contactPreference?.value === "Referral") {
+    leadTypeValue = "Referral";
+  } else if (meCheckbox?.checked && someoneElseCheckbox?.checked && contactPreference?.value === "Referral") {
+    leadTypeValue = originalLeadType;
+  } else if (!meCheckbox?.checked && someoneElseCheckbox?.checked && contactPreference?.value === "You") {
+    leadTypeValue = originalLeadType;
   }
+  leadTypeInput.value = leadTypeValue;
+  updateURLParams(leadTypeValue, productDropdown.value);
+  updateURLParams(leadTypeInput.value, productDropdown.value);
+  
+  // initial state for "Other"
+  if (otherCheckbox) toggleOtherText();
+  if (otherCheckbox) otherCheckbox.addEventListener("change", toggleOtherText);
 
-  // ✅ Event: show/hide "Other" text box
-  if (otherCheckbox) {
-    otherCheckbox.addEventListener("change", toggleOtherText);
-  }
-
-  // ✅ Event: Update product_type when dropdown changes
+  // Update product_type when dropdown changes
   productDropdown.addEventListener("change", () => {
     const selectedProduct = productDropdown.value;
     productTypeInput.value = selectedProduct;
-  
-    // ✅ Update heading
     quoteHeading.textContent = selectedProduct === "legalshield"
       ? "Legal/Identity Protection"
       : "Life Insurance";
-  
-    // ✅ Update URL
     updateURLParams(leadTypeInput.value, selectedProduct);
   });
 
   // Hide Fields in Referral mode
   const hideInReferralFields = document.querySelectorAll(".hide-in-referral");
-  
-  // Track originally required fields
   const originalRequiredMap = new Map();
+
   hideInReferralFields.forEach(el => {
-    // Show personal fields if:
-    // 1. "Me" is selected, OR
-    // 2. "Me + Referral" is selected
     const shouldShowPersonalFields =
       meCheckbox.checked || (meCheckbox.checked && someoneElseCheckbox.checked && contactPreference.value === "Referral");
   
@@ -335,37 +280,30 @@ document.addEventListener("DOMContentLoaded", () => {
   
     const inputs = el.querySelectorAll("input, select, textarea");
     inputs.forEach(input => {
-      // remember original required once
       if (!originalRequiredMap.has(input)) {
         originalRequiredMap.set(input, input.hasAttribute("required"));
       }
       const wasOriginallyRequired = originalRequiredMap.get(input);
-    
       if (shouldShowPersonalFields) {
-        // restore if it used to be required
         if (wasOriginallyRequired) input.setAttribute("required", "required");
       } else {
-        // hide path -> not required
         input.removeAttribute("required");
       }
     });
   });
+
   function updateReferralView() {
     const isMeChecked = meCheckbox.checked;
   
-    // ✅ Fix lead_type value
+    // Fix lead_type value
     const newLeadType = isMeChecked ? originalLeadType : "Referral";
-    // Final lead_type determination
+
     let leadTypeValue = originalLeadType;
-    
     if (!meCheckbox.checked && someoneElseCheckbox.checked && contactPreference.value === "Referral") {
-      // Only Referral selected
       leadTypeValue = "Referral";
     } else if (meCheckbox.checked && someoneElseCheckbox.checked && contactPreference.value === "Referral") {
-      // Both selected, treat as dual lead
-      leadTypeValue = originalLeadType; // Me is primary, Referral extracted separately
+      leadTypeValue = originalLeadType;
     } else if (!meCheckbox.checked && someoneElseCheckbox.checked && contactPreference.value === "You") {
-      // Just a Loved One you're covering
       leadTypeValue = originalLeadType;
     }
     
@@ -373,17 +311,15 @@ document.addEventListener("DOMContentLoaded", () => {
     updateURLParams(leadTypeValue, productDropdown.value);
     updateURLParams(newLeadType, productDropdown.value);
   
-    // ✅ Show/hide fields
+    // Ensure at least one referral card exists in referral paths
     if (contactPreference.value === "Referral") {
       if (referralSlider.children.length === 0) createReferralCard();
-    } else {
     }
-  
     if (!isMeChecked && referralSlider.children.length === 0) {
       createReferralCard();
     }
   
-    // ✅ Toggle visibility and required fields
+    // Toggle visibility and required fields
     hideInReferralFields.forEach(el => {
       el.style.display = isMeChecked ? "block" : "none";
       const inputs = el.querySelectorAll("input, select, textarea");
@@ -392,7 +328,6 @@ document.addEventListener("DOMContentLoaded", () => {
           originalRequiredMap.set(input, input.hasAttribute("required"));
         }
         const wasOriginallyRequired = originalRequiredMap.get(input);
-      
         if (isMeChecked) {
           if (wasOriginallyRequired) input.setAttribute("required", "required");
         } else {
@@ -402,7 +337,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
   
-  // Call this on load too (in case URL opens in referral mode)
+  // Call this on load too
   updateReferralView();
   updateContactPreferences();
   
@@ -410,48 +345,44 @@ document.addEventListener("DOMContentLoaded", () => {
   quoteForCheckboxes.forEach((checkbox) => {
     checkbox.addEventListener("change", () => {
       updateReferralView();
-      updateContactPreferences(); // ensure referrer-info toggles correctly
+      updateContactPreferences();
     });
   });
   
   if (someoneElseCheckbox) {
     someoneElseCheckbox.addEventListener("change", () => {
       updateContactPreferences();
-      updateReferralView(); // keep both views in sync
+      updateReferralView();
     });
-  
     contactPreference.addEventListener("change", () => {
       updateContactPreferences();
-      updateReferralView(); // keep both views in sync
+      updateReferralView();
     });
   }
+
   // Limiting age to numbers
   const ageInput = document.querySelector('input[name="age"]');
   ageInput.addEventListener("input", () => {
     ageInput.value = ageInput.value.replace(/\D/g, "");
   });
   
-  // ✅ TEMPORARY SUBMISSION HANDLER
+  // TEMPORARY SUBMISSION HANDLER -> go to SUMMARY
   quoteForm.addEventListener("submit", (e) => {
-    e.preventDefault();                 // keep it from actually posting yet
-    if (!quoteForm.reportValidity()) return;  // run native validation
-  
+    e.preventDefault();
+    if (!quoteForm.reportValidity()) return;
     generateSummaryScreen();
-    showPanel(panelReferral);
+    showPanel(null);
+    summaryScreen.style.display = "block";
   });
   
   // Create navigation elements
   const navContainer = document.createElement("div");
   navContainer.id = "referral-nav";
-  
   prevBtn.id = "prev-referral";
   prevBtn.textContent = "←";
-  
   nextBtn.id = "next-referral";
   nextBtn.textContent = "→";
-  
   indexDisplay.id = "referral-index";
-  
   navContainer.append(prevBtn, indexDisplay, nextBtn);
   referralSlider.after(navContainer);
   
@@ -459,7 +390,6 @@ document.addEventListener("DOMContentLoaded", () => {
     referralCards.forEach((card, index) => {
       card.style.display = index === currentReferralIndex ? "block" : "none";
     });
-  
     if (referralCards.length > 0) {
       indexDisplay.textContent = `Referral ${currentReferralIndex + 1} of ${referralCards.length}`;
       prevBtn.disabled = currentReferralIndex === 0;
@@ -500,11 +430,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (idx > -1) {
         referralCards.splice(idx, 1);
         card.remove();
-  
         if (currentReferralIndex >= referralCards.length) {
           currentReferralIndex = Math.max(0, referralCards.length - 1);
         }
-  
         updateReferralVisibility();
       }
     });
@@ -542,68 +470,60 @@ document.addEventListener("DOMContentLoaded", () => {
   
     // --- PERSONAL INFO SECTION ---
     if (meCheckbox.checked) {
-    const firstName = document.querySelector('input[name="first-name"]')?.value || "";
-    const lastName  = document.querySelector('input[name="last-name"]')?.value || "";
-    const fullName  = `${firstName} ${lastName}`.trim();
+      const firstName = document.querySelector('input[name="first-name"]')?.value || "";
+      const lastName  = document.querySelector('input[name="last-name"]')?.value || "";
+      const fullName  = `${firstName} ${lastName}`.trim();
   
-    const age     = document.querySelector('input[name="age"]')?.value || "";
-    const phone   = document.querySelector('input[name="phone"]')?.value || "";
-    const email   = document.querySelector('input[name="email"]')?.value || "";
-    const address = document.querySelector('input[name="address"]')?.value || "";
-    const city    = document.querySelector('input[name="city"]')?.value || "";
-    const state   = document.querySelector('input[name="state"]')?.value || "";
+      const age     = document.querySelector('input[name="age"]')?.value || "";
+      const phone   = document.querySelector('input[name="phone"]')?.value || "";
+      const email   = document.querySelector('input[name="email"]')?.value || "";
+      const address = document.querySelector('input[name="address"]')?.value || "";
+      const city    = document.querySelector('input[name="city"]')?.value || "";
+      const state   = document.querySelector('input[name="state"]')?.value || "";
   
-    // Build summary with a ZIP placeholder span
-    personalSummary.innerHTML = `
-      <h3>Your Info<button type="button" id="edit-personal-btn">Edit</button></h3>
-      <strong>${fullName}</strong><br/>
-      ${age ? `Age: ${age}<br/>` : ""}
-      ${phone ? `Phone: ${phone}<br/>` : ""}
-      ${email ? `Email: ${email}<br/>` : ""}
-      ${
-        (address || city || state)
-          ? `Address: ${
-              address ? `${address}<br/>` : ""
-            }${
-              (city || state)
-                ? `${city}${city && state ? ", " : ""}${state} <span id="zip-span"></span><br/>`
-                : ""
-            }`
-          : ""
-      }
-      <hr/>
-    `;
-  
-    // Fill the ZIP span when we have it
-    const fullAddress = [address, city && state ? `${city}, ${state}` : (city || state)]
-      .filter(Boolean)
-      .join(", ");
-    
-    if (fullAddress) {
-      geocodeAddressGoogle(fullAddress).then(({ zip, lat, lng }) => {
-        // 1) Update on-screen ZIP cleanly
-        const zipSpan = document.getElementById("zip-span");
-        if (zipSpan && zip) {
-          zipSpan.textContent = ` ${zip}`;
+      personalSummary.innerHTML = `
+        <h3>Your Info<button type="button" id="edit-personal-btn">Edit</button></h3>
+        <strong>${fullName}</strong><br/>
+        ${age ? `Age: ${age}<br/>` : ""}
+        ${phone ? `Phone: ${phone}<br/>` : ""}
+        ${email ? `Email: ${email}<br/>` : ""}
+        ${
+          (address || city || state)
+            ? `Address: ${
+                address ? `${address}<br/>` : ""
+              }${
+                (city || state)
+                  ? `${city}${city && state ? ", " : ""}${state} <span id="zip-span"></span><br/>`
+                  : ""
+              }`
+            : ""
         }
-    
-        // 2) Store for later submit
-        const zipEl = document.getElementById("zip");
-        const latEl = document.getElementById("lat");
-        const lngEl = document.getElementById("lng");
-        if (zipEl) zipEl.value = zip || "";
-        if (latEl) latEl.value = lat ?? "";
-        if (lngEl) lngEl.value = lng ?? "";
-      }).catch(() => {
-        /* ignore lookup errors for preview */
-      });
+        <hr/>
+      `;
+  
+      const fullAddress = [address, city && state ? `${city}, ${state}` : (city || state)]
+        .filter(Boolean)
+        .join(", ");
+      
+      if (fullAddress) {
+        geocodeAddressGoogle(fullAddress).then(({ zip, lat, lng }) => {
+          const zipSpan = document.getElementById("zip-span");
+          if (zipSpan && zip) {
+            zipSpan.textContent = ` ${zip}`;
+          }
+          const zipEl = document.getElementById("zip");
+          const latEl = document.getElementById("lat");
+          const lngEl = document.getElementById("lng");
+          if (zipEl) zipEl.value = zip || "";
+          if (latEl) latEl.value = lat ?? "";
+          if (lngEl) lngEl.value = lng ?? "";
+        }).catch(() => {});
+      }
     }
-  }
   
     // --- REFERRAL INFO SECTION ---
-    // Only show referrals for C (Me + Referral) or E (Referral only)
     if (path === "C" || path === "E") {
-      referralTitle && (referralTitle.style.display = "block");
+      if (referralTitle) referralTitle.style.display = "block";
     
       referralCards.forEach((card, index) => {
         const firstName    = card.querySelector('input[name="referral_first_name[]"]')?.value || "";
@@ -626,52 +546,42 @@ document.addEventListener("DOMContentLoaded", () => {
         summaryList.appendChild(item);
       });
     
-      // If in C/E but there are no referral cards, hide the title too
       if (referralCards.length === 0 && referralTitle) {
         referralTitle.style.display = "none";
       }
     } else {
-      // Not C/E → hide referral section UI
-      referralTitle && (referralTitle.style.display = "none");
+      if (referralTitle) referralTitle.style.display = "none";
     }
   
-    // Show summary
     formFields.style.display = "none";
     summaryScreen.style.display = "block";
   }
+
+  // summary actions (edit buttons)
   document.getElementById("summary-screen").addEventListener("click", () => {}, { once: false });
 
   document.getElementById("summary-screen").addEventListener("click", (e) => {
     // Edit personal (Your Info)
     if (e.target && e.target.id === "edit-personal-btn") {
-      const path = determinePath(); // A/B/C/D/E
       summaryScreen.style.display = "none";
       formFields.style.display = "block";
-  
-      // Show the personal panel; toggle Loved Ones if B/D
       showPanel(panelPersonal);
       panelPersonal.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   
     // Edit referrals
     if (e.target && e.target.id === "edit-referrals-btn") {
-      const path = determinePath(); // A/B/C/D/E
       summaryScreen.style.display = "none";
       formFields.style.display = "block";
-  
-      // C = Me+Referral (hide "Your Info"), E = Referral only (show "Your Info")
-      if (refInfo) refInfo.style.display = (path === "E") ? "block" : "none";
-  
-      // make sure a card exists
       if (referralSlider && referralSlider.children.length === 0) {
         createReferralCard();
       }
-  
       showPanel(panelReferral);
       panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   });
-  //Handle Edit, Delete, Final Submit
+
+  // Handle Edit/Delete on summary list
   document.getElementById("summary-list").addEventListener("click", (e) => {
     if (e.target.classList.contains("edit-referral")) {
       const index = parseInt(e.target.dataset.index);
@@ -689,66 +599,56 @@ document.addEventListener("DOMContentLoaded", () => {
       generateSummaryScreen(); // refresh summary
     }
   });
-    document.querySelectorAll('.quote-option').forEach(box => {
+
+  // Clickable option boxes sync
+  document.querySelectorAll('.quote-option').forEach(box => {
     box.addEventListener('click', () => {
       const checkboxId = box.getAttribute('data-checkbox');
       const checkbox = document.getElementById(checkboxId);
       if (!checkbox) return;
-  
       checkbox.checked = !checkbox.checked;
-      box.classList.toggle('selected', checkbox.checked); // optional visual feedback
-  
-      checkbox.dispatchEvent(new Event('change')); // triggers any existing JS logic tied to checkbox changes
+      box.classList.toggle('selected', checkbox.checked);
+      checkbox.dispatchEvent(new Event('change'));
       updateNextButtonState();
     });
   });
+
   function updateNextButtonState() {
     const meSelected = meCheckbox?.checked;
     const someoneSelected = someoneElseCheckbox?.checked;
-  
     const isAnySelected = meSelected || someoneSelected;
     nextFromChooserBtn.disabled = !isAnySelected;
-  
     if (nextFromChooserBtn.disabled) {
-      nextFromChooserBtn.classList.add("disabled"); // optional: add greyed-out class
+      nextFromChooserBtn.classList.add("disabled");
     } else {
       nextFromChooserBtn.classList.remove("disabled");
     }
   }
+
   const bothOption = document.getElementById("bothOption");
-  
   if (bothOption && meCheckbox && someoneElseCheckbox) {
-    // Clicking "Me and Someone Else"
     bothOption.addEventListener("click", () => {
       const bothSelected = meCheckbox.checked && someoneElseCheckbox.checked;
-  
       meCheckbox.checked = !bothSelected;
       someoneElseCheckbox.checked = !bothSelected;
-  
-      // Toggle visual state
       document.querySelectorAll('.quote-option').forEach(opt => {
         const id = opt.getAttribute("data-checkbox");
         if (id === "meCheckbox" || id === "someoneElseCheckbox") {
           opt.classList.toggle("selected", !bothSelected);
         }
       });
-  
       bothOption.classList.toggle("selected", !bothSelected);
-  
-      // Trigger change logic
       meCheckbox.dispatchEvent(new Event('change'));
       someoneElseCheckbox.dispatchEvent(new Event('change'));
       updateNextButtonState();
     });
-  
-    // Keep third box synced visually
     const syncBothOption = () => {
       const bothOn = meCheckbox.checked && someoneElseCheckbox.checked;
       bothOption.classList.toggle("selected", bothOn);
     };
-  
     meCheckbox.addEventListener("change", syncBothOption);
     someoneElseCheckbox.addEventListener("change", syncBothOption);
   }
+
   updateNextButtonState();
 });
