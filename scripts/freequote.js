@@ -388,7 +388,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Next from chooser → always go to Panel 2 (personal), with subset based on path
   nextFromChooserBtn.addEventListener("click", () => {
     currentPath = determinePath();
-    applyPanel2ForPath(currentPath);
+    togglePersonalMode(personalModeForPath(currentPath))
     showPanel(panelPersonal);
   });
 
@@ -399,7 +399,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Next from personal → either referral (Panel 3) or summary (Panel 4) depending on path
   nextFromPersonalBtn.addEventListener("click", () => {
-    // Validate only visible + enabled fields
+    // validate only visible fields
     const inputs = Array.from(panelPersonal.querySelectorAll("input, select, textarea"))
       .filter(el => el.offsetParent !== null && !el.disabled);
     for (const el of inputs) {
@@ -408,7 +408,21 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
     }
-    goToPanel3ForPath(currentPath);
+    
+    const rMode = referralModeForPath(currentPath);
+    
+    if (rMode === "none") {
+      // A: no referral → summary
+      generateSummaryScreen();
+      showPanel(summaryScreen);
+    } else {
+      // B/C/D/E: referral step
+      if (referralSlider && referralSlider.children.length === 0) createReferralCard();
+      // apply subset to all existing cards (in case user changed path)
+      Array.from(referralSlider.children).forEach(card => applyReferralModeToCard(card, rMode));
+      showPanel(panelReferral);
+      panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
   });
 
   // Next from referral → summary
