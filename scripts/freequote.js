@@ -54,10 +54,28 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
   // helper to show one panel
-  function showPanel(panel) {
-    [panelChooser, panelPersonal, panelReferral].filter(Boolean).forEach(p => p.style.display = "none");
-    summaryScreen.style.display = "none";
-    if (panel) panel.style.display = "block";
+  function showPanel(panelToShow) {
+    const panels = [panelChooser, panelPersonal, panelReferral, summaryScreen];
+  
+    panels.forEach(panel => {
+      if (panel) {
+        if (panel === panelToShow) {
+          panel.classList.add("slide-in");
+          panel.classList.remove("slide-out");
+          panel.style.display = "block";
+        } else {
+          if (panel.style.display === "block") {
+            panel.classList.add("slide-out");
+            panel.classList.remove("slide-in");
+  
+            // Hide the panel after animation ends
+            panel.addEventListener("animationend", () => {
+              panel.style.display = "none";
+            }, { once: true });
+          }
+        }
+      }
+    });
   }
   // start on chooser
   showPanel(panelChooser);
