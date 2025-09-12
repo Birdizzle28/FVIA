@@ -86,7 +86,7 @@ document.addEventListener("DOMContentLoaded", () => {
       position: "bottom",
     });
   }
-  document.getElementById('next-button').addEventListener('click', function(event) {
+  document.getElementById('next-from-personal').addEventListener('click', function(event) {
     const stateDropdown = document.getElementById('state-dropdown');
     const stateError = document.getElementById('state-error');
   
