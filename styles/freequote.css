@@ -203,7 +203,7 @@ form, label, input, select, textarea, fieldset, button {
   gap: 10px;
   flex-wrap: wrap;
   margin-bottom: 1.5em; /* Add vertical spacing beneath the checkboxes */
-  max-width: 100px;
+  max-width: 200px;
 }
 #panel-1-fieldset,
 #panel-1-fieldset > *,
