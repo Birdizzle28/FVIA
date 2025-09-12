@@ -33,6 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Referral slider
   let currentReferralIndex = 0;
   const referralCards = [];
+  const nextFromChooserBtn = document.getElementById("next-from-chooser");
   
   // --- Google Geocoding (ZIP + lat/lng) ---
   async function geocodeAddressGoogle(fullAddress) {
@@ -695,8 +696,22 @@ document.addEventListener("DOMContentLoaded", () => {
       box.classList.toggle('selected', checkbox.checked); // optional visual feedback
   
       checkbox.dispatchEvent(new Event('change')); // triggers any existing JS logic tied to checkbox changes
+      updateNextButtonState();
     });
   });
+  function updateNextButtonState() {
+    const meSelected = meCheckbox?.checked;
+    const someoneSelected = someoneElseCheckbox?.checked;
+  
+    const isAnySelected = meSelected || someoneSelected;
+    nextFromChooserBtn.disabled = !isAnySelected;
+  
+    if (nextFromChooserBtn.disabled) {
+      nextFromChooserBtn.classList.add("disabled"); // optional: add greyed-out class
+    } else {
+      nextFromChooserBtn.classList.remove("disabled");
+    }
+  }
   const bothOption = document.getElementById("bothOption");
   
   if (bothOption && meCheckbox && someoneElseCheckbox) {
@@ -731,4 +746,5 @@ document.addEventListener("DOMContentLoaded", () => {
     meCheckbox.addEventListener("change", syncBothOption);
     someoneElseCheckbox.addEventListener("change", syncBothOption);
   }
+  updateNextButtonState();
 });
