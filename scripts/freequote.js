@@ -86,6 +86,21 @@ document.addEventListener("DOMContentLoaded", () => {
       position: "bottom",
     });
   }
+  document.getElementById('next-button').addEventListener('click', function(event) {
+    const stateDropdown = document.getElementById('state-dropdown');
+    const stateError = document.getElementById('state-error');
+  
+    if (stateDropdown.value === '') {
+      // Prevent the form from submitting
+      event.preventDefault();
+      // Show the error message
+      stateError.style.display = 'inline';
+    } else {
+      // Hide the error message if a state is selected
+      stateError.style.display = 'none';
+      // Continue with form submission or whatever the next step is
+    }
+  });
   /******************
    * Phone mask
    ******************/
