@@ -249,3 +249,11 @@ select:focus {
   border-color: #3399ff;
   box-shadow: 0 0 0 2px rgba(51, 153, 255, 0.2);
 }
+#next-from-chooser:disabled,
+#next-from-chooser.disabled {
+  background-color: #ccc;
+  color: #666;
+  cursor: not-allowed;
+  border: none;
+  opacity: 0.7;
+}
