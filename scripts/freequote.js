@@ -72,6 +72,29 @@ document.addEventListener("DOMContentLoaded", () => {
       allowInput: true
     });
   }
+  // --- Strictly validate the datalist-backed state input ---
+  const validStates = [
+    "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware",
+    "Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana",
+    "Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana",
+    "Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina",
+    "North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina",
+    "South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia",
+    "Wisconsin","Wyoming"
+  ];
+  const stateInput = document.getElementById("state-input");
+  if (stateInput) {
+    const checkState = () => {
+      const v = stateInput.value.trim();
+      if (!validStates.includes(v)) {
+        stateInput.setCustomValidity("Please select a valid U.S. state from the list.");
+      } else {
+        stateInput.setCustomValidity("");
+      }
+    };
+    stateInput.addEventListener("input", checkState);
+    stateInput.addEventListener("change", checkState);
+  }
   /******************
    * Phone mask
    ******************/
