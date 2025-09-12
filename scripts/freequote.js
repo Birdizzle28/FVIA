@@ -73,28 +73,48 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
   // --- Strictly validate the datalist-backed state input ---
-  const validStates = [
+  const states = [
     "Alabama","Alaska","Arizona","Arkansas","California","Colorado","Connecticut","Delaware",
-    "Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky","Louisiana",
-    "Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi","Missouri","Montana",
-    "Nebraska","Nevada","New Hampshire","New Jersey","New Mexico","New York","North Carolina",
-    "North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania","Rhode Island","South Carolina",
-    "South Dakota","Tennessee","Texas","Utah","Vermont","Virginia","Washington","West Virginia",
-    "Wisconsin","Wyoming"
+    "Florida","Georgia","Hawaii","Idaho","Illinois","Indiana","Iowa","Kansas","Kentucky",
+    "Louisiana","Maine","Maryland","Massachusetts","Michigan","Minnesota","Mississippi",
+    "Missouri","Montana","Nebraska","Nevada","New Hampshire","New Jersey","New Mexico",
+    "New York","North Carolina","North Dakota","Ohio","Oklahoma","Oregon","Pennsylvania",
+    "Rhode Island","South Carolina","South Dakota","Tennessee","Texas","Utah","Vermont",
+    "Virginia","Washington","West Virginia","Wisconsin","Wyoming"
   ];
+  
   const stateInput = document.getElementById("state-input");
-  if (stateInput) {
-    const checkState = () => {
-      const v = stateInput.value.trim();
-      if (!validStates.includes(v)) {
-        stateInput.setCustomValidity("Please select a valid U.S. state from the list.");
-      } else {
-        stateInput.setCustomValidity("");
-      }
-    };
-    stateInput.addEventListener("input", checkState);
-    stateInput.addEventListener("change", checkState);
-  }
+  const suggestionBox = document.getElementById("state-suggestions");
+  
+  stateInput.addEventListener("input", () => {
+    const query = stateInput.value.toLowerCase();
+    suggestionBox.innerHTML = "";
+    if (!query) {
+      suggestionBox.style.display = "none";
+      return;
+    }
+    const matches = states.filter(s => s.toLowerCase().startsWith(query));
+    if (matches.length === 0) {
+      suggestionBox.style.display = "none";
+      return;
+    }
+    matches.forEach(state => {
+      const li = document.createElement("li");
+      li.textContent = state;
+      li.addEventListener("click", () => {
+        stateInput.value = state;
+        suggestionBox.style.display = "none";
+      });
+      suggestionBox.appendChild(li);
+    });
+    suggestionBox.style.display = "block";
+  });
+  
+  document.addEventListener("click", (e) => {
+    if (!suggestionBox.contains(e.target) && e.target !== stateInput) {
+      suggestionBox.style.display = "none";
+    }
+  });
   /******************
    * Phone mask
    ******************/
