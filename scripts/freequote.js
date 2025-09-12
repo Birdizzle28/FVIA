@@ -97,7 +97,6 @@ document.addEventListener("DOMContentLoaded", () => {
     clearReferralsIfNotNeeded(path); // <-- add this line
   
     // show/hide referrer-info based on path
-    const refInfo = document.getElementById("referrer-info");
   
     if (path === "A") {
       // Me only -> Personal
@@ -665,7 +664,6 @@ document.addEventListener("DOMContentLoaded", () => {
       formFields.style.display = "block";
   
       // C = Me+Referral (hide "Your Info"), E = Referral only (show "Your Info")
-      const refInfo = document.getElementById("referrer-info");
       if (refInfo) refInfo.style.display = (path === "E") ? "block" : "none";
   
       // make sure a card exists
