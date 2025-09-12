@@ -697,4 +697,38 @@ document.addEventListener("DOMContentLoaded", () => {
       checkbox.dispatchEvent(new Event('change')); // triggers any existing JS logic tied to checkbox changes
     });
   });
+  const bothOption = document.getElementById("bothOption");
+  
+  if (bothOption && meCheckbox && someoneElseCheckbox) {
+    // Clicking "Me and Someone Else"
+    bothOption.addEventListener("click", () => {
+      const bothSelected = meCheckbox.checked && someoneElseCheckbox.checked;
+  
+      meCheckbox.checked = !bothSelected;
+      someoneElseCheckbox.checked = !bothSelected;
+  
+      // Toggle visual state
+      document.querySelectorAll('.quote-option').forEach(opt => {
+        const id = opt.getAttribute("data-checkbox");
+        if (id === "meCheckbox" || id === "someoneElseCheckbox") {
+          opt.classList.toggle("selected", !bothSelected);
+        }
+      });
+  
+      bothOption.classList.toggle("selected", !bothSelected);
+  
+      // Trigger change logic
+      meCheckbox.dispatchEvent(new Event('change'));
+      someoneElseCheckbox.dispatchEvent(new Event('change'));
+    });
+  
+    // Keep third box synced visually
+    const syncBothOption = () => {
+      const bothOn = meCheckbox.checked && someoneElseCheckbox.checked;
+      bothOption.classList.toggle("selected", bothOn);
+    };
+  
+    meCheckbox.addEventListener("change", syncBothOption);
+    someoneElseCheckbox.addEventListener("change", syncBothOption);
+  }
 });
