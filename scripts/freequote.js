@@ -101,20 +101,16 @@ document.addEventListener("DOMContentLoaded", () => {
   
     if (path === "A") {
       // Me only -> Personal
-      document.getElementById("lovedOneFields").style.display = "none";
       showPanel(panelPersonal);
     } else if (path === "B") {
       // Me + You -> Personal (with loved-one subfields)
-      document.getElementById("lovedOneFields").style.display = "block";
       showPanel(panelPersonal);
     } else if (path === "C") {
       // Me + Referral -> Personal first, referral later; hide "Your Info" in referral panel
       refInfo.style.display = "none";
-      document.getElementById("lovedOneFields").style.display = "none";
       showPanel(panelPersonal);
     } else if (path === "D") {
       // Someone Else + You -> Personal (with loved-ones), no referrer panel later
-      document.getElementById("lovedOneFields").style.display = "block";
       showPanel(panelPersonal);
     } else if (path === "E") {
       // Referral only -> Referral (with "Your Info")
