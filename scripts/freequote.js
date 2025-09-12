@@ -139,8 +139,6 @@ document.addEventListener("DOMContentLoaded", () => {
   
     if (path === "C") {
       // Me + Referral -> go to referral panel, hide "Your Info"
-      const refInfo = document.getElementById("referrer-info");
-      if (refInfo) refInfo.style.display = "none";
   
       if (referralSlider && referralSlider.children.length === 0) {
         createReferralCard();
