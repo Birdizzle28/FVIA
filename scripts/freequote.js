@@ -367,11 +367,22 @@ document.addEventListener("DOMContentLoaded", () => {
         checkbox.checked = !checkbox.checked;
         box.classList.toggle('selected', checkbox.checked);
       }
+  
       // reflect UI and button
       updateChooserUI();
       updateNextButtonState();
     });
   });
+// --- Keep "Me and Someone Else" synced visually ---
+const bothOption = document.getElementById("bothOption");
+function syncBothOption() {
+  if (!bothOption) return;
+  const bothOn = meCheckbox.checked && someoneElseCheckbox.checked;
+  bothOption.classList.toggle("selected", bothOn);
+}
+
+meCheckbox.addEventListener("change", syncBothOption);
+someoneElseCheckbox.addEventListener("change", syncBothOption);
 
   // Also respond to raw checkbox changes (if any)
   quoteForCheckboxes.forEach(cb => {
