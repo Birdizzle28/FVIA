@@ -735,6 +735,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // Trigger change logic
       meCheckbox.dispatchEvent(new Event('change'));
       someoneElseCheckbox.dispatchEvent(new Event('change'));
+      updateNextButtonState();
     });
   
     // Keep third box synced visually
