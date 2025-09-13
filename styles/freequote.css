@@ -357,5 +357,5 @@ select:focus {
   outline: 2px solid #999; outline-offset: 2px !important; 
 }
 .icon-btn i {
-  background-color: #0066cc;
+  color: #0066cc;
 }
