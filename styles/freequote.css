@@ -127,14 +127,14 @@ form, label, input, select, textarea, fieldset, button {
   position: relative;
   width: 100%;
   max-width: 720px;   /* wider, but still nice on mobile */
-  min-height: 320px;  /* keeps height stable while sliding */
+  min-height: auto;  /* keeps height stable while sliding */
   margin: 0 auto;     /* center on page */
-  overflow: hidden;   /* hide sliding overflow */
+  overflow: visible;   /* hide sliding overflow */
   padding: 0.5rem 0;
 }
 
 .referral-card {
-  position: absolute;
+  position: relative;
   inset: 0;                 /* top:0; right:0; bottom:0; left:0 */
   display: none;            /* JS toggles active/showing */
   opacity: 0;
