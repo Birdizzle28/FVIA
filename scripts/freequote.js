@@ -21,6 +21,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const addReferralBtn = document.getElementById("add-referral-btn");
   const referralSlider = document.getElementById("referral-container");
   const referralTemplate = document.getElementById("referral-template");
+  const refNav  = document.getElementById("referral-nav");
+  const refPrev = document.getElementById("ref-prev");
+  const refNext = document.getElementById("ref-next");
+  const refPage = document.getElementById("ref-page");
 
   const quoteHeading = document.getElementById("quote-heading");
   const panelChooser  = document.getElementById("panel-chooser");
@@ -63,6 +67,23 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  function updateReferralNav() {
+    if (!refNav) return;
+  
+    const total = referralCards.length;
+    // show nav only when there is at least 1 card
+    refNav.style.display = total > 0 ? "flex" : "none";
+  
+    // page text
+    if (refPage) {
+      const page = total === 0 ? 0 : (currentReferralIndex + 1);
+      refPage.textContent = `${page} of ${total}`;
+    }
+  
+    // enable/disable arrows
+    if (refPrev) refPrev.disabled = currentReferralIndex <= 0;
+    if (refNext) refNext.disabled = currentReferralIndex >= total - 1;
+  }
   // Flatpickr for contact date
   if (window.flatpickr) {
     flatpickr("#contact-date", {
@@ -316,6 +337,7 @@ function forceShow(panelToShow) {
     referralCards.forEach((card, index) => {
       card.style.display = index === currentReferralIndex ? "block" : "none";
     });
+    updateReferralNav();
   }
 
   function createReferralCard() {
@@ -488,7 +510,19 @@ updateFakeBoxSelection();
         return;
       }
     }
+    refPrev?.addEventListener("click", () => {
+      if (currentReferralIndex > 0) {
+        currentReferralIndex--;
+        updateReferralVisibility();
+      }
+    });
     
+    refNext?.addEventListener("click", () => {
+      if (currentReferralIndex < referralCards.length - 1) {
+        currentReferralIndex++;
+        updateReferralVisibility();
+      }
+    });
     const rMode = referralModeForPath(currentPath);
     
     if (rMode === "none") {
