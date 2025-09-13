@@ -120,7 +120,8 @@ form, label, input, select, textarea, fieldset, button {
   margin-left: auto;
   margin-right: auto;
 }
-#referral-slider {
+/* use the actual id that exists in HTML/JS */
+#referral-container {
   position: relative;
   width: 100%;
   min-height: 300px;
@@ -131,6 +132,33 @@ form, label, input, select, textarea, fieldset, button {
   transition: transform 0.3s ease-in-out;
 }
 
+/* arrows + page indicator */
+#referral-nav {
+  display: none;              /* JS flips this to flex when needed */
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.arrow-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 6px 10px;
+  font-size: 1.1rem;
+}
+
+.arrow-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+#ref-page {
+  min-width: 70px;            /* keeps it from jittering */
+  text-align: center;
+  font-weight: 600;
+}
 .panel { 
   display: none; 
 }
