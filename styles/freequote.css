@@ -8,7 +8,6 @@
   border-radius: 12px;
   box-shadow: 0 0 15px 5px #545454;
   width: 90%;
-  
   margin: 80px auto;
   text-align: center;
   font-family: 'Bellota Text', sans-serif;
@@ -130,7 +129,7 @@ form, label, input, select, textarea, fieldset, button {
   max-width: 720px;   /* wider, but still nice on mobile */
   min-height: 320px;  /* keeps height stable while sliding */
   margin: 0 auto;     /* center on page */
-  overflow: hidden;   /* hide sliding overflow */
+  overflow: visible;   /* hide sliding overflow */
   padding: 0.5rem 0;
 }
 
