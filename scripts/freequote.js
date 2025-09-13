@@ -205,7 +205,40 @@ function forceShow(panelToShow) {
   const p_city    = panelPersonal.querySelector('input[name="city"]');
   const p_state   = panelPersonal.querySelector('select[name="state"]');
   const p_cdate   = panelPersonal.querySelector('input[name="contact-date"]');
-
+  // ***** Label helpers for personal inputs *****
+  const lbl_first = p_first?.closest('label');
+  const lbl_last  = p_last?.closest('label');
+  const lbl_phone = p_phone?.closest('label');
+  
+  function cacheBaseLabel(labelEl) {
+    if (!labelEl || labelEl.dataset.baseLabel) return;
+    // Take the visible text up to the first colon as the base (e.g., "First Name")
+    const raw = (labelEl.textContent || "").trim();
+    const base = (raw.match(/^[^:]+/)?.[0] || raw).trim();
+    labelEl.dataset.baseLabel = base;
+  }
+  
+  function setLabelPrefix(labelEl, prefix /* e.g., "Your" or "" */) {
+    if (!labelEl) return;
+    cacheBaseLabel(labelEl);
+    const base = labelEl.dataset.baseLabel || "";
+    const finalText = `${prefix ? prefix + ' ' : ''}${base}: `;
+  
+    // Replace the first text node (or insert one if missing)
+    let textNode = null;
+    for (const n of labelEl.childNodes) {
+      if (n.nodeType === Node.TEXT_NODE) { textNode = n; break; }
+    }
+    if (textNode) textNode.nodeValue = finalText;
+    else labelEl.insertBefore(document.createTextNode(finalText), labelEl.firstChild);
+  }
+  
+  function updatePersonalLabelsForPath(path) {
+    const prefix = (path === "B" || path === "E") ? "Your" : "";
+    setLabelPrefix(lbl_first, prefix);
+    setLabelPrefix(lbl_last,  prefix);
+    setLabelPrefix(lbl_phone, prefix);
+  }
   // remember original required for personal inputs once
   [p_first,p_last,p_age,p_phone,p_email,p_address,p_city,p_state,p_cdate].forEach(rememberRequired);
 
@@ -333,6 +366,7 @@ function forceShow(panelToShow) {
     panelPersonal.style.display = "block";
     const mode = personalModeForPath(path);
     togglePersonalMode(mode);
+    updatePersonalLabelsForPath(path);
   }
 
   function goToPanel3ForPath(path) {
@@ -433,7 +467,8 @@ updateFakeBoxSelection();
   // Next from chooser → always go to Panel 2 (personal), with subset based on path
   nextFromChooserBtn.addEventListener("click", () => {
     currentPath = determinePath();
-    togglePersonalMode(personalModeForPath(currentPath))
+    togglePersonalMode(personalModeForPath(currentPath));
+    updatePersonalLabelsForPath(currentPath);
     showPanel(panelPersonal);
   });
 
