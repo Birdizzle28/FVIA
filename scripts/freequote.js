@@ -72,35 +72,6 @@ document.addEventListener("DOMContentLoaded", () => {
       allowInput: true
     });
   }
-  // Choices.js init for state select
-  const stateSelect = document.getElementById("state-select");
-  if (stateSelect && window.Choices) {
-    // eslint-disable-next-line no-unused-vars
-    const stateChoice = new Choices(stateSelect, {
-      searchEnabled: true,
-      placeholder: true,
-      placeholderValue: "Select a state...",
-      shouldSort: false,
-      itemSelectText: "",      // hides the "Press to select" text
-      allowHTML: false,        // optional safety
-      position: "bottom",
-    });
-  }
-  document.getElementById('next-from-personal').addEventListener('click', function(event) {
-    const stateDropdown = document.getElementById('state-select');
-    const stateError = document.getElementById('state-error');
-  
-    if (stateDropdown.value === '') {
-      // Prevent the form from submitting
-      event.preventDefault();
-      // Show the error message
-      stateError.style.display = 'inline';
-    } else {
-      // Hide the error message if a state is selected
-      stateError.style.display = 'none';
-      // Continue with form submission or whatever the next step is
-    }
-  });
   /******************
    * Phone mask
    ******************/
