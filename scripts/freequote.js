@@ -649,7 +649,7 @@ updateFakeBoxSelection();
   });
 
   // Edit/delete per referral within summary list
-  ddocument.getElementById("summary-list").addEventListener("click", (e) => {
+  document.getElementById("summary-list").addEventListener("click", (e) => {
   if (e.target.classList.contains("edit-referral")) {
     const index = parseInt(e.target.dataset.index, 10);
     currentReferralIndex = Number.isFinite(index) ? index : 0;
