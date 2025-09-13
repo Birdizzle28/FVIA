@@ -88,6 +88,7 @@
 					  <!-- PANEL 2: personal -->
 					  <section class="panel" id="panel-personal" style="display:none;">
 					    <div class="hide-in-referral">
+							<h4>Your Information</h4>
 					      <label>First Name:
 					        <input type="text" name="first-name" required>
 					      </label>
@@ -179,6 +180,9 @@
 					
 					  <!-- PANEL 3: referral -->
 					  <section class="panel" id="referral-fields" style="display:none;">
+						
+					    <div id="referral-container"></div>
+					    <button type="button" id="add-referral-btn">+ Add Another Referral</button>
 						<div id="referral-nav" aria-live="polite" style="display:none">
 						  <button type="button" id="ref-prev" class="arrow-btn" aria-label="Previous referral">
 						    <i class="fa-solid fa-chevron-left"></i>
@@ -188,12 +192,9 @@
 						    <i class="fa-solid fa-chevron-right"></i>
 						  </button>
 						</div>
-					    <div id="referral-container"></div>
-					    <button type="button" id="add-referral-btn">+ Add Another Referral</button>
-					
 					    <template id="referral-template">
 					      <div class="referral-card">
-					        <h4>Referral</h4>
+					        <h4>Referrals</h4>
 					        <div>
 					          <label>First Name</label>
 					          <input type="text" name="referral_first_name[]" required/>
