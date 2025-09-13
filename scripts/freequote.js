@@ -607,68 +607,63 @@ updateFakeBoxSelection();
 
   // Edit buttons inside summary
   document.getElementById("summary-screen").addEventListener("click", (e) => {
-  const hitPersonal  = e.target.closest('[data-action="edit-personal"], #edit-personal-btn');
-  const hitReferrals = e.target.closest('[data-action="edit-referrals"], #edit-referrals-btn');
-
-  if (hitPersonal) {
-    // Hide summary, show form and personal panel
-    summaryScreen.style.display = "none";
-    formFields.style.display = ""; // reset to CSS default (safer than "block")
-
-    // Re-apply visibility for personal fields based on path
-    applyPanel2ForPath(currentPath);
-
-    // Defensive: ensure the personal shell isn’t hidden
-    const shell = panelPersonal.querySelector('.hide-in-referral');
-    if (shell) shell.style.display = "";
-
-    showPanel(panelPersonal);
-    panelPersonal.scrollIntoView({ behavior: "smooth", block: "start" });
-    return;
-  }
-
-  if (hitReferrals) {
-    // Hide summary, show form and referral panel
-    summaryScreen.style.display = "none";
-    formFields.style.display = "";
-
-    // Ensure at least one card exists if referrals are required
-    const rMode = referralModeForPath(currentPath);
-    if (rMode !== "none" && referralSlider.children.length === 0) {
-      createReferralCard();
+    const hitPersonal  = e.target.closest('[data-action="edit-personal"], #edit-personal-btn');
+    const hitReferrals = e.target.closest('[data-action="edit-referrals"], #edit-referrals-btn');
+  
+    if (hitPersonal) {
+      // leave summary, re-show the form shell
+      summaryScreen.style.display = "none";
+      formFields.style.display = ""; // back to stylesheet default
+  
+      // re-apply personal field visibility for current path
+      applyPanel2ForPath(currentPath);
+  
+      // guard: ensure wrapper isn’t hidden
+      const shell = panelPersonal.querySelector('.hide-in-referral');
+      if (shell) shell.style.display = "";
+  
+      // hard-switch to personal panel
+      forceShow(panelPersonal);
+      panelPersonal.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
     }
-
-    // Make sure a card is actually visible
-    currentReferralIndex = Math.min(currentReferralIndex, referralCards.length - 1);
-    if (currentReferralIndex < 0) currentReferralIndex = 0;
-    updateReferralVisibility();
-
-    // Re-apply the correct field subset to all cards
-    referralCards.forEach(card => applyReferralModeToCard(card, rMode));
-
-    showPanel(panelReferral);
-    panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
-    return;
-  }
-});
+  
+    if (hitReferrals) {
+      summaryScreen.style.display = "none";
+      formFields.style.display = "";
+  
+      const rMode = referralModeForPath(currentPath);
+      if (rMode !== "none" && referralSlider.children.length === 0) createReferralCard();
+  
+      currentReferralIndex = Math.min(currentReferralIndex, referralCards.length - 1);
+      if (currentReferralIndex < 0) currentReferralIndex = 0;
+  
+      updateReferralVisibility();
+      referralCards.forEach(card => applyReferralModeToCard(card, rMode));
+  
+      // hard-switch to referral panel
+      forceShow(panelReferral);
+      panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+  });
 
   // Edit/delete per referral within summary list
-  document.getElementById("summary-list").addEventListener("click", (e) => {
+  ddocument.getElementById("summary-list").addEventListener("click", (e) => {
   if (e.target.classList.contains("edit-referral")) {
     const index = parseInt(e.target.dataset.index, 10);
     currentReferralIndex = Number.isFinite(index) ? index : 0;
 
-    // Show form + referrals panel
     summaryScreen.style.display = "none";
     formFields.style.display = "";
 
-    // Ensure cards/modes/visibility are correct
     const rMode = referralModeForPath(currentPath);
     if (referralSlider.children.length === 0) createReferralCard();
+
     updateReferralVisibility();
     referralCards.forEach(card => applyReferralModeToCard(card, rMode));
 
-    showPanel(panelReferral);
+    forceShow(panelReferral);
     return;
   }
 
