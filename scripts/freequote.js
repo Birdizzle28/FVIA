@@ -607,49 +607,81 @@ updateFakeBoxSelection();
 
   // Edit buttons inside summary
   document.getElementById("summary-screen").addEventListener("click", (e) => {
-    if (e.target.closest('[data-action="edit-personal"]')) {
-      summaryScreen.style.display = "none";
-      formFields.style.display = "block";
-      // Make sure personal fields are visible according to the current path
-      applyPanel2ForPath(currentPath);
-      // Defensive: ensure the shell div is visible
-      const shell = panelPersonal.querySelector('.hide-in-referral');
-      if (shell) shell.style.display = "";
-      showPanel(panelPersonal);
-      panelPersonal.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-    if (e.target.closest('[data-action="edit-referrals"]')) {
-      summaryScreen.style.display = "none";
-      formFields.style.display = "block";
+  const hitPersonal  = e.target.closest('[data-action="edit-personal"], #edit-personal-btn');
+  const hitReferrals = e.target.closest('[data-action="edit-referrals"], #edit-referrals-btn');
 
-      // Ensure at least one card, and that a card is actually shown
-      if (referralModeForPath(currentPath) !== "none" && referralSlider.children.length === 0) {
-        createReferralCard();
-      }
-      currentReferralIndex = Math.min(currentReferralIndex, referralCards.length - 1);
-      if (currentReferralIndex < 0) currentReferralIndex = 0;
-      updateReferralVisibility();
-      showPanel(panelReferral);
-      panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
+  if (hitPersonal) {
+    // Hide summary, show form and personal panel
+    summaryScreen.style.display = "none";
+    formFields.style.display = ""; // reset to CSS default (safer than "block")
+
+    // Re-apply visibility for personal fields based on path
+    applyPanel2ForPath(currentPath);
+
+    // Defensive: ensure the personal shell isn’t hidden
+    const shell = panelPersonal.querySelector('.hide-in-referral');
+    if (shell) shell.style.display = "";
+
+    showPanel(panelPersonal);
+    panelPersonal.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+
+  if (hitReferrals) {
+    // Hide summary, show form and referral panel
+    summaryScreen.style.display = "none";
+    formFields.style.display = "";
+
+    // Ensure at least one card exists if referrals are required
+    const rMode = referralModeForPath(currentPath);
+    if (rMode !== "none" && referralSlider.children.length === 0) {
+      createReferralCard();
     }
-  });
+
+    // Make sure a card is actually visible
+    currentReferralIndex = Math.min(currentReferralIndex, referralCards.length - 1);
+    if (currentReferralIndex < 0) currentReferralIndex = 0;
+    updateReferralVisibility();
+
+    // Re-apply the correct field subset to all cards
+    referralCards.forEach(card => applyReferralModeToCard(card, rMode));
+
+    showPanel(panelReferral);
+    panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
+    return;
+  }
+});
 
   // Edit/delete per referral within summary list
   document.getElementById("summary-list").addEventListener("click", (e) => {
-    if (e.target.classList.contains("edit-referral")) {
-      const index = parseInt(e.target.dataset.index);
-      currentReferralIndex = index;
-      updateReferralVisibility();
-      document.getElementById("summary-screen").style.display = "none";
-      document.getElementById("referral-fields").style.display = "block";
-      showPanel(panelReferral);
-    }
-    if (e.target.classList.contains("delete-referral")) {
-      const index = parseInt(e.target.dataset.index);
+  if (e.target.classList.contains("edit-referral")) {
+    const index = parseInt(e.target.dataset.index, 10);
+    currentReferralIndex = Number.isFinite(index) ? index : 0;
+
+    // Show form + referrals panel
+    summaryScreen.style.display = "none";
+    formFields.style.display = "";
+
+    // Ensure cards/modes/visibility are correct
+    const rMode = referralModeForPath(currentPath);
+    if (referralSlider.children.length === 0) createReferralCard();
+    updateReferralVisibility();
+    referralCards.forEach(card => applyReferralModeToCard(card, rMode));
+
+    showPanel(panelReferral);
+    return;
+  }
+
+  if (e.target.classList.contains("delete-referral")) {
+    const index = parseInt(e.target.dataset.index, 10);
+    if (referralCards[index]) {
       referralCards[index].remove();
       referralCards.splice(index, 1);
+      currentReferralIndex = Math.min(currentReferralIndex, referralCards.length - 1);
+      if (currentReferralIndex < 0) currentReferralIndex = 0;
       updateReferralVisibility();
-      generateSummaryScreen(); // refresh summary
+      generateSummaryScreen();
     }
-  });
+  }
+});
 });
