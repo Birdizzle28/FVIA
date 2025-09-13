@@ -37,7 +37,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const nextFromPersonalBtn = document.getElementById("next-from-personal");
   const nextFromReferralBtn = document.getElementById("next-from-referral");
 
-  // Optional elements that might not exist (safe-guarded)
+  // Optional
   const otherCheckbox  = document.getElementById("otherCheckbox");
   const otherTextInput = document.getElementById("otherTextInput");
 
@@ -47,7 +47,8 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentPath = "A";
   let currentReferralIndex = 0;
   const referralCards = [];
-  const originalRequired = new WeakMap(); // remembers each input's *initial* required state
+  const originalRequired = new WeakMap();
+  let refAnimating = false; // guard for rapid clicks
 
   // small helpers
   const getRow = (inputEl) => inputEl?.closest("label, div") || inputEl;
@@ -68,23 +69,17 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   function updateReferralNav() {
-    if (!refNav) return;
-  
     const total = referralCards.length;
-    // show nav only when there is at least 1 card
     refNav.style.display = total > 0 ? "flex" : "none";
-  
-    // page text
     if (refPage) {
       const page = total === 0 ? 0 : (currentReferralIndex + 1);
       refPage.textContent = `${page} of ${total}`;
     }
-  
-    // enable/disable arrows
     if (refPrev) refPrev.disabled = currentReferralIndex <= 0;
     if (refNext) refNext.disabled = currentReferralIndex >= total - 1;
   }
-  // Flatpickr for contact date
+
+  // Flatpickr
   if (window.flatpickr) {
     flatpickr("#contact-date", {
       dateFormat: "m/d/Y",
@@ -93,6 +88,7 @@ document.addEventListener("DOMContentLoaded", () => {
       allowInput: true
     });
   }
+
   /******************
    * Phone mask
    ******************/
@@ -144,22 +140,21 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
-  // --- Hard switch (no animations) ---
-function forceShow(panelToShow) {
-  const panels = [panelChooser, panelPersonal, panelReferral, summaryScreen];
-  panels.forEach(p => {
-    if (!p) return;
-    p.style.display = (p === panelToShow) ? "block" : "none";
-    p.classList.remove("slide-in", "slide-out");
-  });
-}
+  function forceShow(panelToShow) {
+    const panels = [panelChooser, panelPersonal, panelReferral, summaryScreen];
+    panels.forEach(p => {
+      if (!p) return;
+      p.style.display = (p === panelToShow) ? "block" : "none";
+      p.classList.remove("slide-in", "slide-out");
+    });
+  }
+
   // Start on chooser
   showPanel(panelChooser);
 
   /******************
    * URL + heading setup
    ******************/
-  let originalLeadType = leadTypeParam;
   leadTypeInput.value = leadTypeParam;
   productTypeInput.value = productTypeParam;
   productDropdown.value = productTypeParam;
@@ -182,7 +177,7 @@ function forceShow(panelToShow) {
     updateURLParams(leadTypeInput.value, selectedProduct);
   });
 
-  // Optional "Other" toggle (safe if not present)
+  // Optional "Other" toggle
   function toggleOtherText() {
     if (!otherCheckbox || !otherTextInput) return;
     otherTextInput.style.display = otherCheckbox.checked ? "block" : "none";
@@ -194,12 +189,7 @@ function forceShow(panelToShow) {
   }
 
   /******************
-   * Path detection (YOUR mapping)
-   * A: me && !se
-   * B: !me && se && contact === "Referral"
-   * C: me && se && contact === "You"
-   * D: me && se && contact === "Referral"
-   * E: !me && se && contact === "You"
+   * Path detection
    ******************/
   function determinePath() {
     const me = !!meCheckbox?.checked;
@@ -226,26 +216,21 @@ function forceShow(panelToShow) {
   const p_city    = panelPersonal.querySelector('input[name="city"]');
   const p_state   = panelPersonal.querySelector('select[name="state"]');
   const p_cdate   = panelPersonal.querySelector('input[name="contact-date"]');
-  // ***** Label helpers for personal inputs *****
   const lbl_first = p_first?.closest('label');
   const lbl_last  = p_last?.closest('label');
   const lbl_phone = p_phone?.closest('label');
-  
+
   function cacheBaseLabel(labelEl) {
     if (!labelEl || labelEl.dataset.baseLabel) return;
-    // Take the visible text up to the first colon as the base (e.g., "First Name")
     const raw = (labelEl.textContent || "").trim();
     const base = (raw.match(/^[^:]+/)?.[0] || raw).trim();
     labelEl.dataset.baseLabel = base;
   }
-  
-  function setLabelPrefix(labelEl, prefix /* e.g., "Your" or "" */) {
+  function setLabelPrefix(labelEl, prefix) {
     if (!labelEl) return;
     cacheBaseLabel(labelEl);
     const base = labelEl.dataset.baseLabel || "";
     const finalText = `${prefix ? prefix + ' ' : ''}${base}: `;
-  
-    // Replace the first text node (or insert one if missing)
     let textNode = null;
     for (const n of labelEl.childNodes) {
       if (n.nodeType === Node.TEXT_NODE) { textNode = n; break; }
@@ -253,21 +238,18 @@ function forceShow(panelToShow) {
     if (textNode) textNode.nodeValue = finalText;
     else labelEl.insertBefore(document.createTextNode(finalText), labelEl.firstChild);
   }
-  
   function updatePersonalLabelsForPath(path) {
     const prefix = (path === "B" || path === "E") ? "Your" : "";
     setLabelPrefix(lbl_first, prefix);
     setLabelPrefix(lbl_last,  prefix);
     setLabelPrefix(lbl_phone, prefix);
   }
-  // remember original required for personal inputs once
   [p_first,p_last,p_age,p_phone,p_email,p_address,p_city,p_state,p_cdate].forEach(rememberRequired);
 
-  function togglePersonalMode(mode /* 'full' | 'liteContact' */) {
+  function togglePersonalMode(mode) { // 'full' | 'liteContact'
     const showSet = mode === "full"
       ? {first:1,last:1,age:1,phone:1,email:1,address:1,city:1,state:1,cdate:1}
-      : {first:1,last:1,phone:1}; // liteContact
-
+      : {first:1,last:1,phone:1};
     setVisibleAndRequired(p_first,   !!showSet.first);
     setVisibleAndRequired(p_last,    !!showSet.last);
     setVisibleAndRequired(p_age,     !!showSet.age);
@@ -279,7 +261,7 @@ function forceShow(panelToShow) {
     setVisibleAndRequired(p_cdate,   !!showSet.cdate);
   }
 
-  // REFERRAL fields (apply to every card)
+  // REFERRAL fields
   function rememberCardRequired(card) {
     [
       card.querySelector('input[name="referral_first_name[]"]'),
@@ -289,41 +271,33 @@ function forceShow(panelToShow) {
       card.querySelector('input[name="referral_relationship[]"]'),
     ].forEach(rememberRequired);
   }
-
-  function applyReferralModeToCard(card, mode /* 'full' | 'liteAge' */) {
+  function applyReferralModeToCard(card, mode) { // 'full' | 'liteAge'
     const r_first = card.querySelector('input[name="referral_first_name[]"]');
     const r_last  = card.querySelector('input[name="referral_last_name[]"]');
     const r_age   = card.querySelector('input[name="referral_age[]"]');
     const r_phone = card.querySelector('input[name="referral_phone[]"]');
     const r_rel   = card.querySelector('input[name="referral_relationship[]"]');
-
     const showSet = mode === "full"
       ? {first:1,last:1,age:1,phone:1,rel:1}
-      : {first:1,last:1,age:1}; // liteAge (no phone, no relationship)
-
+      : {first:1,last:1,age:1};
     setVisibleAndRequired(r_first, !!showSet.first);
     setVisibleAndRequired(r_last,  !!showSet.last);
     setVisibleAndRequired(r_age,   !!showSet.age);
     setVisibleAndRequired(r_phone, !!showSet.phone);
     setVisibleAndRequired(r_rel,   !!showSet.rel);
   }
-
   function referralModeForPath(path) {
-    // Panel 3 expectations:
-    // A -> NONE, B -> FULL, C -> LITE (first,last,age), D -> FULL, E -> LITE
     if (path === "B" || path === "D") return "full";
     if (path === "C" || path === "E") return "liteAge";
     return "none";
   }
   function personalModeForPath(path) {
-    // Panel 2 expectations:
-    // A -> FULL, B -> LITE (first,last,phone), C -> FULL, D -> FULL, E -> LITE
     if (path === "B" || path === "E") return "liteContact";
     return "full";
   }
 
   /******************
-   * Chooser UI: contact pref dropdown only when "Someone Else" is checked
+   * Chooser UI
    ******************/
   function updateChooserUI() {
     const isSE = !!someoneElseCheckbox?.checked;
@@ -331,60 +305,151 @@ function forceShow(panelToShow) {
   }
 
   /******************
+   * === Slider helpers (referral cards) ===
+   ******************/
+  function setCardVisible(card, visible) {
+    if (!card) return;
+    if (visible) {
+      card.classList.add("active");
+      card.style.display = "block";
+      card.style.opacity = "1";
+    } else {
+      card.classList.remove("active");
+      card.style.display = "none";
+      card.style.opacity = "0";
+      // Clean animation classes
+      card.classList.remove("ref-card--enter-right","ref-card--enter-left","ref-card--exit-left","ref-card--exit-right");
+    }
+  }
+
+  function animateSwap(oldIdx, newIdx, direction /* 'next' | 'prev' */) {
+    if (refAnimating || oldIdx === newIdx) return;
+    refAnimating = true;
+
+    const oldCard = referralCards[oldIdx];
+    const newCard = referralCards[newIdx];
+    if (!newCard) { refAnimating = false; return; }
+
+    // Prepare new card
+    setCardVisible(newCard, true);
+
+    // Assign animation directions
+    const enterClass = (direction === "next") ? "ref-card--enter-right" : "ref-card--enter-left";
+    const exitClass  = (direction === "next") ? "ref-card--exit-left"  : "ref-card--exit-right";
+
+    // Kick off
+    newCard.classList.add(enterClass);
+    if (oldCard) oldCard.classList.add(exitClass);
+
+    const onDone = () => {
+      // Clean up old
+      if (oldCard) {
+        setCardVisible(oldCard, false);
+        oldCard.removeEventListener("animationend", onDone);
+      }
+      // Clean enter class on new
+      newCard.classList.remove(enterClass);
+      currentReferralIndex = newIdx;
+      updateReferralNav();
+      refAnimating = false;
+    };
+
+    // When either animation finishes last, we'll clean once (listen on exit if present, else on enter)
+    if (oldCard) {
+      oldCard.addEventListener("animationend", onDone, { once: true });
+    } else {
+      newCard.addEventListener("animationend", onDone, { once: true });
+    }
+  }
+
+  function showInitialCard(index) {
+    referralCards.forEach((c,i) => setCardVisible(c, i === index));
+    currentReferralIndex = index;
+    updateReferralNav();
+  }
+
+  /******************
    * Create + manage referral cards
    ******************/
   function updateReferralVisibility() {
+    // Fallback non-animated refresh (used after deletes)
     referralCards.forEach((card, index) => {
-      card.style.display = index === currentReferralIndex ? "block" : "none";
+      setCardVisible(card, index === currentReferralIndex);
     });
     updateReferralNav();
   }
 
-  function createReferralCard() {
+  function createReferralCard({animateFrom = "right"} = {}) {
     const clone = referralTemplate.content.cloneNode(true);
     const card = clone.querySelector(".referral-card");
 
-    // remember required flags for inputs inside this card
     rememberCardRequired(card);
 
-    // Mask + numeric
     bindPhoneMask(card.querySelector('input[name="referral_phone[]"]'));
     const ageInput = card.querySelector('input[name="referral_age[]"]');
     ageInput?.addEventListener("input", () => {
       ageInput.value = ageInput.value.replace(/\D/g, "");
     });
 
-    // delete btn
     const deleteBtn = card.querySelector(".delete-referral");
     deleteBtn?.addEventListener("click", () => {
+      // Animate current card out, then remove
+      if (refAnimating) return;
       const idx = referralCards.indexOf(card);
-      if (idx > -1) {
-        referralCards.splice(idx, 1);
+      if (idx === -1) return;
+
+      // Choose the card that will become visible next
+      const targetIdx = Math.min(idx, referralCards.length - 2); // previous if last, else stays at same index (which becomes next card)
+      const direction = (targetIdx < idx) ? "prev" : "next";
+
+      // Temporarily set the target card visible so animation can play right after removal
+      const onExitDone = () => {
+        // Remove from DOM & array
         card.remove();
-        if (currentReferralIndex >= referralCards.length) {
-          currentReferralIndex = Math.max(0, referralCards.length - 1);
+        referralCards.splice(idx, 1);
+
+        if (referralCards.length === 0) {
+          currentReferralIndex = 0;
+          updateReferralNav();
+          refAnimating = false;
+          return;
         }
-        updateReferralVisibility();
+
+        const safeTarget = Math.max(0, Math.min(targetIdx, referralCards.length - 1));
+        animateSwap(-1, safeTarget, direction); // -1 = no oldCard; we already animated the exit
+      };
+
+      // Animate this card out now
+      if (!refAnimating) {
+        refAnimating = true;
+        card.classList.add(direction === "next" ? "ref-card--exit-left" : "ref-card--exit-right");
+        card.addEventListener("animationend", onExitDone, { once: true });
       }
     });
 
     referralCards.push(card);
     referralSlider.appendChild(card);
-    currentReferralIndex = referralCards.length - 1;
-    updateReferralVisibility();
 
-    // Ensure the right subset is visible for the current path
     const rMode = referralModeForPath(currentPath);
     if (rMode !== "none") applyReferralModeToCard(card, rMode);
+
+    if (referralCards.length === 1) {
+      // First card—no animation
+      showInitialCard(0);
+    } else {
+      // Animate from right when adding
+      const oldIdx = currentReferralIndex;
+      const newIdx = referralCards.length - 1;
+      animateSwap(oldIdx, newIdx, animateFrom === "left" ? "prev" : "next");
+    }
   }
 
-  addReferralBtn.addEventListener("click", createReferralCard);
+  addReferralBtn.addEventListener("click", () => createReferralCard({ animateFrom: "right" }));
 
   /******************
-   * Path application helpers
+   * Panel 2 + Panel 3 application
    ******************/
   function applyPanel2ForPath(path) {
-    // Ensure the personal container is visible; we will show/hide specific fields inside it
     panelPersonal.style.display = "block";
     const mode = personalModeForPath(path);
     togglePersonalMode(mode);
@@ -394,16 +459,13 @@ function forceShow(panelToShow) {
   function goToPanel3ForPath(path) {
     const rMode = referralModeForPath(path);
     if (rMode === "none") {
-      // Skip referral → go straight to summary
       generateSummaryScreen();
       showPanel(summaryScreen);
       return;
     }
-    // Need referral panel; ensure at least one card exists
     if (referralSlider && referralSlider.children.length === 0) {
       createReferralCard();
     }
-    // Apply mode to all existing cards (in case user flipped paths)
     referralCards.forEach(card => applyReferralModeToCard(card, rMode));
     showPanel(panelReferral);
     panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -412,73 +474,55 @@ function forceShow(panelToShow) {
   /******************
    * Navigation flows
    ******************/
-  // enable/disable "Next" on chooser
   function updateNextButtonState() {
     const isAnySelected = !!meCheckbox?.checked || !!someoneElseCheckbox?.checked;
     nextFromChooserBtn.disabled = !isAnySelected;
     nextFromChooserBtn.classList.toggle("disabled", nextFromChooserBtn.disabled);
   }
 
-  // Fake selectable boxes sync
+  // Fake selectable boxes
   document.querySelectorAll('.quote-option').forEach(box => {
-  box.addEventListener('click', () => {
-    const target = box.getAttribute('data-checkbox');
-
-    if (target === 'bothOption') {
-      // Toggle both real checkboxes
-      const bothSelected = meCheckbox.checked && someoneElseCheckbox.checked;
-      meCheckbox.checked = !bothSelected;
-      someoneElseCheckbox.checked = !bothSelected;
-
-      // Fire change so listeners run (VERY important)
-      meCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
-      someoneElseCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
-    } else {
-      // Toggle just one
-      const checkbox = document.getElementById(target);
-      if (!checkbox) return;
-
-      checkbox.checked = !checkbox.checked;
-
-      // Fire change so listeners run (VERY important)
-      checkbox.dispatchEvent(new Event('change', { bubbles: true }));
-    }
-
-    // Keep the rest of the UI in sync
-    updateChooserUI();
-    updateNextButtonState();
+    box.addEventListener('click', () => {
+      const target = box.getAttribute('data-checkbox');
+      if (target === 'bothOption') {
+        const bothSelected = meCheckbox.checked && someoneElseCheckbox.checked;
+        meCheckbox.checked = !bothSelected;
+        someoneElseCheckbox.checked = !bothSelected;
+        meCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+        someoneElseCheckbox.dispatchEvent(new Event('change', { bubbles: true }));
+      } else {
+        const checkbox = document.getElementById(target);
+        if (!checkbox) return;
+        checkbox.checked = !checkbox.checked;
+        checkbox.dispatchEvent(new Event('change', { bubbles: true }));
+      }
+      updateChooserUI();
+      updateNextButtonState();
+    });
   });
-});
-  
-// --- Keep all three boxes synced visually ---
-const bothOption = document.getElementById("bothOption");
 
-function syncBothOption() {
-  if (!bothOption) return;
-  const bothOn = !!meCheckbox.checked && !!someoneElseCheckbox.checked;
-  bothOption.classList.toggle("selected", bothOn);
-}
+  const bothOption = document.getElementById("bothOption");
+  function syncBothOption() {
+    if (!bothOption) return;
+    const bothOn = !!meCheckbox.checked && !!someoneElseCheckbox.checked;
+    bothOption.classList.toggle("selected", bothOn);
+  }
+  function updateFakeBoxSelection() {
+    const meBox = document.querySelector('.quote-option[data-checkbox="meCheckbox"]');
+    const seBox = document.querySelector('.quote-option[data-checkbox="someoneElseCheckbox"]');
+    if (meBox) meBox.classList.toggle('selected', !!meCheckbox.checked);
+    if (seBox) seBox.classList.toggle('selected', !!someoneElseCheckbox.checked);
+    syncBothOption();
+  }
+  meCheckbox.addEventListener("change", updateFakeBoxSelection);
+  someoneElseCheckbox.addEventListener("change", updateFakeBoxSelection);
+  updateFakeBoxSelection();
 
-function updateFakeBoxSelection() {
-  const meBox = document.querySelector('.quote-option[data-checkbox="meCheckbox"]');
-  const seBox = document.querySelector('.quote-option[data-checkbox="someoneElseCheckbox"]');
-  if (meBox) meBox.classList.toggle('selected', !!meCheckbox.checked);
-  if (seBox) seBox.classList.toggle('selected', !!someoneElseCheckbox.checked);
-  syncBothOption();
-}
-
-meCheckbox.addEventListener("change", updateFakeBoxSelection);
-someoneElseCheckbox.addEventListener("change", updateFakeBoxSelection);
-
-// set initial state on load
-updateFakeBoxSelection();
-
-  // Also respond to raw checkbox changes (if any)
   quoteForCheckboxes.forEach(cb => {
     cb.addEventListener("change", () => {
       updateChooserUI();
       updateNextButtonState();
-      updateFakeBoxSelection(); // keep visuals synced
+      updateFakeBoxSelection();
     });
   });
   contactPreference.addEventListener("change", () => {
@@ -486,7 +530,6 @@ updateFakeBoxSelection();
     updateNextButtonState();
   });
 
-  // Next from chooser → always go to Panel 2 (personal), with subset based on path
   nextFromChooserBtn.addEventListener("click", () => {
     currentPath = determinePath();
     togglePersonalMode(personalModeForPath(currentPath));
@@ -494,14 +537,11 @@ updateFakeBoxSelection();
     showPanel(panelPersonal);
   });
 
-  // Back buttons just return to chooser
   document.querySelectorAll('[data-back]').forEach(btn => {
     btn.addEventListener("click", () => showPanel(panelChooser));
   });
 
-  // Next from personal → either referral (Panel 3) or summary (Panel 4) depending on path
   nextFromPersonalBtn.addEventListener("click", () => {
-    // validate only visible fields
     const inputs = Array.from(panelPersonal.querySelectorAll("input, select, textarea"))
       .filter(el => el.offsetParent !== null && !el.disabled);
     for (const el of inputs) {
@@ -510,64 +550,57 @@ updateFakeBoxSelection();
         return;
       }
     }
-    refPrev?.addEventListener("click", () => {
-      if (currentReferralIndex > 0) {
-        currentReferralIndex--;
-        updateReferralVisibility();
-      }
-    });
-    
-    refNext?.addEventListener("click", () => {
-      if (currentReferralIndex < referralCards.length - 1) {
-        currentReferralIndex++;
-        updateReferralVisibility();
-      }
-    });
     const rMode = referralModeForPath(currentPath);
-    
     if (rMode === "none") {
-      // A: no referral → summary
       generateSummaryScreen();
       showPanel(summaryScreen);
     } else {
-      // B/C/D/E: referral step
       if (referralSlider && referralSlider.children.length === 0) createReferralCard();
-      // apply subset to all existing cards (in case user changed path)
       Array.from(referralSlider.children).forEach(card => applyReferralModeToCard(card, rMode));
       showPanel(panelReferral);
       panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   });
 
-  // Next from referral → summary
   nextFromReferralBtn.addEventListener("click", () => {
     generateSummaryScreen();
     showPanel(summaryScreen);
   });
 
-  // Age input (main personal): numeric only
   const ageInputMain = document.querySelector('input[name="age"]');
   ageInputMain?.addEventListener("input", () => {
     ageInputMain.value = ageInputMain.value.replace(/\D/g, "");
   });
 
-  // Final submit → keep on summary (don't jump to referral)
   quoteForm.addEventListener("submit", (e) => {
     e.preventDefault();
     if (!quoteForm.reportValidity()) return;
     generateSummaryScreen();
     showPanel(summaryScreen);
-    // TODO: replace with real submit later
   });
 
-  // Initial chooser UI
   updateChooserUI();
   updateNextButtonState();
 
   /******************
-   * Summary (kept from your code, minor hardening)
+   * Prev/Next for referral slider
    ******************/
-  // --- Google Geocoding (ZIP + lat/lng) ---
+  refPrev?.addEventListener("click", () => {
+    if (refAnimating) return;
+    if (currentReferralIndex > 0) {
+      animateSwap(currentReferralIndex, currentReferralIndex - 1, "prev");
+    }
+  });
+  refNext?.addEventListener("click", () => {
+    if (refAnimating) return;
+    if (currentReferralIndex < referralCards.length - 1) {
+      animateSwap(currentReferralIndex, currentReferralIndex + 1, "next");
+    }
+  });
+
+  /******************
+   * Summary (unchanged except small guards)
+   ******************/
   async function geocodeAddressGoogle(fullAddress) {
     if (!fullAddress) return { zip: "", lat: "", lng: "" };
     const endpoint = "/.netlify/functions/geocode";
@@ -593,7 +626,7 @@ updateFakeBoxSelection();
     personalSummary.innerHTML = "";
 
     // PERSONAL
-    if (meCheckbox.checked || ["A","C","D"].includes(path) || ["B","E"].includes(path)) {
+    if (meCheckbox.checked || ["A","C","D","B","E"].includes(path)) {
       const firstName = document.querySelector('input[name="first-name"]')?.value || "";
       const lastName  = document.querySelector('input[name="last-name"]')?.value || "";
       const fullName  = `${firstName} ${lastName}`.trim();
@@ -646,8 +679,7 @@ updateFakeBoxSelection();
       }
     }
 
-    // REFERRALS in summary:
-    // Show only for B, C, D, E. (A = none)
+    // REFERRALS
     if (["B","C","D","E"].includes(path)) {
       referralTitle && (referralTitle.style.display = "block");
       referralCards.forEach((card, index) => {
@@ -678,83 +710,60 @@ updateFakeBoxSelection();
       referralTitle && (referralTitle.style.display = "none");
     }
 
-    // show summary + hide form fields
     formFields.style.display = "none";
     summaryScreen.style.display = "block";
   }
 
-  // Edit buttons inside summary
   document.getElementById("summary-screen").addEventListener("click", (e) => {
     const hitPersonal  = e.target.closest('[data-action="edit-personal"], #edit-personal-btn');
     const hitReferrals = e.target.closest('[data-action="edit-referrals"], #edit-referrals-btn');
-  
+
     if (hitPersonal) {
-      // leave summary, re-show the form shell
       summaryScreen.style.display = "none";
-      formFields.style.display = "block"; // back to stylesheet default
-  
-      // re-apply personal field visibility for current path
+      formFields.style.display = "block";
       applyPanel2ForPath(currentPath);
-  
-      // guard: ensure wrapper isn’t hidden
       const shell = panelPersonal.querySelector('.hide-in-referral');
       if (shell) shell.style.display = "";
-  
-      // hard-switch to personal panel
       forceShow(panelPersonal);
       panelPersonal.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
-  
     if (hitReferrals) {
       summaryScreen.style.display = "none";
       formFields.style.display = "block";
-  
       const rMode = referralModeForPath(currentPath);
       if (rMode !== "none" && referralSlider.children.length === 0) createReferralCard();
-  
       currentReferralIndex = Math.min(currentReferralIndex, referralCards.length - 1);
       if (currentReferralIndex < 0) currentReferralIndex = 0;
-  
       updateReferralVisibility();
       referralCards.forEach(card => applyReferralModeToCard(card, rMode));
-  
-      // hard-switch to referral panel
       forceShow(panelReferral);
       panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
   });
 
-  // Edit/delete per referral within summary list
   document.getElementById("summary-list").addEventListener("click", (e) => {
-  if (e.target.classList.contains("edit-referral")) {
-    const index = parseInt(e.target.dataset.index, 10);
-    currentReferralIndex = Number.isFinite(index) ? index : 0;
-
-    summaryScreen.style.display = "none";
-    formFields.style.display = "";
-
-    const rMode = referralModeForPath(currentPath);
-    if (referralSlider.children.length === 0) createReferralCard();
-
-    updateReferralVisibility();
-    referralCards.forEach(card => applyReferralModeToCard(card, rMode));
-
-    forceShow(panelReferral);
-    return;
-  }
-
-  if (e.target.classList.contains("delete-referral")) {
-    const index = parseInt(e.target.dataset.index, 10);
-    if (referralCards[index]) {
-      referralCards[index].remove();
-      referralCards.splice(index, 1);
-      currentReferralIndex = Math.min(currentReferralIndex, referralCards.length - 1);
-      if (currentReferralIndex < 0) currentReferralIndex = 0;
+    if (e.target.classList.contains("edit-referral")) {
+      const index = parseInt(e.target.dataset.index, 10);
+      currentReferralIndex = Number.isFinite(index) ? index : 0;
+      summaryScreen.style.display = "none";
+      formFields.style.display = "";
+      if (referralSlider.children.length === 0) createReferralCard();
       updateReferralVisibility();
-      generateSummaryScreen();
+      forceShow(panelReferral);
+      return;
     }
-  }
-});
+    if (e.target.classList.contains("delete-referral")) {
+      const index = parseInt(e.target.dataset.index, 10);
+      if (referralCards[index]) {
+        referralCards[index].remove();
+        referralCards.splice(index, 1);
+        currentReferralIndex = Math.min(currentReferralIndex, referralCards.length - 1);
+        if (currentReferralIndex < 0) currentReferralIndex = 0;
+        updateReferralVisibility();
+        generateSummaryScreen();
+      }
+    }
+  });
 });
