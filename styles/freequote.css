@@ -129,7 +129,7 @@ form, label, input, select, textarea, fieldset, button {
   max-width: 720px;   /* wider, but still nice on mobile */
   min-height: 320px;  /* keeps height stable while sliding */
   margin: 0 auto;     /* center on page */
-  overflow: visible;   /* hide sliding overflow */
+  overflow: hidden;   /* hide sliding overflow */
   padding: 0.5rem 0;
 }
 
