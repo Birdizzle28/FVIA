@@ -121,24 +121,107 @@ form, label, input, select, textarea, fieldset, button {
   margin-right: auto;
 }
 /* use the actual id that exists in HTML/JS */
+#referral-fields {
+  display: block;
+}
 #referral-container {
   position: relative;
   width: 100%;
-  min-height: 300px;
+  max-width: 720px;   /* wider, but still nice on mobile */
+  min-height: 320px;  /* keeps height stable while sliding */
+  margin: 0 auto;     /* center on page */
+  overflow: hidden;   /* hide sliding overflow */
+  padding: 0.5rem 0;
 }
 
 .referral-card {
-  display: none;
-  transition: transform 0.3s ease-in-out;
+  position: absolute;
+  inset: 0;                 /* top:0; right:0; bottom:0; left:0 */
+  display: none;            /* JS toggles active/showing */
+  opacity: 0;
+  padding: 16px;
+  box-sizing: border-box;
+  background: #fff;
+  border-radius: 10px;
+  box-shadow: 0 0 8px rgba(0,0,0,.05);
 }
 
-/* arrows + page indicator */
+/* While visible (no animation) */
+.referral-card.active {
+  display: block;
+  opacity: 1;
+}
+
+/* Labels/inputs full width */
+.referral-card h4 {
+  text-align: center;
+  margin-top: 0;
+}
+
+.referral-card > div {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.referral-card input[type="text"],
+.referral-card input[type="tel"],
+.referral-card input[type="number"] {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+/* Center the add button + nav */
+#add-referral-btn {
+  display: block;
+  margin: 10px auto 16px;
+}
+
+/* Keep nav centered and close to the cards */
 #referral-nav {
-  display: none;              /* JS flips this to flex when needed */
+  display: none;   /* JS flips to flex */
   justify-content: center;
   align-items: center;
   gap: 10px;
-  margin-bottom: 10px;
+  margin: 6px 0 12px;
+}
+
+/* === Slide animations for cards === */
+@keyframes cardInFromRight {
+  from { transform: translateX(100%); opacity: 0; }
+  to   { transform: translateX(0);    opacity: 1; }
+}
+@keyframes cardOutToLeft {
+  from { transform: translateX(0);    opacity: 1; }
+  to   { transform: translateX(-100%);opacity: 0; }
+}
+@keyframes cardInFromLeft {
+  from { transform: translateX(-100%);opacity: 0; }
+  to   { transform: translateX(0);     opacity: 1; }
+}
+@keyframes cardOutToRight {
+  from { transform: translateX(0);     opacity: 1; }
+  to   { transform: translateX(100%);  opacity: 0; }
+}
+
+/* Utility classes the JS toggles */
+.ref-card--enter-right { animation: cardInFromRight .35s ease both; }
+.ref-card--enter-left  { animation: cardInFromLeft  .35s ease both; }
+.ref-card--exit-left   { animation: cardOutToLeft   .35s ease both; }
+.ref-card--exit-right  { animation: cardOutToRight  .35s ease both; }
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .ref-card--enter-right,
+  .ref-card--enter-left,
+  .ref-card--exit-left,
+  .ref-card--exit-right {
+    animation: none !important;
+  }
 }
 
 .arrow-btn {
