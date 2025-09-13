@@ -194,7 +194,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const p_email   = panelPersonal.querySelector('input[name="email"]');
   const p_address = panelPersonal.querySelector('input[name="address"]');
   const p_city    = panelPersonal.querySelector('input[name="city"]');
-  const p_state   = panelPersonal.querySelector('input[name="state"]');
+  const p_state   = panelPersonal.querySelector('select[name="state"]');
   const p_cdate   = panelPersonal.querySelector('input[name="contact-date"]');
 
   // remember original required for personal inputs once
@@ -525,7 +525,7 @@ updateFakeBoxSelection();
       const email   = document.querySelector('input[name="email"]')?.value || "";
       const address = document.querySelector('input[name="address"]')?.value || "";
       const city    = document.querySelector('input[name="city"]')?.value || "";
-      const state   = document.querySelector('input[name="state"]')?.value || "";
+      const state   = document.querySelector('select[name="state"]')?.value || "";
 
       personalSummary.innerHTML = `
         <h3>Your Info<button type="button" id="edit-personal-btn">Edit</button></h3>
