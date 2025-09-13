@@ -528,7 +528,11 @@ updateFakeBoxSelection();
       const state   = document.querySelector('select[name="state"]')?.value || "";
 
       personalSummary.innerHTML = `
-        <h3>Your Info<button type="button" id="edit-personal-btn">Edit</button></h3>
+        <h3>Your Info
+           <button type="button" class="icon-btn" data-action="edit-personal" aria-label="Edit your info">
+             <i class="fa-regular fa-pen-to-square"></i>
+           </button>
+         </h3>
         <strong>${fullName}</strong><br/>
         ${age ? `Age: ${age}<br/>` : ""}
         ${phone ? `Phone: ${phone}<br/>` : ""}
@@ -603,21 +607,28 @@ updateFakeBoxSelection();
 
   // Edit buttons inside summary
   document.getElementById("summary-screen").addEventListener("click", (e) => {
-    if (e.target && e.target.id === "edit-personal-btn") {
+    if (e.target.closest('[data-action="edit-personal"]')) {
       summaryScreen.style.display = "none";
       formFields.style.display = "block";
+      // Make sure personal fields are visible according to the current path
       applyPanel2ForPath(currentPath);
+      // Defensive: ensure the shell div is visible
+      const shell = panelPersonal.querySelector('.hide-in-referral');
+      if (shell) shell.style.display = "";
       showPanel(panelPersonal);
       panelPersonal.scrollIntoView({ behavior: "smooth", block: "start" });
     }
-    if (e.target && e.target.id === "edit-referrals-btn") {
+    if (e.target.closest('[data-action="edit-referrals"]')) {
       summaryScreen.style.display = "none";
       formFields.style.display = "block";
 
-      // ensure at least one card exists if this path uses referrals
+      // Ensure at least one card, and that a card is actually shown
       if (referralModeForPath(currentPath) !== "none" && referralSlider.children.length === 0) {
         createReferralCard();
       }
+      currentReferralIndex = Math.min(currentReferralIndex, referralCards.length - 1);
+      if (currentReferralIndex < 0) currentReferralIndex = 0;
+      updateReferralVisibility();
       showPanel(panelReferral);
       panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
     }
