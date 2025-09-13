@@ -123,6 +123,15 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+  // --- Hard switch (no animations) ---
+function forceShow(panelToShow) {
+  const panels = [panelChooser, panelPersonal, panelReferral, summaryScreen];
+  panels.forEach(p => {
+    if (!p) return;
+    p.style.display = (p === panelToShow) ? "block" : "none";
+    p.classList.remove("slide-in", "slide-out");
+  });
+}
   // Start on chooser
   showPanel(panelChooser);
 
@@ -613,7 +622,7 @@ updateFakeBoxSelection();
     if (hitPersonal) {
       // leave summary, re-show the form shell
       summaryScreen.style.display = "none";
-      formFields.style.display = ""; // back to stylesheet default
+      formFields.style.display = "block"; // back to stylesheet default
   
       // re-apply personal field visibility for current path
       applyPanel2ForPath(currentPath);
@@ -630,7 +639,7 @@ updateFakeBoxSelection();
   
     if (hitReferrals) {
       summaryScreen.style.display = "none";
-      formFields.style.display = "";
+      formFields.style.display = "block";
   
       const rMode = referralModeForPath(currentPath);
       if (rMode !== "none" && referralSlider.children.length === 0) createReferralCard();
