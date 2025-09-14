@@ -78,7 +78,26 @@ document.addEventListener("DOMContentLoaded", () => {
     if (refPrev) refPrev.disabled = currentReferralIndex <= 0;
     if (refNext) refNext.disabled = currentReferralIndex >= total - 1;
   }
-
+  function wireRelationship(card) {
+    const relSelect = card.querySelector('.relationship-group .rel-select');
+    const relInput  = card.querySelector('input[name="referral_relationship[]"]');
+    if (!relSelect || !relInput) return;
+  
+    const sync = () => {
+      const isOther = relSelect.value === 'Other';
+      // show/hide the text input; manage required flags
+      relInput.style.display = isOther ? '' : 'none';
+      relInput.required = isOther;
+      relSelect.required = !isOther;
+  
+      // keep the canonical named input up-to-date for submit
+      if (!isOther) relInput.value = relSelect.value || '';
+    };
+  
+    relSelect.addEventListener('change', sync);
+    // initialize on create
+    sync();
+  }
   // Flatpickr
   if (window.flatpickr) {
     flatpickr("#contact-date", {
@@ -268,6 +287,7 @@ document.addEventListener("DOMContentLoaded", () => {
       card.querySelector('input[name="referral_last_name[]"]'),
       card.querySelector('input[name="referral_age[]"]'),
       card.querySelector('input[name="referral_phone[]"]'),
+      card.querySelector('.relationship-group .rel-select'),
       card.querySelector('input[name="referral_relationship[]"]'),
     ].forEach(rememberRequired);
   }
@@ -276,15 +296,29 @@ document.addEventListener("DOMContentLoaded", () => {
     const r_last  = card.querySelector('input[name="referral_last_name[]"]');
     const r_age   = card.querySelector('input[name="referral_age[]"]');
     const r_phone = card.querySelector('input[name="referral_phone[]"]');
-    const r_rel   = card.querySelector('input[name="referral_relationship[]"]');
+  
+    const relGroup  = card.querySelector('.relationship-group');
+    const relSelect = card.querySelector('.relationship-group .rel-select');
+    const relInput  = card.querySelector('input[name="referral_relationship[]"]');
+  
     const showSet = mode === "full"
       ? {first:1,last:1,age:1,phone:1,rel:1}
-      : {first:1,last:1,age:1};
+      : {first:1,last:1,age:1}; // liteAge = no phone, no relationship
+  
     setVisibleAndRequired(r_first, !!showSet.first);
     setVisibleAndRequired(r_last,  !!showSet.last);
     setVisibleAndRequired(r_age,   !!showSet.age);
     setVisibleAndRequired(r_phone, !!showSet.phone);
-    setVisibleAndRequired(r_rel,   !!showSet.rel);
+  
+    if (relGroup) relGroup.style.display = showSet.rel ? "" : "none";
+    if (!showSet.rel) {
+      if (relSelect) relSelect.required = false;
+      if (relInput)  relInput.required  = false;
+    } else {
+      // when visible, the select is required unless "Other"
+      if (relSelect) relSelect.required = relSelect.value !== 'Other';
+      if (relInput)  relInput.required  = relSelect && relSelect.value === 'Other';
+    }
   }
   function referralModeForPath(path) {
     if (path === "B" || path === "D") return "full";
@@ -390,7 +424,7 @@ document.addEventListener("DOMContentLoaded", () => {
     ageInput?.addEventListener("input", () => {
       ageInput.value = ageInput.value.replace(/\D/g, "");
     });
-
+    wireRelationship(card);
     const deleteBtn = card.querySelector(".delete-referral");
     deleteBtn?.addEventListener("click", (e) => {
       e.preventDefault();
@@ -628,7 +662,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const personalSummary = document.getElementById("personal-summary");
     const referralTitle   = document.getElementById("referral-summary-title");
     const path            = currentPath;
-
+    const relationship = card.querySelector('input[name="referral_relationship[]"]')?.value || "";
     summaryList.innerHTML = "";
     personalSummary.innerHTML = "";
 
