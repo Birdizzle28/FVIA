@@ -359,40 +359,53 @@ document.addEventListener("DOMContentLoaded", () => {
   function animateSwap(oldIdx, newIdx, direction /* 'next' | 'prev' */) {
     if (refAnimating || oldIdx === newIdx) return;
     refAnimating = true;
-
+  
     const oldCard = referralCards[oldIdx];
     const newCard = referralCards[newIdx];
     if (!newCard) { refAnimating = false; return; }
-
-    // Prepare new card
+  
+    // Make sure the incoming card is visible before animating
     setCardVisible(newCard, true);
-
-    // Assign animation directions
+  
     const enterClass = (direction === "next") ? "ref-card--enter-right" : "ref-card--enter-left";
     const exitClass  = (direction === "next") ? "ref-card--exit-left"  : "ref-card--exit-right";
-
-    // Kick off
+  
+    // If user prefers reduced motion, just swap without animating
+    const prefersReduced =
+      window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) {
+      if (oldCard) setCardVisible(oldCard, false);
+      currentReferralIndex = newIdx;
+      updateReferralNav();
+      refAnimating = false;
+      return;
+    }
+  
+    // Kick off animations
     newCard.classList.add(enterClass);
     if (oldCard) oldCard.classList.add(exitClass);
-
+  
+    let cleaned = false;
     const onDone = () => {
-      // Clean up old
-      if (oldCard) {
-        setCardVisible(oldCard, false);
-        oldCard.removeEventListener("animationend", onDone);
-      }
-      // Clean enter class on new
+      if (cleaned) return;
+      cleaned = true;
+  
+      if (oldCard) setCardVisible(oldCard, false);
       newCard.classList.remove(enterClass);
+  
       currentReferralIndex = newIdx;
       updateReferralNav();
       refAnimating = false;
     };
-
-    // When either animation finishes last, we'll clean once (listen on exit if present, else on enter)
+  
+    // Fallback in case animationend doesn't fire (e.g., panel transitions/race)
+    const fallback = setTimeout(onDone, 450); // > 0.35s CSS duration
+  
+    const handler = () => { clearTimeout(fallback); onDone(); };
     if (oldCard) {
-      oldCard.addEventListener("animationend", onDone, { once: true });
+      oldCard.addEventListener("animationend", handler, { once: true });
     } else {
-      newCard.addEventListener("animationend", onDone, { once: true });
+      newCard.addEventListener("animationend", handler, { once: true });
     }
   }
 
@@ -861,7 +874,8 @@ document.addEventListener("DOMContentLoaded", () => {
   
         // If list becomes empty, reflect that and avoid weird nav states
         if (referralCards.length === 0) {
-          referralTitle && (referralTitle.style.display = "none");
+          const referralTitle = document.getElementById("referral-summary-title");
+          if (referralTitle) referralTitle.style.display = "none";
         }
   
         updateReferralVisibility();
