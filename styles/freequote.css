@@ -502,3 +502,14 @@ select:focus {
 #add-referral-btn:hover {
   color: #00cc44 !important;
 }
+.relationship-group select,
+.relationship-group .rel-input {
+  width: 100%;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+.relationship-group .rel-input { 
+  margin-top: 8px; 
+}
