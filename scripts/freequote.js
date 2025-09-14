@@ -662,7 +662,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const personalSummary = document.getElementById("personal-summary");
     const referralTitle   = document.getElementById("referral-summary-title");
     const path            = currentPath;
-    const relationship = card.querySelector('input[name="referral_relationship[]"]')?.value || "";
     summaryList.innerHTML = "";
     personalSummary.innerHTML = "";
 
