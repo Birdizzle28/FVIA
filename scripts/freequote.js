@@ -529,39 +529,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const newIdx = referralCards.length - 1;
 
-    // NEW-SAFETY: if an animation is still running, bail out to a stable, visible state
+    // If an animation is running, just force-show the new card (stabilize)
     if (refAnimating) {
       referralCards.forEach((c,i) => setCardVisible(c, i === newIdx));
       currentReferralIndex = newIdx;
       updateReferralNav();
       refAnimating = false;
-      // ENSURE-VISIBLE
-      setTimeout(() => ensureOneCardVisible(currentReferralIndex), 0);
+      ensureOneCardVisible(currentReferralIndex);
       return;
     }
 
-    // NEW: if we just came back from summary, skip animation for the first add
+    // If we just returned from summary, first add shows directly (no animation)
     if (cameFromSummary) {
       referralCards.forEach((c,i) => setCardVisible(c, i === newIdx));
       currentReferralIndex = newIdx;
       updateReferralNav();
-      cameFromSummary = false; // consume the flag
-      // ENSURE-VISIBLE
-      setTimeout(() => ensureOneCardVisible(currentReferralIndex), 0);
+      cameFromSummary = false;
+      ensureOneCardVisible(currentReferralIndex);
       return;
     }
 
-    if (referralCards.length === 1) {
-      // First card—no animation
-      showInitialCard(0);
-      setTimeout(() => ensureOneCardVisible(0), 0);
-    } else {
-      // Animate from right when adding
-      const oldIdx = currentReferralIndex;
-      animateSwap(oldIdx, newIdx, animateFrom === "left" ? "prev" : "next");
-      // Final safety check after the swap should have completed
-      setTimeout(() => ensureOneCardVisible(newIdx), 520);
-    }
+    // CHANGE: show new card immediately on add (avoid animation race on Chrome/iOS)
+    referralCards.forEach((c,i) => setCardVisible(c, i === newIdx));
+    currentReferralIndex = newIdx;
+    updateReferralNav();
+    ensureOneCardVisible(currentReferralIndex);
   }
 
   // NEW-SAFETY: ignore Add clicks while animating + temp disable the button
