@@ -823,11 +823,31 @@ document.addEventListener("DOMContentLoaded", () => {
     if (editBtn) {
       const index = parseInt(editBtn.dataset.index, 10);
       currentReferralIndex = Number.isFinite(index) ? index : 0;
+    
+      // make the form area visible again
       summaryScreen.style.display = "none";
-      formFields.style.display = "";
+      formFields.style.display = "block";
+    
+      // ensure there's at least one card
       if (referralSlider.children.length === 0) createReferralCard();
+    
+      // RE-APPLY MODE + CLEAN ANIMATION STATE + NAV
+      const rMode = referralModeForPath(currentPath);
+      referralCards.forEach(card => {
+        // wipe any lingering slide classes
+        card.classList.remove(
+          "ref-card--enter-right","ref-card--enter-left",
+          "ref-card--exit-left","ref-card--exit-right"
+        );
+        applyReferralModeToCard(card, rMode);
+      });
+      refAnimating = false;           // <- important, avoid stale "true"
       updateReferralVisibility();
+      updateReferralNav();
+    
+      // show the panel
       forceShow(panelReferral);
+      panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
   
