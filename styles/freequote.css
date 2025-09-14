@@ -469,3 +469,36 @@ select:focus {
 .icon-btn i {
   color: #0066cc;
 }
+/* Trash button inside cards */
+.delete-referral {
+  background: none !important;
+  border: none !important;
+  cursor: pointer !important;
+  font-size: 1.2rem !important;
+  color: #cc0000 !important; /* red */
+  margin-top: 8px !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 4px !important;
+}
+
+.delete-referral:hover {
+  color: #ff3333 !important;
+}
+
+/* Add Referral button */
+#add-referral-btn {
+  background: none !important;
+  border: none !important;
+  cursor: pointer !important;
+  font-size: 1.2rem !important;
+  color: #009933 !important; /* green */
+  font-weight: bold !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+#add-referral-btn:hover {
+  color: #00cc44 !important;
+}
