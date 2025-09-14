@@ -71,6 +71,13 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   };
 
+  // NEW: helper to know if a field is currently "in use" (i.e., its row is shown)
+  const fieldInUse = (el) => {
+    if (!el) return false;
+    const row = getRow(el);
+    return row && row.style.display !== "none";
+  };
+
   function updateReferralNav() {
     const total = referralCards.length;
     refNav.style.display = total > 0 ? "flex" : "none";
@@ -710,7 +717,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   /******************
-   * Summary (unchanged except small guards)
+   * Summary (updated to respect "in use" + geocode gate)
    ******************/
   async function geocodeAddressGoogle(fullAddress) {
     if (!fullAddress) return { zip: "", lat: "", lng: "" };
@@ -735,47 +742,60 @@ document.addEventListener("DOMContentLoaded", () => {
     summaryList.innerHTML = "";
     personalSummary.innerHTML = "";
 
-    // PERSONAL
+    // PERSONAL (only show fields that are in use)
     if (meCheckbox.checked || ["A","C","D","B","E"].includes(path)) {
-      const firstName = document.querySelector('input[name="first-name"]')?.value || "";
-      const lastName  = document.querySelector('input[name="last-name"]')?.value || "";
+      const firstInUse = fieldInUse(p_first);
+      const lastInUse  = fieldInUse(p_last);
+      const ageInUse   = fieldInUse(p_age);
+      const phoneInUse = fieldInUse(p_phone);
+      const emailInUse = fieldInUse(p_email);
+      const addrInUse  = fieldInUse(p_address);
+      const cityInUse  = fieldInUse(p_city);
+      const stateInUse = fieldInUse(p_state);
+      const cdateInUse = fieldInUse(p_cdate);
+
+      const firstName = (firstInUse ? (p_first?.value || "") : "");
+      const lastName  = (lastInUse  ? (p_last?.value  || "") : "");
       const fullName  = `${firstName} ${lastName}`.trim();
 
-      const age     = document.querySelector('input[name="age"]')?.value || "";
-      const phone   = document.querySelector('input[name="phone"]')?.value || "";
-      const email   = document.querySelector('input[name="email"]')?.value || "";
-      const address = document.querySelector('input[name="address"]')?.value || "";
-      const city    = document.querySelector('input[name="city"]')?.value || "";
-      const state   = document.querySelector('select[name="state"]')?.value || "";
+      const age       = (ageInUse   ? (p_age?.value   || "") : "");
+      const phone     = (phoneInUse ? (p_phone?.value || "") : "");
+      const email     = (emailInUse ? (p_email?.value || "") : "");
+      const address   = (addrInUse  ? (p_address?.value || "") : "");
+      const city      = (cityInUse  ? (p_city?.value    || "") : "");
+      const state     = (stateInUse ? (p_state?.value   || "") : "");
+      const cdate     = (cdateInUse ? (p_cdate?.value   || "") : "");
 
-      personalSummary.innerHTML = `
+      let personalHTML = `
         <h3>Your Info
            <button type="button" class="icon-btn" data-action="edit-personal" aria-label="Edit your info">
              <i class="fa-regular fa-pen-to-square"></i>
            </button>
          </h3>
-        <strong>${fullName}</strong><br/>
-        ${age ? `Age: ${age}<br/>` : ""}
-        ${phone ? `Phone: ${phone}<br/>` : ""}
-        ${email ? `Email: ${email}<br/>` : ""}
-        ${
-          (address || city || state)
-            ? `Address: ${
-                address ? `${address}<br/>` : ""
-              }${
-                (city || state)
-                  ? `${city}${city && state ? ", " : ""}${state} <span id="zip-span"></span><br/>`
-                  : ""
-              }`
-            : ""
-        }
-        <hr/>
       `;
 
-      const fullAddress = [address, city && state ? `${city}, ${state}` : (city || state)]
-        .filter(Boolean).join(", ");
+      if (fullName) personalHTML += `<strong>${fullName}</strong><br/>`;
+      if (age)       personalHTML += `Age: ${age}<br/>`;
+      if (phone)     personalHTML += `Phone: ${phone}<br/>`;
+      if (email)     personalHTML += `Email: ${email}<br/>`;
+      if (cdate)     personalHTML += `Best time to contact: ${cdate}<br/>`;
 
-      if (fullAddress) {
+      // Address block only if any of the address fields are in use and have values
+      if ((addrInUse || cityInUse || stateInUse) && (address || city || state)) {
+        personalHTML += `Address: ${address ? `${address}<br/>` : ""}`;
+        if (city || state) {
+          personalHTML += `${city}${city && state ? ", " : ""}${state} <span id="zip-span"></span><br/>`;
+        }
+      }
+
+      // finish section if anything was printed
+      personalHTML += `<hr/>`;
+      personalSummary.innerHTML = personalHTML;
+
+      // Geocode ONLY if the Address input itself is in use and we have something to geocode
+      const fullAddress = [address, (city && state) ? `${city}, ${state}` : (city || state)]
+        .filter(Boolean).join(", ");
+      if (addrInUse && fullAddress) {
         geocodeAddressGoogle(fullAddress).then(({ zip, lat, lng }) => {
           const zipSpan = document.getElementById("zip-span");
           if (zipSpan && zip) zipSpan.textContent = ` ${zip}`;
@@ -789,20 +809,31 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
 
-    // REFERRALS
+    // REFERRALS (only include fields that are in use for each card)
     if (["B","C","D","E"].includes(path)) {
       referralTitle && (referralTitle.style.display = "block");
       referralCards.forEach((card, index) => {
-        const firstName    = card.querySelector('input[name="referral_first_name[]"]')?.value || "";
-        const lastName     = card.querySelector('input[name="referral_last_name[]"]')?.value || "";
-        const age          = card.querySelector('input[name="referral_age[]"]')?.value || "";
-        const phone        = card.querySelector('input[name="referral_phone[]"]')?.value || "";
-        const relationship = card.querySelector('input[name="referral_relationship[]"]')?.value || "";
+        const r_first = card.querySelector('input[name="referral_first_name[]"]');
+        const r_last  = card.querySelector('input[name="referral_last_name[]"]');
+        const r_age   = card.querySelector('input[name="referral_age[]"]');
+        const r_phone = card.querySelector('input[name="referral_phone[]"]');
+        const relGrp  = card.querySelector('.relationship-group');
+        const relInpt = card.querySelector('input[name="referral_relationship[]"]');
+
+        const firstName = fieldInUse(r_first) ? (r_first?.value || "") : "";
+        const lastName  = fieldInUse(r_last)  ? (r_last?.value  || "") : "";
+        const age       = fieldInUse(r_age)   ? (r_age?.value   || "") : "";
+
+        const phoneInUse = fieldInUse(r_phone);
+        const phone      = phoneInUse ? (r_phone?.value || "") : "";
+
+        const relInUse   = relGrp && relGrp.style.display !== "none";
+        const relationship = relInUse ? (relInpt?.value || "") : "";
 
         const item = document.createElement("div");
         item.classList.add("summary-item");
         item.innerHTML = `
-          <strong>${firstName} ${lastName}</strong><br/>
+          <strong>${[firstName, lastName].filter(Boolean).join(" ")}</strong><br/>
           ${age ? `Age: ${age} <br/>` : ""}
           ${phone ? `Phone: ${phone} <br/>` : ""}
           ${relationship ? `Relationship: ${relationship} <br/>` : ""}
