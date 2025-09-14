@@ -50,6 +50,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const originalRequired = new WeakMap();
   let refAnimating = false; // guard for rapid clicks
 
+  // NEW: track re-entry from summary to avoid stale animation state
+  let cameFromSummary = false;
+
   // small helpers
   const getRow = (inputEl) => inputEl?.closest("label, div") || inputEl;
   const rememberRequired = (inputEl) => {
@@ -78,26 +81,28 @@ document.addEventListener("DOMContentLoaded", () => {
     if (refPrev) refPrev.disabled = currentReferralIndex <= 0;
     if (refNext) refNext.disabled = currentReferralIndex >= total - 1;
   }
+
   function wireRelationship(card) {
     const relSelect = card.querySelector('.relationship-group .rel-select');
     const relInput  = card.querySelector('input[name="referral_relationship[]"]');
     if (!relSelect || !relInput) return;
-  
+
     const sync = () => {
       const isOther = relSelect.value === 'Other';
       // show/hide the text input; manage required flags
       relInput.style.display = isOther ? '' : 'none';
       relInput.required = isOther;
       relSelect.required = !isOther;
-  
+
       // keep the canonical named input up-to-date for submit
       if (!isOther) relInput.value = relSelect.value || '';
     };
-  
+
     relSelect.addEventListener('change', sync);
     // initialize on create
     sync();
   }
+
   // Flatpickr
   if (window.flatpickr) {
     flatpickr("#contact-date", {
@@ -296,20 +301,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const r_last  = card.querySelector('input[name="referral_last_name[]"]');
     const r_age   = card.querySelector('input[name="referral_age[]"]');
     const r_phone = card.querySelector('input[name="referral_phone[]"]');
-  
+
     const relGroup  = card.querySelector('.relationship-group');
     const relSelect = card.querySelector('.relationship-group .rel-select');
     const relInput  = card.querySelector('input[name="referral_relationship[]"]');
-  
+
     const showSet = mode === "full"
       ? {first:1,last:1,age:1,phone:1,rel:1}
       : {first:1,last:1,age:1}; // liteAge = no phone, no relationship
-  
+
     setVisibleAndRequired(r_first, !!showSet.first);
     setVisibleAndRequired(r_last,  !!showSet.last);
     setVisibleAndRequired(r_age,   !!showSet.age);
     setVisibleAndRequired(r_phone, !!showSet.phone);
-  
+
     if (relGroup) relGroup.style.display = showSet.rel ? "" : "none";
     if (!showSet.rel) {
       if (relSelect) relSelect.required = false;
@@ -356,20 +361,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // NEW: hard reset of referral panel when re-entering from summary
+  function resetReferralPanelState() {
+    currentReferralIndex = Math.max(0, Math.min(currentReferralIndex, referralCards.length - 1));
+    referralCards.forEach(c => {
+      if (!c) return;
+      c.classList.remove(
+        "ref-card--enter-right","ref-card--enter-left",
+        "ref-card--exit-left","ref-card--exit-right"
+      );
+    });
+    referralCards.forEach((c,i) => setCardVisible(c, i === currentReferralIndex));
+    refAnimating = false;
+    updateReferralNav();
+  }
+
   function animateSwap(oldIdx, newIdx, direction /* 'next' | 'prev' */) {
     if (refAnimating || oldIdx === newIdx) return;
     refAnimating = true;
-  
+
     const oldCard = referralCards[oldIdx];
     const newCard = referralCards[newIdx];
     if (!newCard) { refAnimating = false; return; }
-  
+
     // Make sure the incoming card is visible before animating
     setCardVisible(newCard, true);
-  
+
     const enterClass = (direction === "next") ? "ref-card--enter-right" : "ref-card--enter-left";
     const exitClass  = (direction === "next") ? "ref-card--exit-left"  : "ref-card--exit-right";
-  
+
     // If user prefers reduced motion, just swap without animating
     const prefersReduced =
       window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -380,27 +400,27 @@ document.addEventListener("DOMContentLoaded", () => {
       refAnimating = false;
       return;
     }
-  
+
     // Kick off animations
     newCard.classList.add(enterClass);
     if (oldCard) oldCard.classList.add(exitClass);
-  
+
     let cleaned = false;
     const onDone = () => {
       if (cleaned) return;
       cleaned = true;
-  
+
       if (oldCard) setCardVisible(oldCard, false);
       newCard.classList.remove(enterClass);
-  
+
       currentReferralIndex = newIdx;
       updateReferralNav();
       refAnimating = false;
     };
-  
+
     // Fallback in case animationend doesn't fire (e.g., panel transitions/race)
     const fallback = setTimeout(onDone, 450); // > 0.35s CSS duration
-  
+
     const handler = () => { clearTimeout(fallback); onDone(); };
     if (oldCard) {
       oldCard.addEventListener("animationend", handler, { once: true });
@@ -443,14 +463,14 @@ document.addEventListener("DOMContentLoaded", () => {
       e.preventDefault();
       e.stopPropagation();
       if (refAnimating) return;
-    
+
       const idx = referralCards.indexOf(card);
       if (idx === -1) return;
-    
+
       // Remove the card from DOM + array
       card.remove();
       referralCards.splice(idx, 1);
-    
+
       // If nothing left, auto-create a fresh blank card so the panel isn't "empty"
       if (referralCards.length === 0) {
         createReferralCard({ animateFrom: "right" });
@@ -458,7 +478,7 @@ document.addEventListener("DOMContentLoaded", () => {
         updateReferralVisibility();
         return;
       }
-    
+
       // Otherwise, show the neighbor (prefer the next card, else previous)
       const targetIdx = Math.min(idx, referralCards.length - 1);
       currentReferralIndex = targetIdx;
@@ -471,13 +491,23 @@ document.addEventListener("DOMContentLoaded", () => {
     const rMode = referralModeForPath(currentPath);
     if (rMode !== "none") applyReferralModeToCard(card, rMode);
 
+    const newIdx = referralCards.length - 1;
+
+    // NEW: if we just came back from summary, skip animation for the first add
+    if (cameFromSummary) {
+      referralCards.forEach((c,i) => setCardVisible(c, i === newIdx));
+      currentReferralIndex = newIdx;
+      updateReferralNav();
+      cameFromSummary = false; // consume the flag
+      return;
+    }
+
     if (referralCards.length === 1) {
       // First card—no animation
       showInitialCard(0);
     } else {
       // Animate from right when adding
       const oldIdx = currentReferralIndex;
-      const newIdx = referralCards.length - 1;
       animateSwap(oldIdx, newIdx, animateFrom === "left" ? "prev" : "next");
     }
   }
@@ -589,28 +619,28 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
     }
-  
+
     // keep shell visible unless we intentionally go to summary
     formFields.style.display = "block";
     summaryScreen.style.display = "none";
-  
+
     // IMPORTANT: recompute path in case user changed choices
     currentPath = determinePath();
     const rMode = referralModeForPath(currentPath);
-  
+
     if (rMode === "none") {
       // straight to summary (this will hide formFields inside)
       generateSummaryScreen();
       // no showPanel race—summaryScreen is not animated
       return;
     }
-  
+
     // going to referrals
     if (referralSlider && referralSlider.children.length === 0) {
       createReferralCard();
     }
     referralCards.forEach(card => applyReferralModeToCard(card, rMode));
-  
+
     // hard-switch to the referrals panel (avoids both being hidden mid-animation)
     forceShow(panelReferral);
     panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -620,18 +650,18 @@ document.addEventListener("DOMContentLoaded", () => {
     // validate every referral card (not just the visible one)
     for (let i = 0; i < referralCards.length; i++) {
       const card = referralCards[i];
-  
+
       // ensure canonical relationship input mirrors the select when not "Other"
       const relSelect = card.querySelector('.relationship-group .rel-select');
       const relInput  = card.querySelector('input[name="referral_relationship[]"]');
       if (relSelect && relInput && relSelect.value !== 'Other') {
         relInput.value = relSelect.value || '';
       }
-  
+
       // check required inputs/selects in this card
       const inputs = Array.from(card.querySelectorAll('input, select, textarea'))
         .filter(el => !el.disabled && el.required);
-  
+
       const firstInvalid = inputs.find(el => !el.checkValidity());
       if (firstInvalid) {
         // bring the offending card into view and show the message
@@ -642,7 +672,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return; // stop; user needs to fix this card
       }
     }
-  
+
     // all cards valid → proceed
     generateSummaryScreen();
     showPanel(summaryScreen);
@@ -801,14 +831,14 @@ document.addEventListener("DOMContentLoaded", () => {
       // show only panel 2; hide everything else
       formFields.style.display = "block";
       summaryScreen.style.display = "none";
-    
+
       // ensure other panels are hidden
       panelChooser.style.display  = "none";
       panelReferral.style.display = "none";
-    
+
       // re-apply the right subset + labels for current path
       applyPanel2ForPath(currentPath);
-    
+
       // show panel 2 without animation to avoid race conditions
       forceShow(panelPersonal);
       panelPersonal.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -821,8 +851,12 @@ document.addEventListener("DOMContentLoaded", () => {
       if (rMode !== "none" && referralSlider.children.length === 0) createReferralCard();
       currentReferralIndex = Math.min(currentReferralIndex, referralCards.length - 1);
       if (currentReferralIndex < 0) currentReferralIndex = 0;
-      updateReferralVisibility();
       referralCards.forEach(card => applyReferralModeToCard(card, rMode));
+
+      // NEW: mark we came from summary and hard reset panel state
+      cameFromSummary = true;
+      resetReferralPanelState();
+
       forceShow(panelReferral);
       panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
@@ -832,38 +866,32 @@ document.addEventListener("DOMContentLoaded", () => {
   document.getElementById("summary-list").addEventListener("click", (e) => {
     const editBtn = e.target.closest(".edit-referral");
     const delBtn  = e.target.closest(".delete-referral");
-  
+
     if (editBtn) {
       const index = parseInt(editBtn.dataset.index, 10);
       currentReferralIndex = Number.isFinite(index) ? index : 0;
-    
+
       // make the form area visible again
       summaryScreen.style.display = "none";
       formFields.style.display = "block";
-    
+
       // ensure there's at least one card
       if (referralSlider.children.length === 0) createReferralCard();
-    
-      // RE-APPLY MODE + CLEAN ANIMATION STATE + NAV
+
+      // re-apply mode to cards
       const rMode = referralModeForPath(currentPath);
-      referralCards.forEach(card => {
-        // wipe any lingering slide classes
-        card.classList.remove(
-          "ref-card--enter-right","ref-card--enter-left",
-          "ref-card--exit-left","ref-card--exit-right"
-        );
-        applyReferralModeToCard(card, rMode);
-      });
-      refAnimating = false;           // <- important, avoid stale "true"
-      updateReferralVisibility();
-      updateReferralNav();
-    
+      referralCards.forEach(card => applyReferralModeToCard(card, rMode));
+
+      // NEW: mark we came from summary and hard reset panel state
+      cameFromSummary = true;
+      resetReferralPanelState();
+
       // show the panel
       forceShow(panelReferral);
       panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
     }
-  
+
     if (delBtn) {
       const index = parseInt(delBtn.dataset.index, 10);
       if (referralCards[index]) {
@@ -871,13 +899,13 @@ document.addEventListener("DOMContentLoaded", () => {
         referralCards.splice(index, 1);
         currentReferralIndex = Math.min(currentReferralIndex, referralCards.length - 1);
         if (currentReferralIndex < 0) currentReferralIndex = 0;
-  
+
         // If list becomes empty, reflect that and avoid weird nav states
         if (referralCards.length === 0) {
           const referralTitle = document.getElementById("referral-summary-title");
           if (referralTitle) referralTitle.style.display = "none";
         }
-  
+
         updateReferralVisibility();
         generateSummaryScreen();
       }
