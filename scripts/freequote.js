@@ -500,6 +500,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const newIdx = referralCards.length - 1;
 
+    // NEW-SAFETY: if an animation is still running, bail out to a stable, visible state
+    if (refAnimating) {
+      referralCards.forEach((c,i) => setCardVisible(c, i === newIdx));
+      currentReferralIndex = newIdx;
+      updateReferralNav();
+      refAnimating = false;
+      return;
+    }
+
     // NEW: if we just came back from summary, skip animation for the first add
     if (cameFromSummary) {
       referralCards.forEach((c,i) => setCardVisible(c, i === newIdx));
@@ -519,7 +528,11 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
-  addReferralBtn.addEventListener("click", () => createReferralCard({ animateFrom: "right" }));
+  // NEW-SAFETY: ignore Add clicks while animating
+  addReferralBtn.addEventListener("click", () => {
+    if (refAnimating) return;
+    createReferralCard({ animateFrom: "right" });
+  });
 
   /******************
    * Panel 2 + Panel 3 application
