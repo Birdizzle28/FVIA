@@ -491,7 +491,7 @@ select:focus {
   background: none !important;
   border: none !important;
   cursor: pointer !important;
-  font-size: 1.2rem !important;
+  font-size: 1rem !important;
   color: #009933 !important; /* green */
   font-weight: bold !important;
   display: inline-flex !important;
