@@ -696,8 +696,8 @@ document.addEventListener("DOMContentLoaded", () => {
           ${age ? `Age: ${age} <br/>` : ""}
           ${phone ? `Phone: ${phone} <br/>` : ""}
           ${relationship ? `Relationship: ${relationship} <br/>` : ""}
-          <button type="button" class="edit-referral" data-index="${index}">Edit</button>
-          <button type="button" class="delete-referral" data-index="${index}">Delete</button>
+          <button type="button" class="edit-referral icon-btn" data-index="${index}"><i class="fa-regular fa-pen-to-square"></i></button>
+          <button type="button" class="delete-referral" data-index="${index}"><i class="fa-solid fa-trash"></i></button>
           <hr/>
         `;
         summaryList.appendChild(item);
