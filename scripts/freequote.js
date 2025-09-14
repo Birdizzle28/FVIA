@@ -53,6 +53,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // NEW: track re-entry from summary to avoid stale animation state
   let cameFromSummary = false;
 
+  // NEW-SAFETY: debounce for rapid Add clicks
+  let addClickLocked = false;
+
   // small helpers
   const getRow = (inputEl) => inputEl?.closest("label, div") || inputEl;
   const rememberRequired = (inputEl) => {
@@ -77,6 +80,22 @@ document.addEventListener("DOMContentLoaded", () => {
     const row = getRow(el);
     return row && row.style.display !== "none";
   };
+
+  // ENSURE-VISIBLE: guarantees at least one card is visible
+  function ensureOneCardVisible(targetIdx = null) {
+    if (!referralCards.length) return;
+    const idx = targetIdx != null
+      ? Math.max(0, Math.min(targetIdx, referralCards.length - 1))
+      : Math.max(0, Math.min(currentReferralIndex, referralCards.length - 1));
+
+    const anyVisible = referralCards.some(c => c && c.style.display !== "none");
+    if (!anyVisible) {
+      referralCards.forEach((c, i) => setCardVisible(c, i === idx));
+      currentReferralIndex = idx;
+      refAnimating = false;
+      updateReferralNav();
+    }
+  }
 
   function updateReferralNav() {
     const total = referralCards.length;
@@ -408,9 +427,11 @@ document.addEventListener("DOMContentLoaded", () => {
       return;
     }
 
-    // Kick off animations
-    newCard.classList.add(enterClass);
-    if (oldCard) oldCard.classList.add(exitClass);
+    // Kick off animations (in next frame to guarantee start)
+    requestAnimationFrame(() => {
+      newCard.classList.add(enterClass);
+      if (oldCard) oldCard.classList.add(exitClass);
+    });
 
     let cleaned = false;
     const onDone = () => {
@@ -423,10 +444,13 @@ document.addEventListener("DOMContentLoaded", () => {
       currentReferralIndex = newIdx;
       updateReferralNav();
       refAnimating = false;
+
+      // ENSURE-VISIBLE: in case animationend/fallback sequencing hid both
+      setTimeout(() => ensureOneCardVisible(currentReferralIndex), 0);
     };
 
-    // Fallback in case animationend doesn't fire (e.g., panel transitions/race)
-    const fallback = setTimeout(onDone, 450); // > 0.35s CSS duration
+    // Fallback in case animationend doesn't fire
+    const fallback = setTimeout(onDone, 500);
 
     const handler = () => { clearTimeout(fallback); onDone(); };
     if (oldCard) {
@@ -454,6 +478,11 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function createReferralCard({animateFrom = "right"} = {}) {
+    // NEW-SAFETY: soft debounce to avoid back-to-back collisions
+    if (addClickLocked) return;
+    addClickLocked = true;
+    setTimeout(() => { addClickLocked = false; }, 250);
+
     const clone = referralTemplate.content.cloneNode(true);
     const card = clone.querySelector(".referral-card");
 
@@ -506,6 +535,8 @@ document.addEventListener("DOMContentLoaded", () => {
       currentReferralIndex = newIdx;
       updateReferralNav();
       refAnimating = false;
+      // ENSURE-VISIBLE
+      setTimeout(() => ensureOneCardVisible(currentReferralIndex), 0);
       return;
     }
 
@@ -515,22 +546,29 @@ document.addEventListener("DOMContentLoaded", () => {
       currentReferralIndex = newIdx;
       updateReferralNav();
       cameFromSummary = false; // consume the flag
+      // ENSURE-VISIBLE
+      setTimeout(() => ensureOneCardVisible(currentReferralIndex), 0);
       return;
     }
 
     if (referralCards.length === 1) {
       // First card—no animation
       showInitialCard(0);
+      setTimeout(() => ensureOneCardVisible(0), 0);
     } else {
       // Animate from right when adding
       const oldIdx = currentReferralIndex;
       animateSwap(oldIdx, newIdx, animateFrom === "left" ? "prev" : "next");
+      // Final safety check after the swap should have completed
+      setTimeout(() => ensureOneCardVisible(newIdx), 520);
     }
   }
 
-  // NEW-SAFETY: ignore Add clicks while animating
+  // NEW-SAFETY: ignore Add clicks while animating + temp disable the button
   addReferralBtn.addEventListener("click", () => {
     if (refAnimating) return;
+    addReferralBtn.disabled = true;
+    setTimeout(() => { addReferralBtn.disabled = false; }, 260);
     createReferralCard({ animateFrom: "right" });
   });
 
