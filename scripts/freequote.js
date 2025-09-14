@@ -767,7 +767,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const cdate     = (cdateInUse ? (p_cdate?.value   || "") : "");
 
       let personalHTML = `
-        <h3>Your Info
+        <h3>Your Information
            <button type="button" class="icon-btn" data-action="edit-personal" aria-label="Edit your info">
              <i class="fa-regular fa-pen-to-square"></i>
            </button>
@@ -833,11 +833,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const item = document.createElement("div");
         item.classList.add("summary-item");
         item.innerHTML = `
-          <strong>${[firstName, lastName].filter(Boolean).join(" ")}</strong><br/>
+          <strong>${[firstName, lastName].filter(Boolean).join(" ")}</strong><button type="button" class="edit-referral icon-btn" data-index="${index}"><i class="fa-regular fa-pen-to-square"></i></button><br/>
           ${age ? `Age: ${age} <br/>` : ""}
           ${phone ? `Phone: ${phone} <br/>` : ""}
           ${relationship ? `Relationship: ${relationship} <br/>` : ""}
-          <button type="button" class="edit-referral icon-btn" data-index="${index}"><i class="fa-regular fa-pen-to-square"></i></button>
           <hr/>
         `;
         summaryList.appendChild(item);
