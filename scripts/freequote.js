@@ -392,39 +392,30 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     const deleteBtn = card.querySelector(".delete-referral");
-    deleteBtn?.addEventListener("click", () => {
-      // Animate current card out, then remove
+    deleteBtn?.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
       if (refAnimating) return;
+    
       const idx = referralCards.indexOf(card);
       if (idx === -1) return;
-
-      // Choose the card that will become visible next
-      const targetIdx = Math.min(idx, referralCards.length - 2); // previous if last, else stays at same index (which becomes next card)
-      const direction = (targetIdx < idx) ? "prev" : "next";
-
-      // Temporarily set the target card visible so animation can play right after removal
-      const onExitDone = () => {
-        // Remove from DOM & array
-        card.remove();
-        referralCards.splice(idx, 1);
-
-        if (referralCards.length === 0) {
-          currentReferralIndex = 0;
-          updateReferralNav();
-          refAnimating = false;
-          return;
-        }
-
-        const safeTarget = Math.max(0, Math.min(targetIdx, referralCards.length - 1));
-        animateSwap(-1, safeTarget, direction); // -1 = no oldCard; we already animated the exit
-      };
-
-      // Animate this card out now
-      if (!refAnimating) {
-        refAnimating = true;
-        card.classList.add(direction === "next" ? "ref-card--exit-left" : "ref-card--exit-right");
-        card.addEventListener("animationend", onExitDone, { once: true });
+    
+      // Remove the card from DOM + array
+      card.remove();
+      referralCards.splice(idx, 1);
+    
+      // If nothing left, auto-create a fresh blank card so the panel isn't "empty"
+      if (referralCards.length === 0) {
+        createReferralCard({ animateFrom: "right" });
+        currentReferralIndex = 0;
+        updateReferralVisibility();
+        return;
       }
+    
+      // Otherwise, show the neighbor (prefer the next card, else previous)
+      const targetIdx = Math.min(idx, referralCards.length - 1);
+      currentReferralIndex = targetIdx;
+      updateReferralVisibility(); // quick, stable refresh (no complex exit/enter chaining)
     });
 
     referralCards.push(card);
@@ -744,8 +735,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   document.getElementById("summary-list").addEventListener("click", (e) => {
-    if (e.target.classList.contains("edit-referral")) {
-      const index = parseInt(e.target.dataset.index, 10);
+    const editBtn = e.target.closest(".edit-referral");
+    const delBtn  = e.target.closest(".delete-referral");
+  
+    if (editBtn) {
+      const index = parseInt(editBtn.dataset.index, 10);
       currentReferralIndex = Number.isFinite(index) ? index : 0;
       summaryScreen.style.display = "none";
       formFields.style.display = "";
@@ -754,13 +748,20 @@ document.addEventListener("DOMContentLoaded", () => {
       forceShow(panelReferral);
       return;
     }
-    if (e.target.classList.contains("delete-referral")) {
-      const index = parseInt(e.target.dataset.index, 10);
+  
+    if (delBtn) {
+      const index = parseInt(delBtn.dataset.index, 10);
       if (referralCards[index]) {
         referralCards[index].remove();
         referralCards.splice(index, 1);
         currentReferralIndex = Math.min(currentReferralIndex, referralCards.length - 1);
         if (currentReferralIndex < 0) currentReferralIndex = 0;
+  
+        // If list becomes empty, reflect that and avoid weird nav states
+        if (referralCards.length === 0) {
+          referralTitle && (referralTitle.style.display = "none");
+        }
+  
         updateReferralVisibility();
         generateSummaryScreen();
       }
