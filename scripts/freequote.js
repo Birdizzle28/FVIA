@@ -533,6 +533,7 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   nextFromPersonalBtn.addEventListener("click", () => {
+    // validate only visible fields
     const inputs = Array.from(panelPersonal.querySelectorAll("input, select, textarea"))
       .filter(el => el.offsetParent !== null && !el.disabled);
     for (const el of inputs) {
@@ -541,16 +542,31 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
       }
     }
+  
+    // keep shell visible unless we intentionally go to summary
+    formFields.style.display = "block";
+    summaryScreen.style.display = "none";
+  
+    // IMPORTANT: recompute path in case user changed choices
+    currentPath = determinePath();
     const rMode = referralModeForPath(currentPath);
+  
     if (rMode === "none") {
+      // straight to summary (this will hide formFields inside)
       generateSummaryScreen();
-      showPanel(summaryScreen);
-    } else {
-      if (referralSlider && referralSlider.children.length === 0) createReferralCard();
-      Array.from(referralSlider.children).forEach(card => applyReferralModeToCard(card, rMode));
-      showPanel(panelReferral);
-      panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
+      // no showPanel race—summaryScreen is not animated
+      return;
     }
+  
+    // going to referrals
+    if (referralSlider && referralSlider.children.length === 0) {
+      createReferralCard();
+    }
+    referralCards.forEach(card => applyReferralModeToCard(card, rMode));
+  
+    // hard-switch to the referrals panel (avoids both being hidden mid-animation)
+    forceShow(panelReferral);
+    panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
   });
 
   nextFromReferralBtn.addEventListener("click", () => {
@@ -709,11 +725,18 @@ document.addEventListener("DOMContentLoaded", () => {
     const hitReferrals = e.target.closest('[data-action="edit-referrals"], #edit-referrals-btn');
 
     if (hitPersonal) {
-      summaryScreen.style.display = "none";
+      // show only panel 2; hide everything else
       formFields.style.display = "block";
+      summaryScreen.style.display = "none";
+    
+      // ensure other panels are hidden
+      panelChooser.style.display  = "none";
+      panelReferral.style.display = "none";
+    
+      // re-apply the right subset + labels for current path
       applyPanel2ForPath(currentPath);
-      const shell = panelPersonal.querySelector('.hide-in-referral');
-      if (shell) shell.style.display = "";
+    
+      // show panel 2 without animation to avoid race conditions
       forceShow(panelPersonal);
       panelPersonal.scrollIntoView({ behavior: "smooth", block: "start" });
       return;
