@@ -514,3 +514,17 @@ select:focus {
 .relationship-group .rel-input { 
   margin-top: 8px; 
 }
+/* Summary panel (panel 4) — place Back + Submit side-by-side */
+#summary-screen .panel-nav {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 12px !important;
+  flex-wrap: wrap;
+}
+
+#summary-screen .panel-nav button {
+  display: inline-flex !important;
+  margin: 0 !important;
+}
