@@ -655,8 +655,27 @@ document.addEventListener("DOMContentLoaded", () => {
     showPanel(panelPersonal);
   });
 
+  // REPLACE the old [data-back] handler with this:
   document.querySelectorAll('[data-back]').forEach(btn => {
-    btn.addEventListener("click", () => showPanel(panelChooser));
+    btn.addEventListener("click", (e) => {
+      const parent = e.currentTarget.closest('.panel');
+  
+      // make sure the form area is visible (summary hidden)
+      formFields.style.display = "block";
+      summaryScreen.style.display = "none";
+  
+      if (parent === panelPersonal) {
+        // panel 2 -> back to panel 1 (chooser)
+        showPanel(panelChooser);
+      } else if (parent === panelReferral) {
+        // panel 3 -> back to panel 2 (personal)
+        applyPanel2ForPath(currentPath);
+        showPanel(panelPersonal);
+      } else {
+        // fallback
+        showPanel(panelChooser);
+      }
+    });
   });
 
   nextFromPersonalBtn.addEventListener("click", () => {
@@ -990,4 +1009,49 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     }
   });
+  // Add a Back button to the summary (panel 4) and center with Submit
+  (function setupSummaryNav(){
+    const submit = document.getElementById("submit-final");
+    if (!submit) return;
+  
+    // Avoid duplicating the nav if this runs again
+    if (submit.parentElement && submit.parentElement.classList.contains("panel-nav")) return;
+  
+    const nav = document.createElement("div");
+    nav.className = "panel-nav";
+  
+    const backBtn = document.createElement("button");
+    backBtn.type = "button";
+    backBtn.id = "back-from-summary";
+    backBtn.textContent = "Back";
+  
+    // Move existing Submit into the new centered nav row
+    nav.appendChild(backBtn);
+    nav.appendChild(submit);
+  
+    const summary = document.getElementById("summary-screen");
+    summary.appendChild(nav);
+  
+    // Back from summary: go to referrals when they exist, otherwise to personal
+    backBtn.addEventListener("click", () => {
+      formFields.style.display = "block";
+      summaryScreen.style.display = "none";
+  
+      const rMode = referralModeForPath(currentPath);
+      if (rMode === "none") {
+        // No referrals in this path -> back to Panel 2
+        applyPanel2ForPath(currentPath);
+        showPanel(panelPersonal);
+        return;
+      }
+  
+      // Has referrals -> back to Panel 3
+      if (referralSlider.children.length === 0) createReferralCard();
+      referralCards.forEach(card => applyReferralModeToCard(card, rMode));
+      cameFromSummary = true;            // reuse your existing flag
+      resetReferralPanelState();         // reuse your existing hard reset
+      showPanel(panelReferral);
+      panelReferral.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  })();
 });
