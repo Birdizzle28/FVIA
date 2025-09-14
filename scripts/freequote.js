@@ -604,6 +604,33 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   nextFromReferralBtn.addEventListener("click", () => {
+    // validate every referral card (not just the visible one)
+    for (let i = 0; i < referralCards.length; i++) {
+      const card = referralCards[i];
+  
+      // ensure canonical relationship input mirrors the select when not "Other"
+      const relSelect = card.querySelector('.relationship-group .rel-select');
+      const relInput  = card.querySelector('input[name="referral_relationship[]"]');
+      if (relSelect && relInput && relSelect.value !== 'Other') {
+        relInput.value = relSelect.value || '';
+      }
+  
+      // check required inputs/selects in this card
+      const inputs = Array.from(card.querySelectorAll('input, select, textarea'))
+        .filter(el => !el.disabled && el.required);
+  
+      const firstInvalid = inputs.find(el => !el.checkValidity());
+      if (firstInvalid) {
+        // bring the offending card into view and show the message
+        if (i !== currentReferralIndex) {
+          animateSwap(currentReferralIndex, i, i > currentReferralIndex ? 'next' : 'prev');
+        }
+        firstInvalid.reportValidity();
+        return; // stop; user needs to fix this card
+      }
+    }
+  
+    // all cards valid → proceed
     generateSummaryScreen();
     showPanel(summaryScreen);
   });
