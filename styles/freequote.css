@@ -497,6 +497,7 @@ select:focus {
   display: inline-flex !important;
   align-items: center !important;
   gap: 6px !important;
+  padding: .2em !important;
 }
 
 #add-referral-btn:hover {
