@@ -298,7 +298,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function togglePersonalMode(mode) { // 'full' | 'liteContact'
     const showSet = mode === "full"
-      ? {first:1,last:1,age:1,phone:1,email:1,address:1,city:1,state:1,cdate:1}
+      ? {first:1,last:1,age:1,phone:1,email:1,address:1,city:1,state:1,}
       : {first:1,last:1,phone:1};
     setVisibleAndRequired(p_first,   !!showSet.first);
     setVisibleAndRequired(p_last,    !!showSet.last);
@@ -308,7 +308,7 @@ document.addEventListener("DOMContentLoaded", () => {
     setVisibleAndRequired(p_address, !!showSet.address);
     setVisibleAndRequired(p_city,    !!showSet.city);
     setVisibleAndRequired(p_state,   !!showSet.state);
-    setVisibleAndRequired(p_cdate,   !!showSet.cdate);
+    setVisibleAndRequired(p_cdate,   false);
   }
 
   // REFERRAL fields
