@@ -65,12 +65,23 @@ document.addEventListener("DOMContentLoaded", () => {
   };
   const setVisibleAndRequired = (inputEl, show) => {
     if (!inputEl) return;
+  
     const row = getRow(inputEl);
     row.style.display = show ? "" : "none";
+  
+    // If this control has a flatpickr alt input, keep it in sync
+    const alt = inputEl._flatpickr && inputEl._flatpickr.altInput
+      ? inputEl._flatpickr.altInput
+      : null;
+  
     if (show) {
-      if (originalRequired.get(inputEl)) inputEl.setAttribute("required", "required");
+      const shouldBeRequired = !!originalRequired.get(inputEl);
+      if (shouldBeRequired) inputEl.setAttribute("required", "required");
+      else inputEl.removeAttribute("required");
+      if (alt) alt.required = shouldBeRequired;
     } else {
       inputEl.removeAttribute("required");
+      if (alt) alt.required = false;
     }
   };
 
@@ -137,6 +148,11 @@ document.addEventListener("DOMContentLoaded", () => {
       altFormat: "F j, Y",
       allowInput: true
     });
+    const cdateEl = document.querySelector("#contact-date");
+    if (cdateEl && cdateEl._flatpickr && cdateEl._flatpickr.altInput) {
+      // Make sure the alt input mirrors whatever the real input currently requires
+      cdateEl._flatpickr.altInput.required = cdateEl.required;
+    }
   }
 
   /******************
