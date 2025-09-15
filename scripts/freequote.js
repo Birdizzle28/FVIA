@@ -758,11 +758,257 @@ document.addEventListener("DOMContentLoaded", () => {
   ageInputMain?.addEventListener("input", () => {
     ageInputMain.value = ageInputMain.value.replace(/\D/g, "");
   });
-
-  quoteForm.addEventListener("submit", (e) => {
+  function buildPayload() {
+    // pull product & path
+    const product = productTypeInput?.value || "life";
+    const leadType = leadTypeInput?.value || "Other";
+    const contactPref = contactPreference?.value || "You";
+  
+    // personal (only include if field shown)
+    const personal = {};
+    const addIf = (key, el) => {
+      if (el && el.closest("label,div")?.style.display !== "none" && el.value?.trim()) {
+        personal[key] = el.value.trim();
+      }
+    };
+    addIf("first_name", p_first);
+    addIf("last_name",  p_last);
+    addIf("age",        p_age);
+    addIf("phone",      p_phone);
+    addIf("email",      p_email);
+    addIf("address",    p_address);
+    addIf("city",       p_city);
+    addIf("state",      p_state);
+  
+    // hidden geocode fields (only if present)
+    const zip = document.getElementById("zip")?.value || "";
+    const lat = document.getElementById("lat")?.value || "";
+    const lng = document.getElementById("lng")?.value || "";
+    if (zip) personal.zip = zip;
+    if (lat) personal.lat = lat;
+    if (lng) personal.lng = lng;
+  
+    // referrals (respect visibility on each card)
+    const referrals = referralCards.map(card => {
+      const pick = sel => card.querySelector(sel);
+      const inUse = el => el && (el.closest("label,div")?.style.display !== "none");
+      const r = {};
+      const f = pick('input[name="referral_first_name[]"]');
+      const l = pick('input[name="referral_last_name[]"]');
+      const a = pick('input[name="referral_age[]"]');
+      const ph= pick('input[name="referral_phone[]"]');
+      const relIn = pick('input[name="referral_relationship[]"]');
+      if (inUse(f)  && f.value.trim())  r.first_name   = f.value.trim();
+      if (inUse(l)  && l.value.trim())  r.last_name    = l.value.trim();
+      if (inUse(a)  && a.value.trim())  r.age          = a.value.trim();
+      if (inUse(ph) && ph.value.trim()) r.phone        = ph.value.trim();
+      // relationship group uses container display
+      const relGroup = card.querySelector('.relationship-group');
+      if (relGroup && relGroup.style.display !== "none" && relIn?.value.trim()) {
+        r.relationship = relIn.value.trim();
+      }
+      return r;
+    }).filter(obj => Object.keys(obj).length > 0);
+  
+    return {
+      product_type: product,
+      lead_type: leadType,
+      path: currentPath,
+      contact_preference: contactPref,
+      personal,
+      referrals
+    };
+  }
+  
+  // Wire to your backend (Supabase via Netlify function placeholder)
+  async function submitLead(payload) {
+    const res = await fetch("/.netlify/functions/submit-lead", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      let msg = "Network error";
+      try { const j = await res.json(); msg = j?.error || msg; } catch {}
+      const err = new Error(msg);
+      err.hard = res.status === 400 || res.status === 422; // treat 4xx validation as hard failure
+      throw err;
+    }
+    // Expect { id: "...", reference?: "..." }
+    const data = await res.json();
+    return { id: data.id, reference: data.reference || data.id };
+  }
+  
+  function showResultScreenSuccess({ reference, product, contactPref, refCount }) {
+    const resTitle = document.getElementById("result-title");
+    const resBody  = document.getElementById("result-body");
+    const actions  = document.getElementById("result-actions");
+  
+    resTitle.textContent = "Thanks! Your request was submitted.";
+    const who = (refCount > 0 && contactPref === "Referral")
+      ? "We’ll reach out to your referral(s) directly."
+      : "We’ll contact you first.";
+    resBody.innerHTML =
+      `Product: <strong>${product === "legalshield" ? "Legal/Identity Protection" : "Life Insurance"}</strong><br>` +
+      (refCount ? `Referrals submitted: <strong>${refCount}</strong><br>` : "") +
+      `${who}<br>` +
+      (reference ? `Confirmation #: <strong id="conf-code" style="cursor:pointer" title="Click to copy">${reference}</strong>` : "");
+  
+    // actions
+    actions.innerHTML = "";
+    const btnAgain = document.createElement("button");
+    btnAgain.type = "button";
+    btnAgain.textContent = "Start another quote";
+    const btnView = document.createElement("button");
+    btnView.type = "button";
+    btnView.textContent = "View summary";
+    actions.appendChild(btnAgain);
+    actions.appendChild(btnView);
+  
+    // handlers
+    btnAgain.addEventListener("click", () => {
+      // reset form + UI back to panel 1
+      quoteForm.reset();
+      referralCards.splice(0, referralCards.length);
+      referralSlider.innerHTML = "";
+      currentReferralIndex = 0;
+      updateChooserUI();
+      updateNextButtonState();
+      showPanel(panelChooser);
+      document.getElementById("result-screen").style.display = "none";
+      document.getElementById("summary-screen").style.display = "none";
+      formFields.style.display = "block";
+    });
+    btnView.addEventListener("click", () => {
+      document.getElementById("result-screen").style.display = "none";
+      formFields.style.display = "none";
+      document.getElementById("summary-screen").style.display = "block";
+    });
+  
+    // copy confirmation
+    const conf = document.getElementById("conf-code");
+    conf?.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(reference); } catch {}
+    });
+  
+    // show
+    formFields.style.display = "none";
+    document.getElementById("summary-screen").style.display = "none";
+    document.getElementById("result-screen").style.display = "block";
+  }
+  
+  function showResultScreenSoftFail(message) {
+    const resTitle = document.getElementById("result-title");
+    const resBody  = document.getElementById("result-body");
+    const actions  = document.getElementById("result-actions");
+  
+    resTitle.textContent = "Hmm, that didn’t go through.";
+    resBody.textContent  = message || "We couldn’t submit your request right now. Your information is still on this page.";
+    actions.innerHTML = "";
+  
+    const btnRetry = document.createElement("button");
+    btnRetry.type = "button";
+    btnRetry.textContent = "Try again";
+    const btnDownload = document.createElement("button");
+    btnDownload.type = "button";
+    btnDownload.textContent = "Download summary";
+    actions.appendChild(btnRetry);
+    actions.appendChild(btnDownload);
+  
+    btnRetry.addEventListener("click", () => {
+      document.getElementById("result-screen").style.display = "none";
+      // go back to summary so they can hit submit again
+      formFields.style.display = "none";
+      document.getElementById("summary-screen").style.display = "block";
+    });
+    btnDownload.addEventListener("click", () => window.print());
+  
+    formFields.style.display = "none";
+    document.getElementById("summary-screen").style.display = "none";
+    document.getElementById("result-screen").style.display = "block";
+  }
+  
+  function showResultScreenHardFail(message) {
+    const resTitle = document.getElementById("result-title");
+    const resBody  = document.getElementById("result-body");
+    const actions  = document.getElementById("result-actions");
+  
+    resTitle.textContent = "Please fix a few things and try again.";
+    resBody.textContent  = message || "There were validation issues on the server.";
+    actions.innerHTML = "";
+  
+    const btnEdit = document.createElement("button");
+    btnEdit.type = "button";
+    btnEdit.textContent = "Go back and edit";
+    const btnCancel = document.createElement("button");
+    btnCancel.type = "button";
+    btnCancel.textContent = "Cancel";
+    actions.appendChild(btnEdit);
+    actions.appendChild(btnCancel);
+  
+    btnEdit.addEventListener("click", () => {
+      // return to the right panel (if referrals exist, go there; else personal)
+      document.getElementById("result-screen").style.display = "none";
+      if (referralCards.length) {
+        forceShow(panelReferral);
+      } else {
+        forceShow(panelPersonal);
+      }
+    });
+    btnCancel.addEventListener("click", () => {
+      document.getElementById("result-screen").style.display = "none";
+      formFields.style.display = "none";
+      document.getElementById("summary-screen").style.display = "block";
+    });
+  
+    formFields.style.display = "none";
+    document.getElementById("summary-screen").style.display = "none";
+    document.getElementById("result-screen").style.display = "block";
+  }
+  
+  // Print link on result screen
+  document.addEventListener("click", (e) => {
+    const a = e.target.closest("#print-summary-link");
+    if (a) {
+      e.preventDefault();
+      window.print();
+    }
+  });
+  
+  quoteForm.addEventListener("submit", async (e) => {
     e.preventDefault();
+  
+    // re-validate summary state (form was already validated when reaching summary)
     if (!quoteForm.reportValidity()) return;
-    generateSummaryScreen();
+  
+    const submitBtn = document.getElementById("submit-final");
+    const prev = submitBtn.textContent;
+    submitBtn.disabled = true;
+    submitBtn.textContent = "Submitting…";
+  
+    try {
+      const payload = buildPayload();
+      const result  = await submitLead(payload);
+      const product = productTypeInput?.value || "life";
+      const contactPref = contactPreference?.value || "You";
+      const refCount = (payload.referrals || []).length;
+  
+      showResultScreenSuccess({
+        reference: result.reference,
+        product,
+        contactPref,
+        refCount
+      });
+    } catch (err) {
+      if (err.hard) {
+        showResultScreenHardFail(err.message);
+      } else {
+        showResultScreenSoftFail(err.message);
+      }
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = prev;
+    }
   });
 
   updateChooserUI();
