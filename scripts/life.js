@@ -222,52 +222,45 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
-  function buildSMSLink(numDigits) {
-    if (!numDigits || numDigits.length !== 10) return null;
-    return `sms:+1${numDigits}?&body=YES`;
-  }
-
-  function showSuccess(id, finalPhoneDigits) {
-    const smsLink = buildSMSLink(finalPhoneDigits);
-
+  function showSuccess(id) {
+    const call = (document.getElementById('call_timing')?.value || 'now');
+    const humanCall =
+      call === 'now' ? 'We’ll call you in the next few minutes.' :
+      call === '15m' ? 'We’ll call you in about 15 minutes.' :
+      'We’ll reach out to schedule a time.';
+  
     resTitle.textContent = "Thanks! Your request was submitted.";
     resBody.innerHTML = `
       Product: <strong>Life Insurance</strong><br>
-      ${smsLink ? `Confirm your number: <a href="${smsLink}">Text YES</a><br>` : ""}
+      ${humanCall}<br>
       Confirmation #: <strong id="conf-code" style="cursor:pointer" title="Click to copy">${id || '—'}</strong>
     `;
-
+  
     resActions.innerHTML = "";
-
-    // Book a call (optional)
-    if (schedulerAvailable()) {
+  
+    // Optional: show a “Book a Call” button later when you enable a scheduler
+    if (typeof schedulerAvailable === 'function' && schedulerAvailable()) {
       const btnBook = document.createElement('button');
       btnBook.type = 'button';
       btnBook.textContent = 'Book a Call';
       btnBook.addEventListener('click', () => {
-        // optional event for future automations
         window.dispatchEvent(new CustomEvent('fvScheduleRequested', { detail: { product: 'life' } }));
         openScheduler();
       });
       resActions.appendChild(btnBook);
     }
-
-    // Start another
+  
     const btnAgain = document.createElement('button');
     btnAgain.type = 'button';
     btnAgain.textContent = 'Start another quote';
     btnAgain.addEventListener('click', () => location.reload());
     resActions.appendChild(btnAgain);
-
-    // Enable referrals UI
+  
     refWrap.style.display = 'block';
-
-    // copy confirmation
+  
     const conf = document.getElementById('conf-code');
-    conf?.addEventListener('click', async () => {
-      try { await navigator.clipboard.writeText(id); } catch {}
-    });
-
+    conf?.addEventListener('click', async () => { try { await navigator.clipboard.writeText(id); } catch {} });
+  
     hide(panelShort); hide(panelQual); show(resultScr);
   }
 
