@@ -44,7 +44,18 @@ document.addEventListener('DOMContentLoaded', () => {
       tcpa.checked;
     btnNext.disabled = !ok;
   }
-
+  // after: const callTiming = document.getElementById('call_timing');
+  if (!schedulerAvailable()) {
+    const opt = callTiming.querySelector('option[value="book"]');
+    if (opt) opt.remove();
+  }
+  function schedulerAvailable(){
+    return !!(window.FVG_SCHEDULER_URL || window.FVG_SCHEDULER_OPEN);
+  }
+  function openScheduler(){
+    if (window.FVG_SCHEDULER_OPEN) return window.FVG_SCHEDULER_OPEN();
+    if (window.FVG_SCHEDULER_URL)  return window.open(window.FVG_SCHEDULER_URL,'_blank');
+  }
   [inpFirst, inpLast, inpPhone, inpEmail, inpZip, tcpa].forEach(el => {
     el.addEventListener('input', enableNextCheck);
     el.addEventListener('change', enableNextCheck);
@@ -79,7 +90,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function show(el) { el.style.display = 'block'; }
   function hide(el) { el.style.display = 'none'; }
-
+  
   btnsBack.forEach(b => b.addEventListener('click', () => {
     hide(panelQual);
     show(panelShort);
@@ -229,11 +240,15 @@ document.addEventListener('DOMContentLoaded', () => {
     resActions.innerHTML = "";
 
     // Book a call (optional)
-    if (window.FVG_CALENDLY_URL) {
+    if (schedulerAvailable()) {
       const btnBook = document.createElement('button');
       btnBook.type = 'button';
       btnBook.textContent = 'Book a Call';
-      btnBook.addEventListener('click', () => window.open(window.FVG_CALENDLY_URL, '_blank'));
+      btnBook.addEventListener('click', () => {
+        // optional event for future automations
+        window.dispatchEvent(new CustomEvent('fvScheduleRequested', { detail: { product: 'life' } }));
+        openScheduler();
+      });
       resActions.appendChild(btnBook);
     }
 
