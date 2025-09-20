@@ -11,25 +11,25 @@
   <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
-  <!-- (Optional) if your header uses this -->
+  <!-- (Optional) If your header uses general.js behaviors -->
   <script type="module" src="scripts/general.js"></script>
 
   <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- FV Group config (REQUIRED: replace with your real values) -->
+  <!-- FV Group Supabase init (REQUIRED: replace with your real values) -->
   <script>
     // 🔧 TODO: paste your real values
-    window.FVG_SUPABASE_URL  = "https://YOUR-PROJECT.supabase.co";
-    window.FVG_SUPABASE_ANON = "YOUR-PUBLIC-ANON-KEY";
+    window.FVG_SUPABASE_URL  = "https://ddlbgkolnayqrxslzsxn.supabase.co";
+    window.FVG_SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho";
 
-    // A fixed UUID for “Website Lead” submitter (generate once in SQL: select gen_random_uuid();)
+    // A fixed UUID for “Website Lead” submitter (generate once in SQL: `select gen_random_uuid();`)
     window.FVG_WEBSITE_SUBMITTER_ID   = "00000000-0000-0000-0000-000000000000";
     window.FVG_WEBSITE_SUBMITTER_NAME = "Website Lead";
 
-    // Scheduler placeholders (leave blank for now; we’ll wire later)
-    window.FVG_SCHEDULER_URL  = "";     // e.g., "https://calendly.com/fvg/intro"
-    window.FVG_SCHEDULER_OPEN = null;   // or a function to open your own modal
+    // (Optional) your Calendly link for TY/qualify step
+    window.FVG_SCHEDULER_URL  = "";    // e.g., "https://calendly.com/fvg/intro"
+    window.FVG_SCHEDULER_OPEN = null;  // or a function to open your own modal/widget
   </script>
 
   <!-- Page script -->
@@ -38,7 +38,7 @@
   <title>Life Insurance | Family Values Group</title>
 </head>
 <body id="indexbody">
-  <!-- Header (kept consistent with your site) -->
+  <!-- Header (kept consistent with your site’s pattern) -->
   <header class="index-grid-header">
     <a href="index.html"><img id="headerlogo" src="Pics/img6.png" alt="Family Values Group" /></a>
     <p><strong>Family Values Group</strong></p>
@@ -126,7 +126,7 @@
             <select id="call_timing" required>
               <option value="now">Right now</option>
               <option value="15m">In ~15 minutes</option>
-              <option value="book">Pick a time</option> <!-- stays visible now -->
+              <option value="book">Book a time</option>
             </select>
           </label>
 
@@ -153,19 +153,13 @@
 
           <div id="result-actions" class="panel-nav" style="margin-top:.75rem;"></div>
 
-          <!-- Referrals -->
+          <!-- Optional: simple referrals mini-form -->
           <div id="referrals" style="margin-top:1rem; display:none;">
             <h4>Refer a friend/family (optional)</h4>
             <div id="ref-list"></div>
-            <div class="panel-nav" style="gap:.5rem; margin-top:.5rem;">
-              <button type="button" id="ref-add" class="icon-btn" title="Add another">
-                <i class="fa-solid fa-circle-plus"></i> Add another
-              </button>
-              <button type="button" id="ref-submit" class="icon-btn" title="Submit referrals">
-                <i class="fa-solid fa-paper-plane"></i> Submit referrals
-              </button>
-            </div>
-            <p id="ref-msg" class="small" style="margin-top:.35rem;"></p>
+            <button type="button" id="ref-add" class="icon-btn" title="Add another referral">
+              <i class="fa-solid fa-circle-plus"></i> Add another
+            </button>
           </div>
 
           <div class="tiny-links" style="text-align:center; margin-top:.75rem; font-size:.9em;">
@@ -177,7 +171,7 @@
     </section>
   </main>
 
-  <!-- Footer -->
+  <!-- Footer (kept consistent) -->
   <footer class="index-grid-footer">
     <img id="footerlogo" src="Pics/img6.png" alt="" />
     <hr class="footerhr" />
