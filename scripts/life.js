@@ -28,6 +28,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const refWrap     = document.getElementById('referrals');
   const refList     = document.getElementById('ref-list');
   const refAddBtn   = document.getElementById('ref-add');
+  const refSubmit   = document.getElementById('ref-submit');
+  const refMsg      = document.getElementById('ref-msg');
 
   // ===== Helpers
   const digitsOnly = (s) => (s || '').replace(/\D/g, '');
@@ -44,18 +46,7 @@ document.addEventListener('DOMContentLoaded', () => {
       tcpa.checked;
     btnNext.disabled = !ok;
   }
-  // after: const callTiming = document.getElementById('call_timing');
-  if (!schedulerAvailable()) {
-    const opt = callTiming.querySelector('option[value="book"]');
-    if (opt) opt.remove();
-  }
-  function schedulerAvailable(){
-    return !!(window.FVG_SCHEDULER_URL || window.FVG_SCHEDULER_OPEN);
-  }
-  function openScheduler(){
-    if (window.FVG_SCHEDULER_OPEN) return window.FVG_SCHEDULER_OPEN();
-    if (window.FVG_SCHEDULER_URL)  return window.open(window.FVG_SCHEDULER_URL,'_blank');
-  }
+
   [inpFirst, inpLast, inpPhone, inpEmail, inpZip, tcpa].forEach(el => {
     el.addEventListener('input', enableNextCheck);
     el.addEventListener('change', enableNextCheck);
@@ -90,7 +81,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function show(el) { el.style.display = 'block'; }
   function hide(el) { el.style.display = 'none'; }
-  
+
   btnsBack.forEach(b => b.addEventListener('click', () => {
     hide(panelQual);
     show(panelShort);
@@ -172,6 +163,17 @@ document.addEventListener('DOMContentLoaded', () => {
     return data?.id;
   }
 
+  async function supabaseInsertMany(rows) {
+    const client = supabase.createClient(window.FVG_SUPABASE_URL, window.FVG_SUPABASE_ANON);
+    const { data, error } = await client.from('leads').insert(rows).select('id');
+    if (error) {
+      const e = new Error(error.message || 'Insert failed');
+      e.hard = true;
+      throw e;
+    }
+    return data?.map(r => r.id) || [];
+  }
+
   function buildNotes({ call, smoker, utmText, referralsCount }) {
     const parts = [];
     if (utmText) parts.push(utmText);
@@ -183,20 +185,12 @@ document.addEventListener('DOMContentLoaded', () => {
   function buildRow() {
     const phoneDigits = digitsOnly(inpPhone.value);
     const confirmDigits = digitsOnly(confirmPhone.value || '');
-    // guard if user changed confirm to different valid num; prefer confirm
     const finalPhone = (confirmDigits.length === 10) ? confirmDigits : phoneDigits;
 
     const { text: utmText } = utmBundle();
 
-    // referrals mini
-    const referralsCount = Array.from(refList.querySelectorAll('.ref-fn'))
-      .map((_, i) => {
-        const fn = refList.querySelectorAll('.ref-fn')[i]?.value?.trim();
-        const ln = refList.querySelectorAll('.ref-ln')[i]?.value?.trim();
-        const ph = digitsOnly(refList.querySelectorAll('.ref-ph')[i]?.value || '');
-        return (fn || ln || ph) ? 1 : 0;
-      })
-      .reduce((a,b) => a+b, 0);
+    // NOTE: At primary submit time, referrals list is empty (count = 0). Referrals are submitted later.
+    const referralsCount = 0;
 
     const call = callTiming.value || 'now';
     const smoker = selectedSmoker(); // 'yes'|'no'
@@ -204,7 +198,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return {
       first_name: inpFirst.value.trim(),
       last_name:  inpLast.value.trim(),
-      age:        null,                  // not used on life short form
+      age:        null,
       city:       null,
       zip:        inpZip.value.trim(),
       lead_type:  'Web',
@@ -222,24 +216,31 @@ document.addEventListener('DOMContentLoaded', () => {
     };
   }
 
+  function schedulerAvailable(){
+    return !!(window.FVG_SCHEDULER_URL || window.FVG_SCHEDULER_OPEN);
+  }
+  function openScheduler(){
+    if (window.FVG_SCHEDULER_OPEN) return window.FVG_SCHEDULER_OPEN();
+    if (window.FVG_SCHEDULER_URL)  return window.open(window.FVG_SCHEDULER_URL,'_blank');
+  }
+
   function showSuccess(id) {
     const call = (document.getElementById('call_timing')?.value || 'now');
     const humanCall =
       call === 'now' ? 'We’ll call you in the next few minutes.' :
       call === '15m' ? 'We’ll call you in about 15 minutes.' :
       'We’ll reach out to schedule a time.';
-  
+
     resTitle.textContent = "Thanks! Your request was submitted.";
     resBody.innerHTML = `
       Product: <strong>Life Insurance</strong><br>
       ${humanCall}<br>
       Confirmation #: <strong id="conf-code" style="cursor:pointer" title="Click to copy">${id || '—'}</strong>
     `;
-  
+
     resActions.innerHTML = "";
-  
-    // Optional: show a “Book a Call” button later when you enable a scheduler
-    if (typeof schedulerAvailable === 'function' && schedulerAvailable()) {
+
+    if (schedulerAvailable()) {
       const btnBook = document.createElement('button');
       btnBook.type = 'button';
       btnBook.textContent = 'Book a Call';
@@ -249,19 +250,23 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       resActions.appendChild(btnBook);
     }
-  
+
     const btnAgain = document.createElement('button');
     btnAgain.type = 'button';
     btnAgain.textContent = 'Start another quote';
     btnAgain.addEventListener('click', () => location.reload());
     resActions.appendChild(btnAgain);
-  
+
     refWrap.style.display = 'block';
-  
+
     const conf = document.getElementById('conf-code');
     conf?.addEventListener('click', async () => { try { await navigator.clipboard.writeText(id); } catch {} });
-  
+
     hide(panelShort); hide(panelQual); show(resultScr);
+
+    // stash parent lead id for referrals
+    form.dataset.parentLeadId = id || '';
+    form.dataset.referrerName = `${inpFirst.value.trim()} ${inpLast.value.trim()}`.trim();
   }
 
   function showError(message, hard = true) {
@@ -289,23 +294,84 @@ document.addEventListener('DOMContentLoaded', () => {
     if (digitsOnly(confirmPhone.value).length !== 10) { confirmPhone.reportValidity(); return; }
     if (!callTiming.value) { callTiming.reportValidity(); return; }
 
-    // Insert into Supabase
+    // Insert primary lead
     const row = buildRow();
 
-    // Disable while submitting
     btnSubmit.disabled = true;
     const prev = btnSubmit.textContent;
     btnSubmit.textContent = "Submitting…";
 
     try {
       const id = await supabaseInsert(row);
-      const finalDigits = (row.phone && row.phone[0]) ? row.phone[0] : digitsOnly(confirmPhone.value);
-      showSuccess(id, finalDigits);
+      showSuccess(id);
     } catch (err) {
       showError(err?.message || 'Insert failed', true);
     } finally {
       btnSubmit.disabled = false;
       btnSubmit.textContent = prev;
+    }
+  });
+
+  // ===== Referrals submission =====
+  refSubmit?.addEventListener('click', async () => {
+    refMsg.textContent = "";
+    const parentId = form.dataset.parentLeadId || "";
+    const referrer  = form.dataset.referrerName || "";
+
+    // Collect rows
+    const fns = Array.from(refList.querySelectorAll('.ref-fn'));
+    const lns = Array.from(refList.querySelectorAll('.ref-ln'));
+    const phs = Array.from(refList.querySelectorAll('.ref-ph'));
+
+    const rows = [];
+    for (let i=0; i<phs.length; i++){
+      const fn = fns[i]?.value?.trim() || "";
+      const ln = lns[i]?.value?.trim() || "";
+      const ph = digitsOnly(phs[i]?.value || "");
+      if (!ph || ph.length !== 10) continue;     // require a valid 10-digit phone
+      if (!fn && !ln) continue;                  // require at least a name piece
+
+      rows.push({
+        first_name: fn || "Friend",
+        last_name:  ln || "",
+        age:        null,
+        city:       null,
+        zip:        null,
+        lead_type:  'Referral',
+        notes:      `referred_by=${parentId}${referrer ? `|referrer=${referrer}` : ''}`,
+        submitted_by:      window.FVG_WEBSITE_SUBMITTER_ID,
+        submitted_by_name: window.FVG_WEBSITE_SUBMITTER_NAME || 'Website Lead',
+        assigned_to: null,
+        assigned_at: null,
+        phone:      [ph],
+        address:    null,
+        state:      null,
+        lat:        null,
+        lng:        null,
+        product_type: 'life'
+      });
+    }
+
+    if (!rows.length){
+      refMsg.textContent = "Please add at least one valid referral (name + 10-digit mobile).";
+      return;
+    }
+
+    // Insert referrals
+    refSubmit.disabled = true;
+    const prev = refSubmit.innerHTML;
+    refSubmit.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Submitting…';
+
+    try {
+      await supabaseInsertMany(rows);
+      refMsg.textContent = `Thanks! Submitted ${rows.length} referral${rows.length>1?'s':''}.`;
+      // Optionally lock UI to prevent double-submits:
+      Array.from(refList.querySelectorAll('input')).forEach(i => i.disabled = true);
+    } catch (err) {
+      refMsg.textContent = `Could not submit referrals: ${err?.message || 'unknown error'}.`;
+    } finally {
+      refSubmit.disabled = false;
+      refSubmit.innerHTML = prev;
     }
   });
 });
