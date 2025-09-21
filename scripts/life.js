@@ -35,7 +35,94 @@ document.addEventListener('DOMContentLoaded', () => {
   const digitsOnly = (s) => (s || '').replace(/\D/g, '');
   const isEmail    = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || '');
   const fiveZip    = (s) => /^\d{5}$/.test(s || '');
-
+  // ---- Inline error helpers ----
+  const errEls = {
+    first_name: form.querySelector('[data-err="first_name"]'),
+    last_name:  form.querySelector('[data-err="last_name"]'),
+    phone:      form.querySelector('[data-err="phone"]'),
+    email:      form.querySelector('[data-err="email"]'),
+    zip:        form.querySelector('[data-err="zip"]'),
+    tcpa:       null // no per-field message; we’ll highlight the label
+  };
+  
+  function setError(inputEl, key, msg) {
+    // add .has-error to the label wrapper so CSS can style input + show message
+    const label = inputEl.closest('label') || inputEl.parentElement;
+    if (!label) return;
+  
+    if (msg) {
+      label.classList.add('has-error');
+      if (errEls[key]) errEls[key].textContent = msg;
+    } else {
+      label.classList.remove('has-error');
+      if (errEls[key]) errEls[key].textContent = '';
+    }
+  }
+  
+  function validateField(key) {
+    switch (key) {
+      case 'first_name': {
+        const ok = !!inpFirst.value.trim();
+        setError(inpFirst, 'first_name', ok ? '' : 'First name is required.');
+        return ok;
+      }
+      case 'last_name': {
+        const ok = !!inpLast.value.trim();
+        setError(inpLast, 'last_name', ok ? '' : 'Last name is required.');
+        return ok;
+      }
+      case 'phone': {
+        const ok = /^\D?(\d\D*){10}$/.test(inpPhone.value);
+        setError(inpPhone, 'phone', ok ? '' : 'Enter a valid 10-digit mobile number.');
+        return ok;
+      }
+      case 'email': {
+        const ok = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(inpEmail.value);
+        setError(inpEmail, 'email', ok ? '' : 'Enter a valid email address.');
+        return ok;
+      }
+      case 'zip': {
+        const ok = /^\d{5}$/.test(inpZip.value);
+        setError(inpZip, 'zip', ok ? '' : 'ZIP must be 5 digits.');
+        return ok;
+      }
+      case 'tcpa': {
+        const ok = tcpa.checked;
+        // highlight the wrapper div instead of a small message
+        const wrap = tcpa.closest('.tcpa-inline')?.parentElement || tcpa.closest('.tcpa-inline');
+        if (wrap) wrap.classList.toggle('has-error', !ok);
+        return ok;
+      }
+      default: return true;
+    }
+  }
+  
+  function validateAll() {
+    const order = ['first_name','last_name','phone','email','zip','tcpa'];
+    let firstInvalidEl = null;
+    let allOk = true;
+  
+    order.forEach(k => {
+      const ok = validateField(k);
+      if (!ok) {
+        allOk = false;
+        if (!firstInvalidEl) {
+          firstInvalidEl = (k === 'tcpa') ? tcpa : (
+            k === 'first_name' ? inpFirst :
+            k === 'last_name'  ? inpLast  :
+            k === 'phone'      ? inpPhone :
+            k === 'email'      ? inpEmail : inpZip
+          );
+        }
+      }
+    });
+  
+    // scroll smoothly to the first invalid
+    if (!allOk && firstInvalidEl) {
+      firstInvalidEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+    return allOk;
+  }
   function enableNextCheck() {
     const ok =
       inpFirst.value.trim() &&
@@ -88,17 +175,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }));
 
   btnNext.addEventListener('click', () => {
-    // Stage 1 validation
-    if (!isEmail(inpEmail.value)) { inpEmail.reportValidity(); return; }
-    if (digitsOnly(inpPhone.value).length !== 10) { inpPhone.reportValidity(); return; }
-    if (!fiveZip(inpZip.value)) { inpZip.reportValidity(); return; }
-    if (!tcpa.checked) { tcpa.reportValidity(); return; }
-
-    // Prefill confirm phone
+    const ok = validateAll();
+    if (!ok) {
+      // keep Next disabled; user sees inline messages and we scrolled to first invalid
+      btnNext.disabled = true;
+      return;
+    }
+  
+    // prefill confirm phone and move to Qualify
     confirmPhone.value = inpPhone.value;
-
-    hide(panelShort);
-    show(panelQual);
+    panelShort.style.display = 'none';
+    panelQual.style.display = 'block';
   });
 
   refAddBtn?.addEventListener('click', () => {
