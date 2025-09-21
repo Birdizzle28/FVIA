@@ -87,7 +87,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       case 'tcpa': {
         const ok = tcpa.checked;
-        const wrap = tcpa.closest('.tcpa-inline')?.parentElement || tcpa.closest('.tcpa-inline');
+        const wrap = tcpa.closest('.tcpa-inline');
         if (wrap) wrap.classList.toggle('has-error', !ok);
         return ok;
       }
