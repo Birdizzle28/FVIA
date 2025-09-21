@@ -528,3 +528,35 @@ select:focus {
   display: inline-flex !important;
   margin: 0 !important;
 }
+/* --- TCPA row inline --- */
+.tcpa-inline {
+  display: flex;
+  gap: .6rem;
+  align-items: flex-start;   /* aligns checkbox with first line of text */
+  line-height: 1.35;
+}
+.tcpa-inline input[type="checkbox"] {
+  margin-top: .25rem;        /* tiny nudge to align visually */
+}
+
+/* --- Disabled button look --- */
+.panel-nav button[disabled] {
+  opacity: .45;
+  filter: grayscale(100%);
+  cursor: not-allowed;
+}
+
+/* --- Inline error styles --- */
+.fv-error {
+  display: none;
+  color: #b00020;            /* accessible red */
+  font-size: .85em;
+  margin-top: .25rem;
+}
+.has-error .fv-error { display: block; }
+.has-error input,
+.has-error select {
+  border-color: #b00020 !important;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(176,0,32,.08);
+}
