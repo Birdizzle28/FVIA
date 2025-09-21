@@ -72,22 +72,27 @@
         <section class="panel active" id="panel-short">
           <label>First Name:
             <input type="text" name="first_name" required />
+            <small class="fv-error" data-err="first_name"></small>
           </label>
 
           <label>Last Name:
             <input type="text" name="last_name" required />
+            <small class="fv-error" data-err="first_name"></small>
           </label>
 
           <label>Mobile Number:
             <input type="tel" name="phone" inputmode="tel" required />
+            <small class="fv-error" data-err="first_name"></small>
           </label>
 
           <label>Email:
             <input type="email" name="email" required />
+            <small class="fv-error" data-err="first_name"></small>
           </label>
 
           <label>ZIP:
             <input type="text" name="zip" inputmode="numeric" pattern="\\d{5}" maxlength="5" required />
+            <small class="fv-error" data-err="first_name"></small>
           </label>
 
           <!-- Hidden fields for your schema -->
@@ -97,9 +102,9 @@
           <input type="hidden" name="lng" id="lng" />
 
           <!-- TCPA -->
-          <div style="margin:.75rem 0; font-size:.95em; line-height:1.35;">
-            <label style="display:flex; gap:.5rem; align-items:flex-start;">
-              <input type="checkbox" id="tcpa" required style="margin-top:.25rem;" />
+          <div style="margin:.75rem 0;">
+            <label class="tcpa-inline">
+              <input type="checkbox" id="tcpa" required />
               <span>
                 By clicking Submit, you agree FV Group may contact you at the number and email provided
                 (including autodialed/automated texts or calls and prerecorded messages) about insurance
