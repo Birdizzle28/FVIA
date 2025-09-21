@@ -35,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const digitsOnly = (s) => (s || '').replace(/\D/g, '');
   const isEmail    = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || '');
   const fiveZip    = (s) => /^\d{5}$/.test(s || '');
+
   // ---- Inline error helpers ----
   const errEls = {
     first_name: form.querySelector('[data-err="first_name"]'),
@@ -46,10 +47,8 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   
   function setError(inputEl, key, msg) {
-    // add .has-error to the label wrapper so CSS can style input + show message
     const label = inputEl.closest('label') || inputEl.parentElement;
     if (!label) return;
-  
     if (msg) {
       label.classList.add('has-error');
       if (errEls[key]) errEls[key].textContent = msg;
@@ -88,7 +87,6 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       case 'tcpa': {
         const ok = tcpa.checked;
-        // highlight the wrapper div instead of a small message
         const wrap = tcpa.closest('.tcpa-inline')?.parentElement || tcpa.closest('.tcpa-inline');
         if (wrap) wrap.classList.toggle('has-error', !ok);
         return ok;
@@ -101,7 +99,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const order = ['first_name','last_name','phone','email','zip','tcpa'];
     let firstInvalidEl = null;
     let allOk = true;
-  
     order.forEach(k => {
       const ok = validateField(k);
       if (!ok) {
@@ -116,13 +113,22 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
     });
-  
-    // scroll smoothly to the first invalid
     if (!allOk && firstInvalidEl) {
       firstInvalidEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstInvalidEl.focus?.();
     }
     return allOk;
   }
+
+  // --- Visual-only disabling for Next (keeps button clickable for scrolling) ---
+  function setNextVisualDisabled(disabled) {
+    btnNext.classList.toggle('is-disabled', disabled);
+    // inline styles so it looks disabled even if there’s no CSS rule
+    btnNext.style.opacity = disabled ? '0.45' : '';
+    btnNext.style.filter  = disabled ? 'grayscale(100%)' : '';
+    btnNext.style.cursor  = disabled ? 'not-allowed' : '';
+  }
+
   function enableNextCheck() {
     const ok =
       inpFirst.value.trim() &&
@@ -131,11 +137,27 @@ document.addEventListener('DOMContentLoaded', () => {
       isEmail(inpEmail.value) &&
       fiveZip(inpZip.value) &&
       tcpa.checked;
-    btnNext.disabled = !ok;
+    // visual state only (do NOT use the real disabled attr)
+    setNextVisualDisabled(!ok);
   }
 
+  // Make sure any accidental disabled attribute is cleared so clicks work
+  btnNext.removeAttribute('disabled');
+
   [inpFirst, inpLast, inpPhone, inpEmail, inpZip, tcpa].forEach(el => {
-    el.addEventListener('input', enableNextCheck);
+    el.addEventListener('input', () => {
+      enableNextCheck();
+      // soften errors as they type
+      const keyMap = {
+        [inpFirst.name]: 'first_name',
+        [inpLast.name]:  'last_name',
+        [inpPhone.name]: 'phone',
+        [inpEmail.name]: 'email',
+        [inpZip.name]:   'zip'
+      };
+      const km = keyMap[el.name];
+      if (km) validateField(km);
+    });
     el.addEventListener('change', enableNextCheck);
   });
   enableNextCheck();
@@ -177,12 +199,10 @@ document.addEventListener('DOMContentLoaded', () => {
   btnNext.addEventListener('click', () => {
     const ok = validateAll();
     if (!ok) {
-      // keep Next disabled; user sees inline messages and we scrolled to first invalid
-      btnNext.disabled = true;
+      // show inline errors + smooth scroll (button is still clickable)
       return;
     }
-  
-    // prefill confirm phone and move to Qualify
+    // proceed to Qualify
     confirmPhone.value = inpPhone.value;
     panelShort.style.display = 'none';
     panelQual.style.display = 'block';
@@ -452,7 +472,6 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       await supabaseInsertMany(rows);
       refMsg.textContent = `Thanks! Submitted ${rows.length} referral${rows.length>1?'s':''}.`;
-      // Optionally lock UI to prevent double-submits:
       Array.from(refList.querySelectorAll('input')).forEach(i => i.disabled = true);
     } catch (err) {
       refMsg.textContent = `Could not submit referrals: ${err?.message || 'unknown error'}.`;
