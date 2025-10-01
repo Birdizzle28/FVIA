@@ -45,7 +45,43 @@ document.addEventListener('DOMContentLoaded', () => {
     zip:        form.querySelector('[data-err="zip"]'),
     tcpa:       null // no per-field message; we’ll highlight the label
   };
+  // Chip-style selection state for smoker radios
+  const smokerFieldset = form.querySelector('.smoker-group');
+  const smokerLabels = smokerFieldset ? smokerFieldset.querySelectorAll('label') : [];
   
+  function updateSmokerStyles(){
+    smokerLabels.forEach(l => {
+      const input = l.querySelector('input[type="radio"]');
+      l.classList.toggle('is-checked', !!(input && input.checked));
+    });
+  }
+  smokerRadios.forEach(r => r.addEventListener('change', updateSmokerStyles));
+  updateSmokerStyles();
+  // --- Inline "Pick a time" CTA beside the select ---
+  const scheduleCta = document.createElement('button');
+  scheduleCta.type = 'button';
+  scheduleCta.id = 'btn-open-scheduler';
+  scheduleCta.textContent = 'Pick a time';
+  scheduleCta.style.marginLeft = '8px';
+  scheduleCta.style.display = 'none';
+  
+  // place button right after the select, inside the same label
+  const timingLabel = callTiming.closest('label');
+  if (timingLabel) timingLabel.appendChild(scheduleCta);
+  
+  function updateScheduleCta(){
+    if (callTiming.value === 'book' && schedulerAvailable()) {
+      scheduleCta.style.display = 'inline-flex';
+    } else {
+      scheduleCta.style.display = 'none';
+    }
+  }
+  callTiming.addEventListener('change', updateScheduleCta);
+  scheduleCta.addEventListener('click', () => {
+    window.dispatchEvent(new CustomEvent('fvScheduleRequested', { detail: { product: 'life' } }));
+    openScheduler(); // uses your existing helper
+  });
+  updateScheduleCta(); // init
   function setError(inputEl, key, msg) {
     const label = inputEl.closest('label') || inputEl.parentElement;
     if (!label) return;
