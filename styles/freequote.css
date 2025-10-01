@@ -572,3 +572,53 @@ button.is-disabled {
   filter: grayscale(100%);
   cursor: not-allowed;
 }
+/* Pill chips for Smoker? */
+.smoker-group {
+  display: flex;
+  gap: .5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.smoker-group label {
+  position: relative;
+  padding: .45rem .9rem;
+  border: 1.5px solid #cfcfcf;
+  border-radius: 999px;
+  cursor: pointer;
+  user-select: none;
+  line-height: 1;
+  background: #fff;
+  transition: all .15s ease-in-out;
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+}
+.smoker-group label input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.smoker-group label.is-checked {
+  border-color: #111;
+  background: #111;
+  color: #fff;
+  box-shadow: 0 1px 0 rgba(0,0,0,.08);
+}
+/* Keep nav rows horizontal for the Life flow panels */
+#panel-short .panel-nav,
+#panel-qualify .panel-nav,
+#result-screen .panel-nav {
+  display: flex !important;
+  flex-direction: row !important;
+  justify-content: center !important;   /* or space-between */
+  align-items: center !important;
+  gap: 12px !important;
+  flex-wrap: wrap;
+}
+#panel-short .panel-nav button,
+#panel-qualify .panel-nav button,
+#result-screen .panel-nav button {
+  display: inline-flex !important;
+  width: auto !important;
+  margin: 0 !important;
+}
