@@ -77,22 +77,22 @@
 
           <label>Last Name:
             <input type="text" name="last_name" required />
-            <small class="fv-error" data-err="first_name"></small>
+            <small class="fv-error" data-err="last_name"></small>
           </label>
 
           <label>Mobile Number:
             <input type="tel" name="phone" inputmode="tel" required />
-            <small class="fv-error" data-err="first_name"></small>
+            <small class="fv-error" data-err="phone"></small>
           </label>
 
           <label>Email:
             <input type="email" name="email" required />
-            <small class="fv-error" data-err="first_name"></small>
+            <small class="fv-error" data-err="email"></small>
           </label>
 
           <label>ZIP:
             <input type="text" name="zip" inputmode="numeric" pattern="\\d{5}" maxlength="5" required />
-            <small class="fv-error" data-err="first_name"></small>
+            <small class="fv-error" data-err="zip"></small>
           </label>
 
           <!-- Hidden fields for your schema -->
@@ -135,12 +135,12 @@
             </select>
           </label>
 
-          <fieldset style="border:none; margin-top:.5rem;">
+          <fieldset class="smoker-group" style="border:none; margin-top:.5rem;">
             <legend>Smoker?</legend>
-            <label style="display:inline-flex; gap:.5rem; align-items:center; margin-right:1rem;">
+            <label>
               <input type="radio" name="smoker" value="no" checked /> No
             </label>
-            <label style="display:inline-flex; gap:.5rem; align-items:center;">
+            <label>
               <input type="radio" name="smoker" value="yes" /> Yes
             </label>
           </fieldset>
