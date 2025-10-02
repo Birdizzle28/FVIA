@@ -251,6 +251,7 @@
 .footerhr {
 	width: 50vw;
 	border: none;
+	color: black;
 }
 .fab, .fa {
 	padding: 1vw;
