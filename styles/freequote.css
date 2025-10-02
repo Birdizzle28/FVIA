@@ -274,6 +274,63 @@ select:focus {
    box-shadow:0 0 0 2px rgba(176,0,32,.12); 
    border-color:#b00020; 
 }
+/* === Floating label fields === */
+.fl-field { position: relative; }
+
+.fl-field input,
+.fl-field select,
+.fl-field .multi-select {
+  padding: 14px 12px 12px;           /* top padding leaves room for label */
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  width: 100%;
+  background: #fff;
+}
+
+/* label sits on top of the control */
+.fl-field > label {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  font-size: 1rem;
+  color: #888;
+  background: #fff;
+  padding: 0 6px;
+  line-height: 1;
+  pointer-events: none;
+  transform-origin: left top;
+  transition: transform .15s ease, color .15s ease, top .15s ease;
+  z-index: 1;
+}
+
+/* float when focused or has value */
+.fl-field.is-focused > label,
+.fl-field.has-value > label,
+.fl-field input:focus + label,
+.fl-field input:not(:placeholder-shown) + label {
+  top: -8px;
+  transform: scale(0.85);
+  color: #111;
+}
+
+/* keep border highlight consistent with your theme */
+.fl-field.is-focused input,
+.fl-field.is-focused select,
+.fl-field.is-focused .multi-select {
+  outline: none;
+  border-color: #3399ff;
+  box-shadow: 0 0 0 2px rgba(51,153,255,.12);
+}
+
+/* make your fake dropdown (multi-select) look like an input */
+.fl-field .multi-select { cursor: pointer; }
+
+/* OPTIONAL: when your cover menu is open, treat as focused */
+.fl-field.is-open > label {
+  top: -8px;
+  transform: scale(0.85);
+  color: #111;
+}
 
 /* Responsive */
 @media (max-width:640px) {
