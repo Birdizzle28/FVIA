@@ -60,8 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateCoverDisplayAndCsv() {
     const sel = getSelections();
-    coverDisplay.textContent = sel.length ? sel.join(', ') : 'Select one or more';
+    coverDisplay.textContent = sel.join(', ');   // ← no fallback text
     coverCsv.value = sel.join(',');
+    updateCoverFloat();                          // keep the floating label correct
   }
 
   function updateCoverFloat() {
