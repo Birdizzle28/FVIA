@@ -179,6 +179,18 @@
   box-shadow: 0 0 0 2px rgba(176,0,32,.12);
   border-color: #b00020;
 }
+/* Nuke native checkboxes inside the cover menu */
+#cover-menu .ms-option > input[type="checkbox"]{
+  display:none !important;
+  position:absolute !important;
+  left:-9999px !important;
+  width:0 !important; height:0 !important;
+  opacity:0 !important;
+  pointer-events:none !important;
+  appearance:none !important;
+  -webkit-appearance:none !important;
+  -moz-appearance:none !important;
+}
 
 /* ===========================
    Responsive
