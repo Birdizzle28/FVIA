@@ -56,6 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ensure menu starts closed + text is in sync  ⬇️
   coverMenu.style.display = 'none';
   updateCoverDisplay();
+  syncSelectedClasses();
   
   function toggleMenu(forceOpen) {
     const open = (forceOpen !== undefined) ? forceOpen : (coverMenu.style.display !== 'block');
