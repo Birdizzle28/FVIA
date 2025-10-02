@@ -129,3 +129,72 @@
   box-shadow: 0 0 0 2px rgba(176,0,32,.12);
   border-color: #b00020;
 }
+/* --- Multi-select fake-checkbox look --- */
+
+/* keep the menu left-aligned and padded a bit */
+.ms-menu {
+  text-align: left;
+  padding: .4rem;
+}
+
+/* hide the real checkboxes */
+.ms-option input[type="checkbox"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* make each option look like a selectable chip and left-align content */
+.ms-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;    /* ⬅ left, not centered */
+  gap: .6rem;
+  padding: .55rem .75rem;
+  margin: .35rem .25rem;
+  border: 1.5px solid #ccc;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  user-select: none;
+  transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
+}
+
+/* the "fake checkbox" square on the left */
+.ms-option::before {
+  content: "";
+  width: 18px;
+  height: 18px;
+  border: 2px solid #999;
+  border-radius: 4px;
+  background: #fff;
+  flex: 0 0 18px;
+  box-sizing: border-box;
+}
+
+/* hover state */
+.ms-option:hover {
+  border-color: #8fb8ff;
+  background: #f5f9ff;
+}
+
+/* selected state */
+.ms-option.selected {
+  border-color: #3399ff;
+  background: #eaf4ff;
+  box-shadow: 0 0 0 2px rgba(51,153,255,.12);
+}
+
+/* fill the fake box when selected */
+.ms-option.selected::before {
+  border-color: #3399ff;
+  background: #3399ff;
+  box-shadow: inset 0 0 0 3px #fff;
+}
+
+/* subtle error flash support (already used in your JS) */
+.multi-select.has-error {
+  box-shadow: 0 0 0 2px rgba(176,0,32,.12);
+  border-color: #b00020;
+}
