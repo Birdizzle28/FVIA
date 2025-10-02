@@ -15,6 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const coverMenu    = document.getElementById('cover-menu');
   const coverDisplay = document.getElementById('cover-display');
   const coverCsv     = document.getElementById('cover_csv');
+  const coverWrap    = document.getElementById('cover-fl');
 
   // Step 2 (business)
   const employeeCount = document.getElementById('employee_count');
@@ -36,87 +37,62 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   show(step1);
 
-  // floating label helpers for input/selects
+  /* ---------------------------
+     Floating labels (inputs/selects)
+  ---------------------------- */
   document.querySelectorAll('.fl-field input, .fl-field select').forEach(el => {
     const wrap = el.closest('.fl-field');
     const setHV = () => wrap.classList.toggle('has-value', !!el.value);
-    // initial state (handles autofill)
-    setHV();
+    setHV(); // initial (handles autofill)
     el.addEventListener('focus', () => wrap.classList.add('is-focused'));
     el.addEventListener('blur',  () => { wrap.classList.remove('is-focused'); setHV(); });
     el.addEventListener('input', setHV);
     el.addEventListener('change', setHV);
   });
-  // ---------- Multi-select behavior (chip-driven, supports multi) ----------
+
+  /* ---------------------------
+     Multi-select (chip UI, multi)
+  ---------------------------- */
   function getSelections() {
-    // Read from selected chips, not checkbox state
     return Array.from(coverMenu.querySelectorAll('.ms-option.selected'))
       .map(lbl => (lbl.dataset.value ?? lbl.textContent).trim());
   }
-  
+
   function updateCoverDisplayAndCsv() {
     const sel = getSelections();
     coverDisplay.textContent = sel.length ? sel.join(', ') : 'Select one or more';
     coverCsv.value = sel.join(',');
   }
-  
-  // Start closed + synced
-  coverMenu.style.display = 'none';
-  updateCoverDisplayAndCsv();
-  
+
+  function updateCoverFloat() {
+    const has = getSelections().length > 0;
+    coverWrap?.classList.toggle('has-value', has);
+  }
+
+  // Open/close menu (single definition)
   function toggleMenu(forceOpen) {
     const open = (forceOpen !== undefined) ? forceOpen : (coverMenu.style.display !== 'block');
     coverMenu.style.display = open ? 'block' : 'none';
     coverSelect.setAttribute('aria-expanded', String(open));
+    coverWrap?.classList.toggle('is-open', !!open);
   }
-  
+
+  // Start closed + synced
+  coverMenu.style.display = 'none';
+  updateCoverDisplayAndCsv();
+  updateCoverFloat();
+
   coverSelect.addEventListener('click', () => toggleMenu());
   coverSelect.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMenu(); }
     if (e.key === 'Escape') { toggleMenu(false); }
   });
-  const coverWrap = document.getElementById('cover-fl');
 
-  function updateCoverFloat() {
-    const has = getSelections().length > 0;
-    if (coverWrap) {
-      coverWrap.classList.toggle('has-value', has);
-    }
-  }
-  
-  function setCoverOpen(open) {
-    coverWrap?.classList.toggle('is-open', !!open);
-  }
-  
-  // after you call updateCoverDisplay(), also:
-  updateCoverFloat();
-  
-  // when toggling the menu:
-  function toggleMenu(forceOpen) {
-    const open = (forceOpen !== undefined) ? forceOpen : (coverMenu.style.display !== 'block');
-    coverMenu.style.display = open ? 'block' : 'none';
-    coverSelect.setAttribute('aria-expanded', String(open));
-    setCoverOpen(open);
-  }
-  
-  // whenever an option changes:
-  coverMenu.addEventListener('change', () => {
-    updateCoverDisplay();
-    syncSelectedClasses();
-    updateCoverFloat();
-  });
-  
-  // close behavior should also clear is-open:
-  document.addEventListener('click', (e) => {
-    if (!coverSelect.contains(e.target) && !coverMenu.contains(e.target)) {
-      toggleMenu(false);
-    }
-  });
   // Initialize chips
   (function initChips(){
     coverMenu.querySelectorAll('.ms-option').forEach(lbl => {
       const cb = lbl.querySelector('input[type="checkbox"]');
-  
+
       // Hard-hide native input & cache value on label
       if (cb) {
         Object.assign(cb.style, {
@@ -124,19 +100,20 @@ document.addEventListener('DOMContentLoaded', () => {
           width: '0', height: '0', opacity: '0', pointerEvents: 'none'
         });
         lbl.dataset.value = cb.value || lbl.textContent.trim();
-        if (cb.checked) lbl.classList.add('selected'); // mirror any pre-checked state
+        if (cb.checked) lbl.classList.add('selected'); // mirror pre-checked
       } else {
         lbl.dataset.value = lbl.dataset.value || lbl.textContent.trim();
       }
-  
-      // Click toggles selection (prevent default label->input toggle to avoid double flips)
+
+      // Click toggles selection
       lbl.addEventListener('click', (e) => {
         e.preventDefault();
         lbl.classList.toggle('selected');
         if (cb) cb.checked = lbl.classList.contains('selected'); // keep DOM consistent
         updateCoverDisplayAndCsv();
+        updateCoverFloat();
       });
-  
+
       // Keyboard toggle on chip
       lbl.tabIndex = 0;
       lbl.addEventListener('keydown', (e) => {
@@ -147,13 +124,15 @@ document.addEventListener('DOMContentLoaded', () => {
       });
     });
   })();
-  
+
   // Click outside closes the menu
   document.addEventListener('click', (e) => {
     if (!coverSelect.contains(e.target) && !coverMenu.contains(e.target)) toggleMenu(false);
   });
 
-  // Phone mask
+  /* ---------------------------
+     Phone mask
+  ---------------------------- */
   phone.addEventListener('input', () => {
     const digits = phone.value.replace(/\D/g,'').slice(0,10);
     let out = '';
@@ -163,7 +142,9 @@ document.addEventListener('DOMContentLoaded', () => {
     phone.value = out;
   });
 
-  // ---------- Step 1 -> Step 2/3 ----------
+  /* ---------------------------
+     Step navigation
+  ---------------------------- */
   btnStep1.addEventListener('click', () => {
     const zipOk  = /^\d{5}$/.test((zip.value||'').trim());
     const ageOk  = String(age.value||'').trim() !== '' && Number(age.value) >= 0;
@@ -184,14 +165,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // ---------- Step 2 -> Step 3 ----------
   btnStep2?.addEventListener('click', () => {
     if (!employeeCount.value) { employeeCount.reportValidity(); return; }
     if (!businessName.value.trim()) { businessName.reportValidity(); return; }
     show(step3); firstName.focus();
   });
 
-  // Back links
   document.querySelectorAll('[data-back]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const to = e.currentTarget.getAttribute('data-back');
@@ -200,7 +179,9 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // ---------- Submit -> Supabase ----------
+  /* ---------------------------
+     Submit -> Supabase
+  ---------------------------- */
   const digitsOnly = (s) => (s||'').replace(/\D/g,'');
 
   function productTypeFromSelections(selections) {
@@ -219,7 +200,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return unique.length === 1 ? unique[0] : 'multi';
   }
 
-  // Optional: UTM/referrer capture
   function utmBundle() {
     const p = new URLSearchParams(location.search);
     const keys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
