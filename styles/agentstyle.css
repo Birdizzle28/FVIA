@@ -898,6 +898,7 @@ button:disabled {
     width: 12vw;
     max-width: 50px;
     margin-top: 0;
+	  aspect-ratio: 1/1;
   }
 
   /* Title in center */
