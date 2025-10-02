@@ -73,8 +73,6 @@ button {
 /* Step cards */
 .step-card {
    background:#fff;
-   border-radius:12px;
-   box-shadow:0 0 12px rgba(0,0,0,.08);
    padding:18px;
    display:none;
 }
