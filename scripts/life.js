@@ -64,7 +64,7 @@ document.addEventListener('DOMContentLoaded', () => {
     el.addEventListener('change', setHV);
   });
     // remove error styling once they edit
-  [zip, age, firstName, lastName, phone, email].forEach(el => {
+  [zip, age, firstName, lastName, phone, email, employeeCount, businessName].forEach(el => {
     if (!el) return;
     el.addEventListener('input', () => clearInvalid(el));
     el.addEventListener('change', () => clearInvalid(el));
