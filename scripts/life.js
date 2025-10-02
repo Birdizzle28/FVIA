@@ -36,6 +36,20 @@ document.addEventListener('DOMContentLoaded', () => {
     [step1, step2, step3, resultScr].forEach(p => p.style.display = (p === panel) ? 'block' : 'none');
   }
   show(step1);
+    // --- inline error helpers (red outline + red label) ---
+  const wrapOf = (el) => el.closest('.fl-field') || el.parentElement;
+
+  function markInvalid(el) {
+    el.classList.add('is-invalid');
+    const w = wrapOf(el);
+    if (w) w.classList.add('is-invalid');
+  }
+  function clearInvalid(el) {
+    el.classList.remove('is-invalid');
+    const w = wrapOf(el);
+    if (w) w.classList.remove('is-invalid');
+  }
+  const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || '');
 
   /* ---------------------------
      Floating labels (inputs/selects)
@@ -48,6 +62,12 @@ document.addEventListener('DOMContentLoaded', () => {
     el.addEventListener('blur',  () => { wrap.classList.remove('is-focused'); setHV(); });
     el.addEventListener('input', setHV);
     el.addEventListener('change', setHV);
+  });
+    // remove error styling once they edit
+  [zip, age, firstName, lastName, phone, email].forEach(el => {
+    if (!el) return;
+    el.addEventListener('input', () => clearInvalid(el));
+    el.addEventListener('change', () => clearInvalid(el));
   });
 
   /* ---------------------------
@@ -150,22 +170,34 @@ document.addEventListener('DOMContentLoaded', () => {
     const zipOk  = /^\d{5}$/.test((zip.value||'').trim());
     const ageOk  = String(age.value||'').trim() !== '' && Number(age.value) >= 0;
     const picks  = getSelections();
-    if (!zipOk || !ageOk || picks.length === 0) {
-      if (!zipOk) zip.reportValidity?.();
-      if (!ageOk) age.reportValidity?.();
-      if (picks.length === 0) {
-        coverSelect.classList.add('has-error');
-        setTimeout(()=>coverSelect.classList.remove('has-error'), 1000);
-      }
+
+    // clear previous
+    clearInvalid(zip);
+    clearInvalid(age);
+
+    let bad = false;
+    if (!zipOk) { markInvalid(zip); bad = true; }
+    if (!ageOk) { markInvalid(age); bad = true; }
+    if (picks.length === 0) {
+      coverSelect.classList.add('has-error');
+      setTimeout(()=>coverSelect.classList.remove('has-error'), 1000);
+      bad = true;
+    }
+
+    if (bad) {
+      // scroll to first invalid
+      const firstBad = (!zipOk ? zip : !ageOk ? age : coverSelect);
+      firstBad.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (firstBad.focus) firstBad.focus();
       return;
     }
+
     if (picks.includes('My Business')) {
       show(step2); employeeCount.focus();
     } else {
       show(step3); firstName.focus();
     }
   });
-
   btnStep2?.addEventListener('click', () => {
     if (!employeeCount.value) { employeeCount.reportValidity(); return; }
     if (!businessName.value.trim()) { businessName.reportValidity(); return; }
@@ -234,11 +266,24 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   btnSubmit.addEventListener('click', async () => {
-    if (!firstName.value.trim()) { firstName.reportValidity(); return; }
-    if (!lastName.value.trim())  { lastName.reportValidity();  return; }
+    // clear previous errors
+    [firstName, lastName, phone, email].forEach(clearInvalid);
+
+    let bad = false;
+    if (!firstName.value.trim()) { markInvalid(firstName); bad = true; }
+    if (!lastName.value.trim())  { markInvalid(lastName);  bad = true; }
+
     const ten = digitsOnly(phone.value);
-    if (ten.length !== 10)       { phone.setCustomValidity('Enter a valid 10-digit number.'); phone.reportValidity(); phone.setCustomValidity(''); return; }
-    if (!email.checkValidity())  { email.reportValidity();     return; }
+    if (ten.length !== 10)       { markInvalid(phone);      bad = true; }
+
+    if (!isEmail(email.value))   { markInvalid(email);      bad = true; }
+
+    if (bad) {
+      const firstBad = [firstName, lastName, phone, email].find(el => el.classList.contains('is-invalid')) || firstName;
+      firstBad.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstBad.focus();
+      return;
+    }
 
     const selections = getSelections();
     const notesParts = [
