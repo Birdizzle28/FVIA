@@ -36,6 +36,17 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   show(step1);
 
+  // floating label helpers for input/selects
+  document.querySelectorAll('.fl-field input, .fl-field select').forEach(el => {
+    const wrap = el.closest('.fl-field');
+    const setHV = () => wrap.classList.toggle('has-value', !!el.value);
+    // initial state (handles autofill)
+    setHV();
+    el.addEventListener('focus', () => wrap.classList.add('is-focused'));
+    el.addEventListener('blur',  () => { wrap.classList.remove('is-focused'); setHV(); });
+    el.addEventListener('input', setHV);
+    el.addEventListener('change', setHV);
+  });
   // ---------- Multi-select behavior (chip-driven, supports multi) ----------
   function getSelections() {
     // Read from selected chips, not checkbox state
@@ -64,7 +75,43 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMenu(); }
     if (e.key === 'Escape') { toggleMenu(false); }
   });
+  const coverWrap = document.getElementById('cover-fl');
+
+  function updateCoverFloat() {
+    const has = getSelections().length > 0;
+    if (coverWrap) {
+      coverWrap.classList.toggle('has-value', has);
+    }
+  }
   
+  function setCoverOpen(open) {
+    coverWrap?.classList.toggle('is-open', !!open);
+  }
+  
+  // after you call updateCoverDisplay(), also:
+  updateCoverFloat();
+  
+  // when toggling the menu:
+  function toggleMenu(forceOpen) {
+    const open = (forceOpen !== undefined) ? forceOpen : (coverMenu.style.display !== 'block');
+    coverMenu.style.display = open ? 'block' : 'none';
+    coverSelect.setAttribute('aria-expanded', String(open));
+    setCoverOpen(open);
+  }
+  
+  // whenever an option changes:
+  coverMenu.addEventListener('change', () => {
+    updateCoverDisplay();
+    syncSelectedClasses();
+    updateCoverFloat();
+  });
+  
+  // close behavior should also clear is-open:
+  document.addEventListener('click', (e) => {
+    if (!coverSelect.contains(e.target) && !coverMenu.contains(e.target)) {
+      toggleMenu(false);
+    }
+  });
   // Initialize chips
   (function initChips(){
     coverMenu.querySelectorAll('.ms-option').forEach(lbl => {
