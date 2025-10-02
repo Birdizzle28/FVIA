@@ -275,41 +275,46 @@ select:focus {
    border-color:#b00020; 
 }
 /* === Floating label fields === */
-.fl-field { position: relative; }
+.fl-field { 
+   position: relative; 
+   margin-bottom:14px;
+}
 
 .fl-field input,
 .fl-field select,
 .fl-field .multi-select {
-  padding: 14px 12px 12px;           /* top padding leaves room for label */
-  border-radius: 8px;
-  border: 1px solid #ccc;
-  width: 100%;
-  background: #fff;
+   padding: 12px 12px;           /* top padding leaves room for label */
+   border-radius: 12px;
+   border: 1px solid #ccc;
+   width: 100%;
+   background: #fff;
+   box-sizing:border-box;
+   line-height:1.2;
 }
 
 /* label sits on top of the control */
 .fl-field > label {
-  position: absolute;
-  left: 12px;
-  top: 12px;
-  font-size: 1rem;
-  color: #888;
-  background: #fff;
-  padding: 0 6px;
-  line-height: 1;
-  pointer-events: none;
-  transform-origin: left top;
-  transition: transform .15s ease, color .15s ease, top .15s ease;
-  z-index: 1;
+   position: absolute;
+   left: 12px;
+   top: 50%;
+   font-size: 1rem;
+   color: #888;
+   background: #fff;
+   padding: 0 .25rem;
+   line-height: 1;
+   pointer-events: none;
+   transform-origin: left top;
+   transition: transform .16s ease, color .16s ease, top .15s ease;
+   transform:translateY(-54%);
+   z-index: 1;
 }
 
 /* float when focused or has value */
 .fl-field.is-focused > label,
 .fl-field.has-value > label,
-.fl-field input:focus + label,
-.fl-field input:not(:placeholder-shown) + label {
-  top: -8px;
-  transform: scale(0.85);
+.fl-field.is-open > label {
+  top: 0;
+  transform:translateY(-58%) scale(.88);
   color: #111;
 }
 
@@ -322,14 +327,12 @@ select:focus {
   box-shadow: 0 0 0 2px rgba(51,153,255,.12);
 }
 
-/* make your fake dropdown (multi-select) look like an input */
-.fl-field .multi-select { cursor: pointer; }
-
-/* OPTIONAL: when your cover menu is open, treat as focused */
-.fl-field.is-open > label {
-  top: -8px;
-  transform: scale(0.85);
-  color: #111;
+.fl-field input[type="number"] {
+   -moz-appearance:textfield;
+}
+.fl-field input[type="number"]::-webkit-outer-spin-button,
+.fl-field input[type="number"]::-webkit-inner-spin-button {
+   -webkit-appearance:none;margin:0;
 }
 
 /* Responsive */
