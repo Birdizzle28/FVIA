@@ -69,3 +69,63 @@
   .row { flex-direction: column; }
   .row-zip-age .age-box { width:100%; min-width:0; }
 }
+/* --- Multi-select dropdown --- */
+.cover-field {            /* the label that wraps the select + menu */
+  position: relative;
+}
+
+.multi-select {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .5rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  padding: .6rem .8rem;
+  background: #fff;
+  cursor: pointer;
+  user-select: none;
+}
+
+.ms-value {
+  flex: 1;
+  color: #333;
+}
+
+.ms-caret {
+  pointer-events: none;
+}
+
+/* The dropdown menu */
+.ms-menu {
+  position: absolute;
+  top: calc(100% + .35rem);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  box-shadow: 0 .6rem 1.2rem rgba(0,0,0,.08);
+  display: none;            /* JS toggles to block */
+  z-index: 1000;
+  max-height: 260px;
+  overflow: auto;
+}
+
+.ms-option {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  padding: .55rem .75rem;
+  cursor: pointer;
+}
+
+.ms-option:hover {
+  background: #f5f9ff;
+}
+
+/* subtle error flash if nothing selected on Step 1 */
+.multi-select.has-error {
+  box-shadow: 0 0 0 2px rgba(176,0,32,.12);
+  border-color: #b00020;
+}
