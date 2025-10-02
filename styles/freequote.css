@@ -334,7 +334,22 @@ select:focus {
 .fl-field input[type="number"]::-webkit-inner-spin-button {
    -webkit-appearance:none;margin:0;
 }
+/* Inline error styles for floating fields */
+.fl-field.error input,
+.fl-field.error select,
+.fl-field.error .multi-select {
+  border-color: #b00020 !important;
+  box-shadow: 0 0 0 2px rgba(176,0,32,.12) !important;
+}
 
+.fl-field.error > label,
+.fl-field.error input,
+.fl-field.error select,
+.fl-field.error .ms-value {
+  color: #b00020 !important;
+}
+
+/* (keeps your existing chip error look) */
 /* Responsive */
 @media (max-width:640px) {
    .row { 
