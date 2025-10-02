@@ -57,22 +57,25 @@
           <p class="req-hint">All fields are required.</p>
 
           <div class="row row-zip-age">
-            <label class="grow">Zip Code
-              <!-- Correct pattern uses a single backslash -->
-              <input type="text" id="zip" inputmode="numeric" maxlength="5" pattern="\d{5}" required />
-            </label>
-
-            <label class="age-box">Age
-              <input type="number" id="age" min="0" max="120" required />
-            </label>
+            <div class="fl-field grow">
+              <input type="text" id="zip" placeholder=" " inputmode="numeric" maxlength="5" pattern="\d{5}" required />
+              <label for="zip">Zip Code</label>
+            </div>
+          
+            <div class="fl-field age-box">
+              <input type="number" id="age" placeholder=" " min="0" max="120" required />
+              <label for="age">Age</label>
+            </div>
           </div>
-
-          <label class="cover-field">I want to cover…
-            <!-- multi-select “fake” dropdown -->
+          
+          <!-- Floating label wrapper for the multi-select -->
+          <div class="fl-field" id="cover-fl">
             <div class="multi-select" id="cover-select" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
               <div class="ms-value" id="cover-display">Select one or more</div>
               <i class="fa-solid fa-chevron-down ms-caret"></i>
             </div>
+            <label for="cover-select">I want to cover…</label>
+          
             <div class="ms-menu" id="cover-menu" role="listbox" aria-multiselectable="true">
               <label class="ms-option"><input type="checkbox" value="Me" /> Me</label>
               <label class="ms-option"><input type="checkbox" value="Someone Else" /> Someone Else</label>
@@ -83,7 +86,7 @@
               <label class="ms-option"><input type="checkbox" value="My Identity" /> My Identity</label>
             </div>
             <input type="hidden" id="cover_csv" />
-          </label>
+          </div>
 
           <button type="button" class="cta" id="btn-step1">Get Started</button>
         </section>
@@ -93,9 +96,9 @@
           <h3><span class="step-num">Step 2:</span> Let’s explore some details about your business.</h3>
           <p class="req-hint">All fields are required.</p>
 
-          <label>Employee Count
+          <div class="fl-field">
             <select id="employee_count" required>
-              <option value="" disabled selected>Select…</option>
+              <option value="" disabled selected></option> <!-- empty to allow float -->
               <option>1</option>
               <option>2–9</option>
               <option>10–24</option>
@@ -103,11 +106,13 @@
               <option>50–99</option>
               <option>100+</option>
             </select>
-          </label>
-
-          <label>Business Name
-            <input type="text" id="business_name" required />
-          </label>
+            <label for="employee_count">Employee Count</label>
+          </div>
+          
+          <div class="fl-field">
+            <input type="text" id="business_name" placeholder=" " required />
+            <label for="business_name">Business Name</label>
+          </div>
 
           <div class="step-nav">
             <button type="button" class="link like-back" data-back="1">&lt; Go Back</button>
@@ -121,21 +126,25 @@
           <p class="req-hint">All fields are required.</p>
 
           <div class="row row-name">
-            <label class="grow">First Name
-              <input type="text" id="first_name" required />
-            </label>
-            <label class="grow">Last Name
-              <input type="text" id="last_name" required />
-            </label>
+            <div class="fl-field grow">
+              <input type="text" id="first_name" placeholder=" " required />
+              <label for="first_name">First Name</label>
+            </div>
+            <div class="fl-field grow">
+              <input type="text" id="last_name" placeholder=" " required />
+              <label for="last_name">Last Name</label>
+            </div>
           </div>
-
-          <label>Phone Number
-            <input type="tel" id="phone" inputmode="tel" required />
-          </label>
-
-          <label>Email
-            <input type="email" id="email" required />
-          </label>
+          
+          <div class="fl-field">
+            <input type="tel" id="phone" placeholder=" " inputmode="tel" required />
+            <label for="phone">Phone Number</label>
+          </div>
+          
+          <div class="fl-field">
+            <input type="email" id="email" placeholder=" " required />
+            <label for="email">Email</label>
+          </div>
 
           <p class="tcpa">
             By clicking <strong>Submit</strong>, you agree that Family Values Group may contact you at the
