@@ -1,7 +1,13 @@
-/* container inherits your auth-container + freequote.css look */
-#free-quote-form { max-width: 720px; }
+/* ===========================
+   styles/life.css (page-specific)
+   =========================== */
 
-/* Step cards */
+/* Container inherits your site look; just cap width */
+#free-quote-form { 
+  max-width: 720px; 
+}
+
+/* -------- Step cards -------- */
 .step-card {
   background: #fff;
   border-radius: 12px;
@@ -14,64 +20,64 @@
 .step-num { color:#0066cc; }
 .req-hint { color:#c87800; font-weight:600; margin-bottom:.6rem; }
 
-/* Rows */
+/* -------- Rows -------- */
 .row { display:flex; gap:12px; }
 .row .grow { flex:1; }
 .row-zip-age .age-box { width:180px; min-width:160px; }
 
-/* Inputs + selects inherit site styles; just tighten */
-.step-card input, .step-card select {
+/* Inputs + selects inherit global; tighten a bit here */
+.step-card input,
+.step-card select {
   padding: 12px;
   border-radius: 8px;
   border: 1px solid #ccc;
   font-size: 1rem;
 }
 
-/* Big CTA */
+/* Big CTA button */
 .cta {
   width: 100%;
   padding: 14px;
-  background: #06c; color: #fff;
-  border: none; border-radius: 8px;
-  font-size: 1.1rem; cursor: pointer;
+  background: #06c; 
+  color: #fff;
+  border: none; 
+  border-radius: 8px;
+  font-size: 1.1rem; 
+  cursor: pointer;
+  transition: background .15s ease-in-out;
 }
-.cta:hover { background:#049; }
+.cta:hover { background:#004fa3; }
 
-/* Back link style to mimic Aflac’s “< Go Back” */
+/* Back link style (“< Go Back”) */
 .link.like-back {
-  background: none; border: none; color:#0066cc; cursor:pointer;
-  padding: 0; font-size: .95rem;
+  background: none; 
+  border: none; 
+  color:#0066cc; 
+  cursor:pointer;
+  padding: 0; 
+  font-size: .95rem;
 }
-.step-nav { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:10px; }
 
-/* Multi-select dropdown */
-.multi-select {
-  position: relative;
-  display: flex; align-items:center; justify-content:space-between;
-  border:1px solid #ccc; border-radius:8px; padding: 12px; cursor:pointer;
-  user-select: none; background:#fff;
+/* Keep nav buttons on one line */
+.step-nav { 
+  display:flex; 
+  justify-content:space-between; 
+  align-items:center; 
+  gap:12px; 
+  margin-top:10px; 
 }
-.ms-value { color:#555; }
-.ms-caret { margin-left: 10px; }
-.ms-menu {
-  margin-top: 6px; border:1px solid #ccc; border-radius:8px; background:#fff;
-  box-shadow: 0 6px 18px rgba(0,0,0,.08);
-  display:none; padding:8px; max-height:220px; overflow:auto;
-}
-.ms-option { display:flex; align-items:center; gap:8px; padding:8px; border-radius:6px; }
-.ms-option:hover { background:#f2f7ff; }
 
 /* TCPA text */
-.tcpa { font-size:.9rem; color:#444; line-height:1.35; margin-top:.5rem; }
-
-/* Small screens */
-@media (max-width: 640px) {
-  .row { flex-direction: column; }
-  .row-zip-age .age-box { width:100%; min-width:0; }
+.tcpa { 
+  font-size:.9rem; 
+  color:#444; 
+  line-height:1.35; 
+  margin-top:.5rem; 
 }
-/* --- Multi-select dropdown --- */
-.cover-field {            /* the label that wraps the select + menu */
-  position: relative;
+
+/* -------- Multi-select dropdown (fake-checkbox chips) -------- */
+.cover-field { 
+  position: relative; 
 }
 
 .multi-select {
@@ -86,17 +92,13 @@
   cursor: pointer;
   user-select: none;
 }
-
-.ms-value {
-  flex: 1;
-  color: #333;
+.ms-value { 
+  flex: 1; 
+  color: #333; 
 }
+.ms-caret { pointer-events: none; }
 
-.ms-caret {
-  pointer-events: none;
-}
-
-/* The dropdown menu */
+/* Dropdown menu panel */
 .ms-menu {
   position: absolute;
   top: calc(100% + .35rem);
@@ -106,50 +108,20 @@
   border: 1px solid #ccc;
   border-radius: 8px;
   box-shadow: 0 .6rem 1.2rem rgba(0,0,0,.08);
-  display: none;            /* JS toggles to block */
+  display: none;            /* toggled by JS */
   z-index: 1000;
   max-height: 260px;
   overflow: auto;
-}
-
-.ms-option {
-  display: flex;
-  align-items: center;
-  gap: .5rem;
-  padding: .55rem .75rem;
-  cursor: pointer;
-}
-
-.ms-option:hover {
-  background: #f5f9ff;
-}
-
-/* subtle error flash if nothing selected on Step 1 */
-.multi-select.has-error {
-  box-shadow: 0 0 0 2px rgba(176,0,32,.12);
-  border-color: #b00020;
-}
-/* --- Multi-select fake-checkbox look --- */
-
-/* keep the menu left-aligned and padded a bit */
-.ms-menu {
   text-align: left;
   padding: .4rem;
 }
 
-/* hide the real checkboxes */
-.ms-option input[type="checkbox"] {
-  position: absolute;
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* make each option look like a selectable chip and left-align content */
+/* Each option displayed as a chip with a fake checkbox on the left */
 .ms-option {
   position: relative;
   display: flex;
   align-items: center;
-  justify-content: flex-start;    /* ⬅ left, not centered */
+  justify-content: flex-start;  /* left-aligned */
   gap: .6rem;
   padding: .55rem .75rem;
   margin: .35rem .25rem;
@@ -161,7 +133,20 @@
   transition: border-color .15s ease, background-color .15s ease, box-shadow .15s ease;
 }
 
-/* the "fake checkbox" square on the left */
+/* Bulletproof hide for the native checkbox */
+.ms-option input[type="checkbox"]{
+  position: absolute !important;
+  left: -9999px !important;
+  width: 1px !important;
+  height: 1px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  -moz-appearance: none !important;
+}
+
+/* Fake checkbox */
 .ms-option::before {
   content: "";
   width: 18px;
@@ -173,28 +158,35 @@
   box-sizing: border-box;
 }
 
-/* hover state */
+/* Hover */
 .ms-option:hover {
   border-color: #8fb8ff;
   background: #f5f9ff;
 }
 
-/* selected state */
+/* Selected chip state */
 .ms-option.selected {
   border-color: #3399ff;
   background: #eaf4ff;
   box-shadow: 0 0 0 2px rgba(51,153,255,.12);
 }
 
-/* fill the fake box when selected */
+/* Fill the fake box when selected */
 .ms-option.selected::before {
   border-color: #3399ff;
   background: #3399ff;
   box-shadow: inset 0 0 0 3px #fff;
 }
 
-/* subtle error flash support (already used in your JS) */
+/* Inline error look if nothing selected on Step 1 */
 .multi-select.has-error {
   box-shadow: 0 0 0 2px rgba(176,0,32,.12);
   border-color: #b00020;
+}
+
+/* -------- Responsive -------- */
+@media (max-width: 640px) {
+  .row { flex-direction: column; }
+  .row-zip-age .age-box { width:100%; min-width:0; }
+  .step-nav { gap: 10px; }
 }
