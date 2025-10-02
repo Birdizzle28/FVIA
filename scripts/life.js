@@ -36,64 +36,72 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   show(step1);
 
-  // ---------- Multi-select behavior ----------
+  // ---------- Multi-select behavior (chip-driven, supports multi) ----------
   function getSelections() {
-    const checks = Array.from(coverMenu.querySelectorAll('input[type="checkbox"]:checked'));
-    return checks.map(c => c.value);
+    // Read from selected chips, not checkbox state
+    return Array.from(coverMenu.querySelectorAll('.ms-option.selected'))
+      .map(lbl => (lbl.dataset.value ?? lbl.textContent).trim());
   }
-  function updateCoverDisplay() {
+  
+  function updateCoverDisplayAndCsv() {
     const sel = getSelections();
     coverDisplay.textContent = sel.length ? sel.join(', ') : 'Select one or more';
     coverCsv.value = sel.join(',');
   }
-  function syncSelectedClasses() {
-    coverMenu.querySelectorAll('.ms-option').forEach(lbl => {
-      const cb = lbl.querySelector('input[type="checkbox"]');
-      lbl.classList.toggle('selected', !!cb?.checked);
-    });
-  }
-  // init state
+  
+  // Start closed + synced
   coverMenu.style.display = 'none';
-  updateCoverDisplay();
-  syncSelectedClasses();
-
+  updateCoverDisplayAndCsv();
+  
   function toggleMenu(forceOpen) {
     const open = (forceOpen !== undefined) ? forceOpen : (coverMenu.style.display !== 'block');
     coverMenu.style.display = open ? 'block' : 'none';
     coverSelect.setAttribute('aria-expanded', String(open));
   }
+  
   coverSelect.addEventListener('click', () => toggleMenu());
   coverSelect.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMenu(); }
     if (e.key === 'Escape') { toggleMenu(false); }
   });
-  coverMenu.addEventListener('change', () => { updateCoverDisplay(); syncSelectedClasses(); });
-
-  (function initFakeCheckboxes(){
-    coverMenu.querySelectorAll('.ms-option input[type="checkbox"]').forEach(cb => {
-      cb.style.display = 'none'; cb.style.position='absolute'; cb.style.left='-9999px';
-      cb.style.width = '0'; cb.style.height = '0'; cb.style.opacity='0'; cb.style.pointerEvents='none';
-    });
+  
+  // Initialize chips
+  (function initChips(){
     coverMenu.querySelectorAll('.ms-option').forEach(lbl => {
-      lbl.tabIndex = 0;
+      const cb = lbl.querySelector('input[type="checkbox"]');
+  
+      // Hard-hide native input & cache value on label
+      if (cb) {
+        Object.assign(cb.style, {
+          display: 'none', position: 'absolute', left: '-9999px',
+          width: '0', height: '0', opacity: '0', pointerEvents: 'none'
+        });
+        lbl.dataset.value = cb.value || lbl.textContent.trim();
+        if (cb.checked) lbl.classList.add('selected'); // mirror any pre-checked state
+      } else {
+        lbl.dataset.value = lbl.dataset.value || lbl.textContent.trim();
+      }
+  
+      // Click toggles selection (prevent default label->input toggle to avoid double flips)
       lbl.addEventListener('click', (e) => {
-        if (e.target?.tagName?.toLowerCase() === 'input') return;
-        const cb = lbl.querySelector('input[type="checkbox"]');
-        if (!cb) return;
-        cb.checked = !cb.checked;
-        lbl.classList.toggle('selected', cb.checked);
-        updateCoverDisplay();
+        e.preventDefault();
+        lbl.classList.toggle('selected');
+        if (cb) cb.checked = lbl.classList.contains('selected'); // keep DOM consistent
+        updateCoverDisplayAndCsv();
       });
+  
+      // Keyboard toggle on chip
+      lbl.tabIndex = 0;
       lbl.addEventListener('keydown', (e) => {
         if (e.key === ' ' || e.key === 'Enter') {
           e.preventDefault();
-          const cb = lbl.querySelector('input[type="checkbox"]');
-          if (cb) { cb.checked = !cb.checked; lbl.classList.toggle('selected', cb.checked); updateCoverDisplay(); }
+          lbl.click();
         }
       });
     });
   })();
-
+  
+  // Click outside closes the menu
   document.addEventListener('click', (e) => {
     if (!coverSelect.contains(e.target) && !coverMenu.contains(e.target)) toggleMenu(false);
   });
