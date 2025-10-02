@@ -5,40 +5,37 @@
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 
-  <!-- Reuse your existing styles -->
+  <!-- Your existing styles (keep these) -->
   <link rel="stylesheet" href="styles/general.css" />
   <link rel="stylesheet" href="styles/freequote.css" />
+  <!-- Page-specific styles -->
+  <link rel="stylesheet" href="styles/life.css" />
+
   <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
-  <!-- (Optional) if your header uses this -->
+  <!-- Header/footer script (yours) -->
   <script type="module" src="scripts/general.js"></script>
 
   <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <!-- FV Group config (REQUIRED: replace with your real values) -->
+  <!-- FV Group config (replace with your real values) -->
   <script>
-    // 🔧 TODO: paste your real values
     window.FVG_SUPABASE_URL  = "https://ddlbgkolnayqrxslzsxn.supabase.co";
     window.FVG_SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho";
-
-    // A fixed UUID for “Website Lead” submitter (generate once in SQL: select gen_random_uuid();)
+    // “Website Lead” submitter
     window.FVG_WEBSITE_SUBMITTER_ID   = "00000000-0000-0000-0000-000000000000";
     window.FVG_WEBSITE_SUBMITTER_NAME = "Website Lead";
-
-    // Scheduler placeholders (leave blank for now; we’ll wire later)
-    window.FVG_SCHEDULER_URL  = "";     // e.g., "https://calendly.com/fvg/intro"
-    window.FVG_SCHEDULER_OPEN = null;   // or a function to open your own modal
   </script>
 
   <!-- Page script -->
-  <script type="module" src="scripts/life.js"></script>
+  <script defer src="scripts/life.js"></script>
 
-  <title>Life Insurance | Family Values Group</title>
+  <title>Get a Quote | Family Values Group</title>
 </head>
 <body id="indexbody">
-  <!-- Header (kept consistent with your site) -->
+  <!-- ===== Header (your existing header) ===== -->
   <header class="index-grid-header">
     <a href="index.html"><img id="headerlogo" src="Pics/img6.png" alt="Family Values Group" /></a>
     <p><strong>Family Values Group</strong></p>
@@ -53,7 +50,6 @@
     </nav>
     <hr />
   </header>
-
   <div id="mobile-menu">
     <a href="about.html">About</a>
     <a href="contact.html">Support</a>
@@ -62,127 +58,122 @@
     <a href="login.html">Login</a>
   </div>
 
+  <!-- ===== Main ===== -->
   <main class="auth-container">
     <section id="free-quote-form">
-      <h2 id="quote-heading">Life Insurance</h2>
+      <h2 id="quote-heading">Let’s get you covered</h2>
 
-      <!-- HYBRID FLOW -->
       <form id="life-form" novalidate>
-        <!-- STAGE 1: Short Form -->
-        <section class="panel active" id="panel-short">
-          <label>First Name:
-            <input type="text" name="first_name" required />
-            <small class="fv-error" data-err="first_name"></small>
-          </label>
+        <!-- ============ STEP 1 ============ -->
+        <section class="step-card active" id="step-1">
+          <h3><span class="step-num">Step 1:</span> Let’s start with the basics.</h3>
+          <p class="req-hint">All fields are required.</p>
 
-          <label>Last Name:
-            <input type="text" name="last_name" required />
-            <small class="fv-error" data-err="last_name"></small>
-          </label>
+          <div class="row row-zip-age">
+            <label class="grow">Zip Code
+              <input type="text" id="zip" inputmode="numeric" maxlength="5" pattern="\\d{5}" required />
+            </label>
 
-          <label>Mobile Number:
-            <input type="tel" name="phone" inputmode="tel" required />
-            <small class="fv-error" data-err="phone"></small>
-          </label>
+            <label class="age-box">Age
+              <input type="number" id="age" min="0" max="120" required />
+            </label>
+          </div>
 
-          <label>Email:
-            <input type="email" name="email" required />
-            <small class="fv-error" data-err="email"></small>
-          </label>
-
-          <label>ZIP:
-            <input type="text" name="zip" inputmode="numeric" pattern="\\d{5}" maxlength="5" required />
-            <small class="fv-error" data-err="zip"></small>
-          </label>
-
-          <!-- Hidden fields for your schema -->
-          <input type="hidden" name="lead_type" value="Web" />
-          <input type="hidden" name="product_type" value="life" />
-          <input type="hidden" name="lat" id="lat" />
-          <input type="hidden" name="lng" id="lng" />
-
-          <!-- TCPA -->
-          <div style="margin:.75rem 0;">
-            <div class="tcpa-inline">
-              <input type="checkbox" id="tcpa" required />
-              <label for="tcpa">
-                By clicking Submit, you agree FV Group may contact you at the number and email provided
-                (including autodialed/automated texts or calls and prerecorded messages) about insurance
-                products or services. Consent isn’t required to purchase. Message/data rates may apply.
-                Reply STOP to opt out.
-              </label>
+          <label>I want to cover…
+            <!-- multi-select “fake” dropdown -->
+            <div class="multi-select" id="cover-select" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+              <div class="ms-value" id="cover-display">Select one or more</div>
+              <i class="fa-solid fa-chevron-down ms-caret"></i>
             </div>
-          </div>
+            <div class="ms-menu" id="cover-menu" role="listbox" aria-multiselectable="true">
+              <!-- Each option is a checkbox; selections show as comma list in the display -->
+              <label class="ms-option"><input type="checkbox" value="Me" /> Me</label>
+              <label class="ms-option"><input type="checkbox" value="Someone Else" /> Someone Else</label>
+              <label class="ms-option"><input type="checkbox" value="My Business" /> My Business</label>
+              <label class="ms-option"><input type="checkbox" value="My Car" /> My Car</label>
+              <label class="ms-option"><input type="checkbox" value="My Home" /> My Home</label>
+              <label class="ms-option"><input type="checkbox" value="Legal Protection Plan" /> Legal Protection Plan</label>
+              <label class="ms-option"><input type="checkbox" value="My Identity" /> My Identity</label>
+            </div>
+            <!-- canonical CSV field used on submit -->
+            <input type="hidden" id="cover_csv" />
+          </label>
 
-          <div class="panel-nav">
-            <button type="button" id="btn-next" disabled>Next</button>
-          </div>
+          <button type="button" class="cta" id="btn-step1">Get Started</button>
         </section>
 
-        <!-- STAGE 2: Instant Qualify -->
-        <section class="panel" id="panel-qualify" style="display:none;">
-          <h4>Quick Confirm</h4>
-          <hr />
-          <label>Confirm Mobile Number:
-            <input type="tel" name="confirm_phone" id="confirm_phone" required />
-          </label>
+        <!-- ============ STEP 2 (conditional for business) ============ -->
+        <section class="step-card" id="step-2">
+          <h3><span class="step-num">Step 2:</span> Let’s explore some details about your business.</h3>
+          <p class="req-hint">All fields are required.</p>
 
-          <label>When should we call?
-            <select id="call_timing" required>
-              <option value="now">Right now</option>
-              <option value="15m">In ~15 minutes</option>
-              <option value="book">Pick a time</option> <!-- stays visible now -->
+          <label>Employee Count
+            <select id="employee_count" required>
+              <option value="" disabled selected>Select…</option>
+              <option>1</option>
+              <option>2–9</option>
+              <option>10–24</option>
+              <option>25–49</option>
+              <option>50–99</option>
+              <option>100+</option>
             </select>
           </label>
 
-          <fieldset class="smoker-group" style="border:none; margin-top:.5rem;">
-            <legend>Smoker?</legend>
-            <label>
-              <input type="radio" name="smoker" value="no" checked /> No
-            </label>
-            <label>
-              <input type="radio" name="smoker" value="yes" /> Yes
-            </label>
-          </fieldset>
+          <label>Business Name
+            <input type="text" id="business_name" required />
+          </label>
 
-          <div class="panel-nav">
-            <button type="button" data-back>Back</button>
-            <button type="button" id="btn-submit">Submit</button>
+          <div class="step-nav">
+            <button type="button" class="link like-back" data-back="1">&lt; Go Back</button>
+            <button type="button" class="cta" id="btn-step2">Continue</button>
           </div>
         </section>
 
-        <!-- STAGE 3: Result / Thank-You -->
-        <section id="result-screen" style="display:none;">
+        <!-- ============ STEP 3 ============ -->
+        <section class="step-card" id="step-3">
+          <h3><span class="step-num">Step 3:</span> Go ahead and introduce yourself.</h3>
+          <p class="req-hint">All fields are required.</p>
+
+          <div class="row row-name">
+            <label class="grow">First Name
+              <input type="text" id="first_name" required />
+            </label>
+            <label class="grow">Last Name
+              <input type="text" id="last_name" required />
+            </label>
+          </div>
+
+          <label>Phone Number
+            <input type="tel" id="phone" inputmode="tel" required />
+          </label>
+
+          <label>Email
+            <input type="email" id="email" required />
+          </label>
+
+          <p class="tcpa">
+            By clicking <strong>Submit</strong>, you agree that Family Values Group may contact you at the
+            phone number and email provided (including automated texts/calls and prerecorded messages) about
+            insurance products or services. Consent is not required to purchase. Message/data rates may apply.
+          </p>
+
+          <div class="step-nav">
+            <button type="button" class="link like-back" data-back="2">&lt; Go Back</button>
+            <button type="button" class="cta" id="btn-submit">Submit</button>
+          </div>
+        </section>
+
+        <!-- ============ RESULT ============ -->
+        <section class="step-card" id="result-screen" style="display:none;">
           <h3 id="result-title"></h3>
           <p id="result-body"></p>
-
-          <div id="result-actions" class="panel-nav" style="margin-top:.75rem;"></div>
-
-          <!-- Referrals -->
-          <div id="referrals" style="margin-top:1rem; display:none;">
-            <h4>Refer a friend/family (optional)</h4>
-            <div id="ref-list"></div>
-            <div class="panel-nav" style="gap:.5rem; margin-top:.5rem;">
-              <button type="button" id="ref-add" class="icon-btn" title="Add another">
-                <i class="fa-solid fa-circle-plus"></i> Add another
-              </button>
-              <button type="button" id="ref-submit" class="icon-btn" title="Submit referrals">
-                <i class="fa-solid fa-paper-plane"></i> Submit referrals
-              </button>
-            </div>
-            <p id="ref-msg" class="small" style="margin-top:.35rem;"></p>
-          </div>
-
-          <div class="tiny-links" style="text-align:center; margin-top:.75rem; font-size:.9em;">
-            <a href="index.html">Back to Home</a> ·
-            <a href="affiliations.html">Our Affiliations</a>
-          </div>
+          <div class="step-nav" id="result-actions"></div>
         </section>
       </form>
     </section>
   </main>
 
-  <!-- Footer -->
+  <!-- Footer (yours) -->
   <footer class="index-grid-footer">
     <img id="footerlogo" src="Pics/img6.png" alt="" />
     <hr class="footerhr" />
