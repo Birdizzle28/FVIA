@@ -60,9 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateCoverDisplayAndCsv() {
     const sel = getSelections();
-    coverDisplay.textContent = sel.join(', ');   // ← no fallback text
+    coverDisplay.textContent = sel.join(', '); // no default text when empty
     coverCsv.value = sel.join(',');
-    updateCoverFloat();                          // keep the floating label correct
+    updateCoverFloat(); // keep the label floated when there are picks
   }
 
   function updateCoverFloat() {
