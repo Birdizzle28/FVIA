@@ -199,9 +199,31 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   btnStep2?.addEventListener('click', () => {
-    if (!employeeCount.value) { employeeCount.reportValidity(); return; }
-    if (!businessName.value.trim()) { businessName.reportValidity(); return; }
-    show(step3); firstName.focus();
+    // clear previous error styling
+    clearInvalid(employeeCount);
+    clearInvalid(businessName);
+  
+    let bad = false;
+  
+    if (!employeeCount.value) {
+      markInvalid(employeeCount);
+      bad = true;
+    }
+    if (!businessName.value.trim()) {
+      markInvalid(businessName);
+      bad = true;
+    }
+  
+    if (bad) {
+      const firstBad = [employeeCount, businessName]
+        .find(el => el.classList.contains('is-invalid')) || employeeCount;
+      firstBad.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      firstBad.focus?.();
+      return;
+    }
+  
+    show(step3);
+    firstName.focus();
   });
 
   // Back links (conditional: Step 3 goes to Step 2 only if "My Business" was picked)
