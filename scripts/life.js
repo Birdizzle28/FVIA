@@ -46,16 +46,28 @@ document.addEventListener('DOMContentLoaded', () => {
     coverDisplay.textContent = sel.length ? sel.join(', ') : 'Select one or more';
     coverCsv.value = sel.join(',');
   }
-  coverSelect.addEventListener('click', () => {
-    const open = coverMenu.style.display === 'block';
-    coverMenu.style.display = open ? 'none' : 'block';
-    coverSelect.setAttribute('aria-expanded', String(!open));
+  
+  // ensure menu starts closed + text is in sync  ⬇️
+  coverMenu.style.display = 'none';
+  updateCoverDisplay();
+  
+  function toggleMenu(forceOpen) {
+    const open = (forceOpen !== undefined) ? forceOpen : (coverMenu.style.display !== 'block');
+    coverMenu.style.display = open ? 'block' : 'none';
+    coverSelect.setAttribute('aria-expanded', String(open));
+  }
+  
+  coverSelect.addEventListener('click', () => toggleMenu());              // mouse
+  coverSelect.addEventListener('keydown', (e) => {                        // keyboard
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMenu(); }
+    if (e.key === 'Escape')            { toggleMenu(false); }
   });
+  
   coverMenu.addEventListener('change', updateCoverDisplay);
+  
   document.addEventListener('click', (e) => {
     if (!coverSelect.contains(e.target) && !coverMenu.contains(e.target)) {
-      coverMenu.style.display = 'none';
-      coverSelect.setAttribute('aria-expanded', 'false');
+      toggleMenu(false);
     }
   });
 
