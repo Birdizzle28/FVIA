@@ -123,6 +123,7 @@
   appearance: none !important;
   -webkit-appearance: none !important;
   -moz-appearance: none !important;
+   display: none !important;
 }
 
 /* Option chip (left-aligned with fake box) */
