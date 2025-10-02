@@ -849,3 +849,6 @@ button:disabled {
   #mobile-menu a:hover {
     background: #272727;
   }
+a .fa-solid {
+	padding-right: 5rem;
+}
