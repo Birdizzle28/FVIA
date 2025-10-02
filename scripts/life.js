@@ -46,88 +46,56 @@ document.addEventListener('DOMContentLoaded', () => {
     coverDisplay.textContent = sel.length ? sel.join(', ') : 'Select one or more';
     coverCsv.value = sel.join(',');
   }
-  // NEW: keep the "selected" class on the label in sync with the hidden checkbox
   function syncSelectedClasses() {
     coverMenu.querySelectorAll('.ms-option').forEach(lbl => {
       const cb = lbl.querySelector('input[type="checkbox"]');
       lbl.classList.toggle('selected', !!cb?.checked);
     });
   }
-  // ensure menu starts closed + text is in sync  ⬇️
+  // init state
   coverMenu.style.display = 'none';
   updateCoverDisplay();
   syncSelectedClasses();
-  
+
   function toggleMenu(forceOpen) {
     const open = (forceOpen !== undefined) ? forceOpen : (coverMenu.style.display !== 'block');
     coverMenu.style.display = open ? 'block' : 'none';
     coverSelect.setAttribute('aria-expanded', String(open));
   }
-  
-  coverSelect.addEventListener('click', () => toggleMenu());              // mouse
-  coverSelect.addEventListener('keydown', (e) => {                        // keyboard
+  coverSelect.addEventListener('click', () => toggleMenu());
+  coverSelect.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMenu(); }
-    if (e.key === 'Escape')            { toggleMenu(false); }
+    if (e.key === 'Escape') { toggleMenu(false); }
   });
-  
-  // update display + chip styles when a choice changes
-  coverMenu.addEventListener('change', () => {
-    updateCoverDisplay();
-    syncSelectedClasses();
-  });
-  // ---- PATCH: make labels act like the control and hard-hide any native boxes ----
+  coverMenu.addEventListener('change', () => { updateCoverDisplay(); syncSelectedClasses(); });
+
   (function initFakeCheckboxes(){
-    // absolutely hide via inline style as a last resort (beats any stylesheet order)
     coverMenu.querySelectorAll('.ms-option input[type="checkbox"]').forEach(cb => {
-      cb.style.display = 'none';
-      cb.style.position = 'absolute';
-      cb.style.left = '-9999px';
-      cb.style.width = '0';
-      cb.style.height = '0';
-      cb.style.opacity = '0';
-      cb.style.pointerEvents = 'none';
+      cb.style.display = 'none'; cb.style.position='absolute'; cb.style.left='-9999px';
+      cb.style.width = '0'; cb.style.height = '0'; cb.style.opacity='0'; cb.style.pointerEvents='none';
     });
-  
-    // clicking the label toggles selected state + underlying checkbox value
     coverMenu.querySelectorAll('.ms-option').forEach(lbl => {
+      lbl.tabIndex = 0;
       lbl.addEventListener('click', (e) => {
-        // ignore direct clicks on inputs (shouldn’t happen since we hid them)
-        if (e.target && e.target.tagName && e.target.tagName.toLowerCase() === 'input') return;
+        if (e.target?.tagName?.toLowerCase() === 'input') return;
         const cb = lbl.querySelector('input[type="checkbox"]');
         if (!cb) return;
         cb.checked = !cb.checked;
         lbl.classList.toggle('selected', cb.checked);
-        // update visible text + hidden CSV
-        coverDisplay.textContent = getSelections().join(', ') || 'Select one or more';
-        coverCsv.value = getSelections().join(',');
+        updateCoverDisplay();
+      });
+      lbl.addEventListener('keydown', (e) => {
+        if (e.key === ' ' || e.key === 'Enter') {
+          e.preventDefault();
+          const cb = lbl.querySelector('input[type="checkbox"]');
+          if (cb) { cb.checked = !cb.checked; lbl.classList.toggle('selected', cb.checked); updateCoverDisplay(); }
+        }
       });
     });
-  
-    // ensure initial .selected state matches any prechecked boxes
-    coverMenu.querySelectorAll('.ms-option').forEach(lbl => {
-      const cb = lbl.querySelector('input[type="checkbox"]');
-      lbl.classList.toggle('selected', !!cb?.checked);
-    });
   })();
-  // OPTIONAL: allow keyboard toggling directly on each label (space/enter)
-  coverMenu.querySelectorAll('.ms-option').forEach(lbl => {
-    lbl.tabIndex = 0; // make focusable
-    lbl.addEventListener('keydown', (e) => {
-      if (e.key === ' ' || e.key === 'Enter') {
-        e.preventDefault();
-        const cb = lbl.querySelector('input[type="checkbox"]');
-        if (cb) {
-          cb.checked = !cb.checked;
-          cb.dispatchEvent(new Event('change', { bubbles: true }));
-        }
-      }
-    });
-  });
-  
+
   document.addEventListener('click', (e) => {
-    if (!coverSelect.contains(e.target) && !coverMenu.contains(e.target)) {
-      toggleMenu(false);
-    }
+    if (!coverSelect.contains(e.target) && !coverMenu.contains(e.target)) toggleMenu(false);
   });
 
   // Phone mask
@@ -146,7 +114,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const ageOk  = String(age.value||'').trim() !== '' && Number(age.value) >= 0;
     const picks  = getSelections();
     if (!zipOk || !ageOk || picks.length === 0) {
-      // simple inline validity
       if (!zipOk) zip.reportValidity?.();
       if (!ageOk) age.reportValidity?.();
       if (picks.length === 0) {
@@ -155,14 +122,10 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return;
     }
-
-    // If “My Business” selected, show Step 2, otherwise skip to Step 3
     if (picks.includes('My Business')) {
-      show(step2);
-      employeeCount.focus();
+      show(step2); employeeCount.focus();
     } else {
-      show(step3);
-      firstName.focus();
+      show(step3); firstName.focus();
     }
   });
 
@@ -170,25 +133,22 @@ document.addEventListener('DOMContentLoaded', () => {
   btnStep2?.addEventListener('click', () => {
     if (!employeeCount.value) { employeeCount.reportValidity(); return; }
     if (!businessName.value.trim()) { businessName.reportValidity(); return; }
-    show(step3);
-    firstName.focus();
+    show(step3); firstName.focus();
   });
 
-  // “< Go Back” links
+  // Back links
   document.querySelectorAll('[data-back]').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const to = e.currentTarget.getAttribute('data-back');
       if (to === '1') show(step1);
       if (to === '2') show(step2);
-      if (to === '0') show(step1);
     });
   });
 
   // ---------- Submit -> Supabase ----------
-  function digitsOnly(s){ return (s||'').replace(/\D/g,''); }
+  const digitsOnly = (s) => (s||'').replace(/\D/g,'');
 
   function productTypeFromSelections(selections) {
-    // One product_type column → choose best-fit or "multi"
     const map = new Map([
       ['My Car','auto'],
       ['My Home','home'],
@@ -204,7 +164,18 @@ document.addEventListener('DOMContentLoaded', () => {
     return unique.length === 1 ? unique[0] : 'multi';
   }
 
+  // Optional: UTM/referrer capture
+  function utmBundle() {
+    const p = new URLSearchParams(location.search);
+    const keys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
+    const pairs = [];
+    keys.forEach(k => { if (p.get(k)) pairs.push(`${k.replace('utm_','') }=${p.get(k)}`); });
+    const ref = document.referrer ? `referrer=${document.referrer}` : '';
+    return (pairs.length || ref) ? `utm:${pairs.join('|')}${pairs.length && ref ? ' || ' : ''}${ref}` : '';
+  }
+
   async function insertLead(row){
+    if (!window.supabase) throw new Error('Supabase not loaded');
     const client = supabase.createClient(window.FVG_SUPABASE_URL, window.FVG_SUPABASE_ANON);
     const { data, error } = await client.from('leads').insert(row).select('id').single();
     if (error) throw new Error(error.message || 'Insert failed');
@@ -212,15 +183,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   btnSubmit.addEventListener('click', async () => {
-    // Validate step 3 fields
     if (!firstName.value.trim()) { firstName.reportValidity(); return; }
-    if (!lastName.value.trim())  { lastName.reportValidity(); return; }
+    if (!lastName.value.trim())  { lastName.reportValidity();  return; }
     const ten = digitsOnly(phone.value);
     if (ten.length !== 10)       { phone.setCustomValidity('Enter a valid 10-digit number.'); phone.reportValidity(); phone.setCustomValidity(''); return; }
-    if (!email.checkValidity())  { email.reportValidity(); return; }
+    if (!email.checkValidity())  { email.reportValidity();     return; }
 
-    // Build row for your schema
     const selections = getSelections();
+    const notesParts = [
+      `cover=${selections.join(',')}`,
+      selections.includes('My Business') ? `biz_employees=${employeeCount.value||''}` : null,
+      selections.includes('My Business') ? `biz_name=${(businessName.value||'').trim()}` : null,
+      utmBundle() || null
+    ].filter(Boolean);
+
     const row = {
       first_name: firstName.value.trim(),
       last_name:  lastName.value.trim(),
@@ -228,11 +204,7 @@ document.addEventListener('DOMContentLoaded', () => {
       city:       null,
       zip:        zip.value.trim(),
       lead_type:  'Web',
-      notes: [
-        `cover=${selections.join(',')}`,
-        selections.includes('My Business') ? `biz_employees=${employeeCount.value||''}` : null,
-        selections.includes('My Business') ? `biz_name=${(businessName.value||'').trim()}` : null
-      ].filter(Boolean).join(' || '),
+      notes:      notesParts.join(' || '),
       submitted_by:      window.FVG_WEBSITE_SUBMITTER_ID,
       submitted_by_name: window.FVG_WEBSITE_SUBMITTER_NAME || 'Website Lead',
       assigned_to: null,
@@ -245,14 +217,12 @@ document.addEventListener('DOMContentLoaded', () => {
       product_type: productTypeFromSelections(selections)
     };
 
-    // UI state
     const prev = btnSubmit.textContent;
     btnSubmit.disabled = true;
     btnSubmit.textContent = 'Submitting…';
 
     try {
       const id = await insertLead(row);
-      // Thank-you screen
       const resTitle = document.getElementById('result-title');
       const resBody  = document.getElementById('result-body');
       const resActions = document.getElementById('result-actions');
