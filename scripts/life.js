@@ -75,7 +75,40 @@ document.addEventListener('DOMContentLoaded', () => {
     updateCoverDisplay();
     syncSelectedClasses();
   });
+  // ---- PATCH: make labels act like the control and hard-hide any native boxes ----
+  (function initFakeCheckboxes(){
+    // absolutely hide via inline style as a last resort (beats any stylesheet order)
+    coverMenu.querySelectorAll('.ms-option input[type="checkbox"]').forEach(cb => {
+      cb.style.display = 'none';
+      cb.style.position = 'absolute';
+      cb.style.left = '-9999px';
+      cb.style.width = '0';
+      cb.style.height = '0';
+      cb.style.opacity = '0';
+      cb.style.pointerEvents = 'none';
+    });
   
+    // clicking the label toggles selected state + underlying checkbox value
+    coverMenu.querySelectorAll('.ms-option').forEach(lbl => {
+      lbl.addEventListener('click', (e) => {
+        // ignore direct clicks on inputs (shouldn’t happen since we hid them)
+        if (e.target && e.target.tagName && e.target.tagName.toLowerCase() === 'input') return;
+        const cb = lbl.querySelector('input[type="checkbox"]');
+        if (!cb) return;
+        cb.checked = !cb.checked;
+        lbl.classList.toggle('selected', cb.checked);
+        // update visible text + hidden CSV
+        coverDisplay.textContent = getSelections().join(', ') || 'Select one or more';
+        coverCsv.value = getSelections().join(',');
+      });
+    });
+  
+    // ensure initial .selected state matches any prechecked boxes
+    coverMenu.querySelectorAll('.ms-option').forEach(lbl => {
+      const cb = lbl.querySelector('input[type="checkbox"]');
+      lbl.classList.toggle('selected', !!cb?.checked);
+    });
+  })();
   // OPTIONAL: allow keyboard toggling directly on each label (space/enter)
   coverMenu.querySelectorAll('.ms-option').forEach(lbl => {
     lbl.tabIndex = 0; // make focusable
