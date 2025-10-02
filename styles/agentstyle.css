@@ -839,11 +839,11 @@ button:disabled {
   }
 
   #mobile-menu a {
-    display: block;
-    padding: 10px 20px;
-    color: #353468;
-    text-decoration: none;
-    text-align: center;
+	  display: block;
+	  padding: 10px 20px;
+	  color: #444387;
+	  text-decoration: none;
+	  text-align: left;
   }
 
   #mobile-menu a:hover {
