@@ -4,23 +4,13 @@
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-  <!-- Your existing styles (keep these) -->
   <link rel="stylesheet" href="styles/general.css" />
   <link rel="stylesheet" href="styles/freequote.css" />
-  <!-- Page-specific styles -->
   <link rel="stylesheet" href="styles/life.css" />
-
   <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-
-  <!-- Header/footer script (yours) -->
   <script type="module" src="scripts/general.js"></script>
-
-  <!-- Supabase client -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-  <!-- FV Group config (replace with your real values) -->
   <script>
     window.FVG_SUPABASE_URL  = "https://ddlbgkolnayqrxslzsxn.supabase.co";
     window.FVG_SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho";
@@ -79,7 +69,7 @@
             </label>
           </div>
 
-          <label>I want to cover…
+          <label class="cover-field">I want to cover…
             <!-- multi-select “fake” dropdown -->
             <div class="multi-select" id="cover-select" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
               <div class="ms-value" id="cover-display">Select one or more</div>
