@@ -46,7 +46,13 @@ document.addEventListener('DOMContentLoaded', () => {
     coverDisplay.textContent = sel.length ? sel.join(', ') : 'Select one or more';
     coverCsv.value = sel.join(',');
   }
-  
+  // NEW: keep the "selected" class on the label in sync with the hidden checkbox
+  function syncSelectedClasses() {
+    coverMenu.querySelectorAll('.ms-option').forEach(lbl => {
+      const cb = lbl.querySelector('input[type="checkbox"]');
+      lbl.classList.toggle('selected', !!cb?.checked);
+    });
+  }
   // ensure menu starts closed + text is in sync  ⬇️
   coverMenu.style.display = 'none';
   updateCoverDisplay();
@@ -63,7 +69,26 @@ document.addEventListener('DOMContentLoaded', () => {
     if (e.key === 'Escape')            { toggleMenu(false); }
   });
   
-  coverMenu.addEventListener('change', updateCoverDisplay);
+  // update display + chip styles when a choice changes
+  coverMenu.addEventListener('change', () => {
+    updateCoverDisplay();
+    syncSelectedClasses();
+  });
+  
+  // OPTIONAL: allow keyboard toggling directly on each label (space/enter)
+  coverMenu.querySelectorAll('.ms-option').forEach(lbl => {
+    lbl.tabIndex = 0; // make focusable
+    lbl.addEventListener('keydown', (e) => {
+      if (e.key === ' ' || e.key === 'Enter') {
+        e.preventDefault();
+        const cb = lbl.querySelector('input[type="checkbox"]');
+        if (cb) {
+          cb.checked = !cb.checked;
+          cb.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+      }
+    });
+  });
   
   document.addEventListener('click', (e) => {
     if (!coverSelect.contains(e.target) && !coverMenu.contains(e.target)) {
