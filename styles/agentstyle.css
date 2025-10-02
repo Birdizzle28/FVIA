@@ -250,6 +250,7 @@
 }
 .footerhr {
 	width: 50vw;
+	height: 1px;
 	border: none;
 	background-color: black;
 }
