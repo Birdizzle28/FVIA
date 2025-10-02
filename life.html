@@ -4,27 +4,27 @@
   <meta charset="utf-8" />
   <meta http-equiv="X-UA-Compatible" content="IE=edge" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
   <link rel="stylesheet" href="styles/general.css" />
-  <link rel="stylesheet" href="styles/freequote.css" />
+  <!-- Use merged life.css to avoid conflicts with freequote.css -->
+  <link rel="stylesheet" href="styles/life.css" />
+
   <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
   <script type="module" src="scripts/general.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     window.FVG_SUPABASE_URL  = "https://ddlbgkolnayqrxslzsxn.supabase.co";
     window.FVG_SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho";
-    // “Website Lead” submitter
     window.FVG_WEBSITE_SUBMITTER_ID   = "00000000-0000-0000-0000-000000000000";
     window.FVG_WEBSITE_SUBMITTER_NAME = "Website Lead";
   </script>
 
-  <!-- Page script -->
   <script defer src="scripts/life.js"></script>
-
   <title>Get a Quote | Family Values Group</title>
 </head>
 <body id="indexbody">
-  <!-- ===== Header (your existing header) ===== -->
   <header class="index-grid-header">
     <a href="index.html"><img id="headerlogo" src="Pics/img6.png" alt="Family Values Group" /></a>
     <p><strong>Family Values Group</strong></p>
@@ -53,14 +53,15 @@
       <h2 id="quote-heading">Let’s get you covered</h2>
 
       <form id="life-form" novalidate>
-        <!-- ============ STEP 1 ============ -->
+        <!-- STEP 1 -->
         <section class="step-card active" id="step-1">
           <h3><span class="step-num">Step 1:</span> Let’s start with the basics.</h3>
           <p class="req-hint">All fields are required.</p>
 
           <div class="row row-zip-age">
             <label class="grow">Zip Code
-              <input type="text" id="zip" inputmode="numeric" maxlength="5" pattern="\\d{5}" required />
+              <!-- Correct pattern uses a single backslash -->
+              <input type="text" id="zip" inputmode="numeric" maxlength="5" pattern="\d{5}" required />
             </label>
 
             <label class="age-box">Age
@@ -75,8 +76,7 @@
               <i class="fa-solid fa-chevron-down ms-caret"></i>
             </div>
             <div class="ms-menu" id="cover-menu" role="listbox" aria-multiselectable="true">
-              <!-- Each option is a checkbox; selections show as comma list in the display -->
-              <label class="ms-option"><input type="checkbox" style="display:none;" value="Me" /> Me</label>
+              <label class="ms-option"><input type="checkbox" value="Me" /> Me</label>
               <label class="ms-option"><input type="checkbox" value="Someone Else" /> Someone Else</label>
               <label class="ms-option"><input type="checkbox" value="My Business" /> My Business</label>
               <label class="ms-option"><input type="checkbox" value="My Car" /> My Car</label>
@@ -84,14 +84,13 @@
               <label class="ms-option"><input type="checkbox" value="Legal Protection Plan" /> Legal Protection Plan</label>
               <label class="ms-option"><input type="checkbox" value="My Identity" /> My Identity</label>
             </div>
-            <!-- canonical CSV field used on submit -->
             <input type="hidden" id="cover_csv" />
           </label>
 
           <button type="button" class="cta" id="btn-step1">Get Started</button>
         </section>
 
-        <!-- ============ STEP 2 (conditional for business) ============ -->
+        <!-- STEP 2 (conditional for business) -->
         <section class="step-card" id="step-2">
           <h3><span class="step-num">Step 2:</span> Let’s explore some details about your business.</h3>
           <p class="req-hint">All fields are required.</p>
@@ -118,7 +117,7 @@
           </div>
         </section>
 
-        <!-- ============ STEP 3 ============ -->
+        <!-- STEP 3 -->
         <section class="step-card" id="step-3">
           <h3><span class="step-num">Step 3:</span> Go ahead and introduce yourself.</h3>
           <p class="req-hint">All fields are required.</p>
@@ -152,7 +151,7 @@
           </div>
         </section>
 
-        <!-- ============ RESULT ============ -->
+        <!-- RESULT -->
         <section class="step-card" id="result-screen" style="display:none;">
           <h3 id="result-title"></h3>
           <p id="result-body"></p>
@@ -162,7 +161,6 @@
     </section>
   </main>
 
-  <!-- Footer (yours) -->
   <footer class="index-grid-footer">
     <img id="footerlogo" src="Pics/img6.png" alt="" />
     <hr class="footerhr" />
