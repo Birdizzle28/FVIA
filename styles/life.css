@@ -1,0 +1,71 @@
+/* container inherits your auth-container + freequote.css look */
+#free-quote-form { max-width: 720px; }
+
+/* Step cards */
+.step-card {
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 0 12px rgba(0,0,0,.08);
+  padding: 18px;
+  display: none;
+}
+.step-card.active { display: block; }
+
+.step-num { color:#0066cc; }
+.req-hint { color:#c87800; font-weight:600; margin-bottom:.6rem; }
+
+/* Rows */
+.row { display:flex; gap:12px; }
+.row .grow { flex:1; }
+.row-zip-age .age-box { width:180px; min-width:160px; }
+
+/* Inputs + selects inherit site styles; just tighten */
+.step-card input, .step-card select {
+  padding: 12px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+}
+
+/* Big CTA */
+.cta {
+  width: 100%;
+  padding: 14px;
+  background: #06c; color: #fff;
+  border: none; border-radius: 8px;
+  font-size: 1.1rem; cursor: pointer;
+}
+.cta:hover { background:#049; }
+
+/* Back link style to mimic Aflac’s “< Go Back” */
+.link.like-back {
+  background: none; border: none; color:#0066cc; cursor:pointer;
+  padding: 0; font-size: .95rem;
+}
+.step-nav { display:flex; justify-content:space-between; align-items:center; gap:12px; margin-top:10px; }
+
+/* Multi-select dropdown */
+.multi-select {
+  position: relative;
+  display: flex; align-items:center; justify-content:space-between;
+  border:1px solid #ccc; border-radius:8px; padding: 12px; cursor:pointer;
+  user-select: none; background:#fff;
+}
+.ms-value { color:#555; }
+.ms-caret { margin-left: 10px; }
+.ms-menu {
+  margin-top: 6px; border:1px solid #ccc; border-radius:8px; background:#fff;
+  box-shadow: 0 6px 18px rgba(0,0,0,.08);
+  display:none; padding:8px; max-height:220px; overflow:auto;
+}
+.ms-option { display:flex; align-items:center; gap:8px; padding:8px; border-radius:6px; }
+.ms-option:hover { background:#f2f7ff; }
+
+/* TCPA text */
+.tcpa { font-size:.9rem; color:#444; line-height:1.35; margin-top:.5rem; }
+
+/* Small screens */
+@media (max-width: 640px) {
+  .row { flex-direction: column; }
+  .row-zip-age .age-box { width:100%; min-width:0; }
+}
