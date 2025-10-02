@@ -80,9 +80,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function updateCoverDisplayAndCsv() {
     const sel = getSelections();
-    coverDisplay.textContent = sel.join(', '); // no default text when empty
+    coverDisplay.textContent = sel.join(', ');
     coverCsv.value = sel.join(',');
-    updateCoverFloat(); // keep the label floated when there are picks
+    updateCoverFloat();
+    if (sel.length > 0) clearInvalid(coverSelect); // remove red state once valid
   }
 
   function updateCoverFloat() {
@@ -179,11 +180,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!zipOk) { markInvalid(zip); bad = true; }
     if (!ageOk) { markInvalid(age); bad = true; }
     if (picks.length === 0) {
-      coverSelect.classList.add('has-error');
+      coverSelect.classList.add('has-error');      // red border on the fake input
+      markInvalid(coverSelect);                     // make the floating label turn red
       setTimeout(()=>coverSelect.classList.remove('has-error'), 1000);
       bad = true;
     }
-
     if (bad) {
       // scroll to first invalid
       const firstBad = (!zipOk ? zip : !ageOk ? age : coverSelect);
