@@ -851,4 +851,5 @@ button:disabled {
   }
 #mobile-menu a .fa-solid {
 	padding-right: 1.5rem;
+	width: 1rem;
 }
