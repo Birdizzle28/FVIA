@@ -883,7 +883,7 @@ button:disabled {
     width: 100%;
   }
   .index-grid-header.scrolled {
-  background-color: rgba(0, 0, 0, 0.7) !important;
+  background-color: #ed9ea5 !important;
   transition: background-color 0.3s ease;
 }
   /* Hide original nav and <hr> for mobile */
