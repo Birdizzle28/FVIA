@@ -258,6 +258,7 @@ select:focus {
    background:#fff; 
    flex:0 0 18px; 
    box-sizing:border-box;
+   display: none !important;
 }
 .ms-option.selected { 
    border-color:#3399ff; 
