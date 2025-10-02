@@ -172,11 +172,26 @@ document.addEventListener('DOMContentLoaded', () => {
     show(step3); firstName.focus();
   });
 
+  // Back links (conditional: Step 3 goes to Step 2 only if "My Business" was picked)
   document.querySelectorAll('[data-back]').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const to = e.currentTarget.getAttribute('data-back');
-      if (to === '1') show(step1);
-      if (to === '2') show(step2);
+    btn.addEventListener('click', () => {
+      const to = btn.getAttribute('data-back');
+  
+      // Step 2 back → Step 1
+      if (to === '1') { 
+        show(step1); 
+        return; 
+      }
+  
+      // Step 3 back → Step 2 only if "My Business" was selected; otherwise Step 1
+      if (to === '2') {
+        const selections = getSelections(); // uses the chip menu state
+        if (selections.includes('My Business')) {
+          show(step2);
+        } else {
+          show(step1);
+        }
+      }
     });
   });
 
