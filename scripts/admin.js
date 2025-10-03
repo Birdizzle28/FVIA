@@ -452,7 +452,7 @@ async function loadLeadsWithFilters() {
   if (state) query = query.ilike('state', `%${state}%`);
   if (first) query = query.ilike('first_name', `%${first}%`);
   if (last) query = query.ilike('last_name', `%${last}%`);
-  if (type) query = query.ilike('lead_type', `%${type}%`);
+  if (type) query = query.ilike('product_type', `%${type}%`);
   if (assignedVal === 'true') {
     query = query.not('assigned_to', 'is', null);
   } else if (assignedVal === 'false') {
