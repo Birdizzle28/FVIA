@@ -101,12 +101,12 @@
   justify-content: center;
   flex-wrap: wrap;
 }
-.header-flex-container > a {
+.header-flex-container > a,{
   text-decoration: none;
   background-color: #ed9ea5;
   color: #353468;
   border: none;
-  padding: 8px 12px;
+  padding: 8px 4px;
   border-radius: 4px;
   font-weight: bold;
   cursor: pointer;
@@ -825,7 +825,6 @@ button:disabled {
     display: inline;
     top: 0;
     right: 0;
-    width: 25vw;
     max-width: 300px;
     background: #ed9ea5;
     transform: translateX(100%);
@@ -897,10 +896,10 @@ button:disabled {
 
   /* Logo on the left */
   #headerlogo {
-    order: 1;
-    width: 12vw;
-    max-width: 50px;
-    margin-top: 0;
+	  order: 1;
+	  width: 12vw;
+	  max-width: 50px;
+	  margin-top: 0;
 	  aspect-ratio: 1/1;
   }
 
@@ -951,5 +950,9 @@ button:disabled {
 }
 #mobile-menu a p {
 	display: none;
+}
+#mobile-menu a .fa-solid {
+	padding-right: 0;
+	
 }
 }
