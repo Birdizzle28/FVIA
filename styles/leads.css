@@ -6,29 +6,6 @@
   border-radius: 8px;
   padding: 20px;
 }
-#leads-table {
-  width: 100%;
-  border-collapse: collapse;
-  background-color: #ffffff;
-}
-#leads-table th,
-#leads-table td {
-  border: 1px solid black;
-  padding: 8px;
-  text-align: left;
-  font-size: 0.9em;
-  min-width: 180px;
-}
-/* Style the body cells */
-#leads-table tbody td {
-  padding: 8px;
-  border: 1px solid #ddd;
-}
-
-/* Zebra striping on every other row */
-#leads-table tbody tr:nth-child(even) {
-  background-color: #f5f5f5;   /* light gray */
-}
 #lead-filters {
   display: flex;
   flex-wrap: wrap;
