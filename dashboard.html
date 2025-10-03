@@ -180,17 +180,76 @@
 				<h1 class="dash-title">Lead Snapshot</h1>
 				<div class="folder-tabs">
 					<section id="panel-leads" class="panel is-active" role="tabpanel" aria-labelledby="tab-leads">
-							<div class="card-grid">
-								<article class="card">
-									<h3>New</h3>
-								</article>
-								<article class="card">
-									<h3>Contacted</h3>
-								</article>
-								<article class="card">
-									<h3>Quoted</h3>
-								</article>
-							</div>
+							<section id="panel-leads" class="panel is-active" role="tabpanel" aria-labelledby="tab-leads">
+							  <div class="lead-toolbar">
+							    <div class="scope">
+							      <label><input type="radio" name="lead-scope" value="mine" checked> My leads</label>
+							      <label><input type="radio" name="lead-scope" value="team"> Team</label>
+							    </div>
+							    <div class="range">
+							      <label for="lead-range" class="sr-only">Date range</label>
+							      <select id="lead-range">
+							        <option value="7">Last 7 days</option>
+							        <option value="30" selected>Last 30 days</option>
+							        <option value="0">All time</option>
+							      </select>
+							    </div>
+							  </div>
+							
+							  <div class="lead-stats">
+							    <article class="stat" data-key="new">
+							      <div class="stat-top">
+							        <i class="fa-solid fa-sparkles"></i>
+							        <span>New</span>
+							      </div>
+							      <div class="num" id="stat-new">0</div>
+							    </article>
+							    <article class="stat" data-key="contacted">
+							      <div class="stat-top">
+							        <i class="fa-solid fa-phone"></i>
+							        <span>Contacted</span>
+							      </div>
+							      <div class="num" id="stat-contacted">0</div>
+							    </article>
+							    <article class="stat" data-key="quoted">
+							      <div class="stat-top">
+							        <i class="fa-solid fa-file-invoice-dollar"></i>
+							        <span>Quoted</span>
+							      </div>
+							      <div class="num" id="stat-quoted">0</div>
+							    </article>
+							    <article class="stat" data-key="closed">
+							      <div class="stat-top">
+							        <i class="fa-solid fa-check-circle"></i>
+							        <span>Closed</span>
+							      </div>
+							      <div class="num" id="stat-closed">0</div>
+							    </article>
+							  </div>
+							
+							  <div class="lead-mini">
+							    <h3>Recent new leads</h3>
+							    <table class="mini-table" aria-label="Recent new leads">
+							      <thead>
+							        <tr>
+							          <th>Name</th>
+							          <th>Product</th>
+							          <th>ZIP</th>
+							          <th>Created</th>
+							        </tr>
+							      </thead>
+							      <tbody id="mini-new-leads">
+							        <!-- filled by JS -->
+							      </tbody>
+							    </table>
+							  </div>
+							
+							  <div class="snapshot-actions">
+							    <a class="btn-link" href="leads.html">
+							      Open leads inbox <i class="fa-solid fa-arrow-right"></i>
+							    </a>
+							  </div>
+							</section>
 						</section>
 					</div>
 				</div>
