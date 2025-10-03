@@ -8,4 +8,21 @@ const supabase = createClient(
 // Wait for DOM
 document.addEventListener('DOMContentLoaded', async () => {
   const { data: { session } } = await supabase.auth.getSession();
+  // simple tab switcher
+  document.addEventListener('click', (e) => {
+    const btn = e.target.closest('.folder-tabs .tab');
+    if (!btn) return;
+  
+    const tabs   = btn.parentElement.querySelectorAll('.tab');
+    const panels = btn.closest('.folder-tabs').querySelectorAll('.panel');
+    const id     = btn.dataset.tab;
+  
+    tabs.forEach(t => {
+      const active = t === btn;
+      t.classList.toggle('is-active', active);
+      t.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+  
+    panels.forEach(p => p.classList.toggle('is-active', p.id === `panel-${id}`));
+  });
 });
