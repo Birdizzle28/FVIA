@@ -50,6 +50,70 @@
       <a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
       <a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
   </div>
+	<main>
+		<section class="dash-wrap">
+  <h1 class="dash-title">Main Dashboard</h1>
+
+  <div class="folder-tabs">
+    <div class="tablist" role="tablist" aria-label="Dashboard sections">
+      <button class="tab is-active" id="tab-compliance" data-tab="compliance"
+              role="tab" aria-selected="true" aria-controls="panel-compliance">
+        Compliance
+      </button>
+      <button class="tab" id="tab-banking" data-tab="banking"
+              role="tab" aria-selected="false" aria-controls="panel-banking">
+        Banking Info
+      </button>
+      <button class="tab" id="tab-docs" data-tab="documents"
+              role="tab" aria-selected="false" aria-controls="panel-documents">
+        Documents
+      </button>
+      <button class="tab" id="tab-carriers" data-tab="carriers"
+              role="tab" aria-selected="false" aria-controls="panel-carriers">
+        Carrier Credentials
+      </button>
+    </div>
+
+    <div class="panels">
+      <!-- Compliance -->
+      <section id="panel-compliance" class="panel is-active" role="tabpanel" aria-labelledby="tab-compliance">
+        <div class="card-grid">
+          <article class="card">
+            <h3>License</h3>
+            <p>Individual NPN is 19866925<br>Agency NPN is --</p>
+            <a href="#" class="card-link">License (6)</a>
+          </article>
+          <article class="card">
+            <h3>Social Security Number</h3>
+            <p>SSN is ********5908</p>
+          </article>
+        </div>
+      </section>
+
+      <!-- Banking -->
+      <section id="panel-banking" class="panel" role="tabpanel" aria-labelledby="tab-banking">
+        <div class="card-grid">
+          <article class="card"><h3>Bank Account</h3><p>Add/update your payout info.</p></article>
+        </div>
+      </section>
+
+      <!-- Documents -->
+      <section id="panel-documents" class="panel" role="tabpanel" aria-labelledby="tab-docs">
+        <div class="card-grid">
+          <article class="card"><h3>Documents</h3><p>W-9, E&O, training certs, etc.</p></article>
+        </div>
+      </section>
+
+      <!-- Carrier Credentials -->
+      <section id="panel-carriers" class="panel" role="tabpanel" aria-labelledby="tab-carriers">
+        <div class="card-grid">
+          <article class="card"><h3>Carrier Logins</h3><p>View or request appointments.</p></article>
+        </div>
+      </section>
+    </div>
+  </div>
+</section>
+</main>
 
   <!-- Footer -->
   <footer class="index-grid-footer">
