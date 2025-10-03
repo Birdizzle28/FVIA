@@ -7,7 +7,6 @@ const supabase = createClient(
 
 // Wait for DOM
 document.addEventListener('DOMContentLoaded', async () => {
-  const loadingScreen = document.getElementById('loading-screen');
   const { data: { session } } = await supabase.auth.getSession();
 
 
@@ -17,8 +16,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const user = session.user;
-
-  loadingScreen.style.display = 'none';
 
   // Load profile info
   const { data: profile } = await supabase
