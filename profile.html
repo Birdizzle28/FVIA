@@ -32,7 +32,19 @@
   </header>
   <div id="mobile-menu">
       <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
-      <a href="leads.html"><i class="fa-solid fa-address-book"></i><p>Leads</p></a>
+     <!-- Toolkit parent (acts like a toggle, not a link) -->
+		<button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
+		  <i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
+		  <i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
+		</button>
+		
+		<!-- Submenu that expands between Toolkit and Commissions -->
+		<div id="toolkit-submenu" class="submenu" hidden>
+		  <a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
+		  <a href="routing.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
+		  <a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
+		  <a href="calendar.html"><i class="fa-solid fa-calendar-days"></i><span>Calendar</span></a>
+		</div>
       <a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
       <a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
       <a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
