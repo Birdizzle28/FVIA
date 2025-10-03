@@ -395,13 +395,13 @@ async function loadAgentsForAdmin() {
   allAgents = data || [];
   // Normalize products field to array of strings
   allAgents.forEach(agent => {
-    if (agent.products) {
-      if (Array.isArray(agent.products)) {
-        // already an array
-      } else if (typeof agent.products === 'string') {
-        agent.products = agent.products.split(',').map(s => s.trim());
+    if (agent.product_types) {
+      if (Array.isArray(agent.product_types)) {
+        // already array
+      } else if (typeof agent.product_types === 'string') {
+        agent.product_types = agent.product_types.split(',').map(s => s.trim());
       } else {
-        agent.products = null;
+        agent.product_types = null;
       }
     }
   });
