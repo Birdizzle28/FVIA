@@ -1,62 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-		<title>Admin | Family Values Group</title>
-		<link rel="stylesheet" href="styles/agentstyle.css" />
-		<link rel="stylesheet" href="styles/admin.css" />
-		<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
-	</head>
-	
-	<body id="dashboardbody">
-		
-		<!-- Header -->
-		<header class="index-grid-header">
-			<div id="logofvcontainer">
-				<div id="logodiv">
-					<a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
-				</div>
-				<div id="fvdiv">
-					<p><strong>Family Values Group</strong></p>
-				</div>
-			</div>
-			<div id="navcontainer">
-				<nav class="header-flex-container">
-					<a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
-					<a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
-					<div id="menu-toggle">
-						<i class="fa-solid fa-bars"></i>
-					</div>
-				</nav>
-			</div>
-		</header>
-
-		<!-- Mobile Menu -->
-		<div id="mobile-menu">
-			<a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
-			
-			<!-- Toolkit parent (acts like a toggle, not a link) -->
-			<button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
-				<i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
-				<i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
-			</button>
-			
-			<!-- Submenu that expands between Toolkit and Commissions -->
-			<div id="toolkit-submenu" class="submenu" hidden>
-				<a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
-				<a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
-				<a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
-				<a href="calendar.html"><i class="fa-solid fa-calendar-days"></i><span>Calendar</span></a>
-			</div>
-			<a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
-			<a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
-			<a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
-			<a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
-			<a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
-		</div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin | Family Values</title>
+  <link rel="stylesheet" href="styles/agentstyle.css" />
+  <link rel="stylesheet" href="styles/admin.css" />
+  <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+</head>
+<body id="dashboardbody">
+  <header class="index-grid-header">
+    <div id="logofvcontainer">
+      <div id="logodiv">
+        <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+      </div>
+      <div id="fvdiv">
+        <p><strong>Family Values</strong></p>
+        <p>Insurance Agency</p>
+      </div>
+    </div>
+    <div id="navcontainer">
+      <nav class="header-flex-container">
+        <a id="thread-tab" href="thread.html">Thread</a>
+        <div class="dropdown">
+          <button id="agent-hub-toggle" class="dropbtn">Agent Hub ▾</button>
+          <div id="agent-hub-menu" class="dropdown-content">
+            <a href="leads.html">My Leads</a>
+            <a href="scheduling.html">Scheduling</a>
+            <a href="maps.html">Map & Routing</a>
+            <a href="calculator.html">Insurance Calculator</a>
+          </div>
+        </div>
+        <a id="resources-tab" href="resources.html">Resources</a>
+        <a id="admin-tab"href="admin.html" class="admin-only">Admin</a>
+        <a id="profile-tab" href="profile.html">Profile</a>
+      </nav>
+    </div>
+  </header>
   <main class="auth-container">
     
     <!-- Admin page navigation -->
@@ -283,50 +266,43 @@
       <p>Agent statistics coming soon…</p>
     </section>
   </main>
-    <!-- Reassignment Warning Modal -->
-    <div id="reassign-warning-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
-      <div style="background: white; padding: 20px; border-radius: 10px; max-width: 90vw; width: 300px; text-align: center;">
-        <p><strong>Warning!</strong> You are about to re-assign one or more leads. Would you still like to submit?</p>
-        <div style="margin-top: 20px;">
-          <button id="cancel-reassign-btn" style="margin-right: 10px;">Cancel</button>
-          <button id="submit-anyway-btn">Submit Anyway</button>
-        </div>
+  <footer class="index-grid-footer">
+    <img id="footerlogo" src="../Pics/img17.png" alt="FVIA Footer Logo" />
+    <hr class="footerhr" />
+    <div id="footercontact">
+      <a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
+        <span class="fa fa-envelope"></span>
+        <span class="contactcontcontacts">fvinsuranceagency@gmail.com</span>
+      </a>
+      <a class="contactcontainer" href="tel:+17316934739">
+        <span class="fa fa-phone"></span>
+        <span class="contactcontcontacts">(731) 693-4739</span>
+      </a>
+    </div>
+    <hr class="footerhr" />
+    <div id="footersocial">
+      <a class="fab fa-facebook-f" href="#"></a>
+      <a class="fab fa-linkedin-in" href="#"></a>
+      <a class="fab fa-instagram" href="#"></a>
+      <a class="fab fa-youtube" href="#"></a>
+      <a class="fab fa-google" href="#"></a>
+    </div>
+    <p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
+  </footer>
+  <!-- Reassignment Warning Modal -->
+  <div id="reassign-warning-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: white; padding: 20px; border-radius: 10px; max-width: 90vw; width: 300px; text-align: center;">
+      <p><strong>Warning!</strong> You are about to re-assign one or more leads. Would you still like to submit?</p>
+      <div style="margin-top: 20px;">
+        <button id="cancel-reassign-btn" style="margin-right: 10px;">Cancel</button>
+        <button id="submit-anyway-btn">Submit Anyway</button>
       </div>
     </div>
-    
-  <!-- Footer -->
-		<footer class="index-grid-footer">
-			<img id="footerlogo" src="Pics/img17.png">
-			<hr class="footerhr">
-			<div id="footercontact">
-				<a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
-					<span class="fa fa-envelope"></span>
-					<span class="contactcontcontacts">fvinsuranceagency@gmail.com</span>
-				</a>
-				<p> | </p>
-				<a class="contactcontainer" href="tel:+17316934739">
-					<span href="#" class="fa fa-phone"></span>
-					<span class="contactcontcontacts">(731)693-4739</span>
-				</a>
-			</div>
-			<hr class="footerhr">
-			<div id="footersocial">
-				<a class="fab fa-facebook-f" href="#"></a>
-				<a class="fab fa-linkedin-in" href="#"></a>
-				<a class="fab fa-instagram" href="#"></a>
-				<a class="fab fa-youtube" href="#"></a>
-				<a class="fab fa-google" href="#"></a>
-			</div>
-			<!-- Footer links section (below social icons) -->
-			<div id="footerlinks">
-				<a href="faqs.html">FAQs</a>
-				<a href="terms.html">Terms</a>
-				<a href="accessibility.html">Accessibility</a>
-				<a href="privacy.html">Privacy</a>
-			</div>
-			<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
-		</footer>
-		<script type="module" src="scripts/general.js"></script>
-		<script type="module" src="scripts/admin.js"></script>
-	</body>
+  </div>
+  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+  <script type="module" src="scripts/admin.js"></script>
+</body>
 </html>
