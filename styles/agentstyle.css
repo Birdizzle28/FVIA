@@ -2,7 +2,9 @@
 * {
   font-family: Bellota Text;
 }
-
+html, body {
+  overflow-x: hidden;
+}
 /* Loading screen overlay */
 #loading-screen {
   position: fixed;
