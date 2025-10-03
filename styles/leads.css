@@ -1,8 +1,3 @@
-/* Lead management table */
-#leads-table-container {
-  overflow-x: auto;
-  width: 100%;
-}
 /* Leads page sections styling */
 .lead-section {
   max-width: 90%;
@@ -10,18 +5,6 @@
   background-color: #fff;
   border-radius: 8px;
   padding: 20px;
-}
-#leads-table-container table {
-  border-collapse: collapse;
-  width: 100%;
-}
-#leads-table-container thead th {
-  position: sticky;
-  top: 0;
-  background-color: #353468;   /* pick a theme colour */
-  color: #ffffff;
-  z-index: 1;
-  cursor: pointer; /* for sort indicator */
 }
 #leads-table {
   width: 100%;
