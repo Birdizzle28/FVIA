@@ -107,13 +107,16 @@ main {
   position: relative;
   border: 1px solid var(--tab-border);
   background: #fff;
-  padding: 0;               /* no extra rounding/padding wrapper */
+  padding: 0;
+  overflow: hidden;
 }
 .carousel-track {
   display: flex;
-  overflow: hidden;
+  overflow: visible;
   scroll-behavior: smooth;
   touch-action: pan-y;
+  will-change: transform;
+  transition: transform .3s ease;
 }
 .slide {
   flex: 0 0 100%;
