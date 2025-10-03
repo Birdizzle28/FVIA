@@ -1,3 +1,10 @@
+/* ==== lighter full-width page area under your sections ==== */
+main {
+  background: #f6f7fb;           /* softer, light gray-blue */
+  width: 100%;
+}
+
+/* ==== folder tabs (square, flush-left, no seam, no scroll) ==== */
 :root{
   --tab-bg: #eceff7;
   --tab-bg-active:#ffffff;
@@ -6,7 +13,6 @@
   --muted:#6b7280;
 }
 
-/* wrapper + title */
 .dash-wrap{ max-width:1100px; margin:24px auto; padding:0 16px; }
 .dash-title{
   margin:6px 0 14px;
@@ -15,45 +21,84 @@
   font-weight:800;
 }
 
-/* folder tabs */
+/* tab row */
 .folder-tabs .tablist{
-  display:flex; gap:12px; overflow-x:auto; padding:0 6px;
-}
-.folder-tabs .tab{
-  appearance:none; border:none; cursor:pointer;
-  background:var(--tab-bg); color:var(--muted);
-  border:1px solid var(--tab-border); border-bottom:none;
-  border-radius:12px 12px 0 0;
-  padding:10px 16px; font-weight:700; white-space:nowrap;
-  transition:background .15s ease, color .15s ease, transform .15s ease;
-  margin-bottom:-1px; /* sit on the panel border like a folder tab */
-}
-.folder-tabs .tab:hover{ background:#f6f7fb; color:var(--ink); }
-.folder-tabs .tab.is-active{
-  background:var(--tab-bg-active); color:var(--ink);
-  position:relative; z-index:2; box-shadow:0 2px 0 #fff inset;
+  display:flex;
+  align-items:flex-end;
+  gap:8px;                 /* no left padding so it sits flush */
+  padding:0;               /* flush-left */
+  border-bottom:1px solid var(--tab-border); /* panel seam lives here */
+  overflow:visible;        /* NEVER scroll/detach */
+  flex-wrap:wrap;          /* if space is tight on desktop, wrap instead of scrolling */
 }
 
-/* panel shell */
+/* tab buttons */
+.folder-tabs .tab{
+  appearance:none; border:1px solid var(--tab-border);
+  border-bottom:none;                 /* sits on the tablist border */
+  background:var(--tab-bg); color:var(--muted);
+  padding:10px 16px; font-weight:700; white-space:nowrap;
+  cursor:pointer; margin:0;           /* no rounding anywhere */
+  border-radius:0;
+  transition:background .15s ease, color .15s ease;
+}
+.folder-tabs .tab:hover{ background:#f0f3fb; color:var(--ink); }
+
+.folder-tabs .tab.is-active{
+  background:var(--tab-bg-active);
+  color:var(--ink);
+  position:relative;
+  top:1px;                 /* rides 1px down over the panel */
+}
+
+/* panel shell (no top border so there's NO seam) */
 .folder-tabs .panels{
   border:1px solid var(--tab-border);
-  border-radius:12px; background:#fff;
+  border-top:none;         /* removes the seam under the active tab */
+  background:#fff;
+  border-radius:0;         /* square */
   box-shadow:0 14px 30px rgba(0,0,0,.06);
   padding:16px;
 }
-.panel{ display:none; }
-.panel.is-active{ display:block; }
 
-/* cards inside panels */
+/* cards inside panels — square */
 .card-grid{
   display:grid; gap:16px;
   grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
 }
 .card{
-  border:1px solid #e9eaf0; border-radius:12px;
-  padding:18px; box-shadow:0 2px 8px rgba(0,0,0,.05);
+  border:1px solid #e9eaf0;
+  border-radius:0;         /* square */
+  padding:18px;
+  box-shadow:0 2px 8px rgba(0,0,0,.05);
 }
 .card h3{ margin:0 0 10px; color:var(--ink); }
 .card p{ margin:0 0 12px; color:#5f6472; }
 .card-link{ color:#1e6fff; text-decoration:none; font-weight:700; }
 .card-link:hover{ text-decoration:underline; }
+
+.panel{ display:none; }
+.panel.is-active{ display:block; }
+
+/* ==== mobile tabs: smaller, slight overlap, icons only ==== */
+@media (max-width: 640px){
+  .folder-tabs .tablist{
+    gap:0;                 /* let us create a subtle overlap */
+  }
+  .folder-tabs .tab{
+    padding:8px 10px;
+    font-size:0;           /* hide text visually */
+  }
+  .folder-tabs .tab + .tab{
+    margin-left:-6px;      /* gentle “folder” overlap */
+  }
+  .folder-tabs .tab .icon{
+    font-size:18px;
+    line-height:1;
+    vertical-align:middle;
+    display:inline-block;
+  }
+  .folder-tabs .tab .label{
+    display:none;          /* text off on small screens */
+  }
+}
