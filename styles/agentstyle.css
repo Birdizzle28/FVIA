@@ -408,17 +408,4 @@ button:disabled {
 	font-size: clamp(15px, 1vw, 25px);
 	padding: 0 6px;
 }
-#mobile-menu a p {
-	display: none;
-}
-#mobile-menu a .fa-solid {
-	margin-right: 0;
-	
-}
-  #mobile-menu .menu-item span { 
-	  display: none; 
-  }
-  #mobile-menu .menu-item .fa-solid {
-	  padding-right: 0;
-  }
 }
