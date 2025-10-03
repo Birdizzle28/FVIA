@@ -122,6 +122,7 @@ main {
   flex: 0 0 100%;
   padding: 16px;
   border-right: 1px solid #eef0f6;  /* faint divider between slides */
+  box-sizing: border-box;
 }
 .slide:last-child { border-right: none; }
 .slide h3 { margin: 0 0 8px; color: var(--ink); font-weight: 800; }
@@ -147,12 +148,17 @@ main {
   display: flex; gap: 6px;
   justify-content: center;
   padding: 10px 8px 0;
+  align-items:center;
 }
 .car-dots button {
   width: 8px; height: 8px;
+  padding:0;              /* <-- add */
+  line-height:0;
   border-radius: 50%;
-  border: 0; background: #cdd3e1;
+  border: 0; 
+  background: #cdd3e1;
   cursor: pointer;
+  display:block;
 }
 .car-dots button[aria-current="true"] { background: #6f7aa3; }
 
