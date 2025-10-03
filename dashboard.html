@@ -64,15 +64,20 @@
 				<h1 class="dash-title">Main Dashboard</h1>
 				<div class="folder-tabs">
 					<div class="tablist" role="tablist" aria-label="Dashboard sections">
-						<button class="tab is-active" id="tab-announcements" data-tab="announcements" role="tab" aria-selected="true" aria-controls="panel-announcements">
-						Announcements
-						</button>
-						<button class="tab" id="tab-sales" data-tab="sales" role="tab" aria-selected="false" aria-controls="panel-sales">
-						My Sales This Month
-						</button>
-						<button class="tab" id="tab-reminders" data-tab="reminders" role="tab" aria-selected="false" aria-controls="panel-reminders">
-						Tasks/Reminders
-						</button>
+					  <button class="tab is-active" id="tab-announcements" data-tab="announcements" role="tab" aria-selected="true" aria-controls="panel-announcements" aria-label="Announcements">
+						<i class="fa-solid fa-bullhorn icon" aria-hidden="true"></i>
+						<span class="label">Announcements</span>
+					  </button>
+					
+					  <button class="tab" id="tab-sales" data-tab="sales" role="tab" aria-selected="false" aria-controls="panel-sales" aria-label="My Sales This Month">
+						<i class="fa-solid fa-chart-line icon" aria-hidden="true"></i>
+						<span class="label">My Sales This Month</span>
+					  </button>
+					
+					  <button class="tab" id="tab-reminders" data-tab="reminders" role="tab" aria-selected="false" aria-controls="panel-reminders" aria-label="Tasks and Reminders">
+						<i class="fa-solid fa-list-check icon" aria-hidden="true"></i>
+						<span class="label">Tasks/Reminders</span>
+					  </button>
 					</div>
 					
 					<div class="panels">
@@ -172,19 +177,23 @@
 			<section class="dash-wrap">
 				<h1 class="dash-title">Personal Information</h1>
 				<div class="folder-tabs">
-					<div class="tablist" role="tablist" aria-label="Dashboard sections">
-						<button class="tab is-active" id="tab-compliance" data-tab="compliance" role="tab" aria-selected="true" aria-controls="panel-compliance">
-						Compliance
-						</button>
-						<button class="tab" id="tab-banking" data-tab="banking" role="tab" aria-selected="false" aria-controls="panel-banking">
-						Banking Info
-						</button>
-						<button class="tab" id="tab-docs" data-tab="documents" role="tab" aria-selected="false" aria-controls="panel-documents">
-						Documents
-						</button>
-						<button class="tab" id="tab-carriers" data-tab="carriers" role="tab" aria-selected="false" aria-controls="panel-carriers">
-						Carrier Credentials
-						</button>
+					<div class="tablist" role="tablist" aria-label="Personal Information">
+					  <button class="tab is-active" id="tab-compliance" data-tab="compliance" role="tab" aria-selected="true" aria-controls="panel-compliance" aria-label="Compliance">
+					    <i class="fa-solid fa-shield-halved icon" aria-hidden="true"></i>
+					    <span class="label">Compliance</span>
+					  </button>
+					  <button class="tab" id="tab-banking" data-tab="banking" role="tab" aria-selected="false" aria-controls="panel-banking" aria-label="Banking Info">
+					    <i class="fa-solid fa-piggy-bank icon" aria-hidden="true"></i>
+					    <span class="label">Banking Info</span>
+					  </button>
+					  <button class="tab" id="tab-docs" data-tab="documents" role="tab" aria-selected="false" aria-controls="panel-documents" aria-label="Documents">
+					    <i class="fa-solid fa-file-lines icon" aria-hidden="true"></i>
+					    <span class="label">Documents</span>
+					  </button>
+					  <button class="tab" id="tab-carriers" data-tab="carriers" role="tab" aria-selected="false" aria-controls="panel-carriers" aria-label="Carrier Credentials">
+					    <i class="fa-solid fa-id-badge icon" aria-hidden="true"></i>
+					    <span class="label">Carrier Credentials</span>
+					  </button>
 					</div>
 					
 					<div class="panels">
