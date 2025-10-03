@@ -493,10 +493,11 @@ async function loadLeadsWithFilters() {
     checkbox.classList.add('lead-checkbox');
     checkbox.dataset.leadId = lead.id;
     checkbox.addEventListener('change', e => {
+      const id = String(lead.id);
       if (e.target.checked) {
-        selectedLeads.add(lead.id);
+        selectedLeads.add(id);
       } else {
-        selectedLeads.delete(lead.id);
+        selectedLeads.delete(id);
       }
       document.getElementById('selected-count').textContent = selectedLeads.size;
       toggleExportVisibility();
