@@ -140,7 +140,46 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!mobileMenu?.contains(e.target)) closeSubmenu();
     });
   }
+  // Burger → X toggle + slide-out open/close
+const menuToggle = document.getElementById('menu-toggle');
+const menuIcon   = menuToggle?.querySelector('i');
+const mobileMenu = document.getElementById('mobile-menu');
 
+if (menuToggle && mobileMenu && menuIcon) {
+  // ensure a smooth icon change
+  menuIcon.style.transition = 'transform .2s ease';
+
+  const setOpen = (open) => {
+    mobileMenu.classList.toggle('open', open);
+    menuToggle.setAttribute('aria-expanded', String(open));
+
+    // swap Font Awesome icon
+    if (open) {
+      menuIcon.classList.remove('fa-bars');
+      menuIcon.classList.add('fa-xmark');
+      // little rotate flair (optional)
+      menuIcon.style.transform = 'rotate(90deg)';
+    } else {
+      menuIcon.classList.remove('fa-xmark');
+      menuIcon.classList.add('fa-bars');
+      menuIcon.style.transform = 'rotate(0deg)';
+    }
+  };
+
+  // click to open/close
+  menuToggle.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isOpen = mobileMenu.classList.contains('open');
+    setOpen(!isOpen);
+  });
+
+  // click outside to close
+  document.addEventListener('click', (e) => {
+    if (!mobileMenu.contains(e.target) && !menuToggle.contains(e.target)) {
+      setOpen(false);
+    }
+  });
+}
 });
 //Logout
 document.getElementById('logout-btn')?.addEventListener('click', async (e) => {
