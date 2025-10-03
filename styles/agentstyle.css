@@ -70,8 +70,9 @@
   margin-right: 10px;
 }
 #headerlogo {
-  width: 8vw;
+	width: 8vw;
 	aspect-ratio: 1/1;
+	max-width: 60px;
 }
 #fvdiv {
   display: flex;
@@ -868,6 +869,9 @@ button:disabled {
 	width: 1rem;
 	font-weight: bold;
 }
+#mobile-menu a p {
+	display: inline;
+}
 @media (max-width: 768px) {
 	@media (max-width: 768px) {
   .index-grid-header {
@@ -883,7 +887,7 @@ button:disabled {
     width: 100%;
   }
   .index-grid-header.scrolled {
-  background-color: #ed9ea5 !important;
+  background-color: rgba(237, 158, 165, 0.7) !important;
   transition: background-color 0.3s ease;
 }
   /* Hide original nav and <hr> for mobile */
@@ -945,5 +949,8 @@ button:disabled {
 .contactcontainer span {
 	font-size: clamp(15px, 1vw, 25px);
 	padding: 0 6px;
+}
+#mobile-menu a p {
+	display: none;
 }
 }
