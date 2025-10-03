@@ -1,188 +1,314 @@
-/* Admin page navigation bar */
-#admin-page-nav {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin: 10px auto;
-  width: 90%;
-}
-#admin-page-nav button {
-  background-color: #ed9ea5;
-  color: #353468;
-  border: none;
-  padding: 8px 16px;
-  font-weight: bold;
-  border-radius: 4px;
-  cursor: pointer;
-}
-#admin-page-nav button.active {
-  background-color: #353468;
-  color: #fff;
-}
-.admin-section {
-  /* hide all sections by default; the script will show the first one */
-  display: none;
-}
-/* Wrap filters and table together */
-#admin-all-container {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  width: 100%;
-  max-width: 90%;      /* limit overall width */
-  margin: 0 auto;      /* centre on the page */
-
+/* ========== Theme tokens (match Dashboard) ========== */
+:root{
+  --indigo: #353468;
+  --indigo-600: #2b2a59;
+  --pink: #ed9ea5;
+  --bg: #f5f6fb;
+  --card: #ffffff;
+  --text: #1f1f2e;
+  --muted: #6b6b8a;
+  --radius: 12px;
+  --radius-sm: 8px;
+  --shadow: 0 10px 25px rgba(21,22,44,.08);
+  --ring: 0 0 0 3px rgba(237,158,165,.35);
 }
 
-/* Create a two‑column grid for the filters */
-.filter-wrapper {
+html, body { background: var(--bg); color: var(--text); }
+
+/* ========== Page chrome ========== */
+main.auth-container{
+  width: min(1200px, 92vw);
+  margin: 24px auto 64px;
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 15px;
-  padding: 15px;
-  background-color: #ffffff;
-  border-radius: 8px;
+  gap: 24px;
 }
 
-/* Stack label above each input/select */
-.filter-group {
-  display: flex;
-  flex-direction: column;
+/* ========== Tabbed page nav (looks like Dashboard folder tabs) ========== */
+#admin-page-nav{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding: 6px;
+  background: transparent;
+  border-radius: var(--radius);
+  overflow-x:auto;
 }
 
-.filter-group label {
-  margin-bottom: 4px;
-  font-weight: bold;
-  color: #353468;
+#admin-page-nav button{
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--indigo);
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 999px;
+  position: relative;
+  transition: background .2s ease, color .2s ease, transform .02s ease;
+  white-space: nowrap;
+}
+#admin-page-nav button:hover{ background: rgba(53,52,104,.08); }
+#admin-page-nav button.active{
+  background: var(--indigo);
+  color: #fff;
+  box-shadow: var(--shadow);
+}
+
+/* ========== Sections as cards ========== */
+.admin-section{
+  display:none; /* JS toggles */
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+}
+.admin-section h3{
+  margin: 0 0 12px;
+  font-size: 1.25rem;
+  color: var(--indigo);
+}
+
+/* ========== Filters card ========== */
+#admin-all-container{
+  display:flex;
+  flex-direction:column;
+  gap:18px;
+}
+
+.filter-wrapper{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0,1fr));
+  gap:14px 18px;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+}
+
+.filter-group{ display:flex; flex-direction:column; gap:6px; }
+
+.filter-group label{
+  font-weight: 700;
+  color: var(--indigo);
+  font-size: .95rem;
 }
 
 .filter-group input,
-.filter-group select {
+.filter-group select{
+  height: 42px;
+  padding: 8px 12px;
+  border: 1px solid #e5e6ef;
+  border-radius: 10px;
+  background: #fff;
+  outline: none;
+  transition: box-shadow .15s ease, border-color .15s ease, transform .02s ease;
+  font-family: inherit;
+}
+.filter-group input:focus,
+.filter-group select:focus{
+  border-color: var(--pink);
+  box-shadow: var(--ring);
+}
+
+/* Choices.js polish */
+.choices__inner{
+  border-radius: 10px !important;
+  border-color: #e5e6ef !important;
+  min-height: 42px !important;
+}
+.is-focused .choices__inner{
+  border-color: var(--pink) !important;
+  box-shadow: var(--ring) !important;
+}
+
+/* Flatpickr nudge */
+.flatpickr-calendar{
+  border-radius: 12px;
+  box-shadow: var(--shadow) !important;
+}
+
+/* Filter buttons */
+.filter-buttons{
+  grid-column: 1 / -1;
+  display:flex; gap:12px; justify-content:flex-end;
+}
+#apply-filters, #reset-filters{
+  border:0; cursor:pointer; font-weight:800;
+  padding: 10px 14px; border-radius: 10px;
+  transition: transform .02s ease, filter .2s ease, background .2s ease, color .2s ease;
+}
+#apply-filters{
+  background: var(--indigo); color:#fff;
+}
+#reset-filters{
+  background: #fff; color: var(--indigo); border:1px solid #e5e6ef;
+}
+#apply-filters:hover{ filter: brightness(1.02); }
+#reset-filters:hover{ background: rgba(53,52,104,.08); }
+
+/* ========== Leads table ========== */
+#leads-table-container{
   width: 100%;
-  height: 40px;       /* consistent height */
-  padding: 8px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
-  box-sizing: border-box;
+  overflow:auto;
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 8px 8px 0;
 }
 
-/* Position Apply/Reset buttons across both columns */
-.filter-buttons {
-  grid-column: span 2;            /* span both columns */
-  display: flex;
-  justify-content: center;        /* center them horizontally */
-  gap: 20px;
+#leads-table{
+  width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+  font-size: 0.95rem;
 }
 
-#apply-filters,
-#reset-filters {
-  flex: 1;                        /* each takes half the available width */
-  padding: 12px;
-  background-color: #ed9ea5;
-  color: #353468;
-  border: none;
-  border-radius: 4px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-#apply-filters:hover,
-#reset-filters:hover {
-  background-color: #353468;
+#leads-table thead th{
+  position: sticky; top: 0; z-index: 2;
+  background: var(--indigo);
   color: #fff;
-}
-#pagination-controls {
-  display: flex;
-  justify-content: center;    /* centre the buttons */
-  gap: 20px;
-  margin-top: 10px;
-}
-
-#pagination-controls button {
-  padding: 8px 16px;
-  background-color: #ed9ea5;
-  color: #353468;
-  border: none;
-  border-radius: 4px;
-  font-weight: bold;
-  cursor: pointer;
-}
-
-#pagination-controls button:disabled {
-  opacity: 0.4;
-  cursor: not-allowed;
-}
-#bulk-export-container {
-  background-color: #ffffff;
-  padding: 15px;
-  border-radius: 8px;
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 15px;
-}
-
-#bulk-assign-controls,
-#export-controls {
-  margin: auto;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-#bulk-assign-controls select,
-#bulk-assign-controls button,
-#export-controls > button {
-  width: 100%;   /* full width */
-  max-width: 300px;
-  margin-top: 8px;
-  padding: 10px;
-}
-
-#export-options {
-  display: none;
-  flex-direction: column;
-  gap: 5px;
-}
-/* Lead management table */
-#leads-table-container {
-  overflow-x: auto;
-  width: 100%;
-}
-#leads-table-container table {
-  border-collapse: collapse;
-  width: 100%;
-}
-#leads-table-container thead th {
-  position: sticky;
-  top: 0;
-  background-color: #353468;   /* pick a theme colour */
-  color: #ffffff;
-  z-index: 1;
-  cursor: pointer; /* for sort indicator */
-}
-#leads-table {
-  width: 100%;
-  border-collapse: collapse;
-  background-color: #ffffff;
-}
-#leads-table th,
-#leads-table td {
-  border: 1px solid black;
-  padding: 8px;
   text-align: left;
-  font-size: 0.9em;
-  min-width: 180px;
+  padding: 12px 10px;
+  font-weight: 800;
+  letter-spacing: .2px;
+  border: 0;
+  white-space: nowrap;
+  user-select: none;
 }
-/* Style the body cells */
-#leads-table tbody td {
-  padding: 8px;
-  border: 1px solid #ddd;
+#leads-table thead th[data-column]{ cursor: pointer; }
+#leads-table thead th:first-child{ width: 44px; }
+
+#leads-table tbody td{
+  padding: 12px 10px;
+  border-top: 1px solid #eef0f6;
+  color: #2a2a3e;
+  vertical-align: top;
 }
 
-/* Zebra striping on every other row */
-#leads-table tbody tr:nth-child(even) {
-  background-color: #f5f5f5;   /* light gray */
+/* zebra + hover */
+#leads-table tbody tr:nth-child(even){ background: #fafbff; }
+#leads-table tbody tr:hover{ background: #f7f7fd; }
+
+/* highlight selected rows (pure CSS using :has) */
+#leads-table tbody tr:has(.lead-checkbox:checked){
+  background: #fff5f8 !important;
+  box-shadow: inset 0 0 0 2px rgba(237,158,165,.5);
+}
+
+/* checkboxes */
+#leads-table input[type="checkbox"]{
+  width: 18px; height: 18px; cursor: pointer;
+}
+
+/* Pagination row */
+#pagination-controls{
+  display:flex; justify-content: center; align-items:center; gap: 14px;
+  padding: 12px 8px 16px;
+}
+#pagination-controls button{
+  border:0; cursor:pointer; font-weight:800;
+  padding: 10px 14px; border-radius: 10px;
+  background: #fff; color: var(--indigo); border:1px solid #e5e6ef;
+  transition: background .2s ease;
+}
+#pagination-controls button:hover{ background: rgba(53,52,104,.08); }
+#pagination-controls button:disabled{ opacity:.45; cursor:not-allowed; }
+
+/* ========== Bulk assign + Export ========== */
+#bulk-export-invisible-container{ }
+#bulk-export-container{
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 16px;
+  display:flex; flex-direction: column; gap: 16px;
+  align-items: stretch;
+}
+
+#bulk-assign-controls, #export-controls{ display:flex; flex-direction: column; gap:10px; align-items: stretch; }
+#bulk-assign-controls label{ color: var(--indigo); font-weight: 800; }
+
+#bulk-assign-controls select{
+  height: 44px; padding: 8px 12px; border-radius: 10px; border:1px solid #e5e6ef;
+}
+#bulk-assign-controls button{
+  height: 44px; border:0; border-radius: 10px; cursor:pointer; font-weight: 800;
+  background: var(--pink); color: var(--indigo);
+  transition: filter .2s ease, transform .02s ease;
+}
+#bulk-assign-controls button:hover{ filter: brightness(1.03); }
+#bulk-assign-controls button:active{ transform: translateY(1px); }
+
+/* Export dropdown */
+#export-controls{ position: relative; }
+#export-btn{
+  height: 44px; border:0; border-radius: 10px; cursor:pointer; font-weight: 800;
+  background: #fff; color: var(--indigo); border:1px solid #e5e6ef;
+}
+#export-btn:hover{ background: rgba(53,52,104,.08); }
+#export-options{
+  position: absolute; top: calc(100% + 6px); right: 0;
+  display:none; flex-direction: column; gap:8px;
+  background:#fff; border:1px solid #e5e6ef; border-radius: 10px; padding: 8px;
+  box-shadow: var(--shadow);
+  min-width: 160px;
+}
+#export-options button{
+  height: 38px; border:0; border-radius: 8px; cursor:pointer; font-weight: 700;
+  background: #fff; color: var(--indigo);
+}
+#export-options button:hover{ background: rgba(53,52,104,.08); }
+
+/* ========== Requested leads + history ========== */
+.scroll-container{
+  max-height: 420px; overflow:auto;
+  background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
+  padding: 12px;
+}
+
+.lead-request-box{
+  background:#fff; border:1px solid #eef0f6; border-radius: 10px; padding: 12px; margin: 10px 0;
+}
+.lead-request-box button{
+  border:0; border-radius: 8px; padding: 8px 12px; font-weight:800; cursor:pointer;
+  background: #fff; color: var(--indigo); border:1px solid #e5e6ef;
+}
+.lead-request-box button:hover{ background: rgba(53,52,104,.08); }
+
+#assignment-history-table{
+  width:100%; border-collapse: collapse; background:#fff; border-radius: var(--radius); overflow:hidden;
+  box-shadow: var(--shadow);
+}
+#assignment-history-table th{
+  background: var(--indigo); color:#fff; text-align:left; padding: 12px 10px; font-weight: 800;
+}
+#assignment-history-table td{
+  border-top: 1px solid #eef0f6; padding: 12px 10px;
+}
+
+/* ========== Modal (move inline styles to CSS if you want) ========== */
+#reassign-warning-modal{
+  position: fixed; inset: 0; display:none; align-items:center; justify-content:center;
+  background: rgba(0,0,0,.5); z-index: 9999;
+}
+#reassign-warning-modal .modal-card{
+  background:#fff; border-radius: 14px; width:min(420px, 92vw);
+  padding: 18px; text-align:center; box-shadow: var(--shadow);
+}
+#reassign-warning-modal .modal-actions{
+  display:flex; justify-content:center; gap:10px; margin-top: 16px;
+}
+#reassign-warning-modal .modal-actions button{
+  height:40px; padding: 0 14px; border-radius: 10px; border:0; font-weight:800; cursor:pointer;
+}
+#cancel-reassign-btn{ background:#fff; color: var(--indigo); border:1px solid #e5e6ef; }
+#submit-anyway-btn{ background: var(--pink); color: var(--indigo); }
+
+/* ========== Utilities ========== */
+hr{ border:0; height:1px; background:#ececf5; }
+
+/* ========== Responsive ========== */
+@media (max-width: 900px){
+  .filter-wrapper{ grid-template-columns: 1fr; }
+  #leads-table{ font-size: .9rem; }
+  #leads-table thead th, #leads-table tbody td{ padding: 10px 8px; }
 }
