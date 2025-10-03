@@ -510,7 +510,6 @@ async function loadLeadsWithFilters() {
       selectedLeads.add(String(lead.id));
     }
     // Assigned agent name (or Unassigned)
-    const productTd = document.createElement('td');
     const agentName = lead.assigned_to ? (allAgents.find(a => a.id === lead.assigned_to)?.full_name || 'Unassigned') : 'Unassigned';
     // Other fields
     const cellMap = {
