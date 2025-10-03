@@ -113,33 +113,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   } else {
     agentHubBtn?.classList.remove('active-page');
   }
-  const toggleToolkit = document.getElementById('toolkit-toggle');
-  const submenu = document.getElementById('toolkit-submenu');
-
-  if (toggleToolkit && submenu) {
-    const openSubmenu = () => {
-      submenu.hidden = false;
-      submenu.classList.add('open');
-      toggleToolkit.setAttribute('aria-expanded', 'true');
-    };
-    const closeSubmenu = () => {
-      submenu.classList.remove('open');
-      toggleToolkit.setAttribute('aria-expanded', 'false');
-      // hide after animation finishes to keep height animation smooth
-      setTimeout(() => { if (!submenu.classList.contains('open')) submenu.hidden = true; }, 260);
-    };
-
-    toggleToolkit.addEventListener('click', () => {
-      const expanded = toggleToolkit.getAttribute('aria-expanded') === 'true';
-      expanded ? closeSubmenu() : openSubmenu();
-    });
-
-    // Optional: close submenu when clicking outside the mobile menu
-    document.addEventListener('click', (e) => {
-      const mobileMenu = document.getElementById('mobile-menu');
-      if (!mobileMenu?.contains(e.target)) closeSubmenu();
-    });
-  }
 });
 //Logout
 document.getElementById('logout-btn')?.addEventListener('click', async (e) => {
