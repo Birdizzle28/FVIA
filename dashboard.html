@@ -65,45 +65,110 @@
 				<div class="folder-tabs">
 					<div class="tablist" role="tablist" aria-label="Dashboard sections">
 					  <button class="tab is-active" id="tab-announcements" data-tab="announcements" role="tab" aria-selected="true" aria-controls="panel-announcements" aria-label="Announcements">
-						<i class="fa-solid fa-bullhorn icon" aria-hidden="true"></i>
-						<span class="label">Announcements</span>
+							<i class="fa-solid fa-bullhorn icon" aria-hidden="true"></i>
+							<span class="label">Announcements</span>
 					  </button>
 					
 					  <button class="tab" id="tab-sales" data-tab="sales" role="tab" aria-selected="false" aria-controls="panel-sales" aria-label="My Sales This Month">
-						<i class="fa-solid fa-chart-line icon" aria-hidden="true"></i>
-						<span class="label">My Sales This Month</span>
+							<i class="fa-solid fa-chart-line icon" aria-hidden="true"></i>
+							<span class="label">My Sales This Month</span>
 					  </button>
 					
 					  <button class="tab" id="tab-reminders" data-tab="reminders" role="tab" aria-selected="false" aria-controls="panel-reminders" aria-label="Tasks and Reminders">
-						<i class="fa-solid fa-list-check icon" aria-hidden="true"></i>
-						<span class="label">Tasks/Reminders</span>
+							<i class="fa-solid fa-list-check icon" aria-hidden="true"></i>
+							<span class="label">Tasks/Reminders</span>
 					  </button>
 					</div>
 					
 					<div class="panels">
 						<!-- Announcements -->
 						<section id="panel-announcements" class="panel is-active" role="tabpanel" aria-labelledby="tab-announcements">
-							<div class="card-grid">
-								<article class="card">
-								</article>
-								<article class="card">
-								</article>
+							<!-- REPLACE inside #panel-announcements -->
+							<div class="carousel" data-key="announcements" aria-label="Announcements carousel">
+							  <div class="carousel-track">
+							    <!-- Slide 1 -->
+							    <article class="slide" tabindex="0">
+							      <h3>New carrier added</h3>
+							      <p>We’ve onboarded “Pioneer Life”. Appoint if you sell life products.</p>
+							    </article>
+							
+							    <!-- Slide 2 -->
+							    <article class="slide" tabindex="0">
+							      <h3>Portal maintenance</h3>
+							      <p>Agent portal updates this Friday 10–11pm CT. Expect brief downtime.</p>
+							    </article>
+							
+							    <!-- Slide 3 -->
+							    <article class="slide" tabindex="0">
+							      <h3>Training: Final Expense</h3>
+							      <p>Live webinar Tue 2pm. Seats limited—register in Training → Events.</p>
+							    </article>
+							  </div>
+							
+							  <button class="car-btn prev" aria-label="Previous">
+							    <i class="fa-solid fa-chevron-left"></i>
+							  </button>
+							  <button class="car-btn next" aria-label="Next">
+							    <i class="fa-solid fa-chevron-right"></i>
+							  </button>
+							
+							  <div class="car-dots" role="tablist" aria-label="Announcements slides"></div>
+							
+							  <div class="car-footer">
+							    <button class="see-all" data-overlay="announcements">See all</button>
+							  </div>
 							</div>
 						</section>
 						
 						<!-- Sales -->
 						<section id="panel-sales" class="panel" role="tabpanel" aria-labelledby="tab-sales">
-							<div class="card-grid">
-								<article class="card">
-								</article>
+							<!-- REPLACE inside #panel-sales -->
+							<div class="carousel" data-key="sales" aria-label="Sales carousel">
+							  <div class="carousel-track">
+							    <article class="slide" tabindex="0">
+							      <h3>$3,200 AP • 5 policies</h3>
+							      <p>Breakdown: FE (3), Term (1), Whole (1). Keep pushing!</p>
+							    </article>
+							    <article class="slide" tabindex="0">
+							      <h3>$4,050 AP • 6 policies</h3>
+							      <p>Week-over-week +26%. Nice momentum.</p>
+							    </article>
+							  </div>
+							
+							  <button class="car-btn prev" aria-label="Previous"><i class="fa-solid fa-chevron-left"></i></button>
+							  <button class="car-btn next" aria-label="Next"><i class="fa-solid fa-chevron-right"></i></button>
+							
+							  <div class="car-dots" role="tablist" aria-label="Sales slides"></div>
+							
+							  <div class="car-footer">
+							    <button class="see-all" data-overlay="sales">See all</button>
+							  </div>
 							</div>
 						</section>
 						
 						<!-- Tasks/Reminders -->
 						<section id="panel-reminders" class="panel" role="tabpanel" aria-labelledby="tab-reminders">
-							<div class="card-grid">
-								<article class="card">
-								</article>
+							<!-- REPLACE inside #panel-reminders -->
+							<div class="carousel" data-key="reminders" aria-label="Reminders carousel">
+							  <div class="carousel-track">
+							    <article class="slide" tabindex="0">
+							      <h3>Call back John Doe</h3>
+							      <p>Asked about FE quote. Prefers afternoons. (555) 555-0199</p>
+							    </article>
+							    <article class="slide" tabindex="0">
+							      <h3>Upload W-9</h3>
+							      <p>Accounting flagged missing doc. Go to Personal Info → Documents.</p>
+							    </article>
+							  </div>
+							
+							  <button class="car-btn prev" aria-label="Previous"><i class="fa-solid fa-chevron-left"></i></button>
+							  <button class="car-btn next" aria-label="Next"><i class="fa-solid fa-chevron-right"></i></button>
+							
+							  <div class="car-dots" role="tablist" aria-label="Reminders slides"></div>
+							
+							  <div class="car-footer">
+							    <button class="see-all" data-overlay="reminders">See all</button>
+							  </div>
 							</div>
 						</section>
 					</div>
@@ -246,6 +311,19 @@
 			</section>
 		</main>
 		
+		<!-- OVERLAY: “See all” (ADD ONCE, before footer) -->
+		<div id="dash-overlay" class="overlay" aria-hidden="true">
+		  <div class="overlay-backdrop" data-close></div>
+		  <div class="overlay-panel" role="dialog" aria-modal="true" aria-labelledby="overlay-title">
+		    <div class="overlay-header">
+		      <h2 id="overlay-title">All Items</h2>
+		      <button class="overlay-close" aria-label="Close" data-close>&times;</button>
+		    </div>
+		    <div class="overlay-body">
+		      <div class="overlay-grid" id="overlay-grid"><!-- filled by JS --></div>
+		    </div>
+		  </div>
+		</div>
 		<!-- Footer -->
 		<footer class="index-grid-footer">
 			<img id="footerlogo" src="Pics/img17.png">
