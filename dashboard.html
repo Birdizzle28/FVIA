@@ -1,153 +1,165 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Dashboard | Family Values Group</title>
-  <link rel="stylesheet" href="styles/agentstyle.css" />
-	<link rel="stylesheet" href="styles/dashboard.css" />
-  <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-</head>
-
-<body id="dashboardbody">
-  <!-- Header -->
-  <header class="index-grid-header">
-    <div id="logofvcontainer">
-      <div id="logodiv">
-        <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
-      </div>
-      <div id="fvdiv">
-        <p><strong>Family Values Group</strong></p>
-      </div>
-    </div>
-    <div id="navcontainer">
-      <nav class="header-flex-container">
-        <a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
-        <a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
-        <div id="menu-toggle"><i class="fa-solid fa-bars"></i></div>
-      </nav>
-    </div>
-  </header>
-  <div id="mobile-menu">
-      <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
-     <!-- Toolkit parent (acts like a toggle, not a link) -->
-		<button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
-		  <i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
-		  <i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
-		</button>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<title>Dashboard | Family Values Group</title>
+		<link rel="stylesheet" href="styles/agentstyle.css" />
+		<link rel="stylesheet" href="styles/dashboard.css" />
+		<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+	</head>
+	
+	<body id="dashboardbody">
 		
-		<!-- Submenu that expands between Toolkit and Commissions -->
-		<div id="toolkit-submenu" class="submenu" hidden>
-		  <a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
-		  <a href="routing.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
-		  <a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
-		  <a href="calendar.html"><i class="fa-solid fa-calendar-days"></i><span>Calendar</span></a>
+		<!-- Header -->
+		<header class="index-grid-header">
+			<div id="logofvcontainer">
+				<div id="logodiv">
+					<a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+				</div>
+				<div id="fvdiv">
+					<p><strong>Family Values Group</strong></p>
+				</div>
+			</div>
+			<div id="navcontainer">
+				<nav class="header-flex-container">
+					<a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
+					<a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
+					<div id="menu-toggle">
+						<i class="fa-solid fa-bars"></i>
+					</div>
+				</nav>
+			</div>
+		</header>
+
+		<!-- Mobile Menu -->
+		<div id="mobile-menu">
+			<a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
+			
+			<!-- Toolkit parent (acts like a toggle, not a link) -->
+			<button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
+				<i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
+				<i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
+			</button>
+			
+			<!-- Submenu that expands between Toolkit and Commissions -->
+			<div id="toolkit-submenu" class="submenu" hidden>
+				<a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
+				<a href="routing.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
+				<a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
+				<a href="calendar.html"><i class="fa-solid fa-calendar-days"></i><span>Calendar</span></a>
+			</div>
+			<a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
+			<a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
+			<a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
+			<a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
+			<a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
 		</div>
-      <a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
-      <a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
-      <a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
-      <a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
-      <a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
-  </div>
-	<main>
-		<section class="dash-wrap">
-  <h1 class="dash-title">Main Dashboard</h1>
 
-  <div class="folder-tabs">
-    <div class="tablist" role="tablist" aria-label="Dashboard sections">
-      <button class="tab is-active" id="tab-compliance" data-tab="compliance"
-              role="tab" aria-selected="true" aria-controls="panel-compliance">
-        Compliance
-      </button>
-      <button class="tab" id="tab-banking" data-tab="banking"
-              role="tab" aria-selected="false" aria-controls="panel-banking">
-        Banking Info
-      </button>
-      <button class="tab" id="tab-docs" data-tab="documents"
-              role="tab" aria-selected="false" aria-controls="panel-documents">
-        Documents
-      </button>
-      <button class="tab" id="tab-carriers" data-tab="carriers"
-              role="tab" aria-selected="false" aria-controls="panel-carriers">
-        Carrier Credentials
-      </button>
-    </div>
-
-    <div class="panels">
-      <!-- Compliance -->
-      <section id="panel-compliance" class="panel is-active" role="tabpanel" aria-labelledby="tab-compliance">
-        <div class="card-grid">
-          <article class="card">
-            <h3>License</h3>
-            <p>Individual NPN is 19866925<br>Agency NPN is --</p>
-            <a href="#" class="card-link">License (6)</a>
-          </article>
-          <article class="card">
-            <h3>Social Security Number</h3>
-            <p>SSN is ********5908</p>
-          </article>
-        </div>
-      </section>
-
-      <!-- Banking -->
-      <section id="panel-banking" class="panel" role="tabpanel" aria-labelledby="tab-banking">
-        <div class="card-grid">
-          <article class="card"><h3>Bank Account</h3><p>Add/update your payout info.</p></article>
-        </div>
-      </section>
-
-      <!-- Documents -->
-      <section id="panel-documents" class="panel" role="tabpanel" aria-labelledby="tab-docs">
-        <div class="card-grid">
-          <article class="card"><h3>Documents</h3><p>W-9, E&O, training certs, etc.</p></article>
-        </div>
-      </section>
-
-      <!-- Carrier Credentials -->
-      <section id="panel-carriers" class="panel" role="tabpanel" aria-labelledby="tab-carriers">
-        <div class="card-grid">
-          <article class="card"><h3>Carrier Logins</h3><p>View or request appointments.</p></article>
-        </div>
-      </section>
-    </div>
-  </div>
-</section>
-</main>
-
-  <!-- Footer -->
-  <footer class="index-grid-footer">
-		<img id="footerlogo" src="Pics/img17.png">
-		<hr class="footerhr">
-		<div id="footercontact">
-			<a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
-				<span class="fa fa-envelope"></span>
-				<span class="contactcontcontacts">fvinsuranceagency@gmail.com</span>
-			</a>
-			<p> | </p>
-			<a class="contactcontainer" href="tel:+17316934739">
-				<span href="#" class="fa fa-phone"></span>
-				<span class="contactcontcontacts">(731)693-4739</span>
-			</a>
-		</div>
-		<hr class="footerhr">
-		<div id="footersocial">
-			<a class="fab fa-facebook-f" href="#"></a>
-			<a class="fab fa-linkedin-in" href="#"></a>
-			<a class="fab fa-instagram" href="#"></a>
-			<a class="fab fa-youtube" href="#"></a>
-			<a class="fab fa-google" href="#"></a>
-		</div>
-		    <!-- Footer links section (below social icons) -->
-		    <div id="footerlinks">
-		        <a href="faqs.html">FAQs</a>
-		        <a href="terms.html">Terms</a>
-		        <a href="accessibility.html">Accessibility</a>
-		        <a href="privacy.html">Privacy</a>
-		    </div>
-		<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
-	</footer>
-  <script type="module" src="scripts/general.js"></script>
-  <script type="module" src="scripts/dashboard.js"></script>
-</body>
+		<!-- Main Page Content -->
+		<main>
+			<section class="dash-wrap">
+				<h1 class="dash-title">Main Dashboard</h1>
+				<div class="folder-tabs">
+					<div class="tablist" role="tablist" aria-label="Dashboard sections">
+						<button class="tab is-active" id="tab-compliance" data-tab="compliance" role="tab" aria-selected="true" aria-controls="panel-compliance">
+						Compliance
+						</button>
+						<button class="tab" id="tab-banking" data-tab="banking" role="tab" aria-selected="false" aria-controls="panel-banking">
+						Banking Info
+						</button>
+						<button class="tab" id="tab-docs" data-tab="documents" role="tab" aria-selected="false" aria-controls="panel-documents">
+						Documents
+						</button>
+						<button class="tab" id="tab-carriers" data-tab="carriers" role="tab" aria-selected="false" aria-controls="panel-carriers">
+						Carrier Credentials
+						</button>
+					</div>
+					
+					<div class="panels">
+						<!-- Compliance -->
+						<section id="panel-compliance" class="panel is-active" role="tabpanel" aria-labelledby="tab-compliance">
+							<div class="card-grid">
+								<article class="card">
+									<h3>License</h3>
+									<p>Individual NPN is 19866925<br>Agency NPN is --</p>
+									<a href="#" class="card-link">License (6)</a>
+								</article>
+								<article class="card">
+									<h3>Social Security Number</h3>
+									<p>SSN is ********5908</p>
+								</article>
+							</div>
+						</section>
+						
+						<!-- Banking -->
+						<section id="panel-banking" class="panel" role="tabpanel" aria-labelledby="tab-banking">
+							<div class="card-grid">
+								<article class="card">
+									<h3>Bank Account</h3>
+									<p>Add/update your payout info.</p>
+								</article>
+							</div>
+						</section>
+						
+						<!-- Documents -->
+						<section id="panel-documents" class="panel" role="tabpanel" aria-labelledby="tab-docs">
+							<div class="card-grid">
+								<article class="card">
+									<h3>Documents</h3>
+									<p>W-9, E&O, training certs, etc.</p>
+								</article>
+							</div>
+						</section>
+						
+						<!-- Carrier Credentials -->
+						<section id="panel-carriers" class="panel" role="tabpanel" aria-labelledby="tab-carriers">
+							<div class="card-grid">
+								<article class="card">
+									<h3>Carrier Logins</h3>
+									<p>View or request appointments.</p>
+								</article>
+							</div>
+						</section>
+					</div>
+				</div>
+			</section>
+		</main>
+		
+		<!-- Footer -->
+		<footer class="index-grid-footer">
+			<img id="footerlogo" src="Pics/img17.png">
+			<hr class="footerhr">
+			<div id="footercontact">
+				<a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
+					<span class="fa fa-envelope"></span>
+					<span class="contactcontcontacts">fvinsuranceagency@gmail.com</span>
+				</a>
+				<p> | </p>
+				<a class="contactcontainer" href="tel:+17316934739">
+					<span href="#" class="fa fa-phone"></span>
+					<span class="contactcontcontacts">(731)693-4739</span>
+				</a>
+			</div>
+			<hr class="footerhr">
+			<div id="footersocial">
+				<a class="fab fa-facebook-f" href="#"></a>
+				<a class="fab fa-linkedin-in" href="#"></a>
+				<a class="fab fa-instagram" href="#"></a>
+				<a class="fab fa-youtube" href="#"></a>
+				<a class="fab fa-google" href="#"></a>
+			</div>
+			<!-- Footer links section (below social icons) -->
+			<div id="footerlinks">
+				<a href="faqs.html">FAQs</a>
+				<a href="terms.html">Terms</a>
+				<a href="accessibility.html">Accessibility</a>
+				<a href="privacy.html">Privacy</a>
+			</div>
+			<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+		</footer>
+		<script type="module" src="scripts/general.js"></script>
+		<script type="module" src="scripts/dashboard.js"></script>
+	</body>
 </html>
