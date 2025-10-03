@@ -893,7 +893,6 @@ button:disabled {
   /* Hide original nav and <hr> for mobile */
   .header-flex-container,
   .index-grid-header > hr {
-    display: none;
   }
 
   /* Logo on the left */
