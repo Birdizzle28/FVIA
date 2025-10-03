@@ -235,4 +235,133 @@ document.addEventListener('DOMContentLoaded', () => {
       openOverlay(titleMap[key] || 'All Items', inst ? inst.getAllSlides() : Array.from(host.querySelectorAll('.slide')), inst);
     });
   });
+  
+  /* ---------- LEAD SNAPSHOT ---------- */
+  (async function initLeadSnapshot(){
+    // try to get current user; if your general.js sets this, great — otherwise this is safe
+    let userId = null;
+    try {
+      if (window.supabase) {
+        const { data: { session } } = await supabase.auth.getSession();
+        userId = session?.user?.id || null;
+      }
+    } catch {}
+  
+    const rangeSel = document.getElementById('lead-range');
+    const scopeRadios = document.querySelectorAll('input[name="lead-scope"]');
+  
+    // tiny helpers
+    const el = id => document.getElementById(id);
+    const setText = (id, v) => { const n = el(id); if (n) n.textContent = String(v); };
+  
+    function inferStage(row){
+      // prefer explicit columns if you have them
+      const s = (row.status || row.stage || '').toLowerCase();
+      if (s) return s;
+      // fallback heuristics (adjust later if you want)
+      if (row.closed_at || row.is_closed) return 'closed';
+      if (row.quoted_at || /quoted/i.test(row.notes||'')) return 'quoted';
+      if (row.contacted_at || /contacted/i.test(row.notes||'')) return 'contacted';
+      return 'new';
+    }
+  
+    function fmtDate(d){
+      try {
+        const dt = new Date(d);
+        return dt.toLocaleDateString(undefined, { month:'short', day:'numeric' });
+      } catch { return ''; }
+    }
+  
+    async function fetchLeads(days, scope){
+      // If Supabase not present, return demo data so UI still works
+      if (!window.supabase) {
+        const now = Date.now();
+        const demo = [
+          { first_name:'Tara', last_name:'Ng', product_type:'life', zip:'38120', created_at:new Date(now-864e5*2), status:'new' },
+          { first_name:'Mark', last_name:'L', product_type:'auto', zip:'38119', created_at:new Date(now-864e5*3), status:'contacted' },
+          { first_name:'Ada', last_name:'B', product_type:'home', zip:'38128', created_at:new Date(now-864e5*4), status:'quoted' },
+          { first_name:'Jon', last_name:'R', product_type:'life', zip:'38134', created_at:new Date(now-864e5*5), status:'closed' },
+          { first_name:'Maya', last_name:'C', product_type:'life', zip:'38133', created_at:new Date(now-864e5*1), status:'new' },
+        ];
+        return demo;
+      }
+  
+      let q = supabase.from('leads')
+        .select('id, first_name, last_name, zip, product_type, status, stage, notes, created_at, assigned_to, submitted_by, quoted_at, contacted_at, closed_at')
+        .order('created_at', { ascending:false });
+  
+      // scope
+      if (scope === 'mine' && userId) {
+        // prefer assigned_to, else fall back to submitted_by
+        q = q.or(`assigned_to.eq.${userId},submitted_by.eq.${userId}`);
+      }
+  
+      // date range
+      if (days && Number(days) > 0) {
+        const since = new Date();
+        since.setDate(since.getDate() - Number(days));
+        q = q.gte('created_at', since.toISOString());
+      }
+  
+      const { data, error } = await q.limit(200); // cap a bit for snapshot
+      if (error) {
+        console.warn('Lead fetch error:', error);
+        return [];
+      }
+      return data || [];
+    }
+  
+    function renderCounts(rows){
+      const counts = { new:0, contacted:0, quoted:0, closed:0 };
+      rows.forEach(r => {
+        const k = inferStage(r);
+        if (k === 'contacted') counts.contacted++;
+        else if (k === 'quoted') counts.quoted++;
+        else if (k === 'closed' || k === 'won') counts.closed++;
+        else counts.new++;
+      });
+      setText('stat-new', counts.new);
+      setText('stat-contacted', counts.contacted);
+      setText('stat-quoted', counts.quoted);
+      setText('stat-closed', counts.closed);
+    }
+  
+    function renderMiniNew(rows){
+      const tbody = document.getElementById('mini-new-leads');
+      if (!tbody) return;
+      tbody.innerHTML = '';
+      const newOnes = rows.filter(r => inferStage(r) === 'new').slice(0,5);
+  
+      if (newOnes.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4">No new leads in this range.</td></tr>`;
+        return;
+      }
+  
+      newOnes.forEach(r => {
+        const tr = document.createElement('tr');
+        const name = [r.first_name, r.last_name].filter(Boolean).join(' ') || '—';
+        tr.innerHTML = `
+          <td>${name}</td>
+          <td>${r.product_type || '—'}</td>
+          <td>${r.zip || '—'}</td>
+          <td>${r.created_at ? fmtDate(r.created_at) : '—'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+  
+    async function refresh(){
+      const days  = document.getElementById('lead-range')?.value || '30';
+      const scope = [...scopeRadios].find(r => r.checked)?.value || 'mine';
+      const rows  = await fetchLeads(days, scope);
+      renderCounts(rows);
+      renderMiniNew(rows);
+    }
+  
+    rangeSel?.addEventListener('change', refresh);
+    scopeRadios.forEach(r => r.addEventListener('change', refresh));
+  
+    // first load
+    await refresh();
+  })();
 });
