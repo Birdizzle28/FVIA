@@ -41,7 +41,7 @@ main.auth-container{
   color: var(--indigo);
   font-weight: 700;
   padding: 10px 14px;
-  border-radius: 999px;
+  border-radius: 0;
   position: relative;
   transition: background .2s ease, color .2s ease, transform .02s ease;
   white-space: nowrap;
@@ -97,7 +97,7 @@ main.auth-container{
   height: 42px;
   padding: 8px 12px;
   border: 1px solid #e5e6ef;
-  border-radius: 10px;
+  border-radius: 0;
   background: #fff;
   outline: none;
   transition: box-shadow .15s ease, border-color .15s ease, transform .02s ease;
@@ -111,7 +111,7 @@ main.auth-container{
 
 /* Choices.js polish */
 .choices__inner{
-  border-radius: 10px !important;
+  border-radius: 0 !important;
   border-color: #e5e6ef !important;
   min-height: 42px !important;
 }
@@ -122,7 +122,7 @@ main.auth-container{
 
 /* Flatpickr nudge */
 .flatpickr-calendar{
-  border-radius: 12px;
+  border-radius: 0;
   box-shadow: var(--shadow) !important;
 }
 
@@ -133,7 +133,7 @@ main.auth-container{
 }
 #apply-filters, #reset-filters{
   border:0; cursor:pointer; font-weight:800;
-  padding: 10px 14px; border-radius: 10px;
+  padding: 10px 14px; border-radius: 0;
   transition: transform .02s ease, filter .2s ease, background .2s ease, color .2s ease;
 }
 #apply-filters{
@@ -206,7 +206,7 @@ main.auth-container{
 }
 #pagination-controls button{
   border:0; cursor:pointer; font-weight:800;
-  padding: 10px 14px; border-radius: 10px;
+  padding: 10px 14px; border-radius: 0;
   background: #fff; color: var(--indigo); border:1px solid #e5e6ef;
   transition: background .2s ease;
 }
@@ -228,10 +228,10 @@ main.auth-container{
 #bulk-assign-controls label{ color: var(--indigo); font-weight: 800; }
 
 #bulk-assign-controls select{
-  height: 44px; padding: 8px 12px; border-radius: 10px; border:1px solid #e5e6ef;
+  height: 44px; padding: 8px 12px; border-radius: 0; border:1px solid #e5e6ef;
 }
 #bulk-assign-controls button{
-  height: 44px; border:0; border-radius: 10px; cursor:pointer; font-weight: 800;
+  height: 44px; border:0; border-radius: 0; cursor:pointer; font-weight: 800;
   background: var(--pink); color: var(--indigo);
   transition: filter .2s ease, transform .02s ease;
 }
@@ -241,19 +241,19 @@ main.auth-container{
 /* Export dropdown */
 #export-controls{ position: relative; }
 #export-btn{
-  height: 44px; border:0; border-radius: 10px; cursor:pointer; font-weight: 800;
+  height: 44px; border:0; border-radius: 0; cursor:pointer; font-weight: 800;
   background: #fff; color: var(--indigo); border:1px solid #e5e6ef;
 }
 #export-btn:hover{ background: rgba(53,52,104,.08); }
 #export-options{
   position: absolute; top: calc(100% + 6px); right: 0;
   display:none; flex-direction: column; gap:8px;
-  background:#fff; border:1px solid #e5e6ef; border-radius: 10px; padding: 8px;
+  background:#fff; border:1px solid #e5e6ef; border-radius: 0; padding: 8px;
   box-shadow: var(--shadow);
   min-width: 160px;
 }
 #export-options button{
-  height: 38px; border:0; border-radius: 8px; cursor:pointer; font-weight: 700;
+  height: 38px; border:0; border-radius: 0; cursor:pointer; font-weight: 700;
   background: #fff; color: var(--indigo);
 }
 #export-options button:hover{ background: rgba(53,52,104,.08); }
@@ -266,10 +266,10 @@ main.auth-container{
 }
 
 .lead-request-box{
-  background:#fff; border:1px solid #eef0f6; border-radius: 10px; padding: 12px; margin: 10px 0;
+  background:#fff; border:1px solid #eef0f6; border-radius: 0; padding: 12px; margin: 10px 0;
 }
 .lead-request-box button{
-  border:0; border-radius: 8px; padding: 8px 12px; font-weight:800; cursor:pointer;
+  border:0; border-radius: 0; padding: 8px 12px; font-weight:800; cursor:pointer;
   background: #fff; color: var(--indigo); border:1px solid #e5e6ef;
 }
 .lead-request-box button:hover{ background: rgba(53,52,104,.08); }
@@ -291,14 +291,14 @@ main.auth-container{
   background: rgba(0,0,0,.5); z-index: 9999;
 }
 #reassign-warning-modal .modal-card{
-  background:#fff; border-radius: 14px; width:min(420px, 92vw);
+  background:#fff; border-radius: 0; width:min(420px, 92vw);
   padding: 18px; text-align:center; box-shadow: var(--shadow);
 }
 #reassign-warning-modal .modal-actions{
   display:flex; justify-content:center; gap:10px; margin-top: 16px;
 }
 #reassign-warning-modal .modal-actions button{
-  height:40px; padding: 0 14px; border-radius: 10px; border:0; font-weight:800; cursor:pointer;
+  height:40px; padding: 0 14px; border-radius: 0; border:0; font-weight:800; cursor:pointer;
 }
 #cancel-reassign-btn{ background:#fff; color: var(--indigo); border:1px solid #e5e6ef; }
 #submit-anyway-btn{ background: var(--pink); color: var(--indigo); }
