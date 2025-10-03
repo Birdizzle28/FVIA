@@ -102,3 +102,107 @@ main {
     display:none;          /* text off on small screens */
   }
 }
+/* ===== CAROUSEL ===== */
+.carousel {
+  position: relative;
+  border: 1px solid var(--tab-border);
+  background: #fff;
+  padding: 0;               /* no extra rounding/padding wrapper */
+}
+.carousel-track {
+  display: flex;
+  overflow: hidden;
+  scroll-behavior: smooth;
+  touch-action: pan-y;
+}
+.slide {
+  flex: 0 0 100%;
+  padding: 16px;
+  border-right: 1px solid #eef0f6;  /* faint divider between slides */
+}
+.slide:last-child { border-right: none; }
+.slide h3 { margin: 0 0 8px; color: var(--ink); font-weight: 800; }
+.slide p { margin: 0; color: #5f6472; }
+
+/* arrows */
+.car-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 0;
+  background: rgba(0,0,0,0.04);
+  width: 36px; height: 36px;
+  display: grid; place-items: center;
+  cursor: pointer;
+}
+.car-btn:hover { background: rgba(0,0,0,0.08); }
+.car-btn.prev { left: 8px; }
+.car-btn.next { right: 8px; }
+
+/* dots + footer */
+.car-dots {
+  display: flex; gap: 6px;
+  justify-content: center;
+  padding: 10px 8px 0;
+}
+.car-dots button {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  border: 0; background: #cdd3e1;
+  cursor: pointer;
+}
+.car-dots button[aria-current="true"] { background: #6f7aa3; }
+
+.car-footer {
+  display: flex;
+  justify-content: flex-end;
+  padding: 8px;
+  border-top: 1px solid var(--tab-border);
+}
+.see-all {
+  border: 1px solid var(--tab-border);
+  background: #f6f7fb;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+.see-all:hover { background: #eceff7; }
+
+/* ===== OVERLAY ===== */
+.overlay {
+  position: fixed; inset: 0; z-index: 1200;
+  display: none;
+}
+.overlay.open { display: block; }
+.overlay-backdrop {
+  position: absolute; inset: 0; background: rgba(0,0,0,.45);
+}
+.overlay-panel {
+  position: relative;
+  margin: 5vh auto 0;
+  max-width: 980px;
+  background: #fff;
+  border: 1px solid var(--tab-border);
+  /* square edges (no rounding) */
+}
+.overlay-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 14px; border-bottom: 1px solid var(--tab-border);
+}
+.overlay-header h2 { margin: 0; color: var(--ink); }
+.overlay-close { background: transparent; border: 0; font-size: 24px; cursor: pointer; }
+.overlay-body { padding: 12px 14px 18px; }
+.overlay-grid {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+.overlay-item {
+  border: 1px solid #e9eaf0; padding: 12px; background: #fff; cursor: pointer;
+}
+.overlay-item:hover { background: #f8faff; }
+
+/* mobile tweaks */
+@media (max-width: 720px) {
+  .car-btn { display: none; }       /* rely on swipe on small screens */
+  .overlay-panel { margin: 0; height: 100vh; max-width: none; }
+  .overlay-body { height: calc(100vh - 52px); overflow: auto; }
+}
