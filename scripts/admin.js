@@ -102,21 +102,31 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  // Adjust product filter when selecting an agent for bulk assignment
+  // Bulk-assign: choosing an agent should NOT reload the table.
+  // We only store which products they’re eligible for (used at assign time).
   document.getElementById('bulk-assign-agent').addEventListener('change', e => {
     const agentId = e.target.value;
-    if (agentId) {
-      const agent = allAgents.find(a => a.id === agentId);
-      if (agent && agent.product_types) {
-        allowedProductsFilter = Array.isArray(agent.product_types) ? agent.product_types.slice() : [agent.product_types];
-      } else {
-        allowedProductsFilter = null;
-      }
+  
+    // Keep existing checked rows
+    selectedLeads = new Set(
+      Array.from(document.querySelectorAll('.lead-checkbox:checked'))
+        .map(cb => cb.dataset.leadId)
+    );
+  
+    if (!agentId) {
+      allowedProductsFilter = null;
+      return;
+    }
+  
+    const agent = allAgents.find(a => a.id === agentId);
+    if (agent && agent.product_types) {
+      // normalize to array
+      allowedProductsFilter = Array.isArray(agent.product_types)
+        ? agent.product_types.slice()
+        : String(agent.product_types).split(',').map(s => s.trim()).filter(Boolean);
     } else {
       allowedProductsFilter = null;
     }
-    currentPage = 1;
-    loadLeadsWithFilters();
   });
 
   // Bulk assign leads button
