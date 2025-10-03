@@ -10,19 +10,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const loadingScreen = document.getElementById('loading-screen');
   const { data: { session } } = await supabase.auth.getSession();
 
-  // Make sure menu is hidden initially
-  menu.style.display = "none";
 
-  toggle?.addEventListener("click", (e) => {
-    e.stopPropagation();
-    menu.style.display = menu.style.display === "block" ? "none" : "block";
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!e.target.closest(".dropdown")) {
-      menu.style.display = "none";
-    }
-  });
   if (!session) {
     window.location.href = 'login.html'; // or 'login.html' if that's what you're using
     return;
