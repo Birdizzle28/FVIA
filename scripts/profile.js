@@ -9,8 +9,6 @@ const supabase = createClient(
 document.addEventListener('DOMContentLoaded', async () => {
   const loadingScreen = document.getElementById('loading-screen');
   const { data: { session } } = await supabase.auth.getSession();
-  const toggle = document.getElementById("agent-hub-toggle");
-  const menu = document.getElementById("agent-hub-menu");
 
   // Make sure menu is hidden initially
   menu.style.display = "none";
