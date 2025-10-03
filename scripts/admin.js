@@ -429,9 +429,9 @@ async function loadAgentsForAdmin() {
 async function loadLeadsWithFilters() {
   const tbody = document.querySelector('#leads-table tbody');
   if (!tbody) return;
-  selectedLeads.clear();
-  document.getElementById('selected-count').textContent = '0';
+  const prevSelection = new Set(selectedLeads);
   tbody.innerHTML = '';
+  document.getElementById('selected-count').textContent = '0';
   // Build query based on filters
   let query = supabase.from('leads').select('*', { count: 'exact' });
   const orderDir = document.getElementById('date-order').value;
@@ -503,6 +503,11 @@ async function loadLeadsWithFilters() {
     });
     checkboxTd.appendChild(checkbox);
     tr.appendChild(checkboxTd);
+    // restore checkbox state if it was previously selected
+    if (prevSelection.has(String(lead.id))) {
+      checkbox.checked = true;
+      selectedLeads.add(String(lead.id));
+    }
     // Assigned agent name (or Unassigned)
     const productTd = document.createElement('td');
     const agentName = lead.assigned_to ? (allAgents.find(a => a.id === lead.assigned_to)?.full_name || 'Unassigned') : 'Unassigned';
@@ -530,6 +535,8 @@ async function loadLeadsWithFilters() {
     }
     tbody.appendChild(tr);
   });
+  document.getElementById('selected-count').textContent = String(selectedLeads.size);
+  toggleExportVisibility();
 }
 const selectAllBox = document.getElementById('select-all');
 selectAllBox?.addEventListener('change', (e) => {
