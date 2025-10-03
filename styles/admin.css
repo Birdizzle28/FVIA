@@ -376,3 +376,89 @@ main.auth-container,
   border-color: #ed9ea5;
   box-shadow: 0 0 0 3px rgba(237,158,165,.35);
 }
+/* -------------------------------------------
+   1) Top nav: same card background + centered
+--------------------------------------------*/
+#admin-page-nav{
+  /* full-width bar, same surface as the cards */
+  width: 100%;
+  background: var(--card);
+  border: 1px solid #e5e6ef;
+  box-shadow: var(--shadow);
+  padding: 8px 12px;
+
+  /* keep inline buttons, but center the row */
+  display: flex;
+  align-items: center;
+  justify-content: center;   /* <-- center the buttons horizontally */
+  gap: 10px;
+
+  /* no rounding on this project */
+  border-radius: 0;
+}
+
+/* keep your active/hover states as-is; no changes needed to buttons */
+
+
+/* ------------------------------------------------------
+   2) Main parts overflowing: constrain + allow scrolling
+-------------------------------------------------------*/
+
+/* make sizing predictable so padding doesn't blow width */
+html { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: inherit; }
+
+/* never let the page itself create a horizontal scrollbar */
+body { overflow-x: hidden; }
+
+/* the grid container is already capped; just ensure children can shrink */
+main.auth-container > * { min-width: 0; }
+
+/* every “card/section” should never exceed the viewport width */
+.admin-section,
+#admin-all-container,
+#leads-table-container,
+.filter-wrapper,
+.scroll-container {
+  max-width: 100%;
+  min-width: 0;         /* critical in grid/flex to allow shrinking */
+  overflow-x: auto;     /* if content is wider, scroll INSIDE the block */
+}
+
+/* Choices.js sometimes sets wide inline widths; keep it contained */
+.choices,
+.choices__inner {
+  max-width: 100% !important;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+
+/* the table: fixed layout + wrap long content so it doesn’t force width */
+#leads-table {
+  table-layout: fixed;  /* columns share space instead of expanding page */
+  width: 100%;
+}
+#leads-table th,
+#leads-table td {
+  min-width: 120px;     /* tighten a bit more to reduce overflow */
+  word-break: break-word;
+}
+
+/* the sticky header can wrap if needed on tiny screens */
+#leads-table thead th {
+  white-space: normal;  /* was nowrap; let it wrap to avoid overflow */
+}
+
+/* filter grid: prevent its children from forcing overflow */
+.filter-wrapper {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+.filter-group { min-width: 0; } /* lets inputs shrink inside the grid */
+
+/* export dropdown: never exceed the viewport width */
+#export-controls { position: relative; }
+#export-options {
+  right: 0; left: auto;
+  max-width: calc(100vw - 24px);
+  overflow-x: auto;
+}
