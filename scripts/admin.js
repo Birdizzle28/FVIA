@@ -143,12 +143,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
     // Validate product eligibility for selected leads
     const agentInfo = allAgents.find(a => a.id === agentId);
-    if (agentInfo && agentInfo.product_types) {
+    if (agentInfo && Array.isArray(agentInfo.product_types) && agentInfo.product_types.length) {
       let ineligibleFound = false;
-      for (let id of selectedIds) {
+      for (let id of selectedLeads) {
         const row = document.querySelector(`input[data-lead-id="${id}"]`)?.closest('tr');
-        const leadType = row?.querySelector('.lead-type')?.textContent.trim();
-        if (leadType && !agentInfo.product_types.includes(leadType)) {
+        const product = row?.querySelector('.lead-product')?.textContent.trim(); // <-- was .lead-type
+        if (product && !agentInfo.product_types.includes(product)) {
           ineligibleFound = true;
           break;
         }
