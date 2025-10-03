@@ -312,3 +312,67 @@ hr{ border:0; height:1px; background:#ececf5; }
   #leads-table{ font-size: .9rem; }
   #leads-table thead th, #leads-table tbody td{ padding: 10px 8px; }
 }
+/* 2) prevent any section from exceeding the viewport width */
+main.auth-container,
+.admin-section,
+#admin-all-container,
+#leads-table-container,
+.filter-wrapper {
+  width: 100%;
+  max-width: 100vw;         /* never wider than the screen */
+}
+
+/* 3) make sections themselves scroll if content is wider */
+.admin-section { 
+  overflow: auto;           /* scroll inside the section if needed */
+}
+
+/* 4) table should scroll horizontally on small screens */
+#leads-table-container {
+  overflow-x: auto;         /* enables horizontal scroll */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 5) tighten min-width so the table doesn't balloon too much */
+#leads-table th,
+#leads-table td {
+  min-width: 140px;         /* was 180px; shrink to reduce overflow */
+  word-break: break-word;   /* wrap long notes/addresses */
+}
+
+/* 6) filter grid: allow it to shrink and wrap cleanly */
+.filter-wrapper {
+  grid-template-columns: repeat(2, minmax(0, 1fr));  /* prevent overflow from long selects */
+  overflow-x: auto;        /* if it ever gets wider, it scrolls */
+}
+
+/* stack filters to one column on narrower screens so they don't overflow */
+@media (max-width: 900px) {
+  .filter-wrapper { grid-template-columns: 1fr; }
+}
+
+/* 7) dropdown menu shouldn't force layout wider than screen */
+#export-controls { position: relative; }
+#export-options {
+  right: 0; left: auto;     /* anchor to the right edge of the button */
+  max-width: calc(100vw - 24px);
+}
+
+/* 8) pagination and page nav stay within width */
+#admin-page-nav { 
+  overflow-x: auto; 
+  padding-bottom: 4px; 
+}
+
+/* 9) small input tweaks so borders match the dashboard vibe */
+.filter-group input,
+.filter-group select,
+#bulk-assign-controls select {
+  border: 1px solid #e5e6ef;
+}
+.filter-group input:focus,
+.filter-group select:focus {
+  outline: none;
+  border-color: #ed9ea5;
+  box-shadow: 0 0 0 3px rgba(237,158,165,.35);
+}
