@@ -140,41 +140,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!mobileMenu?.contains(e.target)) closeSubmenu();
     });
   }
-  // Burger → X toggle + slide-out
-const menuToggle = document.getElementById('menu-toggle');
-const menuIcon   = menuToggle?.querySelector('i');
-const mobileMenu = document.getElementById('mobile-menu');
-
-if (menuToggle && menuIcon && mobileMenu) {
-  const setOpen = (open) => {
-    mobileMenu.classList.toggle('open', open);
-    menuToggle.setAttribute('aria-expanded', String(open));
-
-    // swap icon
-    if (open) {
-      menuIcon.classList.remove('fa-bars');
-      menuIcon.classList.add('fa-xmark');
-      menuIcon.style.transform = 'rotate(90deg)';   // lil flair
-    } else {
-      menuIcon.classList.remove('fa-xmark');
-      menuIcon.classList.add('fa-bars');
-      menuIcon.style.transform = 'rotate(0deg)';
-    }
-  };
-
-  // open/close on click
-  menuToggle.addEventListener('click', (e) => {
-    e.stopPropagation();
-    setOpen(!mobileMenu.classList.contains('open'));
-  });
-
-  // close when clicking outside
-  document.addEventListener('click', (e) => {
-    if (!mobileMenu.contains(e.target) && !menuToggle.contains(e.target)) {
-      setOpen(false);
-    }
-  });
-}
 });
 //Logout
 document.getElementById('logout-btn')?.addEventListener('click', async (e) => {
