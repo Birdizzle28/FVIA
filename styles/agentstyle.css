@@ -2,9 +2,6 @@
 * {
   font-family: Bellota Text;
 }
-html, body {
-  overflow-x: hidden;
-}
 /* Loading screen overlay */
 #loading-screen {
   position: fixed;
@@ -886,6 +883,7 @@ button:disabled {
     justify-content: space-between;
     padding: 10px;
     width: 100%;
+	  box-sizing: border-box;
   }
   .index-grid-header.scrolled {
   background-color: rgba(237, 158, 165, 0.7) !important;
