@@ -329,6 +329,23 @@ button:disabled {
 #mobile-menu .menu-item span {
 	display: inline; 
 } 
+/* Burger icon animation */
+#menu-toggle i {
+  transition: transform .2s ease;
+  transform-origin: 50% 50%;
+}
+
+/* Ensure the slide-out actually opens */
+#mobile-menu.open { transform: translateX(0); }
+
+/* Hover color for menu items */
+#mobile-menu a:hover {
+  background: #5e2a4b;   /* your dark purple */
+  color: #fff;
+}
+
+/* (Optional) predictable panel width */
+#mobile-menu { width: 80vw; max-width: 300px; }
 
 @media (max-width: 768px) {
 	@media (max-width: 768px) {
