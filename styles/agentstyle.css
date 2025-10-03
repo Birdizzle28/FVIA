@@ -825,7 +825,7 @@ button:disabled {
     display: inline;
     top: 0;
     right: 0;
-    width: 30vw;
+    width: 25vw;
     max-width: 300px;
     background: #ed9ea5;
     transform: translateX(100%);
