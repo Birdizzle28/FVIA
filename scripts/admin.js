@@ -458,18 +458,6 @@ async function loadLeadsWithFilters() {
   } else if (assignedVal === 'false') {
     query = query.is('assigned_to', null);
   }
-  if (allowedProductsFilter && Array.isArray(allowedProductsFilter)) {
-    if (allowedProductsFilter.length === 0) {
-      // Agent has no eligible products: no leads should show
-      tbody.innerHTML = '<tr><td colspan="14">No leads available for the selected agent.</td></tr>';
-      document.getElementById('current-page').textContent = 'Page 1 of 1';
-      document.getElementById('prev-page').disabled = true;
-      document.getElementById('next-page').disabled = true;
-      return;
-    } else {
-      query = query.in('product_type', allowedProductsFilter);
-    }
-  }
   const from = (currentPage - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
   const { data: leads, error, count } = await query.order(sortBy, { ascending: orderDir === 'asc' }).range(from, to);
