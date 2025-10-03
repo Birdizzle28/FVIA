@@ -130,24 +130,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   } else {
     agentHubBtn?.classList.remove('active-page');
   }
-  const toggle = document.getElementById('toolkit-toggle');
+  const toggleToolkit = document.getElementById('toolkit-toggle');
   const submenu = document.getElementById('toolkit-submenu');
 
-  if (toggle && submenu) {
+  if (toggleToolkit && submenu) {
     const openSubmenu = () => {
       submenu.hidden = false;
       submenu.classList.add('open');
-      toggle.setAttribute('aria-expanded', 'true');
+      toggleToolkit.setAttribute('aria-expanded', 'true');
     };
     const closeSubmenu = () => {
       submenu.classList.remove('open');
-      toggle.setAttribute('aria-expanded', 'false');
+      toggleToolkit.setAttribute('aria-expanded', 'false');
       // hide after animation finishes to keep height animation smooth
       setTimeout(() => { if (!submenu.classList.contains('open')) submenu.hidden = true; }, 260);
     };
 
-    toggle.addEventListener('click', () => {
-      const expanded = toggle.getAttribute('aria-expanded') === 'true';
+    toggleToolkit.addEventListener('click', () => {
+      const expanded = toggleToolkit.getAttribute('aria-expanded') === 'true';
       expanded ? closeSubmenu() : openSubmenu();
     });
 
