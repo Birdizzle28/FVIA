@@ -47,6 +47,7 @@ main.auth-container{
   padding: 20px;
   /* allow dropdowns/menus to escape if needed */
   overflow-x: auto;
+   overflow-y: visible;
 }
 .admin-section h3{
   margin: 0 0 12px;
