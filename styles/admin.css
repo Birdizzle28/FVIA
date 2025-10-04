@@ -281,6 +281,11 @@ main.auth-container{
 
 /* Export dropdown anchor + menu (robust) */
 #export-controls { position: relative; }
+#export-controls button{
+  height: 44px; border:0; border-radius: 0; cursor:pointer; font-weight: 800;
+  background: var(--pink); color: var(--indigo);
+  transition: filter .2s ease, transform .02s ease;
+}
 #export-btn{
   height: 44px; border:0; border-radius: 0; cursor:pointer; font-weight: 800;
   background: #fff; color: var(--indigo); border:1px solid #e5e6ef;
