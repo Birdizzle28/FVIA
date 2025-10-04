@@ -184,7 +184,7 @@ main.auth-container{
 #leads-table{
   /* let the table grow wider than the container when columns demand it */
   width: max-content;
-  min-width: 100%;
+  max-width: 100%;
   border-collapse: collapse;
   background: #fff;
   font-size: 0.95rem;
