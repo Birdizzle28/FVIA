@@ -347,10 +347,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     hideAllAdminSections();
     sections[name].style.display = 'block';
     navButtons[name].classList.add('active');
-
-    // You can optionally load data here when switching tabs.
-    // For example:
-    // if (name === 'history') loadAssignmentHistory();
+    if (name === 'history') loadAssignmentHistory();
   }
 
   // Initial view
@@ -684,4 +681,20 @@ async function assignLeads(agentId) {
   document.getElementById('selected-count').textContent = '0';
   await loadLeadsWithFilters();
   await loadAssignmentHistory();
+}
+AgentStatsPayload = {
+  period: { startISO, endISO },           // based on #stat-range
+  scope: 'team' | 'mine',                 // based on #stat-scope
+
+  kpis: {
+    newLeads: { value, deltaPct, spark: number[] },        // spark = mini trend points
+    contactRate: { valuePct, deltaPct, spark: number[] },
+    quoteRate:   { valuePct, deltaPct, spark: number[] },
+    closeRate:   { valuePct, deltaPct, spark: number[] },
+  },
+
+  weeklyCloses: { labels: string[], values: number[] },    // 12 buckets (week starts)
+  funnelDonut:  { labels: ['New','Contacted','Quoted','Closed'], values: number[] },
+  assignments:  { labels: string[], values: number[] },    // agents; last 30 days
+  progress:     { pct: number, label: string, targetText: string } // e.g., “37% of 50 closes”
 }
