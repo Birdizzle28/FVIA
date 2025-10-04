@@ -181,12 +181,13 @@ main.auth-container{
   padding: 8px 8px 0;
 }
 #leads-table{
+  /* let the table grow wider than the container when columns demand it */
   width: max-content;
+  min-width: 100%;
   border-collapse: collapse;
   background: #fff;
   font-size: 0.95rem;
-  table-layout: auto;    /* let columns breathe */
-   max-width: 100%;
+  table-layout: auto;    /* natural widths so scrolling kicks in */
 }
 #leads-table thead th{
   position: sticky; top: 0; z-index: 2;
