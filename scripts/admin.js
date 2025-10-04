@@ -348,6 +348,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     sections[name].style.display = 'block';
     navButtons[name].classList.add('active');
     if (name === 'history') loadAssignmentHistory();
+    if (name === 'stats')   loadAgentStats();
   }
 
   // Initial view
@@ -499,6 +500,7 @@ async function loadLeadsWithFilters() {
     // Assigned agent name (or Unassigned)
     const agentName = lead.assigned_to ? (allAgents.find(a => a.id === lead.assigned_to)?.full_name || 'Unassigned') : 'Unassigned';
     // Other fields
+    const phoneText = Array.isArray(lead.phone) ? lead.phone.join(', ') : (lead.phone || '');
     const cellMap = {
       'lead-date': new Date(lead.created_at).toLocaleDateString(),
       'lead-agent': agentName,
@@ -618,7 +620,10 @@ async function loadAssignmentHistory() {
     tbody.appendChild(tr);
   });
 }
-
+async function loadAgentStats() {
+  // TODO: fetch metrics and draw charts here
+  console.log('Agent Stats tab opened');
+}
 // Toggle export controls visibility
 function toggleExportVisibility() {
   const anyChecked = document.querySelectorAll('input.lead-checkbox:checked').length > 0;
@@ -682,7 +687,7 @@ async function assignLeads(agentId) {
   await loadLeadsWithFilters();
   await loadAssignmentHistory();
 }
-AgentStatsPayload = {
+/*AgentStatsPayload = {
   period: { startISO, endISO },           // based on #stat-range
   scope: 'team' | 'mine',                 // based on #stat-scope
 
@@ -698,3 +703,4 @@ AgentStatsPayload = {
   assignments:  { labels: string[], values: number[] },    // agents; last 30 days
   progress:     { pct: number, label: string, targetText: string } // e.g., “37% of 50 closes”
 }
+*/
