@@ -283,83 +283,53 @@
     <section id="admin-stats-section" class="admin-section" style="display:none;">
 	  <h3>Agent Stats</h3>
 	
-	  <!-- Optional scope/range controls to match your filters vibe -->
-	  <div id="stats-toolbar" class="filter-wrapper" style="margin-bottom:12px;">
-	    <div class="filter-group">
-	      <label for="stat-scope">Scope</label>
-	      <select id="stat-scope">
-	        <option value="team" selected>Team</option>
-	        <option value="mine">My leads</option>
-	      </select>
+	  <div class="stats-toolbar">
+	    <div class="scope">
+	      <label><input type="radio" name="stat-scope" value="team" checked> Team</label>
+	      <label><input type="radio" name="stat-scope" value="mine"> Mine</label>
 	    </div>
-	    <div class="filter-group">
-	      <label for="stat-range">Range</label>
+	    <div class="range">
+	      <label for="stat-range" class="sr-only">Range</label>
 	      <select id="stat-range">
 	        <option value="7">Last 7 days</option>
 	        <option value="30" selected>Last 30 days</option>
-	        <option value="0">All time</option>
+	        <option value="90">Last 90 days</option>
 	      </select>
 	    </div>
 	  </div>
 	
-	  <!-- KPI cards -->
-	  <div id="stats-kpis" class="stats-kpis">
-	    <article class="kpi" data-key="new">
+	  <div class="kpi-grid">
+	    <article class="kpi-card">
 	      <div class="kpi-label">New Leads</div>
-	      <div class="kpi-value" id="kpi-new">—</div>
-	      <div class="kpi-delta" id="kpi-new-delta">—</div>
-	      <div class="kpi-spark" id="spark-new"></div>
+	      <div class="kpi-value" id="kpi-new">0</div>
 	    </article>
-	    <article class="kpi" data-key="contact">
-	      <div class="kpi-label">Contact rate</div>
-	      <div class="kpi-value" id="kpi-contact">—</div>
-	      <div class="kpi-delta" id="kpi-contact-delta">—</div>
-	      <div class="kpi-spark" id="spark-contact"></div>
+	    <article class="kpi-card">
+	      <div class="kpi-label">Assigned</div>
+	      <div class="kpi-value" id="kpi-assigned">0</div>
 	    </article>
-	    <article class="kpi" data-key="quote">
-	      <div class="kpi-label">Quote rate</div>
-	      <div class="kpi-value" id="kpi-quote">—</div>
-	      <div class="kpi-delta" id="kpi-quote-delta">—</div>
-	      <div class="kpi-spark" id="spark-quote"></div>
+	    <article class="kpi-card">
+	      <div class="kpi-label">Avg Age</div>
+	      <div class="kpi-value" id="kpi-avg-age">—</div>
 	    </article>
-	    <article class="kpi" data-key="close">
-	      <div class="kpi-label">Close rate</div>
-	      <div class="kpi-value" id="kpi-close">—</div>
-	      <div class="kpi-delta" id="kpi-close-delta">—</div>
-	      <div class="kpi-spark" id="spark-close"></div>
+	    <article class="kpi-card">
+	      <div class="kpi-label">Agents Assigned</div>
+	      <div class="kpi-value" id="kpi-agents">0</div>
 	    </article>
 	  </div>
 	
-	  <!-- Charts / breakdowns -->
-	  <div class="stats-grid">
-	    <article class="card">
-	      <h4>Weekly closes (last 12 weeks)</h4>
-	      <canvas id="chart-weekly-closes" height="120"></canvas>
-	    </article>
-	
-	    <article class="card">
-	      <h4>Monthly target progress</h4>
-	      <div class="flex-row">
-	        <canvas id="chart-funnel" height="160" width="160" aria-label="Funnel donut"></canvas>
-	        <ul class="legend" id="legend-funnel"></ul>
-	      </div>
-	    </article>
-	
-	    <article class="card">
-	      <h4>Assignments by agent (30 days)</h4>
-	      <canvas id="chart-assignments" height="160"></canvas>
-	    </article>
-	
-	    <article class="card">
-	      <h4>Overall progress</h4>
-	      <div class="progress">
-	        <div class="bar" id="progress-month"></div>
-	      </div>
-	      <div class="progress-meta">
-	        <span id="progress-label">—</span>
-	        <span id="progress-target">—</span>
-	      </div>
-	    </article>
+	  <div class="chart-grid">
+	    <div class="chart-card">
+	      <h4>Weekly New Leads</h4>
+	      <canvas id="chart-weekly" height="140"></canvas>
+	    </div>
+	    <div class="chart-card">
+	      <h4>Product Mix</h4>
+	      <canvas id="chart-products" height="140"></canvas>
+	    </div>
+	    <div class="chart-card">
+	      <h4>Assignments by Agent</h4>
+	      <canvas id="chart-assignments" height="140"></canvas>
+	    </div>
 	  </div>
 	</section>
   </main>
@@ -409,6 +379,7 @@
 		  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 		  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 		  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 		<script type="module" src="scripts/general.js"></script>
 		<script type="module" src="scripts/admin.js"></script>
 	</body>
