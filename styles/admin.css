@@ -17,8 +17,7 @@
 
 /* Global resets/sizing */
 html, body { background: var(--bg); color: var(--text); }
-html { box-sizing: border-box; }
-*, *::before, *::after { box-sizing: inherit; }
+
 body { overflow-x: hidden; }
 
 /* =========================
