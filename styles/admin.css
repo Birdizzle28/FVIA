@@ -181,11 +181,12 @@ main.auth-container{
   padding: 8px 8px 0;
 }
 #leads-table{
-  width: 100%;
+  width: max-content;
   border-collapse: collapse;
   background: #fff;
   font-size: 0.95rem;
-  table-layout: auto;              /* let columns breathe */
+  table-layout: auto;    /* let columns breathe */
+   min-width: 100%;
 }
 #leads-table thead th{
   position: sticky; top: 0; z-index: 2;
