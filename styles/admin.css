@@ -293,14 +293,14 @@ main.auth-container{
 #export-btn:hover{ background: rgba(53,52,104,.08); }
 #export-options{
   position: absolute;
-  top: calc(100% + 6px);
-  left: 50;
+  bottom: 100%;
+  left: 50%;
   display:none; flex-direction: column; gap:8px;
   background:#fff; border:1px solid #e5e6ef; border-radius: 0; padding: 8px;
   box-shadow: var(--shadow);
   min-width: 160px;
   max-width: calc(100vw - 24px);
-  z-index: 1000; /* stay on top of tables/cards */
+  z-index: 10000; /* stay on top of tables/cards */
 }
 #export-options button{
   height: 38px; border:0; border-radius: 0; cursor:pointer; font-weight: 700;
