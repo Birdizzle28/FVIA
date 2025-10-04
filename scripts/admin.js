@@ -170,17 +170,24 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   // Export dropdown toggle
+  // --- Export dropdown toggle (safe + robust) ---
   const exportBtn = document.getElementById('export-btn');
   const exportOptions = document.getElementById('export-options');
-  exportBtn.addEventListener('click', () => {
-    exportOptions.style.display = exportOptions.style.display === 'block' ? 'none' : 'block';
-  });
-  // Hide export options when clicking outside
-  document.addEventListener('click', e => {
-    if (!exportBtn.contains(e.target) && !exportOptions.contains(e.target)) {
-      exportOptions.style.display = 'none';
-    }
-  });
+  
+  if (exportBtn && exportOptions) {
+    exportBtn.addEventListener('click', (e) => {
+      e.stopPropagation(); // don't let outside-click handler fire
+      const open = exportOptions.style.display === 'block';
+      exportOptions.style.display = open ? 'none' : 'block';
+    });
+  
+    // close when clicking anywhere else
+    document.addEventListener('click', (e) => {
+      if (!exportBtn.contains(e.target) && !exportOptions.contains(e.target)) {
+        exportOptions.style.display = 'none';
+      }
+    });
+  }
 
   // CSV Export
   document.getElementById('export-csv').addEventListener('click', () => {
