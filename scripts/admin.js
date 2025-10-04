@@ -169,25 +169,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('reassign-warning-modal').style.display = 'none';
   });
 
-  // Export dropdown toggle
-  // --- Export dropdown toggle (safe + robust) ---
+  // --- Export dropdown toggle (robust) ---
   const exportBtn = document.getElementById('export-btn');
   const exportOptions = document.getElementById('export-options');
   
   if (exportBtn && exportOptions) {
     exportBtn.addEventListener('click', (e) => {
-      e.stopPropagation(); // don't let outside-click handler fire
-      const open = exportOptions.style.display === 'block';
-      exportOptions.style.display = open ? 'none' : 'block';
+      e.preventDefault();
+      e.stopPropagation();
+      exportOptions.style.display = (exportOptions.style.display === 'block') ? 'none' : 'block';
     });
   
+    // prevent inside clicks from bubbling to document (which hides the menu)
+    exportOptions.addEventListener('click', (e) => e.stopPropagation());
+  
     // close when clicking anywhere else
-    document.addEventListener('click', (e) => {
-      if (!exportBtn.contains(e.target) && !exportOptions.contains(e.target)) {
-        exportOptions.style.display = 'none';
-      }
+    document.addEventListener('click', () => {
+      exportOptions.style.display = 'none';
     });
   }
+  
+  // After each export action, hide the menu:
+  ['export-csv','export-pdf','export-print'].forEach(id => {
+    const btn = document.getElementById(id);
+    btn?.addEventListener('click', () => {
+      exportOptions.style.display = 'none';
+    });
+  });
 
   // CSV Export
   document.getElementById('export-csv').addEventListener('click', () => {
