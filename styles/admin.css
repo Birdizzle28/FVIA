@@ -236,6 +236,10 @@ main.auth-container{
 
 /* Pagination */
 #pagination-controls{
+   position: sticky;
+  left: 0;                   /* pin to left edge of the scroller viewport */
+  right: 0;                  /* stretch to right edge as well */
+  bottom: 0;          
   display:flex; justify-content: center; align-items:center; gap: 14px;
   padding: 12px 8px 16px;
 }
