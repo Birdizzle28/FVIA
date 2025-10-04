@@ -46,7 +46,7 @@ main.auth-container{
   box-shadow: var(--shadow);
   padding: 20px;
   /* allow dropdowns/menus to escape if needed */
-  overflow: visible;
+  overflow: auto;
 }
 .admin-section h3{
   margin: 0 0 12px;
