@@ -462,3 +462,78 @@ main.auth-container > * { min-width: 0; }
   max-width: calc(100vw - 24px);
   overflow-x: auto;
 }
+/* Make the whole main area a white surface so gaps look white */
+main.auth-container{
+  background: var(--card);
+  border: 1px solid #e5e6ef;
+  box-shadow: var(--shadow);
+  padding: 12px;          /* spacing now lives inside the white surface */
+  gap: 16px;               /* keep some air between blocks */
+}
+
+/* Tab bar: same surface and centered */
+#admin-page-nav{
+  background: var(--card);
+  border: 1px solid #e5e6ef;
+  box-shadow: var(--shadow);
+  padding: 8px 12px;
+  display: flex;
+  justify-content: center; /* center the buttons horizontally */
+  align-items: center;
+  gap: 10px;
+  border-radius: 0;
+}
+
+/* (keep your existing #admin-page-nav button styles) */
+/* Table: let it size naturally; scroll horizontally in its container */
+#leads-table-container{
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Remove the fixed layout that was compressing columns */
+#leads-table{
+  table-layout: auto;  /* was fixed */
+  width: 100%;
+}
+
+/* Keep headers on one line so columns keep their natural width */
+#leads-table thead th{
+  white-space: nowrap; /* was normal */
+}
+
+/* Give columns a sensible floor so rows don’t collapse */
+#leads-table th,
+#leads-table td{
+  min-width: 170px;    /* was 120/140; roomier so it won’t feel squished */
+  word-break: break-word;
+}
+
+/* Filters: don’t shrink to nothing—scroll if they overflow instead */
+.filter-wrapper{
+  grid-template-columns: repeat(2, minmax(260px, 1fr)); /* sane min width */
+  overflow-x: auto;
+}
+.filter-group{ min-width: 0; }
+@media (max-width: 900px){
+  .filter-wrapper{ grid-template-columns: 1fr; }
+}
+
+/* Make sure cards/sections can be wider internally without shrinking;
+   if they overflow, they scroll inside themselves instead of compressing */
+.admin-section,
+#admin-all-container,
+#leads-table-container,
+.filter-wrapper,
+.scroll-container{
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+}
+
+/* Safety: choices selects don’t blow the width */
+.choices,
+.choices__inner{
+  max-width: 100% !important;
+  width: 100% !important;
+}
