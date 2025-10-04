@@ -1,4 +1,6 @@
-/* ========== Theme tokens (match Dashboard) ========== */
+/* =========================
+   THEME TOKENS (Dashboard)
+========================= */
 :root{
   --indigo: #353468;
   --indigo-600: #2b2a59;
@@ -13,27 +15,60 @@
   --ring: 0 0 0 3px rgba(237,158,165,.35);
 }
 
+/* Global resets/sizing */
 html, body { background: var(--bg); color: var(--text); }
+html { box-sizing: border-box; }
+*, *::before, *::after { box-sizing: inherit; }
+body { overflow-x: hidden; }
 
-/* ========== Page chrome ========== */
+/* =========================
+   PAGE CHROME / LAYOUT
+========================= */
 main.auth-container{
   width: min(1200px, 92vw);
   margin: 24px auto 64px;
   display: grid;
-  gap: 24px;
+  gap: 16px;
+  /* Make the whole main area white so the gaps match the cards */
+  background: var(--card);
+  border: 1px solid #e5e6ef;
+  box-shadow: var(--shadow);
+  padding: 12px;
 }
 
-/* ========== Tabbed page nav (looks like Dashboard folder tabs) ========== */
+/* Each section is a card; let inner blocks handle scrolling/overflow */
+.admin-section{
+  display:none; /* JS toggles */
+  background: var(--card);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  padding: 20px;
+  /* allow dropdowns/menus to escape if needed */
+  overflow: visible;
+}
+.admin-section h3{
+  margin: 0 0 12px;
+  font-size: 1.25rem;
+  color: var(--indigo);
+}
+
+/* =========================
+   TOP TAB BAR (centered + same surface)
+========================= */
 #admin-page-nav{
+  width: 100%;
   display:flex;
   align-items:center;
+  justify-content:center; /* centered buttons */
   gap:10px;
-  padding: 6px;
-  background: transparent;
-  border-radius: var(--radius);
+  padding: 8px 12px;
+  background: var(--card);
+  border: 1px solid #e5e6ef;
+  box-shadow: var(--shadow);
+  border-radius: 0;
   overflow-x:auto;
+  padding-bottom: 8px;
 }
-
 #admin-page-nav button{
   appearance: none;
   border: 0;
@@ -53,21 +88,9 @@ main.auth-container{
   box-shadow: var(--shadow);
 }
 
-/* ========== Sections as cards ========== */
-.admin-section{
-  display:none; /* JS toggles */
-  background: var(--card);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow);
-  padding: 20px;
-}
-.admin-section h3{
-  margin: 0 0 12px;
-  font-size: 1.25rem;
-  color: var(--indigo);
-}
-
-/* ========== Filters card ========== */
+/* =========================
+   FILTERS
+========================= */
 #admin-all-container{
   display:flex;
   flex-direction:column;
@@ -76,22 +99,21 @@ main.auth-container{
 
 .filter-wrapper{
   display:grid;
-  grid-template-columns: repeat(2, minmax(0,1fr));
+  grid-template-columns: repeat(2, minmax(260px, 1fr)); /* sane min width; wrap if needed */
   gap:14px 18px;
   background: var(--card);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 16px;
+  overflow-x: auto; /* if contents ever exceed width, scroll horizontally */
 }
-
-.filter-group{ display:flex; flex-direction:column; gap:6px; }
+.filter-group{ display:flex; flex-direction:column; gap:6px; min-width: 0; }
 
 .filter-group label{
   font-weight: 700;
   color: var(--indigo);
   font-size: .95rem;
 }
-
 .filter-group input,
 .filter-group select{
   height: 42px;
@@ -110,6 +132,11 @@ main.auth-container{
 }
 
 /* Choices.js polish */
+.choices,
+.choices__inner{
+  max-width: 100% !important;
+  width: 100% !important;
+}
 .choices__inner{
   border-radius: 0 !important;
   border-color: #e5e6ef !important;
@@ -120,7 +147,7 @@ main.auth-container{
   box-shadow: var(--ring) !important;
 }
 
-/* Flatpickr nudge */
+/* Flatpickr */
 .flatpickr-calendar{
   border-radius: 0;
   box-shadow: var(--shadow) !important;
@@ -136,32 +163,30 @@ main.auth-container{
   padding: 10px 14px; border-radius: 0;
   transition: transform .02s ease, filter .2s ease, background .2s ease, color .2s ease;
 }
-#apply-filters{
-  background: var(--indigo); color:#fff;
-}
-#reset-filters{
-  background: #fff; color: var(--indigo); border:1px solid #e5e6ef;
-}
+#apply-filters{ background: var(--indigo); color:#fff; }
+#reset-filters{ background: #fff; color: var(--indigo); border:1px solid #e5e6ef; }
 #apply-filters:hover{ filter: brightness(1.02); }
 #reset-filters:hover{ background: rgba(53,52,104,.08); }
 
-/* ========== Leads table ========== */
+/* =========================
+   LEADS TABLE (scrollable, not squished)
+========================= */
 #leads-table-container{
   width: 100%;
-  overflow:auto;
+  overflow-x: auto;                /* horizontal scroll when wider than screen */
+  -webkit-overflow-scrolling: touch;
   background: var(--card);
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   padding: 8px 8px 0;
 }
-
 #leads-table{
   width: 100%;
   border-collapse: collapse;
   background: #fff;
   font-size: 0.95rem;
+  table-layout: auto;              /* let columns breathe */
 }
-
 #leads-table thead th{
   position: sticky; top: 0; z-index: 2;
   background: var(--indigo);
@@ -171,17 +196,20 @@ main.auth-container{
   font-weight: 800;
   letter-spacing: .2px;
   border: 0;
-  white-space: nowrap;
+  white-space: nowrap;             /* keep headers on one line */
   user-select: none;
 }
 #leads-table thead th[data-column]{ cursor: pointer; }
 #leads-table thead th:first-child{ width: 44px; }
 
-#leads-table tbody td{
+#leads-table th,
+#leads-table td{
   padding: 12px 10px;
   border-top: 1px solid #eef0f6;
   color: #2a2a3e;
   vertical-align: top;
+  min-width: 170px;                /* sensible floor so table can overflow + scroll */
+  word-break: break-word;
 }
 
 /* zebra + hover */
@@ -199,7 +227,7 @@ main.auth-container{
   width: 18px; height: 18px; cursor: pointer;
 }
 
-/* Pagination row */
+/* Pagination */
 #pagination-controls{
   display:flex; justify-content: center; align-items:center; gap: 14px;
   padding: 12px 8px 16px;
@@ -213,7 +241,9 @@ main.auth-container{
 #pagination-controls button:hover{ background: rgba(53,52,104,.08); }
 #pagination-controls button:disabled{ opacity:.45; cursor:not-allowed; }
 
-/* ========== Bulk assign + Export ========== */
+/* =========================
+   BULK ASSIGN + EXPORT
+========================= */
 #bulk-export-invisible-container{ }
 #bulk-export-container{
   background: var(--card);
@@ -222,11 +252,15 @@ main.auth-container{
   padding: 16px;
   display:flex; flex-direction: column; gap: 16px;
   align-items: stretch;
+  /* let dropdown menu escape this card */
+  overflow: visible;
 }
 
-#bulk-assign-controls, #export-controls{ display:flex; flex-direction: column; gap:10px; align-items: stretch; }
+#bulk-assign-controls,
+#export-controls{
+  display:flex; flex-direction: column; gap:10px; align-items: stretch;
+}
 #bulk-assign-controls label{ color: var(--indigo); font-weight: 800; }
-
 #bulk-assign-controls select{
   height: 44px; padding: 8px 12px; border-radius: 0; border:1px solid #e5e6ef;
 }
@@ -238,19 +272,23 @@ main.auth-container{
 #bulk-assign-controls button:hover{ filter: brightness(1.03); }
 #bulk-assign-controls button:active{ transform: translateY(1px); }
 
-/* Export dropdown */
-#export-controls{ position: relative; }
+/* Export dropdown anchor + menu (robust) */
+#export-controls { position: relative; }
 #export-btn{
   height: 44px; border:0; border-radius: 0; cursor:pointer; font-weight: 800;
   background: #fff; color: var(--indigo); border:1px solid #e5e6ef;
 }
 #export-btn:hover{ background: rgba(53,52,104,.08); }
 #export-options{
-  position: absolute; top: calc(100% + 6px); right: 0;
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
   display:none; flex-direction: column; gap:8px;
   background:#fff; border:1px solid #e5e6ef; border-radius: 0; padding: 8px;
   box-shadow: var(--shadow);
   min-width: 160px;
+  max-width: calc(100vw - 24px);
+  z-index: 1000; /* stay on top of tables/cards */
 }
 #export-options button{
   height: 38px; border:0; border-radius: 0; cursor:pointer; font-weight: 700;
@@ -258,13 +296,14 @@ main.auth-container{
 }
 #export-options button:hover{ background: rgba(53,52,104,.08); }
 
-/* ========== Requested leads + history ========== */
+/* =========================
+   REQUESTED LEADS + HISTORY
+========================= */
 .scroll-container{
   max-height: 420px; overflow:auto;
   background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow);
   padding: 12px;
 }
-
 .lead-request-box{
   background:#fff; border:1px solid #eef0f6; border-radius: 0; padding: 12px; margin: 10px 0;
 }
@@ -285,7 +324,9 @@ main.auth-container{
   border-top: 1px solid #eef0f6; padding: 12px 10px;
 }
 
-/* ========== Modal (move inline styles to CSS if you want) ========== */
+/* =========================
+   MODAL
+========================= */
 #reassign-warning-modal{
   position: fixed; inset: 0; display:none; align-items:center; justify-content:center;
   background: rgba(0,0,0,.5); z-index: 9999;
@@ -303,254 +344,16 @@ main.auth-container{
 #cancel-reassign-btn{ background:#fff; color: var(--indigo); border:1px solid #e5e6ef; }
 #submit-anyway-btn{ background: var(--pink); color: var(--indigo); }
 
-/* ========== Utilities ========== */
+/* =========================
+   UTILITIES
+========================= */
 hr{ border:0; height:1px; background:#ececf5; }
 
-/* ========== Responsive ========== */
+/* =========================
+   RESPONSIVE
+========================= */
 @media (max-width: 900px){
   .filter-wrapper{ grid-template-columns: 1fr; }
   #leads-table{ font-size: .9rem; }
   #leads-table thead th, #leads-table tbody td{ padding: 10px 8px; }
-}
-/* 2) prevent any section from exceeding the viewport width */
-main.auth-container,
-.admin-section,
-#admin-all-container,
-#leads-table-container,
-.filter-wrapper {
-  width: 100%;
-  max-width: 100vw;         /* never wider than the screen */
-}
-
-/* 3) make sections themselves scroll if content is wider */
-.admin-section { 
-  overflow: auto;           /* scroll inside the section if needed */
-}
-
-/* 4) table should scroll horizontally on small screens */
-#leads-table-container {
-  overflow-x: auto;         /* enables horizontal scroll */
-  -webkit-overflow-scrolling: touch;
-}
-
-/* 5) tighten min-width so the table doesn't balloon too much */
-#leads-table th,
-#leads-table td {
-  min-width: 140px;         /* was 180px; shrink to reduce overflow */
-  word-break: break-word;   /* wrap long notes/addresses */
-}
-
-/* 6) filter grid: allow it to shrink and wrap cleanly */
-.filter-wrapper {
-  grid-template-columns: repeat(2, minmax(0, 1fr));  /* prevent overflow from long selects */
-  overflow-x: auto;        /* if it ever gets wider, it scrolls */
-}
-
-/* stack filters to one column on narrower screens so they don't overflow */
-@media (max-width: 900px) {
-  .filter-wrapper { grid-template-columns: 1fr; }
-}
-
-/* 7) dropdown menu shouldn't force layout wider than screen */
-#export-controls { position: relative; }
-#export-options {
-  right: 0; left: auto;     /* anchor to the right edge of the button */
-  max-width: calc(100vw - 24px);
-}
-
-/* 8) pagination and page nav stay within width */
-#admin-page-nav { 
-  overflow-x: auto; 
-  padding-bottom: 4px; 
-}
-
-/* 9) small input tweaks so borders match the dashboard vibe */
-.filter-group input,
-.filter-group select,
-#bulk-assign-controls select {
-  border: 1px solid #e5e6ef;
-}
-.filter-group input:focus,
-.filter-group select:focus {
-  outline: none;
-  border-color: #ed9ea5;
-  box-shadow: 0 0 0 3px rgba(237,158,165,.35);
-}
-/* -------------------------------------------
-   1) Top nav: same card background + centered
---------------------------------------------*/
-#admin-page-nav{
-  /* full-width bar, same surface as the cards */
-  width: 100%;
-  background: var(--card);
-  border: 1px solid #e5e6ef;
-  box-shadow: var(--shadow);
-  padding: 8px 12px;
-
-  /* keep inline buttons, but center the row */
-  display: flex;
-  align-items: center;
-  justify-content: center;   /* <-- center the buttons horizontally */
-  gap: 10px;
-
-  /* no rounding on this project */
-  border-radius: 0;
-}
-
-/* keep your active/hover states as-is; no changes needed to buttons */
-
-
-/* ------------------------------------------------------
-   2) Main parts overflowing: constrain + allow scrolling
--------------------------------------------------------*/
-
-/* make sizing predictable so padding doesn't blow width */
-html { box-sizing: border-box; }
-*, *::before, *::after { box-sizing: inherit; }
-
-/* never let the page itself create a horizontal scrollbar */
-body { overflow-x: hidden; }
-
-/* the grid container is already capped; just ensure children can shrink */
-main.auth-container > * { min-width: 0; }
-
-/* every “card/section” should never exceed the viewport width */
-.admin-section,
-#admin-all-container,
-#leads-table-container,
-.filter-wrapper,
-.scroll-container {
-  max-width: 100%;
-  min-width: 0;         /* critical in grid/flex to allow shrinking */
-  overflow-x: auto;     /* if content is wider, scroll INSIDE the block */
-}
-
-/* Choices.js sometimes sets wide inline widths; keep it contained */
-.choices,
-.choices__inner {
-  max-width: 100% !important;
-  width: 100% !important;
-  min-width: 0 !important;
-}
-
-/* the table: fixed layout + wrap long content so it doesn’t force width */
-#leads-table {
-  table-layout: fixed;  /* columns share space instead of expanding page */
-  width: 100%;
-}
-#leads-table th,
-#leads-table td {
-  min-width: 120px;     /* tighten a bit more to reduce overflow */
-  word-break: break-word;
-}
-
-/* the sticky header can wrap if needed on tiny screens */
-#leads-table thead th {
-  white-space: normal;  /* was nowrap; let it wrap to avoid overflow */
-}
-
-/* filter grid: prevent its children from forcing overflow */
-.filter-wrapper {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-.filter-group { min-width: 0; } /* lets inputs shrink inside the grid */
-
-/* export dropdown: never exceed the viewport width */
-#export-controls { position: relative; }
-#export-options {
-  right: 0; left: auto;
-  max-width: calc(100vw - 24px);
-  overflow-x: auto;
-}
-/* Make the whole main area a white surface so gaps look white */
-main.auth-container{
-  background: var(--card);
-  border: 1px solid #e5e6ef;
-  box-shadow: var(--shadow);
-  padding: 12px;          /* spacing now lives inside the white surface */
-  gap: 16px;               /* keep some air between blocks */
-}
-
-/* Tab bar: same surface and centered */
-#admin-page-nav{
-  background: var(--card);
-  border: 1px solid #e5e6ef;
-  box-shadow: var(--shadow);
-  padding: 8px 12px;
-  display: flex;
-  justify-content: center; /* center the buttons horizontally */
-  align-items: center;
-  gap: 10px;
-  border-radius: 0;
-}
-
-/* (keep your existing #admin-page-nav button styles) */
-/* Table: let it size naturally; scroll horizontally in its container */
-#leads-table-container{
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Remove the fixed layout that was compressing columns */
-#leads-table{
-  table-layout: auto;  /* was fixed */
-  width: 100%;
-}
-
-/* Keep headers on one line so columns keep their natural width */
-#leads-table thead th{
-  white-space: nowrap; /* was normal */
-}
-
-/* Give columns a sensible floor so rows don’t collapse */
-#leads-table th,
-#leads-table td{
-  min-width: 170px;    /* was 120/140; roomier so it won’t feel squished */
-  word-break: break-word;
-}
-
-/* Filters: don’t shrink to nothing—scroll if they overflow instead */
-.filter-wrapper{
-  grid-template-columns: repeat(2, minmax(260px, 1fr)); /* sane min width */
-  overflow-x: auto;
-}
-.filter-group{ min-width: 0; }
-@media (max-width: 900px){
-  .filter-wrapper{ grid-template-columns: 1fr; }
-}
-
-/* Make sure cards/sections can be wider internally without shrinking;
-   if they overflow, they scroll inside themselves instead of compressing */
-.admin-section,
-#admin-all-container,
-#leads-table-container,
-.filter-wrapper,
-.scroll-container{
-  max-width: 100%;
-  min-width: 0;
-  overflow-x: auto;
-}
-
-/* Safety: choices selects don’t blow the width */
-.choices,
-.choices__inner{
-  max-width: 100% !important;
-  width: 100% !important;
-}
-/* The container anchors the absolute menu */
-#export-controls { position: relative; }
-
-/* Make the dropdown sit above cards/tables and not get clipped */
-#export-options{
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 1000;         /* <-- ensure it's on top */
-  display: none;
-}
-
-/* If a parent section/card clips it, allow overflow to show the menu */
-#bulk-export-container,
-.admin-section {
-  overflow: visible;      /* not auto/hidden, so the menu can extend */
 }
