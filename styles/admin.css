@@ -360,15 +360,6 @@ main.auth-container{
    UTILITIES
 ========================= */
 hr{ border:0; height:1px; background:#ececf5; }
-#bulk-export-container { overflow: visible; }
-#export-controls { position: relative; }
-#export-options{
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 2000;           /* higher than sticky headers etc. */
-  display: none;
-}
 
 /* =========================
    RESPONSIVE
