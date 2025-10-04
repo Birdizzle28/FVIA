@@ -620,9 +620,121 @@ async function loadAssignmentHistory() {
     tbody.appendChild(tr);
   });
 }
+let chartWeekly, chartProducts, chartAssignments;
+
 async function loadAgentStats() {
-  // TODO: fetch metrics and draw charts here
-  console.log('Agent Stats tab opened');
+  const rangeDays = Number(document.getElementById('stat-range')?.value || 30);
+  const scope = document.querySelector('input[name="stat-scope"]:checked')?.value || 'team';
+
+  // date window
+  const now = new Date();
+  const start = new Date(now.getTime() - rangeDays * 864e5);
+  const startISO = start.toISOString();
+
+  // base query
+  let q = supabase
+    .from('leads')
+    .select('id, created_at, age, product_type, assigned_to, assigned_at', { count: 'exact' })
+    .gte('created_at', startISO);
+
+  // scope filter: mine = leads assigned to me
+  if (scope === 'mine' && userId) {
+    q = q.eq('assigned_to', userId);
+  }
+
+  const { data: leads, error } = await q;
+  if (error) {
+    console.error('Stats load error:', error);
+    return;
+  }
+
+  // ---------- KPIs ----------
+  const kNew = leads.length;
+  const assignedInWindow = leads.filter(l => l.assigned_at && new Date(l.assigned_at) >= start);
+  const kAssigned = assignedInWindow.length;
+
+  const ages = leads.map(l => Number(l.age)).filter(n => Number.isFinite(n) && n > 0);
+  const avgAge = ages.length ? (ages.reduce((a,b)=>a+b,0)/ages.length) : NaN;
+  const distinctAgents = new Set(assignedInWindow.map(l => l.assigned_to).filter(Boolean));
+  const kAgents = distinctAgents.size;
+
+  document.getElementById('kpi-new').textContent = String(kNew);
+  document.getElementById('kpi-assigned').textContent = String(kAssigned);
+  document.getElementById('kpi-avg-age').textContent = Number.isFinite(avgAge) ? (Math.round(avgAge * 10) / 10) : '—';
+  document.getElementById('kpi-agents').textContent = String(kAgents);
+
+  // ---------- Weekly buckets ----------
+  const weekMs = 7 * 864e5;
+  const bucketCount = Math.min(12, Math.max(1, Math.ceil(rangeDays / 7)));
+  const bucketStarts = Array.from({length: bucketCount}, (_,i) => new Date(start.getTime() + i * weekMs));
+  const weeklyCounts = new Array(bucketCount).fill(0);
+
+  for (const l of leads) {
+    const t = new Date(l.created_at).getTime();
+    const idx = Math.floor((t - start.getTime()) / weekMs);
+    if (idx >= 0 && idx < bucketCount) weeklyCounts[idx]++;
+  }
+  const weekLabels = bucketStarts.map(d => `${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')}`);
+
+  // ---------- Product mix ----------
+  const productCounts = {};
+  for (const l of leads) {
+    const key = (l.product_type || 'Unknown').trim() || 'Unknown';
+    productCounts[key] = (productCounts[key] || 0) + 1;
+  }
+  const productLabels = Object.keys(productCounts);
+  const productValues = productLabels.map(k => productCounts[k]);
+
+  // ---------- Assignments by agent (in window) ----------
+  const nameById = new Map(allAgents.map(a => [a.id, a.full_name]));
+  const assigns = {};
+  for (const l of assignedInWindow) {
+    const id = l.assigned_to || 'Unknown';
+    assigns[id] = (assigns[id] || 0) + 1;
+  }
+  const assignLabels = Object.keys(assigns).map(id => nameById.get(id) || 'Unassigned/Unknown');
+  const assignValues = Object.keys(assigns).map(id => assigns[id]);
+
+  // ---------- Draw / Update charts ----------
+  // destroy old charts to avoid duplicates
+  chartWeekly?.destroy();
+  chartProducts?.destroy();
+  chartAssignments?.destroy();
+
+  const weeklyCtx = document.getElementById('chart-weekly').getContext('2d');
+  chartWeekly = new Chart(weeklyCtx, {
+    type: 'line',
+    data: { labels: weekLabels, datasets: [{ label: 'New Leads', data: weeklyCounts, tension: 0.3 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision:0 } } }
+    }
+  });
+
+  const productsCtx = document.getElementById('chart-products').getContext('2d');
+  chartProducts = new Chart(productsCtx, {
+    type: 'doughnut',
+    data: { labels: productLabels, datasets: [{ data: productValues }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins: { legend: { position: 'bottom' } } }
+  });
+
+  const assignsCtx = document.getElementById('chart-assignments').getContext('2d');
+  chartAssignments = new Chart(assignsCtx, {
+    type: 'bar',
+    data: { labels: assignLabels, datasets: [{ label: 'Assignments', data: assignValues }] },
+    options: {
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins: { legend: { display:false } },
+      scales: { y: { beginAtZero:true, ticks: { precision:0 } } }
+    }
+  });
+
+  // re-run when controls change
+  document.getElementById('stat-range')?.addEventListener('change', loadAgentStats, { once: true });
+  document.querySelectorAll('input[name="stat-scope"]').forEach(r => r.addEventListener('change', loadAgentStats, { once: true }));
 }
 // Toggle export controls visibility
 function toggleExportVisibility() {
