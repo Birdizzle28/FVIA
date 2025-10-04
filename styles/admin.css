@@ -537,3 +537,20 @@ main.auth-container{
   max-width: 100% !important;
   width: 100% !important;
 }
+/* The container anchors the absolute menu */
+#export-controls { position: relative; }
+
+/* Make the dropdown sit above cards/tables and not get clipped */
+#export-options{
+  position: absolute;
+  top: calc(100% + 6px);
+  right: 0;
+  z-index: 1000;         /* <-- ensure it's on top */
+  display: none;
+}
+
+/* If a parent section/card clips it, allow overflow to show the menu */
+#bulk-export-container,
+.admin-section {
+  overflow: visible;      /* not auto/hidden, so the menu can extend */
+}
