@@ -294,7 +294,7 @@ main.auth-container{
 #export-options{
   position: absolute;
   bottom: 500%;
-  left: 50%;
+  left: 0;
   display:none; flex-direction: column; gap:8px;
   background:#fff; border:1px solid #e5e6ef; border-radius: 0; padding: 8px;
   box-shadow: var(--shadow);
