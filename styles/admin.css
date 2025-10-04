@@ -365,46 +365,37 @@ main.auth-container{
 ========================= */
 hr{ border:0; height:1px; background:#ececf5; }
 
-/* KPI grid */
-.stats-kpis{
-  display:grid;
-  grid-template-columns: repeat(4, minmax(160px, 1fr));
-  gap:12px;
+.stats-toolbar{
+  display:flex; justify-content:space-between; align-items:center;
+  gap:14px; margin-bottom:12px;
 }
-.kpi{
-  background: var(--card);
-  box-shadow: var(--shadow);
+.stats-toolbar .scope { display:flex; gap:12px; align-items:center; }
+.stats-toolbar .range select{
+  height: 36px; padding: 6px 10px; border:1px solid #e5e6ef; background:#fff;
+}
+
+.kpi-grid{
+  display:grid; grid-template-columns: repeat(4, minmax(0,1fr));
+  gap:14px; margin-bottom:16px;
+}
+.kpi-card{
+  background: var(--card); box-shadow: var(--shadow); border-radius: var(--radius);
   padding:14px;
-  border:1px solid #e5e6ef;
 }
-.kpi-label{ color: var(--muted); font-weight:700; margin-bottom:6px; }
-.kpi-value{ font-size: 2rem; font-weight: 800; color: var(--indigo); }
-.kpi-delta{ font-size: .9rem; color: var(--muted); margin-top:2px; }
+.kpi-label{ color: var(--muted); font-weight:700; font-size:.9rem; }
+.kpi-value{ font-size:1.8rem; font-weight:800; color: var(--indigo); }
 
-/* Charts grid */
-.stats-grid{
-  display:grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap:12px;
-  margin-top:12px;
+.chart-grid{
+  display:grid; grid-template-columns: repeat(3, minmax(0,1fr));
+  gap:14px;
 }
-.stats-grid .card{
-  background: var(--card);
-  box-shadow: var(--shadow);
+.chart-card{
+  background: var(--card); box-shadow: var(--shadow); border-radius: var(--radius);
   padding:14px;
-  border:1px solid #e5e6ef;
 }
-.flex-row{ display:flex; align-items:center; gap:12px; }
-.legend{ list-style:none; padding:0; margin:0; display:grid; gap:6px; }
-
-/* Progress bar */
-.progress{ height: 14px; background:#f1f2f8; border:1px solid #e5e6ef; }
-.progress .bar{ height: 100%; background: var(--indigo); width: 0%; transition: width .4s ease; }
-.progress-meta{ display:flex; justify-content:space-between; margin-top:6px; font-weight:700; color: var(--indigo); }
-
 @media (max-width: 900px){
-  .stats-kpis{ grid-template-columns: 1fr 1fr; }
-  .stats-grid{ grid-template-columns: 1fr; }
+  .kpi-grid{ grid-template-columns: 1fr 1fr; }
+  .chart-grid{ grid-template-columns: 1fr; }
 }
 
 /* =========================
