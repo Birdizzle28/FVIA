@@ -365,6 +365,48 @@ main.auth-container{
 ========================= */
 hr{ border:0; height:1px; background:#ececf5; }
 
+/* KPI grid */
+.stats-kpis{
+  display:grid;
+  grid-template-columns: repeat(4, minmax(160px, 1fr));
+  gap:12px;
+}
+.kpi{
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding:14px;
+  border:1px solid #e5e6ef;
+}
+.kpi-label{ color: var(--muted); font-weight:700; margin-bottom:6px; }
+.kpi-value{ font-size: 2rem; font-weight: 800; color: var(--indigo); }
+.kpi-delta{ font-size: .9rem; color: var(--muted); margin-top:2px; }
+
+/* Charts grid */
+.stats-grid{
+  display:grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap:12px;
+  margin-top:12px;
+}
+.stats-grid .card{
+  background: var(--card);
+  box-shadow: var(--shadow);
+  padding:14px;
+  border:1px solid #e5e6ef;
+}
+.flex-row{ display:flex; align-items:center; gap:12px; }
+.legend{ list-style:none; padding:0; margin:0; display:grid; gap:6px; }
+
+/* Progress bar */
+.progress{ height: 14px; background:#f1f2f8; border:1px solid #e5e6ef; }
+.progress .bar{ height: 100%; background: var(--indigo); width: 0%; transition: width .4s ease; }
+.progress-meta{ display:flex; justify-content:space-between; margin-top:6px; font-weight:700; color: var(--indigo); }
+
+@media (max-width: 900px){
+  .stats-kpis{ grid-template-columns: 1fr 1fr; }
+  .stats-grid{ grid-template-columns: 1fr; }
+}
+
 /* =========================
    RESPONSIVE
 ========================= */
