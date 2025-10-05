@@ -72,6 +72,36 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadLeadsWithFilters();
   await loadRequestedLeads();
   await loadAssignmentHistory();
+  
+  // ---- Agent Stats date-range picker (default last 30 days) ----
+  let statPicker;  // make this accessible to loadAgentStats()
+  
+  (function initStatRange(){
+    const thirtyDaysAgo = new Date(Date.now() - 30*864e5);
+  
+    statPicker = flatpickr('#stat-range-wrap', {
+      mode: 'range',
+      dateFormat: 'Y-m-d',
+      defaultDate: [thirtyDaysAgo, new Date()],
+      wrap: true,              // lets the button open the calendar
+      onChange: () => {
+        // only reload when NOT "All time"
+        if (!document.getElementById('stat-all-time').checked) {
+          loadAgentStats();
+        }
+      }
+    });
+  
+    // All time toggle
+    const allCb = document.getElementById('stat-all-time');
+    allCb.addEventListener('change', () => {
+      const disabled = allCb.checked;
+      // visually/semantically disable the picker when All time
+      document.getElementById('stat-range').disabled = disabled;
+      document.querySelector('#stat-range-wrap .calendar-btn').disabled = disabled;
+      loadAgentStats();
+    });
+  })();
   document.getElementById('stat-agent')?.addEventListener('change', loadAgentStats);
   document.getElementById('stat-range')?.addEventListener('change', loadAgentStats);
 
