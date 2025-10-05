@@ -377,6 +377,22 @@ document.addEventListener('DOMContentLoaded', async () => {
       await loadLeadsWithFilters();
     }
   });
+  function populateStatAgentSelect() {
+    const sel = document.getElementById('stat-agent');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">All agents</option>';
+    allAgents.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = a.full_name;
+      sel.appendChild(opt);
+    });
+  
+    // Optional: enhance with Choices.js (you already load it elsewhere)
+    try {
+      new Choices(sel, { shouldSort: false, searchEnabled: true, itemSelectText: '' });
+    } catch (_) {}
+  }
 }); // end DOMContentLoaded
 
 // Load active agents and populate filters
@@ -424,7 +440,12 @@ async function loadAgentsForAdmin() {
   new Choices(agentFilterEl, { shouldSort: false, searchEnabled: true, placeholder: true, itemSelectText: '' });
   new Choices(bulkAssignEl, { shouldSort: false, searchEnabled: true, placeholder: true, itemSelectText: '' });
 }
+// After: await loadAgentsForAdmin();
+populateStatAgentSelect();
 
+// Make the controls re-run stats
+document.getElementById('stat-agent')?.addEventListener('change', loadAgentStats);
+document.getElementById('stat-range')?.addEventListener('change', loadAgentStats);
 // Load leads with current filters and pagination
 async function loadLeadsWithFilters() {
   const tbody = document.querySelector('#leads-table tbody');
@@ -624,8 +645,8 @@ let chartWeekly, chartProducts, chartAssignments;
 
 async function loadAgentStats() {
   const rangeDays = Number(document.getElementById('stat-range')?.value || 30);
-  const scope = document.querySelector('input[name="stat-scope"]:checked')?.value || 'team';
-
+  const agentId = document.getElementById('stat-agent')?.value || '';  // '' means All agents
+  
   // date window
   const now = new Date();
   const start = new Date(now.getTime() - rangeDays * 864e5);
@@ -636,10 +657,11 @@ async function loadAgentStats() {
     .from('leads')
     .select('id, created_at, age, product_type, assigned_to, assigned_at', { count: 'exact' })
     .gte('created_at', startISO);
-
-  // scope filter: mine = leads assigned to me
-  if (scope === 'mine' && userId) {
-    q = q.eq('assigned_to', userId);
+  
+  // Filter: if an agent is chosen, show only leads assigned to them.
+  // (If you’d rather see “leads submitted by” that agent, switch 'assigned_to' → 'submitted_by')
+  if (agentId) {
+    q = q.eq('assigned_to', agentId);
   }
 
   const { data: leads, error } = await q;
