@@ -671,26 +671,40 @@ async function loadAssignmentHistory() {
 let chartWeekly, chartProducts, chartAssignments;
 
 async function loadAgentStats() {
-  const rangeDays = Number(document.getElementById('stat-range')?.value || 30);
-  const agentId = document.getElementById('stat-agent')?.value || '';  // '' means All agents
+  const isAll = document.getElementById('stat-all-time')?.checked === true;
+  const agentId = document.getElementById('stat-agent')?.value || '';
   
-  // date window
-  const now = new Date();
-  const start = new Date(now.getTime() - rangeDays * 864e5);
-  const startISO = start.toISOString();
-
+  let start = null, end = null;
+  if (!isAll) {
+    // get the two dates from the flatpickr range (statPicker is created in DOMContentLoaded)
+    const dates = statPicker?.selectedDates || [];
+    if (dates.length === 2) {
+      [start, end] = dates;
+    } else {
+      // fallback: last 30 days
+      end = new Date();
+      start = new Date(end.getTime() - 30 * 864e5);
+    }
+  }
+  const startISO = start ? start.toISOString() : null;
+  // include the full end-day until 23:59:59.999
+  const endISO = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999).toISOString() : null;
+  
   // base query
   let q = supabase
     .from('leads')
-    .select('id, created_at, age, product_type, assigned_to, assigned_at', { count: 'exact' })
-    .gte('created_at', startISO);
+    .select('id, created_at, age, product_type, assigned_to, assigned_at', { count: 'exact' });
   
-  // Filter: if an agent is chosen, show only leads assigned to them.
-  // (If you’d rather see “leads submitted by” that agent, switch 'assigned_to' → 'submitted_by')
+  // only constrain by date when NOT all-time
+  if (!isAll && startISO && endISO) {
+    q = q.gte('created_at', startISO).lte('created_at', endISO);
+  }
+  
+  // filter by agent if chosen (keep as assigned_to; switch to submitted_by if you prefer)
   if (agentId) {
     q = q.eq('assigned_to', agentId);
   }
-
+  
   const { data: leads, error } = await q;
   if (error) {
     console.error('Stats load error:', error);
