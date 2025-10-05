@@ -731,18 +731,100 @@ async function loadAgentStats() {
   document.getElementById('kpi-avg-age').textContent = Number.isFinite(avgAge) ? (Math.round(avgAge * 10) / 10) : '—';
   document.getElementById('kpi-agents').textContent = String(kAgents);
 
-  // ---------- Weekly buckets ----------
-  const weekMs = 7 * 864e5;
-  const bucketCount = Math.min(12, Math.max(1, Math.ceil(rangeDays / 7)));
-  const bucketStarts = Array.from({length: bucketCount}, (_,i) => new Date(start.getTime() + i * weekMs));
-  const weeklyCounts = new Array(bucketCount).fill(0);
-
-  for (const l of leads) {
-    const t = new Date(l.created_at).getTime();
-    const idx = Math.floor((t - start.getTime()) / weekMs);
-    if (idx >= 0 && idx < bucketCount) weeklyCounts[idx]++;
+  // ---------- Time buckets for line chart (weekly or monthly) ----------
+  let timeLabels, timeCounts, chartLineLabel;
+  
+  if (isAll) {
+    // All time → show last 12 months
+    const now = new Date();
+    const monthStarts = Array.from({ length: 12 }, (_, i) =>
+      new Date(now.getFullYear(), now.getMonth() - (11 - i), 1)
+    );
+    const monthCounts = new Array(12).fill(0);
+  
+    for (const l of leads) {
+      const dt = new Date(l.created_at);
+      const base = monthStarts[0];
+      const diffMonths =
+        (dt.getFullYear() - base.getFullYear()) * 12 + (dt.getMonth() - base.getMonth());
+      if (diffMonths >= 0 && diffMonths < 12) monthCounts[diffMonths]++;
+    }
+  
+    timeLabels = monthStarts.map(d =>
+      `${d.toLocaleString('default', { month: 'short' })} ${String(d.getFullYear()).slice(-2)}`
+    );
+    timeCounts = monthCounts;
+    chartLineLabel = 'Monthly New Leads';
+  } else {
+    const totalDays =
+      Math.max(1, Math.round((+new Date(endISO) - +start) / 864e5) + 1);
+    const useMonthly = totalDays > 120; // > ~4 months → monthly
+  
+    if (useMonthly) {
+      // monthly between start and end
+      const monthStarts = [];
+      const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+      const last = new Date(end.getFullYear(), end.getMonth(), 1);
+      while (cursor <= last) {
+        monthStarts.push(new Date(cursor));
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
+  
+      const monthCounts = new Array(monthStarts.length).fill(0);
+      for (const l of leads) {
+        const dt = new Date(l.created_at);
+        const idx = monthStarts.findIndex(
+          m => dt.getFullYear() === m.getFullYear() && dt.getMonth() === m.getMonth()
+        );
+        if (idx !== -1) monthCounts[idx]++;
+      }
+  
+      timeLabels = monthStarts.map(d =>
+        `${d.toLocaleString('default', { month: 'short' })} ${String(d.getFullYear()).slice(-2)}`
+      );
+      timeCounts = monthCounts;
+      chartLineLabel = 'Monthly New Leads';
+    } else {
+      // weekly between start and end
+      const weekMs = 7 * 864e5;
+      const bucketCount = Math.min(24, Math.max(1, Math.ceil(totalDays / 7))); // cap to keep it light
+      const bucketStarts = Array.from(
+        { length: bucketCount },
+        (_, i) => new Date(start.getTime() + i * weekMs)
+      );
+      const weeklyCounts = new Array(bucketCount).fill(0);
+  
+      for (const l of leads) {
+        const t = new Date(l.created_at).getTime();
+        const idx = Math.floor((t - start.getTime()) / weekMs);
+        if (idx >= 0 && idx < bucketCount) weeklyCounts[idx]++;
+      }
+  
+      timeLabels = bucketStarts.map(d =>
+        `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`
+      );
+      timeCounts = weeklyCounts;
+      chartLineLabel = 'Weekly New Leads';
+    }
   }
-  const weekLabels = bucketStarts.map(d => `${(d.getMonth()+1).toString().padStart(2,'0')}/${d.getDate().toString().padStart(2,'0')}`);
+  
+  // (Optional) update the card title above the canvas
+  const weeklyTitleEl = document.querySelector('#chart-weekly')?.previousElementSibling;
+  if (weeklyTitleEl) weeklyTitleEl.textContent = chartLineLabel;
+  
+  // then feed `timeLabels` and `timeCounts` to your line chart:
+  chartWeekly?.destroy();
+  const weeklyCtx = document.getElementById('chart-weekly').getContext('2d');
+  chartWeekly = new Chart(weeklyCtx, {
+    type: 'line',
+    data: { labels: timeLabels, datasets: [{ label: chartLineLabel, data: timeCounts, tension: 0.3 }] },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
 
   // ---------- Product mix ----------
   const productCounts = {};
