@@ -392,6 +392,20 @@ hr{ border:0; height:1px; background:#ececf5; }
 .chart-card{
   background: var(--card); box-shadow: var(--shadow); border-radius: var(--radius);
   padding:14px;
+   display: flex;
+  flex-direction: column;
+  height: 280px;
+}
+.chart-card h4{
+  margin: 0 0 8px;
+  flex: 0 0 auto;
+}
+
+.chart-card canvas{
+  flex: 1 1 auto;            /* canvas takes the remaining space */
+  width: 100% !important;
+  height: 100% !important;   /* fill the card’s height */
+  min-height: 0;             /* avoid flex min-height quirks */
 }
 @media (max-width: 900px){
   .kpi-grid{ grid-template-columns: 1fr 1fr; }
