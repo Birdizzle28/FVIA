@@ -671,6 +671,10 @@ let chartWeekly, chartProducts, chartAssignments;
 async function loadAgentStats() {
   const isAll = document.getElementById('stat-all-time')?.checked === true;
   const agentId = document.getElementById('stat-agent')?.value || '';
+  // Tear down any existing charts once per run
+  chartWeekly?.destroy();
+  chartProducts?.destroy();
+  chartAssignments?.destroy();
   
   let start = null, end = null;
   if (!isAll) {
@@ -843,21 +847,37 @@ async function loadAgentStats() {
   const assignLabels = Object.keys(assigns).map(id => nameById.get(id) || 'Unassigned/Unknown');
   const assignValues = Object.keys(assigns).map(id => assigns[id]);
 
-  // ---------- Draw / Update charts ----------
-  // destroy old charts to avoid duplicates
-  chartWeekly?.destroy();
-  chartProducts?.destroy();
-  chartAssignments?.destroy();
-
+  // --- Build charts (weekly/monthly line was already computed as timeLabels/timeCounts) ---
   const weeklyCtx = document.getElementById('chart-weekly').getContext('2d');
   chartWeekly = new Chart(weeklyCtx, {
     type: 'line',
-    data: { labels: weekLabels, datasets: [{ label: 'New Leads', data: weeklyCounts, tension: 0.3 }] },
+    data: { labels: timeLabels, datasets: [{ label: chartLineLabel, data: timeCounts, tension: 0.3 }] },
     options: {
       responsive: true,
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { precision:0 } } }
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
+    }
+  });
+  
+  // Product mix doughnut
+  const productsCtx = document.getElementById('chart-products').getContext('2d');
+  chartProducts = new Chart(productsCtx, {
+    type: 'doughnut',
+    data: { labels: productLabels, datasets: [{ data: productValues }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins: { legend: { position: 'bottom' } } }
+  });
+  
+  // Assignments by agent bar
+  const assignsCtx = document.getElementById('chart-assignments').getContext('2d');
+  chartAssignments = new Chart(assignsCtx, {
+    type: 'bar',
+    data: { labels: assignLabels, datasets: [{ label: 'Assignments', data: assignValues }] },
+    options: {
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins: { legend: { display:false } },
+      scales: { y: { beginAtZero:true, ticks: { precision:0 } } }
     }
   });
 
