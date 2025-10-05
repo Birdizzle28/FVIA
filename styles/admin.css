@@ -370,6 +370,12 @@ hr{ border:0; height:1px; background:#ececf5; }
   gap:14px; margin-bottom:12px;
 }
 .stats-toolbar .scope { display:flex; gap:12px; align-items:center; }
+.stats-toolbar .scope select{
+  height: 36px;
+  padding: 6px 10px;
+  border: 1px solid #e5e6ef;
+  background: #fff;
+}
 .stats-toolbar .range select{
   height: 36px; padding: 6px 10px; border:1px solid #e5e6ef; background:#fff;
 }
