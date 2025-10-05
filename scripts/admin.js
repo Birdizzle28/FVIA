@@ -722,7 +722,7 @@ async function loadAgentStats() {
   // base query
   let q = supabase
     .from('leads')
-    .select('id, created_at, age, product_type, assigned_to, assigned_at', { count: 'exact' });
+    .select('*', { count: 'exact' });
   
   // only constrain by date when NOT all-time
   if (!isAll && startISO && endISO) {
