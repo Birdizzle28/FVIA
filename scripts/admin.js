@@ -813,20 +813,6 @@ async function loadAgentStats() {
   // (Optional) update the card title above the canvas
   const weeklyTitleEl = document.querySelector('#chart-weekly')?.previousElementSibling;
   if (weeklyTitleEl) weeklyTitleEl.textContent = chartLineLabel;
-  
-  // then feed `timeLabels` and `timeCounts` to your line chart:
-  chartWeekly?.destroy();
-  const weeklyCtx = document.getElementById('chart-weekly').getContext('2d');
-  chartWeekly = new Chart(weeklyCtx, {
-    type: 'line',
-    data: { labels: timeLabels, datasets: [{ label: chartLineLabel, data: timeCounts, tension: 0.3 }] },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
-    }
-  });
 
   // ---------- Product mix ----------
   const productCounts = {};
@@ -857,27 +843,6 @@ async function loadAgentStats() {
       maintainAspectRatio: false,
       plugins: { legend: { display: false } },
       scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
-    }
-  });
-  
-  // Product mix doughnut
-  const productsCtx = document.getElementById('chart-products').getContext('2d');
-  chartProducts = new Chart(productsCtx, {
-    type: 'doughnut',
-    data: { labels: productLabels, datasets: [{ data: productValues }] },
-    options: { responsive:true, maintainAspectRatio:false, plugins: { legend: { position: 'bottom' } } }
-  });
-  
-  // Assignments by agent bar
-  const assignsCtx = document.getElementById('chart-assignments').getContext('2d');
-  chartAssignments = new Chart(assignsCtx, {
-    type: 'bar',
-    data: { labels: assignLabels, datasets: [{ label: 'Assignments', data: assignValues }] },
-    options: {
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins: { legend: { display:false } },
-      scales: { y: { beginAtZero:true, ticks: { precision:0 } } }
     }
   });
 
