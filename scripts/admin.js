@@ -14,6 +14,22 @@ let rangeStart = null;
 let rangeEnd = null;
 let allowedProductsFilter = null;
 
+function populateStatAgentSelect() {
+    const sel = document.getElementById('stat-agent');
+    if (!sel) return;
+    sel.innerHTML = '<option value="">All agents</option>';
+    allAgents.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = a.full_name;
+      sel.appendChild(opt);
+    });
+  
+    // Optional: enhance with Choices.js (you already load it elsewhere)
+    try {
+      new Choices(sel, { shouldSort: false, searchEnabled: true, itemSelectText: '' });
+    } catch (_) {}
+  }
 document.addEventListener('DOMContentLoaded', async () => {
   const toggle = document.getElementById("agent-hub-toggle");
 
@@ -51,10 +67,13 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Load agents list and populate dropdowns
   await loadAgentsForAdmin();
+  populateStatAgentSelect();
   // Initial data load
   await loadLeadsWithFilters();
   await loadRequestedLeads();
   await loadAssignmentHistory();
+  document.getElementById('stat-agent')?.addEventListener('change', loadAgentStats);
+  document.getElementById('stat-range')?.addEventListener('change', loadAgentStats);
 
   // Filter change events
   document.querySelectorAll('#admin-filters input, #admin-filters select').forEach(el => {
@@ -377,22 +396,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       await loadLeadsWithFilters();
     }
   });
-  function populateStatAgentSelect() {
-    const sel = document.getElementById('stat-agent');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">All agents</option>';
-    allAgents.forEach(a => {
-      const opt = document.createElement('option');
-      opt.value = a.id;
-      opt.textContent = a.full_name;
-      sel.appendChild(opt);
-    });
-  
-    // Optional: enhance with Choices.js (you already load it elsewhere)
-    try {
-      new Choices(sel, { shouldSort: false, searchEnabled: true, itemSelectText: '' });
-    } catch (_) {}
-  }
 }); // end DOMContentLoaded
 
 // Load active agents and populate filters
@@ -440,12 +443,6 @@ async function loadAgentsForAdmin() {
   new Choices(agentFilterEl, { shouldSort: false, searchEnabled: true, placeholder: true, itemSelectText: '' });
   new Choices(bulkAssignEl, { shouldSort: false, searchEnabled: true, placeholder: true, itemSelectText: '' });
 }
-// After: await loadAgentsForAdmin();
-populateStatAgentSelect();
-
-// Make the controls re-run stats
-document.getElementById('stat-agent')?.addEventListener('change', loadAgentStats);
-document.getElementById('stat-range')?.addEventListener('change', loadAgentStats);
 // Load leads with current filters and pagination
 async function loadLeadsWithFilters() {
   const tbody = document.querySelector('#leads-table tbody');
@@ -753,10 +750,6 @@ async function loadAgentStats() {
       scales: { y: { beginAtZero:true, ticks: { precision:0 } } }
     }
   });
-
-  // re-run when controls change
-  document.getElementById('stat-range')?.addEventListener('change', loadAgentStats, { once: true });
-  document.querySelectorAll('input[name="stat-scope"]').forEach(r => r.addEventListener('change', loadAgentStats, { once: true }));
 }
 // Toggle export controls visibility
 function toggleExportVisibility() {
