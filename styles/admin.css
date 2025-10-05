@@ -413,6 +413,10 @@ hr{ border:0; height:1px; background:#ececf5; }
   height: 100% !important;   /* fill the card’s height */
   min-height: 0;             /* avoid flex min-height quirks */
 }
+.flatpickr-range { display:flex; align-items:center; gap:8px; }
+.flatpickr-range input { height:36px; padding:6px 10px; border:1px solid #e5e6ef; background:#fff; }
+.calendar-btn { height:36px; padding:0 10px; border:1px solid #e5e6ef; background:#fff; cursor:pointer; }
+.calendar-btn:hover { background: rgba(53,52,104,.06); }
 @media (max-width: 900px){
   .kpi-grid{ grid-template-columns: 1fr 1fr; }
   .chart-grid{ grid-template-columns: 1fr; }
