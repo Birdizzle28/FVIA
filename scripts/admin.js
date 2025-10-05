@@ -74,9 +74,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadRequestedLeads();
   await loadAssignmentHistory();
   
-  // ---- Agent Stats date-range picker (default last 30 days) ----
-  let statPicker;  // make this accessible to loadAgentStats()
-  
   (function initStatRange(){
     const thirtyDaysAgo = new Date(Date.now() - 30*864e5);
   
