@@ -713,7 +713,12 @@ async function loadAgentStats() {
 
   // ---------- KPIs ----------
   const kNew = leads.length;
-  const assignedInWindow = leads.filter(l => l.assigned_at && new Date(l.assigned_at) >= start);
+  const assignedInWindow = leads.filter(l => {
+    if (!l.assigned_at) return false;
+    if (isAll) return true;
+    const t = new Date(l.assigned_at).getTime();
+    return t >= start.getTime() && t <= new Date(endISO).getTime();
+  });
   const kAssigned = assignedInWindow.length;
 
   const ages = leads.map(l => Number(l.age)).filter(n => Number.isFinite(n) && n > 0);
