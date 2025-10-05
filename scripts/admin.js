@@ -14,6 +14,33 @@ const PAGE_SIZE = 25;
 let rangeStart = null;
 let rangeEnd = null;
 let allowedProductsFilter = null;
+// ---- KPI helpers ----
+const DAY_MS = 864e5;
+const PERSISTENCY_DAYS = 90; // change if you want 13-month, etc.
+
+const safeDiv = (num, den) => (den > 0 ? num / den : NaN);
+const fmtPct  = v => Number.isFinite(v) ? (Math.round(v * 1000) / 10) + '%' : '—';
+
+const getStage = l => String(l.status || l.stage || '').toLowerCase();
+
+const isContacted = l =>
+  !!l.contact_at || ['contacted','quoted','closed'].includes(getStage(l));
+
+const isQuoted = l =>
+  !!l.quote_at || ['quoted','closed'].includes(getStage(l));
+
+const isClosed = l =>
+  !!(l.issued_at || l.closed_at) || ['closed','issued','policy'].includes(getStage(l));
+
+const issuedAt = l => l.issued_at
+  ? new Date(l.issued_at)
+  : (l.closed_at ? new Date(l.closed_at) : null);
+
+const inRange = (d, start, end) => {
+  if (!d) return false;
+  const t = +d;
+  return (!start || t >= +start) && (!end || t <= +end);
+};
 
 function populateStatAgentSelect() {
     const sel = document.getElementById('stat-agent');
@@ -732,6 +759,48 @@ async function loadAgentStats() {
   document.getElementById('kpi-assigned').textContent = String(kAssigned);
   document.getElementById('kpi-avg-age').textContent = Number.isFinite(avgAge) ? (Math.round(avgAge * 10) / 10) : '—';
   document.getElementById('kpi-agents').textContent = String(kAgents);
+    // ===== New KPI block: contact / quote / close / persistency =====
+    // Base set for rates = leads returned by the query (created in window, or all-time)
+    const baseDen = leads.length;
+  
+    // Count stages with timestamp or status fallback
+    const contacted = leads.filter(isContacted).length;
+    const quoted    = leads.filter(isQuoted).length;
+    const closed    = leads.filter(isClosed).length;
+  
+    // Overall rates (denominator = all leads in window)
+    const contactRate = safeDiv(contacted, baseDen);
+    const quoteRate   = safeDiv(quoted, baseDen);
+    const closeRate   = safeDiv(closed, baseDen);
+  
+    // Persistency (90-day) — only policies issued within the window (or all time),
+    // AND old enough to judge (>= 90 days). Cancelled inside 90 days counts against.
+    const now = Date.now();
+  
+    const persistCandidates = leads.filter(l => {
+      if (!isClosed(l)) return false;
+      const ia = issuedAt(l);
+      if (!ia) return false;
+      // If a custom date range is active, require issue date to be in that range
+      if (!isAll && !inRange(ia, start, new Date(endISO))) return false;
+      // Must be at least 90 days old to be judged
+      return (now - +ia) >= PERSISTENCY_DAYS * DAY_MS;
+    });
+  
+    const persistent = persistCandidates.filter(l => {
+      const ia = issuedAt(l);
+      const canc = l.cancelled_at ? new Date(l.cancelled_at) : null;
+      // Persistent if never cancelled OR cancelled after the 90-day mark
+      return !canc || (+canc > (+ia + PERSISTENCY_DAYS * DAY_MS));
+    });
+  
+    const persistency = safeDiv(persistent.length, persistCandidates.length);
+  
+    // Paint the tiles
+    document.getElementById('kpi-contact').textContent     = fmtPct(contactRate);
+    document.getElementById('kpi-quote').textContent       = fmtPct(quoteRate);
+    document.getElementById('kpi-close').textContent       = fmtPct(closeRate);
+    document.getElementById('kpi-persistency').textContent = fmtPct(persistency);
 
   // ---------- Time buckets for line chart (weekly or monthly) ----------
   let timeLabels, timeCounts, chartLineLabel;
