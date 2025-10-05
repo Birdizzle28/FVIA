@@ -285,9 +285,12 @@
 	
 	  <div class="stats-toolbar">
 	    <div class="scope">
-	      <label><input type="radio" name="stat-scope" value="team" checked> Team</label>
-	      <label><input type="radio" name="stat-scope" value="mine"> Mine</label>
-	    </div>
+		  <label for="stat-agent">Agent</label>
+		  <select id="stat-agent">
+			<option value="">All agents</option>
+			<!-- options filled by JS -->
+		  </select>
+		</div>
 	    <div class="range">
 	      <label for="stat-range" class="sr-only">Range</label>
 	      <select id="stat-range">
