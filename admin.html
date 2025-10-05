@@ -291,14 +291,18 @@
 			<!-- options filled by JS -->
 		  </select>
 		</div>
-	    <div class="range">
-	      <label for="stat-range" class="sr-only">Range</label>
-	      <select id="stat-range">
-	        <option value="7">Last 7 days</option>
-	        <option value="30" selected>Last 30 days</option>
-	        <option value="90">Last 90 days</option>
-	      </select>
-	    </div>
+	    <div class="range" style="display:flex; align-items:center; gap:10px;">
+		  <!-- flatpickr wrap lets the icon open the calendar -->
+		  <div id="stat-range-wrap" class="flatpickr-range" data-wrap="true">
+		    <input id="stat-range" type="text" placeholder="Select date range" data-input readonly />
+		    <button class="calendar-btn" type="button" title="Choose dates" data-toggle>
+		      <i class="fa-solid fa-calendar"></i>
+		    </button>
+		  </div>
+		  <label style="display:flex; align-items:center; gap:6px; white-space:nowrap;">
+		    <input type="checkbox" id="stat-all-time"> All time
+		  </label>
+		</div>
 	  </div>
 	
 	  <div class="kpi-grid">
