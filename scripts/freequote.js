@@ -480,7 +480,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       // === Call Now ===
       btnCallNow.onclick = async (e) => {
-        e.preventDefault(); // stop reload
+        e.preventDefault();
         btnCallNow.disabled = true;
       
         try {
@@ -489,7 +489,10 @@ document.addEventListener('DOMContentLoaded', () => {
             await supabase.from('leads')
               .update({ contacted_at: new Date().toISOString() })
               .eq('id', lead.id);
-            const toNumber = chosen.phone?.[0] || chosen.phone || null;
+      
+            // << INSERT THIS BLOCK >>
+            const rawNumber = Array.isArray(chosen.phone) ? chosen.phone[0] : chosen.phone;
+            const toNumber = toE164(rawNumber);
             if (toNumber) {
               const response = await fetch("/.netlify/functions/makeCall", {
                 method: "POST",
@@ -498,13 +501,16 @@ document.addEventListener('DOMContentLoaded', () => {
               });
               const result = await response.json();
               console.log("Telnyx result:", result);
+            } else {
+              console.warn("No dialable agent number for", chosen.full_name, chosen.phone);
             }
+            // << END INSERT >>
+      
             return chosen;
           });
       
           const results = await Promise.all(updates);
           alert(`✅ Connected leads to agents: ${results.map(a => a.full_name).join(', ')}`);
-      
           hideAllModals();
           callModal.style.display = 'none';
         } catch (err) {
