@@ -118,7 +118,7 @@
   color: #353468;
   border: none;
   padding: 8px 4px;
-  border-radius: 4px;
+  border-radius: 0;
   font-weight: bold;
   cursor: pointer;
   font-size: 1rem;
@@ -383,7 +383,7 @@ button:disabled {
     justify-content: space-between;
     padding: 10px;
     width: 100%;
-	  box-sizing: border-box;
+	  box-sizing: content-box !important;
   }
   .index-grid-header.scrolled {
   background-color: rgba(237, 158, 165, 0.7) !important;
