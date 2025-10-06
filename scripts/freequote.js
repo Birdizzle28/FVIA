@@ -284,15 +284,63 @@ document.addEventListener('DOMContentLoaded', () => {
     return (pairs.length || ref) ? `utm:${pairs.join('|')}${pairs.length && ref ? ' || ' : ''}${ref}` : '';
   }
 
-  async function insertLead(row) {
-    if (!window.supabase) throw new Error('Supabase not loaded');
-    const { data, error } = await supabase
+  async function insertContactAndLeads(contactInfo, productTypes) {
+    const client = window.supabase;
+    if (!client) throw new Error('Supabase not loaded');
+  
+    // 🔍 Check if contact already exists by phone or email
+    const { data: existing } = await client
+      .from('contacts')
+      .select('id, phones, emails')
+      .or(`phones.cs.{${contactInfo.phone}},emails.cs.{${contactInfo.email}}`)
+      .maybeSingle();
+  
+    let contactId;
+    if (existing) {
+      contactId = existing.id;
+    } else {
+      // 🆕 Create new contact
+      const { data: contact, error: contactError } = await client
+        .from('contacts')
+        .insert({
+          first_name: contactInfo.first_name,
+          last_name: contactInfo.last_name,
+          phones: [contactInfo.phone],
+          emails: [contactInfo.email],
+          zip: contactInfo.zip,
+          contact_status: 'new',
+          tcpaconsent: true,
+          consent_source: 'website',
+          consent_at: new Date().toISOString(),
+          notes: contactInfo.notes || null
+        })
+        .select('id')
+        .single();
+      if (contactError) throw new Error(contactError.message);
+      contactId = contact.id;
+    }
+  
+    // 🧩 Create one lead per product type
+    const leadRows = productTypes.map(pt => ({
+      first_name: contactInfo.first_name,
+      last_name: contactInfo.last_name,
+      zip: contactInfo.zip,
+      phone: [contactInfo.phone],
+      lead_type: 'Web',
+      product_type: pt,
+      contact_id: contactId,
+      submitted_by: window.FVG_WEBSITE_SUBMITTER_ID,
+      submitted_by_name: window.FVG_WEBSITE_SUBMITTER_NAME || 'Website Lead'
+    }));
+  
+    const { data: leads, error: leadsError } = await client
       .from('leads')
-      .insert(row)
-      .select('id')
-      .single();
-    if (error) throw new Error(error.message || 'Insert failed');
-    return data?.id;
+      .insert(leadRows)
+      .select('id, product_type');
+  
+    if (leadsError) throw new Error(leadsError.message);
+  
+    return { contactId, leads };
   }
 
   btnSubmit.addEventListener('click', async () => {
