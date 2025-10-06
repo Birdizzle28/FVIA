@@ -1,5 +1,9 @@
 // scripts/life.js
 document.addEventListener('DOMContentLoaded', () => {
+  const supabase = window.supabase?.createClient(
+    window.FVG_SUPABASE_URL,
+    window.FVG_SUPABASE_ANON
+  );
   // Panels
   const step1 = document.getElementById('step-1');
   const step2 = document.getElementById('step-2');
@@ -32,6 +36,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnStep2 = document.getElementById('btn-step2');
   const btnSubmit= document.getElementById('btn-submit');
 
+  function hideAllModals() {
+    document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
+  }
   function show(panel) {
     [step1, step2, step3, resultScr].forEach(p => p.style.display = (p === panel) ? 'block' : 'none');
   }
@@ -411,6 +418,7 @@ document.addEventListener('DOMContentLoaded', () => {
             .eq('id', id);
       
           alert(`✅ Connecting to ${chosenAgent.full_name} (${chosenAgent.phone})`);
+          hideAllModals();
       
           // Future: Twilio whisper call trigger
           // fetch('/.netlify/functions/callNow', {
@@ -457,6 +465,7 @@ document.addEventListener('DOMContentLoaded', () => {
           document.getElementById('cancel-schedule-btn').onclick = () => {
             scheduleModal.style.display = 'none';
           };
+          hideAllModals();
         };
     } catch (err) {
       alert(`Could not submit: ${err.message||'unknown error'}`);
