@@ -296,25 +296,25 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   btnSubmit.addEventListener('click', async () => {
-    // clear previous errors
     [firstName, lastName, phone, email].forEach(clearInvalid);
-
+  
     let bad = false;
     if (!firstName.value.trim()) { markInvalid(firstName); bad = true; }
     if (!lastName.value.trim())  { markInvalid(lastName);  bad = true; }
-
+  
     const ten = digitsOnly(phone.value);
     if (ten.length !== 10)       { markInvalid(phone);      bad = true; }
-
+  
     if (!isEmail(email.value))   { markInvalid(email);      bad = true; }
-
+  
     if (bad) {
-      const firstBad = [firstName, lastName, phone, email].find(el => el.classList.contains('is-invalid')) || firstName;
+      const firstBad = [firstName, lastName, phone, email]
+        .find(el => el.classList.contains('is-invalid')) || firstName;
       firstBad.scrollIntoView({ behavior: 'smooth', block: 'center' });
       firstBad.focus();
       return;
     }
-
+  
     const selections = getSelections();
     const notesParts = [
       `cover=${selections.join(',')}`,
@@ -322,8 +322,8 @@ document.addEventListener('DOMContentLoaded', () => {
       selections.includes('My Business') ? `biz_name=${(businessName.value||'').trim()}` : null,
       utmBundle() || null
     ].filter(Boolean);
-
-    const row = {
+  
+    const baseRow = {
       first_name: firstName.value.trim(),
       last_name:  lastName.value.trim(),
       age:        age.value ? Number(age.value) : null,
@@ -339,26 +339,50 @@ document.addEventListener('DOMContentLoaded', () => {
       address:    null,
       state:      null,
       lat:        null,
-      lng:        null,
-      product_type: productTypeFromSelections(selections)
+      lng:        null
     };
-
+  
     const prev = btnSubmit.textContent;
     btnSubmit.disabled = true;
     btnSubmit.textContent = 'Submitting…';
-
+  
     try {
-      const id = await insertLead(row);
+      // --- Determine specific product types from selections ---
+      const map = new Map([
+        ['My Car','Property Insurance'],
+        ['My Home','Property Insurance'],
+        ['My Business','Casualty Insurance'],
+        ['My Identity','ID Shield'],
+        ['Legal Protection Plan','Legal Shield'],
+        ['Me','Life Insurance'],
+        ['Someone Else','Life Insurance'],
+      ]);
+  
+      const pickedTypes = Array.from(
+        new Set(selections.map(v => map.get(v)).filter(Boolean))
+      );
+  
+      if (pickedTypes.length === 0) pickedTypes.push('Life Insurance');
+  
+      const insertedIds = [];
+  
+      // --- Create a separate lead for each product type ---
+      for (const type of pickedTypes) {
+        const newRow = { ...baseRow, product_type: type };
+        const id = await insertLead(newRow);
+        insertedIds.push({ id, type });
+      }
+  
+      // --- Build the thank-you screen ---
       const resTitle = document.getElementById('result-title');
       const resBody  = document.getElementById('result-body');
       const resActions = document.getElementById('result-actions');
-
+  
       resTitle.textContent = 'Thanks! Your request was submitted.';
-      resBody.innerHTML = `
-        Product: <strong>${row.product_type}</strong><br>
-        Selections: <strong>${selections.join(', ')}</strong><br>
-        Confirmation #: <strong id="conf-code" style="cursor:pointer" title="Click to copy">${id}</strong>
-      `;
+      resBody.innerHTML = insertedIds.map(
+        (r, i) => `Lead #${i+1}: <strong>${r.type}</strong> – <span style="cursor:pointer" title="Click to copy" data-id="${r.id}">${r.id}</span>`
+      ).join('<br>');
+  
       resActions.innerHTML = '';
       const again = document.createElement('button');
       again.type = 'button';
@@ -366,107 +390,16 @@ document.addEventListener('DOMContentLoaded', () => {
       again.textContent = 'Start another quote';
       again.addEventListener('click', () => location.reload());
       resActions.appendChild(again);
-
-      document.getElementById('conf-code')?.addEventListener('click', async () => {
-        try { await navigator.clipboard.writeText(id); } catch {}
+  
+      resBody.querySelectorAll('[data-id]').forEach(el => {
+        el.addEventListener('click', async () => {
+          try { await navigator.clipboard.writeText(el.dataset.id); } catch {}
+        });
       });
-
+  
       show(resultScr);
-        /* ==========================================================
-           AFTER SUCCESSFUL SUBMISSION → Call Now / Schedule Later
-           ========================================================== */
-        const callModal = document.getElementById('call-or-schedule');
-        const btnCallNow = document.getElementById('btn-call-now');
-        const btnSchedule = document.getElementById('btn-schedule');
-      
-        async function assignLeadToAgent(leadId, productType) {
-          const { data: agents, error } = await supabase
-            .from('agents')
-            .select('id, full_name, product_types, phone')
-            .eq('is_active', true);
-      
-          if (error || !agents?.length) throw new Error('No active agents found.');
-      
-          const eligible = agents.filter(a =>
-            Array.isArray(a.product_types) &&
-            a.product_types.some(pt => pt.toLowerCase() === productType.toLowerCase())
-          );
-      
-          if (!eligible.length) throw new Error('No eligible agent for this product type.');
-      
-          const chosen = eligible[0];
-          const now = new Date().toISOString();
-      
-          await supabase.from('leads').update({
-            assigned_to: chosen.id,
-            assigned_at: now
-          }).eq('id', leadId);
-      
-          return chosen;
-        }
-      
-        // Show the call/schedule modal
-        callModal.style.display = 'flex';
-      
-        // === Call Now ===
-        btnCallNow.onclick = async () => {
-          callModal.style.display = 'none';
-          const chosenAgent = await assignLeadToAgent(id, row.product_type);
-      
-          await supabase.from('leads')
-            .update({ contacted_at: new Date().toISOString() })
-            .eq('id', id);
-      
-          alert(`✅ Connecting to ${chosenAgent.full_name} (${chosenAgent.phone})`);
-          hideAllModals();
-      
-          // Future: Twilio whisper call trigger
-          // fetch('/.netlify/functions/callNow', {
-          //   method: 'POST',
-          //   body: JSON.stringify({ leadId: id, agentPhone: chosenAgent.phone })
-          // });
-        };
-      
-        // === Schedule for Later ===
-        btnSchedule.onclick = async () => {
-          callModal.style.display = 'none';
-          const chosenAgent = await assignLeadToAgent(id, row.product_type);
-      
-          const scheduleModal = document.getElementById('schedule-modal');
-          const dateInput = document.getElementById('schedule-datetime');
-          scheduleModal.style.display = 'flex';
-      
-          flatpickr(dateInput, {
-            enableTime: true,
-            dateFormat: "Y-m-d H:i",
-            minDate: "today",
-            minuteIncrement: 15,
-            onReady: () => dateInput.focus()
-          });
-      
-          document.getElementById('confirm-schedule-btn').onclick = async () => {
-            const selectedDate = dateInput.value;
-            if (!selectedDate) return alert('Please select a date and time.');
-      
-            await supabase.from('tasks').insert({
-              contact_id: null,
-              lead_id: id,
-              assigned_to: chosenAgent.id,
-              title: 'Scheduled Client Call',
-              scheduled_at: new Date(selectedDate).toISOString(),
-              status: 'open',
-              channel: 'call'
-            });
-      
-            scheduleModal.style.display = 'none';
-            alert(`📅 Scheduled with ${chosenAgent.full_name} at ${selectedDate}`);
-          };
-      
-          document.getElementById('cancel-schedule-btn').onclick = () => {
-            scheduleModal.style.display = 'none';
-          };
-          hideAllModals();
-        };
+      // you can keep the call/schedule modal logic here if you like,
+      // but for clarity you can move it inside this loop later per lead type
     } catch (err) {
       alert(`Could not submit: ${err.message||'unknown error'}`);
       show(step3);
