@@ -416,6 +416,95 @@ document.addEventListener('DOMContentLoaded', () => {
       // --- Create or fetch contact + insert one lead per product type ---
       const { contactId, leads } = await insertContactAndLeads(baseRow, pickedTypes);
       const insertedIds = leads.map(l => ({ id: l.id, type: l.product_type }));
+      // --- Auto-assignment + Call/Schedule modal ---
+      const callModal = document.getElementById('call-or-schedule');
+      const btnCallNow = document.getElementById('btn-call-now');
+      const btnSchedule = document.getElementById('btn-schedule');
+      
+      async function assignLeadToAgent(leadId, productType) {
+        const { data: agents, error } = await supabase
+          .from('agents')
+          .select('id, full_name, product_types, phone')
+          .eq('is_active', true);
+      
+        if (error || !agents?.length) throw new Error('No active agents found.');
+      
+        const eligible = agents.filter(a =>
+          Array.isArray(a.product_types) &&
+          a.product_types.some(pt => pt.toLowerCase() === productType.toLowerCase())
+        );
+      
+        if (!eligible.length) throw new Error('No eligible agent for this product type.');
+      
+        // pick first available
+        const chosen = eligible[0];
+        const now = new Date().toISOString();
+      
+        await supabase.from('leads')
+          .update({ assigned_to: chosen.id, assigned_at: now })
+          .eq('id', leadId);
+      
+        // also update owning_agent_id on contact
+        await supabase.from('contacts')
+          .update({ owning_agent_id: chosen.id })
+          .eq('id', contactId);
+      
+        return chosen;
+      }
+      
+      callModal.style.display = 'flex';
+      
+      // === Call Now ===
+      btnCallNow.onclick = async () => {
+        callModal.style.display = 'none';
+        for (const lead of insertedIds) {
+          const chosen = await assignLeadToAgent(lead.id, lead.type);
+          await supabase.from('leads')
+            .update({ contacted_at: new Date().toISOString() })
+            .eq('id', lead.id);
+          alert(`✅ Connecting ${lead.type} lead to ${chosen.full_name}`);
+        }
+        hideAllModals();
+      };
+      
+      // === Schedule Later ===
+      btnSchedule.onclick = async () => {
+        callModal.style.display = 'none';
+        const scheduleModal = document.getElementById('schedule-modal');
+        const dateInput = document.getElementById('schedule-datetime');
+        scheduleModal.style.display = 'flex';
+      
+        flatpickr(dateInput, {
+          enableTime: true,
+          dateFormat: "Y-m-d H:i",
+          minDate: "today",
+          minuteIncrement: 15,
+          onReady: () => dateInput.focus()
+        });
+      
+        document.getElementById('confirm-schedule-btn').onclick = async () => {
+          const selectedDate = dateInput.value;
+          if (!selectedDate) return alert('Please select a date/time.');
+          for (const lead of insertedIds) {
+            const chosen = await assignLeadToAgent(lead.id, lead.type);
+            await supabase.from('tasks').insert({
+              contact_id: contactId,
+              lead_id: lead.id,
+              assigned_to: chosen.id,
+              title: 'Scheduled Client Call',
+              scheduled_at: new Date(selectedDate).toISOString(),
+              status: 'open',
+              channel: 'call'
+            });
+          }
+          scheduleModal.style.display = 'none';
+          alert(`📅 Scheduled follow-ups for ${insertedIds.length} lead(s).`);
+        };
+      
+        document.getElementById('cancel-schedule-btn').onclick = () => {
+          scheduleModal.style.display = 'none';
+        };
+      };
   
       // --- Build the thank-you screen ---
       const resTitle = document.getElementById('result-title');
