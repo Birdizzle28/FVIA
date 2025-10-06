@@ -413,14 +413,9 @@ document.addEventListener('DOMContentLoaded', () => {
   
       if (pickedTypes.length === 0) pickedTypes.push('Life Insurance');
   
-      const insertedIds = [];
-  
-      // --- Create a separate lead for each product type ---
-      for (const type of pickedTypes) {
-        const newRow = { ...baseRow, product_type: type };
-        const id = await insertLead(newRow);
-        insertedIds.push({ id, type });
-      }
+      // --- Create or fetch contact + insert one lead per product type ---
+      const { contactId, leads } = await insertContactAndLeads(baseRow, pickedTypes);
+      const insertedIds = leads.map(l => ({ id: l.id, type: l.product_type }));
   
       // --- Build the thank-you screen ---
       const resTitle = document.getElementById('result-title');
