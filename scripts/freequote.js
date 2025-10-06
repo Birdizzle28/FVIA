@@ -33,6 +33,15 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnStep2 = document.getElementById('btn-step2');
   const btnSubmit= document.getElementById('btn-submit');
 
+  // Add once near the other helpers
+  const toE164 = (v) => {
+    if (!v) return null;
+    const d = String(v).replace(/\D/g, '');
+    if (!d) return null;
+    // If it already had a +, trust it; otherwise assume US 10-digit
+    return v.startsWith('+') ? v : (d.length === 10 ? `+1${d}` : `+${d}`);
+  };
+
   function hideAllModals() {
     document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
   }
@@ -575,14 +584,5 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSubmit.textContent = prev;
     }
   });
-  
-    const response = await fetch("/.netlify/functions/makeCall", {
-      method: "POST",
-      body: JSON.stringify({ toNumber: phone })
-    });
-  
-    const result = await response.json();
-    if (result.data) alert("Call initiated!");
-    else alert("Error: " + result.error);
   });
 });
