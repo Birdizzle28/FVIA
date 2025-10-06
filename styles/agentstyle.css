@@ -370,7 +370,6 @@ button:disabled {
 	box-sizing: content-box !important;
 } 
 
-@media (max-width: 768px) {
 	@media (max-width: 768px) {
   .index-grid-header {
     position: sticky;
