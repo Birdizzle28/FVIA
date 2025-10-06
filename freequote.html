@@ -9,9 +9,11 @@
 
   <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+  
+  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script type="module" src="scripts/general.js"></script>
-   <script type="module" src="scripts/freequote.js"></script>
+  <script type="module" src="scripts/freequote.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
     window.FVG_SUPABASE_URL  = "https://ddlbgkolnayqrxslzsxn.supabase.co";
@@ -162,6 +164,17 @@
           <p id="result-body"></p>
           <div class="step-nav" id="result-actions"></div>
         </section>
+        <!-- === Call/Schedule Modal === -->
+        <div id="call-or-schedule" class="modal" style="display:none;">
+          <div class="modal-content">
+            <h3>How would you like to connect?</h3>
+            <p>We can call you now or schedule a time that works best for you.</p>
+            <div class="btn-group">
+              <button id="btn-call-now" class="cta">Call Now</button>
+              <button id="btn-schedule" class="cta alt">Schedule for Later</button>
+            </div>
+          </div>
+        </div>
       </form>
     </section>
   </main>
