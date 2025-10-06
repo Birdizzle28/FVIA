@@ -590,5 +590,4 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSubmit.textContent = prev;
     }
   });
-  });
 });
