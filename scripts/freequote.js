@@ -38,8 +38,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!v) return null;
     const d = String(v).replace(/\D/g, '');
     if (!d) return null;
-    // If it already had a +, trust it; otherwise assume US 10-digit
-    return v.startsWith('+') ? v : (d.length === 10 ? `+1${d}` : `+${d}`);
+    if (d.length === 10) return `+1${d}`;               // US 10-digit
+    if (d.length === 11 && d.startsWith('1')) return `+${d}`; // US 11-digit
+    return `+${d}`;                                     // fallback: other countries
   };
 
   function hideAllModals() {
