@@ -550,4 +550,17 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSubmit.textContent = prev;
     }
   });
+  document.getElementById("callNowBtn").addEventListener("click", async () => {
+    const phone = document.querySelector("#lead-phone").value;
+    if (!phone) return alert("No phone number!");
+  
+    const response = await fetch("/.netlify/functions/makeCall", {
+      method: "POST",
+      body: JSON.stringify({ toNumber: phone })
+    });
+  
+    const result = await response.json();
+    if (result.data) alert("Call initiated!");
+    else alert("Error: " + result.error);
+  });
 });
