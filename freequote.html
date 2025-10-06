@@ -27,6 +27,17 @@
       window.FVG_SUPABASE_ANON
     );
   </script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      if (window.flatpickr) {
+        flatpickr('#schedule-datetime', {
+          enableTime: true,
+          dateFormat: 'Y-m-d H:i',
+          minDate: 'today'
+        });
+      }
+    });
+  </script>
   <script type="module" src="scripts/freequote.js"></script>
   <title>Get a Quote | Family Values Group</title>
 </head>
