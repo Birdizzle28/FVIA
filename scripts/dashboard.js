@@ -365,4 +365,44 @@ document.addEventListener('DOMContentLoaded', () => {
     // first load
     await refresh();
   })();
+  document.addEventListener("DOMContentLoaded", async () => {
+    const switchEl = document.getElementById("availabilitySwitch");
+    const statusEl = document.getElementById("availabilityStatus");
+  
+    // Load the current status from Supabase
+    const { data, error } = await supabase
+      .from("agent_availability")
+      .select("available")
+      .eq("agent_id", user.id)
+      .single();
+  
+    if (data) {
+      switchEl.checked = data.available;
+      statusEl.textContent = data.available ? "Available" : "Unavailable";
+      statusEl.style.color = data.available ? "#4caf50" : "#555";
+    }
+  
+    switchEl.addEventListener("change", async () => {
+      const isAvailable = switchEl.checked;
+  
+      statusEl.textContent = isAvailable ? "Available" : "Unavailable";
+      statusEl.style.color = isAvailable ? "#4caf50" : "#555";
+  
+      const { error } = await supabase
+        .from("agent_availability")
+        .upsert(
+          {
+            agent_id: user.id,
+            available: isAvailable,
+            last_changed_at: new Date().toISOString()
+          },
+          { onConflict: "agent_id" }
+        );
+  
+      if (error) {
+        alert("Could not update availability: " + error.message);
+        switchEl.checked = !isAvailable;
+      }
+    });
+  });
 });
