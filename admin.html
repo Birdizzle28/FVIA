@@ -412,4 +412,313 @@
 		<script type="module" src="scripts/general.js"></script>
 		<script type="module" src="scripts/admin.js"></script>
 	</body>
+	-- =========================================================
+-- FVIA CRM CORE SCHEMA (Contacts → Leads → Policies)
+-- Safe to run multiple times (guards for duplicates).
+-- =========================================================
+
+-- ---------- Helpers
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+CREATE EXTENSION IF NOT EXISTS pgcrypto;
+
+-- touch updated_at helper
+CREATE OR REPLACE FUNCTION public.tg_touch_updated_at()
+RETURNS trigger
+LANGUAGE plpgsql AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END $$;
+
+-- ---------- Lightweight "enum via CHECK" (easier to evolve than real ENUM)
+-- If you prefer true ENUMs later, swap these for CREATE TYPE statements.
+-- Lead close status
+DO $$ BEGIN
+  ALTER TABLE IF EXISTS public.leads
+    ADD CONSTRAINT leads_closed_status_check
+    CHECK (closed_status IN ('open','won','lost'));
+EXCEPTION WHEN duplicate_object THEN NULL; END $$;
+
+-- Policy status values
+DO $$ BEGIN
+  CREATE TABLE IF NOT EXISTS public._policy_status_allowed (val text PRIMARY KEY);
+  INSERT INTO public._policy_status_allowed(val) VALUES
+    ('pending'),('issued'),('in_force'),('cancelled'),('reinstated'),('lapsed'),('renewed')
+  ON CONFLICT DO NOTHING;
+END $$;
+
+-- Activity types (for timeline)
+DO $$ BEGIN
+  CREATE TABLE IF NOT EXISTS public._activity_type_allowed (val text PRIMARY KEY);
+  INSERT INTO public._activity_type_allowed(val) VALUES
+    ('note'),('call_outbound'),('call_inbound'),('sms'),('email'),('meeting'),
+    ('task_created'),('quote_started'),('quote_finalized'),('import_event'),('status_change')
+  ON CONFLICT DO NOTHING;
+END $$;
+
+-- Policy event types (status history)
+DO $$ BEGIN
+  CREATE TABLE IF NOT EXISTS public._policy_event_type_allowed (val text PRIMARY KEY);
+  INSERT INTO public._policy_event_type_allowed(val) VALUES
+    ('submitted'),('issued'),('in_force'),('cancelled'),('reinstated'),('lapsed'),('renewed'),('chargeback'),('other')
+  ON CONFLICT DO NOTHING;
+END $$;
+
+-- =========================================================
+-- CONTACTS
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.contacts (
+  id               uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at       timestamptz NOT NULL DEFAULT now(),
+  updated_at       timestamptz NOT NULL DEFAULT now(),
+
+  -- Identity
+  first_name       text,
+  last_name        text,
+  full_name        text GENERATED ALWAYS AS (
+    trim(coalesce(first_name,'') || ' ' || coalesce(last_name,''))
+  ) STORED,
+
+  -- Multi-values
+  phones           text[] DEFAULT '{}'::text[],
+  emails           text[] DEFAULT '{}'::text[],
+
+  -- Address
+  address_line1    text,
+  address_line2    text,
+  city             text,
+  state            text,
+  zip              text,
+  lat              numeric,
+  lng              numeric,
+
+  -- Compliance
+  consent_source   text,          -- e.g., 'web_form','agent_entry'
+  consent_at       timestamptz,
+  tcpaconsent      boolean DEFAULT false,
+  dnc_flag         boolean DEFAULT false,
+
+  -- Ownership
+  owning_agent_id  uuid,          -- maps to your auth.users.id if desired
+
+  metadata         jsonb DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_contacts_name ON public.contacts (full_name);
+CREATE INDEX IF NOT EXISTS idx_contacts_phones_gin ON public.contacts USING gin (phones);
+CREATE INDEX IF NOT EXISTS idx_contacts_emails_gin ON public.contacts USING gin (emails);
+
+DROP TRIGGER IF EXISTS trg_contacts_touch ON public.contacts;
+CREATE TRIGGER trg_contacts_touch
+BEFORE UPDATE ON public.contacts
+FOR EACH ROW EXECUTE FUNCTION public.tg_touch_updated_at();
+
+-- =========================================================
+-- LEADS (augment your existing table, DO NOT drop anything)
+-- =========================================================
+
+-- Link leads → contacts
+ALTER TABLE public.leads
+  ADD COLUMN IF NOT EXISTS contact_id uuid REFERENCES public.contacts(id) ON DELETE SET NULL;
+
+-- Operational stamps
+ALTER TABLE public.leads
+  ADD COLUMN IF NOT EXISTS contacted_at          timestamptz,
+  ADD COLUMN IF NOT EXISTS quoted_at             timestamptz,
+  ADD COLUMN IF NOT EXISTS closed_at             timestamptz,
+  ADD COLUMN IF NOT EXISTS closed_status         text DEFAULT 'open',
+  ADD COLUMN IF NOT EXISTS closed_reason         text,
+  ADD COLUMN IF NOT EXISTS first_seen_in_feed_at timestamptz;
+
+-- Helpful indexes
+CREATE INDEX IF NOT EXISTS idx_leads_contact_id       ON public.leads (contact_id);
+CREATE INDEX IF NOT EXISTS idx_leads_product_type     ON public.leads (product_type);
+CREATE INDEX IF NOT EXISTS idx_leads_closed_status    ON public.leads (closed_status);
+CREATE INDEX IF NOT EXISTS idx_leads_created_at       ON public.leads (created_at);
+
+-- Enforce allowed closed_status values (uses check added above)
+DO $$ BEGIN
+  PERFORM 1 FROM information_schema.constraint_column_usage
+   WHERE table_schema='public' AND table_name='leads' AND constraint_name='leads_closed_status_check';
+  -- If missing, add again (guarded above)
+EXCEPTION WHEN OTHERS THEN NULL; END $$;
+
+-- =========================================================
+-- POLICIES
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.policies (
+  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at         timestamptz NOT NULL DEFAULT now(),
+  updated_at         timestamptz NOT NULL DEFAULT now(),
+
+  -- Links
+  contact_id         uuid NOT NULL REFERENCES public.contacts(id) ON DELETE CASCADE,
+  lead_id            uuid REFERENCES public.leads(id) ON DELETE SET NULL,
+  agent_id           uuid,  -- who wrote it (auth.users.id if you like)
+
+  -- Carrier specifics
+  carrier_name       text NOT NULL,
+  policy_number      text NOT NULL,
+  policy_type        text,           -- granular (Homeowners, Final Expense, etc.)
+  product_line       text,           -- high-level bucket; align to leads.product_type
+
+  -- Dates & money
+  submitted_at       timestamptz,
+  issued_at          timestamptz,
+  effective_at       timestamptz,
+  status             text NOT NULL DEFAULT 'pending',
+  premium_modal      numeric,
+  premium_annual     numeric,
+  currency           text DEFAULT 'USD',
+
+  -- Provenance
+  source             text,           -- 'agent_attestation','carrier_feed','imo_feed'
+  verification_state text DEFAULT 'unverified',
+
+  metadata           jsonb DEFAULT '{}'::jsonb,
+
+  -- No dupes
+  UNIQUE (carrier_name, policy_number),
+
+  -- Status must be one of allowed
+  CONSTRAINT policies_status_check
+    CHECK (status IN (SELECT val FROM public._policy_status_allowed))
+);
+
+CREATE INDEX IF NOT EXISTS idx_policies_contact          ON public.policies (contact_id);
+CREATE INDEX IF NOT EXISTS idx_policies_lead             ON public.policies (lead_id);
+CREATE INDEX IF NOT EXISTS idx_policies_carrier_polnum   ON public.policies (carrier_name, policy_number);
+CREATE INDEX IF NOT EXISTS idx_policies_status           ON public.policies (status);
+
+DROP TRIGGER IF EXISTS trg_policies_touch ON public.policies;
+CREATE TRIGGER trg_policies_touch
+BEFORE UPDATE ON public.policies
+FOR EACH ROW EXECUTE FUNCTION public.tg_touch_updated_at();
+
+-- =========================================================
+-- POLICY STATUS HISTORY (events instead of arrays)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.policy_status_history (
+  id             bigserial PRIMARY KEY,
+  policy_id      uuid NOT NULL REFERENCES public.policies(id) ON DELETE CASCADE,
+  event_type     text NOT NULL,
+  event_at       timestamptz NOT NULL,
+  source         text,              -- 'carrier_feed','imo_feed','manual'
+  notes          text,
+  payload        jsonb DEFAULT '{}'::jsonb,
+
+  CONSTRAINT psh_event_type_check
+    CHECK (event_type IN (SELECT val FROM public._policy_event_type_allowed))
+);
+
+CREATE INDEX IF NOT EXISTS idx_psh_policy   ON public.policy_status_history (policy_id);
+CREATE INDEX IF NOT EXISTS idx_psh_event_at ON public.policy_status_history (event_at);
+
+-- =========================================================
+-- ACTIVITIES (unified timeline across contact/lead/policy)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.activities (
+  id             bigserial PRIMARY KEY,
+  created_at     timestamptz NOT NULL DEFAULT now(),
+
+  contact_id     uuid NOT NULL REFERENCES public.contacts(id) ON DELETE CASCADE,
+  lead_id        uuid REFERENCES public.leads(id) ON DELETE SET NULL,
+  policy_id      uuid REFERENCES public.policies(id) ON DELETE SET NULL,
+
+  actor_user_id  uuid,              -- agent/admin who did it (optional)
+  kind           text NOT NULL,
+  summary        text,
+  details        text,
+  metadata       jsonb DEFAULT '{}'::jsonb,
+
+  CONSTRAINT activities_kind_check
+    CHECK (kind IN (SELECT val FROM public._activity_type_allowed))
+);
+
+CREATE INDEX IF NOT EXISTS idx_acts_contact ON public.activities (contact_id);
+CREATE INDEX IF NOT EXISTS idx_acts_lead    ON public.activities (lead_id);
+CREATE INDEX IF NOT EXISTS idx_acts_policy  ON public.activities (policy_id);
+CREATE INDEX IF NOT EXISTS idx_acts_kind    ON public.activities (kind);
+
+-- =========================================================
+-- ASSIGNMENT HISTORY (who owned what, when)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.assignments (
+  id             bigserial PRIMARY KEY,
+  created_at     timestamptz NOT NULL DEFAULT now(),
+
+  target_type    text NOT NULL CHECK (target_type IN ('contact','lead','policy')),
+  contact_id     uuid REFERENCES public.contacts(id) ON DELETE CASCADE,
+  lead_id        uuid REFERENCES public.leads(id) ON DELETE CASCADE,
+  policy_id      uuid REFERENCES public.policies(id) ON DELETE CASCADE,
+
+  assigned_to    uuid NOT NULL,  -- agent/user id
+  assigned_by    uuid,
+  reason         text
+);
+
+CREATE INDEX IF NOT EXISTS idx_assign_contact ON public.assignments (contact_id);
+CREATE INDEX IF NOT EXISTS idx_assign_lead    ON public.assignments (lead_id);
+CREATE INDEX IF NOT EXISTS idx_assign_policy  ON public.assignments (policy_id);
+
+-- =========================================================
+-- TASKS / SCHEDULING (appointments & reminders)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.tasks (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at     timestamptz NOT NULL DEFAULT now(),
+  updated_at     timestamptz NOT NULL DEFAULT now(),
+
+  contact_id     uuid REFERENCES public.contacts(id) ON DELETE SET NULL,
+  lead_id        uuid REFERENCES public.leads(id) ON DELETE SET NULL,
+  assigned_to    uuid,
+
+  title          text NOT NULL,
+  scheduled_at   timestamptz,      -- appointment
+  due_at         timestamptz,      -- callback/task due
+  completed_at   timestamptz,
+
+  status         text DEFAULT 'open' CHECK (status IN ('open','completed','cancelled')),
+  channel        text,             -- 'call','zoom','in_person'
+  metadata       jsonb DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_tasks_assigned_to  ON public.tasks (assigned_to);
+CREATE INDEX IF NOT EXISTS idx_tasks_scheduled_at ON public.tasks (scheduled_at);
+
+DROP TRIGGER IF EXISTS trg_tasks_touch ON public.tasks;
+CREATE TRIGGER trg_tasks_touch
+BEFORE UPDATE ON public.tasks
+FOR EACH ROW EXECUTE FUNCTION public.tg_touch_updated_at();
+
+-- =========================================================
+-- IMPORTS (upload file → importer does the work)
+-- =========================================================
+CREATE TABLE IF NOT EXISTS public.import_runs (
+  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  created_at     timestamptz NOT NULL DEFAULT now(),
+  created_by     uuid,
+  source_name    text NOT NULL,         -- 'Lincoln Heritage portal','IMO export', etc.
+  file_path      text NOT NULL,         -- Supabase Storage path/URL
+  file_type      text,                  -- 'csv','xlsx','pdf'
+  carrier_name   text,
+  row_count      int,
+  status         text NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','processing','completed','failed')),
+  notes          text,
+  meta           jsonb DEFAULT '{}'::jsonb
+);
+
+CREATE INDEX IF NOT EXISTS idx_impruns_created_at ON public.import_runs (created_at);
+CREATE INDEX IF NOT EXISTS idx_impruns_status     ON public.import_runs (status);
+
+CREATE TABLE IF NOT EXISTS public.import_rows (
+  id               bigserial PRIMARY KEY,
+  import_id        uuid NOT NULL REFERENCES public.import_runs(id) ON DELETE CASCADE,
+  raw_payload      jsonb NOT NULL,
+  processed        boolean DEFAULT false,
+  error_message    text,
+  linked_policy_id uuid
+);
+
+CREATE INDEX IF NOT EXISTS idx_improws_import ON public.import_rows (import_id);
 </html>
