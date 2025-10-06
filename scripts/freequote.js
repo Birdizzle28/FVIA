@@ -349,13 +349,14 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       // --- Determine specific product types from selections ---
       const map = new Map([
-        ['My Car','Property Insurance'],
+        ['My Car','Casualty Insurance'],
         ['My Home','Property Insurance'],
         ['My Business','Casualty Insurance'],
         ['My Identity','ID Shield'],
         ['Legal Protection Plan','Legal Shield'],
         ['Me','Life Insurance'],
         ['Someone Else','Life Insurance'],
+        ['My Health','Health Insurance'],
       ]);
   
       const pickedTypes = Array.from(
