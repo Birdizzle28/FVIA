@@ -366,66 +366,69 @@ document.addEventListener('DOMContentLoaded', () => {
     await refresh();
   })();
   /* ---------- AVAILABILITY SWITCH ---------- */
-  const switchEl = document.getElementById("availabilitySwitch");
-  const statusEl = document.getElementById("availabilityStatus");
-
-  // 🟢 Get the logged-in agent
-  let user = null;
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    user = session?.user;
-    if (!user) {
-      console.warn("No user found — redirecting to login");
-      window.location.href = "login.html";
+  (async () => {
+    const switchEl = document.getElementById("availabilitySwitch");
+    const statusEl = document.getElementById("availabilityStatus");
+    if (!switchEl || !statusEl) return;
+  
+    // 🟢 Get the logged-in agent
+    let user = null;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      user = session?.user;
+      if (!user) {
+        console.warn("No user found — redirecting to login");
+        window.location.href = "login.html";
+        return;
+      }
+    } catch (err) {
+      console.error("Error fetching session:", err);
       return;
     }
-  } catch (err) {
-    console.error("Error fetching session:", err);
-    return;
-  }
-
-  // 🟢 Load current status
-  const { data, error } = await supabase
-    .from("agent_availability")
-    .select("available")
-    .eq("agent_id", user.id)
-    .single();
-
-  if (error && error.code !== "PGRST116") {
-    console.error("Error fetching availability:", error);
-  }
-
-  if (data) {
-    switchEl.checked = data.available;
-    statusEl.textContent = data.available ? "🟢 I’m Available" : "🔴 I’m Offline";
-    statusEl.style.color = data.available ? "#4caf50" : "#999";
-  } else {
-    switchEl.checked = false;
-    statusEl.textContent = "🔴 I’m Offline";
-    statusEl.style.color = "#999";
-  }
-
-  // 🟢 Handle toggle
-  switchEl.addEventListener("change", async () => {
-    const isAvailable = switchEl.checked;
-
-    statusEl.textContent = isAvailable ? "🟢 I’m Available" : "🔴 I’m Offline";
-    statusEl.style.color = isAvailable ? "#4caf50" : "#999";
-
-    const { error } = await supabase
+  
+    // 🟢 Load current status
+    const { data, error } = await supabase
       .from("agent_availability")
-      .upsert(
-        {
-          agent_id: user.id,
-          available: isAvailable,
-          last_changed_at: new Date().toISOString(),
-        },
-        { onConflict: "agent_id" }
-      );
-
-    if (error) {
-      alert("Could not update availability: " + error.message);
-      switchEl.checked = !isAvailable;
+      .select("available")
+      .eq("agent_id", user.id)
+      .single();
+  
+    if (error && error.code !== "PGRST116") {
+      console.error("Error fetching availability:", error);
     }
-  });
+  
+    if (data) {
+      switchEl.checked = data.available;
+      statusEl.textContent = data.available ? "🟢 I’m Available" : "🔴 I’m Offline";
+      statusEl.style.color = data.available ? "#4caf50" : "#999";
+    } else {
+      switchEl.checked = false;
+      statusEl.textContent = "🔴 I’m Offline";
+      statusEl.style.color = "#999";
+    }
+  
+    // 🟢 Handle toggle
+    switchEl.addEventListener("change", async () => {
+      const isAvailable = switchEl.checked;
+  
+      statusEl.textContent = isAvailable ? "🟢 I’m Available" : "🔴 I’m Offline";
+      statusEl.style.color = isAvailable ? "#4caf50" : "#999";
+  
+      const { error } = await supabase
+        .from("agent_availability")
+        .upsert(
+          {
+            agent_id: user.id,
+            available: isAvailable,
+            last_changed_at: new Date().toISOString(),
+          },
+          { onConflict: "agent_id" }
+        );
+  
+      if (error) {
+        alert("Could not update availability: " + error.message);
+        switchEl.checked = !isAvailable;
+      }
+    });
+  })();
 });
