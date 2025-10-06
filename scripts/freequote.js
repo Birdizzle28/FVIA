@@ -455,36 +455,46 @@ document.addEventListener('DOMContentLoaded', () => {
       callModal.style.display = 'flex';
       
       // === Call Now ===
-      btnCallNow.onclick = async () => {
-        callModal.style.display = 'none';
-        for (const lead of insertedIds) {
-          const chosen = await assignLeadToAgent(lead.id, lead.type);
-          await supabase.from('leads')
-            .update({ contacted_at: new Date().toISOString() })
-            .eq('id', lead.id);
-          alert(`✅ Connecting ${lead.type} lead to ${chosen.full_name}`);
+      btnCallNow.onclick = async (e) => {
+        e.preventDefault(); // stop reload
+        btnCallNow.disabled = true;
+      
+        try {
+          const updates = insertedIds.map(async (lead) => {
+            const chosen = await assignLeadToAgent(lead.id, lead.type);
+            await supabase.from('leads')
+              .update({ contacted_at: new Date().toISOString() })
+              .eq('id', lead.id);
+            return chosen;
+          });
+      
+          const results = await Promise.all(updates);
+          alert(`✅ Connected leads to agents: ${results.map(a => a.full_name).join(', ')}`);
+      
+          hideAllModals();
+          callModal.style.display = 'none';
+        } catch (err) {
+          alert('Call initiation failed: ' + err.message);
+        } finally {
+          btnCallNow.disabled = false;
         }
-        hideAllModals();
       };
       
-      // === Schedule Later ===
-      btnSchedule.onclick = async () => {
+      // === Schedule for Later ===
+      btnSchedule.onclick = (e) => {
+        e.preventDefault();
         callModal.style.display = 'none';
         const scheduleModal = document.getElementById('schedule-modal');
-        const dateInput = document.getElementById('schedule-datetime');
         scheduleModal.style.display = 'flex';
+      };
       
-        flatpickr(dateInput, {
-          enableTime: true,
-          dateFormat: "Y-m-d H:i",
-          minDate: "today",
-          minuteIncrement: 15,
-          onReady: () => dateInput.focus()
-        });
+      document.getElementById('confirm-schedule-btn').onclick = async (e) => {
+        e.preventDefault();
+        const dateInput = document.getElementById('schedule-datetime');
+        const selectedDate = dateInput.value;
+        if (!selectedDate) return alert('Please select a date and time.');
       
-        document.getElementById('confirm-schedule-btn').onclick = async () => {
-          const selectedDate = dateInput.value;
-          if (!selectedDate) return alert('Please select a date/time.');
+        try {
           for (const lead of insertedIds) {
             const chosen = await assignLeadToAgent(lead.id, lead.type);
             await supabase.from('tasks').insert({
@@ -497,13 +507,12 @@ document.addEventListener('DOMContentLoaded', () => {
               channel: 'call'
             });
           }
-          scheduleModal.style.display = 'none';
-          alert(`📅 Scheduled follow-ups for ${insertedIds.length} lead(s).`);
-        };
       
-        document.getElementById('cancel-schedule-btn').onclick = () => {
-          scheduleModal.style.display = 'none';
-        };
+          alert(`📅 Scheduled follow-ups for ${insertedIds.length} lead(s)`);
+          document.getElementById('schedule-modal').style.display = 'none';
+        } catch (err) {
+          alert('Scheduling failed: ' + err.message);
+        }
       };
   
       // --- Build the thank-you screen ---
