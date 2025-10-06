@@ -60,6 +60,7 @@
   padding: 10px 20px;
   flex-wrap: wrap;
 	grid-area: indexheader;
+	box-sizing: border-box !important;
 }
 #logofvcontainer {
   display: flex;
