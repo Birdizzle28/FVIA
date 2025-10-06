@@ -353,6 +353,30 @@ select.is-invalid {
   border-color: #b00020 !important;
   box-shadow: 0 0 0 2px rgba(176,0,32,.12) !important;
 }
+.modal {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0,0,0,0.45);
+  z-index: 9999;
+}
+.modal-card {
+  background: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 5px 20px rgba(0,0,0,.2);
+  text-align: center;
+  max-width: 350px;
+  width: 90%;
+}
+.modal-actions {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 16px;
+}
 
 /* (keeps your existing chip error look) */
 /* Responsive */
