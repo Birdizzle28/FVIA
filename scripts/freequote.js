@@ -284,64 +284,71 @@ document.addEventListener('DOMContentLoaded', () => {
     return (pairs.length || ref) ? `utm:${pairs.join('|')}${pairs.length && ref ? ' || ' : ''}${ref}` : '';
   }
 
-  async function insertContactAndLeads(contactInfo, productTypes) {
-    const client = window.supabase;
-    if (!client) throw new Error('Supabase not loaded');
-  
-    // 🔍 Check if contact already exists by phone or email
-    const { data: existing } = await client
-      .from('contacts')
-      .select('id, phones, emails')
-      .or(`phones.cs.{${contactInfo.phone}},emails.cs.{${contactInfo.email}}`)
-      .maybeSingle();
-  
-    let contactId;
-    if (existing) {
-      contactId = existing.id;
-    } else {
-      // 🆕 Create new contact
-      const { data: contact, error: contactError } = await client
+    async function insertContactAndLeads(contactInfo, productTypes) {
+      const client = window.supabase;
+      if (!client) throw new Error('Supabase not loaded');
+    
+      // 1) Try by phone
+      let { data: existing, error: exErr } = await client
         .from('contacts')
-        .insert({
-          first_name: contactInfo.first_name,
-          last_name: contactInfo.last_name,
-          phones: [contactInfo.phone],
-          emails: [contactInfo.email],
-          zip: contactInfo.zip,
-          contact_status: 'new',
-          tcpaconsent: true,
-          consent_source: 'website',
-          consent_at: new Date().toISOString(),
-          notes: contactInfo.notes || null
-        })
-        .select('id')
-        .single();
-      if (contactError) throw new Error(contactError.message);
-      contactId = contact.id;
+        .select('id, phones, emails')
+        .contains('phones', [contactInfo.phone])
+        .maybeSingle();
+    
+      // 2) Try by email if not found
+      if (!existing && contactInfo.email) {
+        const r = await client
+          .from('contacts')
+          .select('id, phones, emails')
+          .contains('emails', [contactInfo.email])
+          .maybeSingle();
+        existing = r.data;
+      }
+    
+      let contactId;
+      if (existing) {
+        contactId = existing.id;
+      } else {
+        const { data: contact, error: contactError } = await client
+          .from('contacts')
+          .insert({
+            first_name: contactInfo.first_name,
+            last_name: contactInfo.last_name,
+            phones: [contactInfo.phone],
+            emails: [contactInfo.email],
+            zip: contactInfo.zip,
+            contact_status: 'new',
+            tcpaconsent: true,
+            consent_source: 'website',
+            consent_at: new Date().toISOString(),
+            notes: contactInfo.notes || null
+          })
+          .select('id')
+          .single();
+        if (contactError) throw new Error(contactError.message);
+        contactId = contact.id;
+      }
+    
+      const leadRows = productTypes.map(pt => ({
+        first_name: contactInfo.first_name,
+        last_name: contactInfo.last_name,
+        zip: contactInfo.zip,
+        phone: [contactInfo.phone],   // leads table keeps array
+        lead_type: 'Web',
+        product_type: pt,
+        contact_id: contactId,
+        submitted_by: window.FVG_WEBSITE_SUBMITTER_ID,
+        submitted_by_name: window.FVG_WEBSITE_SUBMITTER_NAME || 'Website Lead'
+      }));
+    
+      const { data: leads, error: leadsError } = await client
+        .from('leads')
+        .insert(leadRows)
+        .select('id, product_type');
+    
+      if (leadsError) throw new Error(leadsError.message);
+      return { contactId, leads };
     }
-  
-    // 🧩 Create one lead per product type
-    const leadRows = productTypes.map(pt => ({
-      first_name: contactInfo.first_name,
-      last_name: contactInfo.last_name,
-      zip: contactInfo.zip,
-      phone: [contactInfo.phone],
-      lead_type: 'Web',
-      product_type: pt,
-      contact_id: contactId,
-      submitted_by: window.FVG_WEBSITE_SUBMITTER_ID,
-      submitted_by_name: window.FVG_WEBSITE_SUBMITTER_NAME || 'Website Lead'
-    }));
-  
-    const { data: leads, error: leadsError } = await client
-      .from('leads')
-      .insert(leadRows)
-      .select('id, product_type');
-  
-    if (leadsError) throw new Error(leadsError.message);
-  
-    return { contactId, leads };
-  }
 
   btnSubmit.addEventListener('click', async () => {
     [firstName, lastName, phone, email].forEach(clearInvalid);
@@ -414,7 +421,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (pickedTypes.length === 0) pickedTypes.push('Life Insurance');
   
       // --- Create or fetch contact + insert one lead per product type ---
-      const { contactId, leads } = await insertContactAndLeads(baseRow, pickedTypes);
+      const contactInfo = {
+        first_name: firstName.value.trim(),
+        last_name:  lastName.value.trim(),
+        zip:        zip.value.trim(),
+        phone:      ten,                         // <-- string, not array
+        email:      email.value.trim(),          // <-- include email
+        notes:      notesParts.join(' || ')
+      };
+      const { contactId, leads } = await insertContactAndLeads(contactInfo, pickedTypes);
       const insertedIds = leads.map(l => ({ id: l.id, type: l.product_type }));
       // --- Auto-assignment + Call/Schedule modal ---
       const callModal = document.getElementById('call-or-schedule');
