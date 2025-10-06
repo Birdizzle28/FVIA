@@ -399,11 +399,11 @@ document.addEventListener('DOMContentLoaded', () => {
   
     if (data) {
       switchEl.checked = data.available;
-      statusEl.textContent = data.available ? "🟢 I’m Available" : "🔴 I’m Offline";
+      statusEl.textContent = data.available ? "I’m Available" : "I’m Offline";
       statusEl.style.color = data.available ? "#4caf50" : "#999";
     } else {
       switchEl.checked = false;
-      statusEl.textContent = "🔴 I’m Offline";
+      statusEl.textContent = "I’m Offline";
       statusEl.style.color = "#999";
     }
   
@@ -411,7 +411,7 @@ document.addEventListener('DOMContentLoaded', () => {
     switchEl.addEventListener("change", async () => {
       const isAvailable = switchEl.checked;
   
-      statusEl.textContent = isAvailable ? "🟢 I’m Available" : "🔴 I’m Offline";
+      statusEl.textContent = isAvailable ? "I’m Available" : "I’m Offline";
       statusEl.style.color = isAvailable ? "#4caf50" : "#999";
   
       const { error } = await supabase
