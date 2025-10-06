@@ -465,6 +465,16 @@ document.addEventListener('DOMContentLoaded', () => {
             await supabase.from('leads')
               .update({ contacted_at: new Date().toISOString() })
               .eq('id', lead.id);
+            const toNumber = chosen.phone?.[0] || chosen.phone || null;
+            if (toNumber) {
+              const response = await fetch("/.netlify/functions/makeCall", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ toNumber })
+              });
+              const result = await response.json();
+              console.log("Telnyx result:", result);
+            }
             return chosen;
           });
       
