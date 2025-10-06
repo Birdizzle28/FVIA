@@ -59,7 +59,7 @@
   background-color: #ed9ea5;
   padding: 10px 20px;
   flex-wrap: wrap;
-	box-sizing: content-box !important;
+	grid-area: indexheader;
 }
 #logofvcontainer {
   display: flex;
