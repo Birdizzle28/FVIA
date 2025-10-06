@@ -373,4 +373,108 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSubmit.textContent = prev;
     }
   });
+  /* ==========================================================
+   AFTER SUCCESSFUL SUBMISSION → Call Now / Schedule Later
+   ========================================================== */
+
+  const callModal = document.getElementById('call-or-schedule');
+  const btnCallNow = document.getElementById('btn-call-now');
+  const btnSchedule = document.getElementById('btn-schedule');
+  
+  async function assignLeadToAgent(leadId, productType) {
+    // Find first available agent who sells this product
+    const { data: agents, error } = await supabase
+      .from('agents')
+      .select('id, full_name, product_types, phone')
+      .eq('is_active', true);
+  
+    if (error || !agents?.length) throw new Error('No active agents found.');
+  
+    // agents who can sell this product
+    const eligible = agents.filter(a =>
+      Array.isArray(a.product_types) &&
+      a.product_types.some(pt => pt.toLowerCase() === productType.toLowerCase())
+    );
+  
+    if (!eligible.length) throw new Error('No eligible agent for this product type.');
+  
+    // pick the first available (round-robin style could come later)
+    const chosen = eligible[0];
+  
+    // assign the lead
+    const now = new Date().toISOString();
+    await supabase.from('leads').update({
+      assigned_to: chosen.id,
+      assigned_at: now
+    }).eq('id', leadId);
+  
+    // return for downstream use (phone number, name)
+    return chosen;
+  }
+  
+  // after the insertLead(row) try{} block where you build resTitle/resBody:
+  (async () => {
+    callModal.style.display = 'flex'; // show modal
+  
+    // When user picks CALL NOW
+    btnCallNow.addEventListener('click', async () => {
+      callModal.style.display = 'none';
+      const chosenAgent = await assignLeadToAgent(id, row.product_type);
+  
+      // record that the client was contacted now
+      await supabase.from('leads').update({ contacted_at: new Date().toISOString() }).eq('id', id);
+  
+      alert(`✅ An agent is being connected now!\nAgent: ${chosenAgent.full_name}\nPhone: ${chosenAgent.phone}`);
+  
+      // Here’s where you’ll eventually trigger the Twilio "whisper" call:
+      // fetch('/.netlify/functions/callNow', { method: 'POST', body: JSON.stringify({ leadId: id, agentPhone: chosenAgent.phone }) });
+    });
+  
+    // When user picks SCHEDULE FOR LATER
+    btnSchedule.addEventListener('click', async () => {
+      callModal.style.display = 'none';
+      const chosenAgent = await assignLeadToAgent(id, row.product_type);
+    
+      // Open the schedule modal
+      const scheduleModal = document.getElementById('schedule-modal');
+      const dateInput = document.getElementById('schedule-datetime');
+      scheduleModal.style.display = 'flex';
+    
+      // Initialize Flatpickr
+      flatpickr(dateInput, {
+        enableTime: true,
+        dateFormat: "Y-m-d H:i",
+        minDate: "today",
+        minuteIncrement: 15,
+        onReady: () => dateInput.focus()
+      });
+    
+      // Confirm button
+      document.getElementById('confirm-schedule-btn').onclick = async () => {
+        const selectedDate = dateInput.value;
+        if (!selectedDate) {
+          alert('Please select a date and time.');
+          return;
+        }
+    
+        await supabase.from('tasks').insert({
+          contact_id: null,
+          lead_id: id,
+          assigned_to: chosenAgent.id,
+          title: 'Scheduled Client Call',
+          scheduled_at: new Date(selectedDate).toISOString(),
+          status: 'open',
+          channel: 'call'
+        });
+    
+        scheduleModal.style.display = 'none';
+        alert(`📅 Scheduled with ${chosenAgent.full_name} at ${selectedDate}`);
+      };
+    
+      // Cancel button
+      document.getElementById('cancel-schedule-btn').onclick = () => {
+        scheduleModal.style.display = 'none';
+      };
+    });
+  })();
 });
