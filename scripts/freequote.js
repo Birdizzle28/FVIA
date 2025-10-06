@@ -1,9 +1,6 @@
 // scripts/life.js
 document.addEventListener('DOMContentLoaded', () => {
-  const supabase = window.supabase?.createClient(
-    window.FVG_SUPABASE_URL,
-    window.FVG_SUPABASE_ANON
-  );
+  const supabase = window.supabase;
   // Panels
   const step1 = document.getElementById('step-1');
   const step2 = document.getElementById('step-2');
