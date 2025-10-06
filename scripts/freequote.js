@@ -284,10 +284,13 @@ document.addEventListener('DOMContentLoaded', () => {
     return (pairs.length || ref) ? `utm:${pairs.join('|')}${pairs.length && ref ? ' || ' : ''}${ref}` : '';
   }
 
-  async function insertLead(row){
+  async function insertLead(row) {
     if (!window.supabase) throw new Error('Supabase not loaded');
-    const client = supabase.createClient(window.FVG_SUPABASE_URL, window.FVG_SUPABASE_ANON);
-    const { data, error } = await client.from('leads').insert(row).select('id').single();
+    const { data, error } = await supabase
+      .from('leads')
+      .insert(row)
+      .select('id')
+      .single();
     if (error) throw new Error(error.message || 'Insert failed');
     return data?.id;
   }
