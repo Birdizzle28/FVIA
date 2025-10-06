@@ -382,7 +382,6 @@ button:disabled {
     justify-content: space-between;
     padding: 10px;
     width: 100%;
-	  box-sizing: content-box !important;
   }
   .index-grid-header.scrolled {
   background-color: rgba(237, 158, 165, 0.7) !important;
