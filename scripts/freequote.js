@@ -268,7 +268,6 @@ document.addEventListener('DOMContentLoaded', () => {
      Submit -> Supabase
   ---------------------------- */
   const digitsOnly = (s) => (s||'').replace(/\D/g,'');
-  const e164Prospect = toE164(ten);
 
   function productTypeFromSelections(selections) {
     const map = new Map([
@@ -393,6 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!lastName.value.trim())  { markInvalid(lastName);  bad = true; }
   
     const ten = digitsOnly(phone.value);
+    const e164Prospect = toE164(ten);
     if (ten.length !== 10)       { markInvalid(phone);      bad = true; }
   
     if (!isEmail(email.value))   { markInvalid(email);      bad = true; }
