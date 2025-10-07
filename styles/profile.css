@@ -7,7 +7,7 @@
   gap: 20px;
   padding-bottom: 30px;
   background-color: white;
-  border-radius: 2%;
+  border-radius: 0;
 }
 .profile-picture-wrapper {
   display: flex;
@@ -64,7 +64,7 @@
 .form-group select {
   width: 100%;
   padding: 10px;
-  border-radius: 4px;
+  border-radius: 0;
   font-size: 1rem;
   border: 1px solid #ccc;
 }
@@ -74,7 +74,7 @@
   background-color: #5e2a4b;
   color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 0;
   font-weight: bold;
   cursor: pointer;
 }
