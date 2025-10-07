@@ -124,7 +124,13 @@ html, #indexbody {
   aspect-ratio: 1 / 1;
   width: 50px;
 }
-
+.chat-bubble {
+  padding: 10px 15px;
+  border-radius: 0;
+  max-width: 80%;
+  word-wrap: break-word;
+  font-size: 14px;
+}
 #chat-window {
   display: none;
   position: fixed;
@@ -133,7 +139,7 @@ html, #indexbody {
   width: 300px;
   max-height: 400px;
   background: white;
-  border-radius: 10px;
+  border-radius: 0;
   box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
   flex-direction: column;
   overflow: hidden;
@@ -156,14 +162,6 @@ html, #indexbody {
   display: flex;
   flex-direction: column;
   gap: 8px;
-}
-
-.chat-bubble {
-  padding: 10px 15px;
-  border-radius: 15px;
-  max-width: 80%;
-  word-wrap: break-word;
-  font-size: 14px;
 }
 
 .chat-bubble.bot {
