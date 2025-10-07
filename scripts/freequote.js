@@ -32,15 +32,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnStep1 = document.getElementById('btn-step1');
   const btnStep2 = document.getElementById('btn-step2');
   const btnSubmit= document.getElementById('btn-submit');
+  const BUSINESS_NUMBER = '+16292437980';
 
-  // Add once near the other helpers
+  // Add once near the other helpers (REPLACE your current toE164)
   const toE164 = (v) => {
     if (!v) return null;
-    const d = String(v).replace(/\D/g, '');
+    const s = String(v).trim();
+    if (s.startsWith('+')) return s.replace(/[^\d+]/g, ''); // trust already E.164
+    const d = s.replace(/\D/g, '');
     if (!d) return null;
-    if (d.length === 10) return `+1${d}`;               // US 10-digit
+    if (d.length === 10) return `+1${d}`;                     // US 10-digit
     if (d.length === 11 && d.startsWith('1')) return `+${d}`; // US 11-digit
-    return `+${d}`;                                     // fallback: other countries
+    return `+${d}`;                                           // fallback
   };
 
   function hideAllModals() {
@@ -519,16 +522,40 @@ document.addEventListener('DOMContentLoaded', () => {
             // << INSERT THIS BLOCK >>
             const rawNumber = Array.isArray(chosen.phone) ? chosen.phone[0] : chosen.phone;
             const toNumber = toE164(rawNumber);
-            if (toNumber) {
-              const response = await fetch("/.netlify/functions/makeCall", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ toNumber })
-              });
-              const result = await response.json();
-              console.log("Telnyx result:", result);
-            } else {
-              console.warn("No dialable agent number for", chosen.full_name, chosen.phone);
+            
+            // Our caller ID (must be a number you own on Telnyx)
+            const fromNumber = toE164(BUSINESS_NUMBER);
+            
+            // Log what we're about to send (helps if we get 422)
+            console.log('makeCall payload:', { toNumber, fromNumber });
+            
+            if (!toNumber || !fromNumber) {
+              console.warn('Missing toNumber or fromNumber', { toNumber, fromNumber, chosen });
+              throw new Error('Missing to/from number');
+            }
+            
+            // Call the Netlify function. Send both naming styles to match any handler.
+            const resp = await fetch('/.netlify/functions/makeCall', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                toNumber,
+                fromNumber,
+                to: toNumber,
+                from: fromNumber
+              })
+            });
+            
+            // Read raw text so we can see the real error if it fails
+            const rawText = await resp.text();
+            console.log('makeCall status:', resp.status, 'body:', rawText);
+            
+            let result;
+            try { result = JSON.parse(rawText); } catch { result = { raw: rawText }; }
+            
+            if (!resp.ok) {
+              alert(`Call failed (${resp.status}): ${rawText}`);
+              throw new Error(rawText);
             }
             // << END INSERT >>
       
