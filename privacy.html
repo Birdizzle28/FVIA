@@ -92,15 +92,14 @@
 		<img id="footerlogo" src="Pics/img6.png">
 		<hr class="footerhr">
 		<div id="footercontact">
-			<a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
+			<a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
 				<span class="fa fa-envelope"></span>
-				<span class="contactcontcontacts">fvinsuranceagency@gmail.com
-				</span>
+				<span class="contactcontcontacts">info@familyvaluesgroup.com</span>
 			</a>
 			<p> | </p>
-			<a class="contactcontainer" href="tel:+17316934739">
-				<span href="#" class="fa fa-phone"></span>
-				<span class="contactcontcontacts">(731)693-4739</span>
+			<a class="contactcontainer" href="tel:+16292437980">
+				<span class="fa fa-phone"></span>
+				<span class="contactcontcontacts">+1-629-243-7980</span>
 			</a>
 		</div>
 		<hr class="footerhr">
@@ -122,10 +121,9 @@
 	</footer>
 	</div>
 	
-	<!-- Chat Bubble Button -->
+	<!-- 
 	<button id="chat-bubble"><i class="fas fa-comment-dots"></i></button>
 	
-	<!-- Chat Window -->
 	<div id="chat-window">
 	  <div id="chat-header">Chat with us</div>
 	  <div id="chat-body">
@@ -135,21 +133,8 @@
 	    <input type="text" placeholder="Type a message..." />
 	    <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
 	  </div>
-	</div>
+	</div>-->
 	<script type="module" src="scripts/privacy.js"></script>
 	<script type="module" src="scripts/general.js"></script>
-	<script>
-	  const allowed = sessionStorage.getItem("siteAccess");
-	
-	  if (!allowed) {
-	    const pass = prompt("Enter password to view the site:");
-	    if (pass !== "BigBirdleWordle") {
-	      document.write("Access Denied");
-	      throw new Error("Wrong password");
-	    } else {
-	      sessionStorage.setItem("siteAccess", "true");
-	    }
-	  }
-	</script>
 </body>
 </html>
