@@ -268,6 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
      Submit -> Supabase
   ---------------------------- */
   const digitsOnly = (s) => (s||'').replace(/\D/g,'');
+  const e164Prospect = toE164(ten);
 
   function productTypeFromSelections(selections) {
     const map = new Map([
