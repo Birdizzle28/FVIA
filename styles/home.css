@@ -16,7 +16,7 @@
 	position: relative;
 	top: -20px;
 	flex-basis: 26%;
-	border-radius: 4%;
+	border-radius: 0;
 	box-shadow: 0 0 20px 6px #545454;
 }
 .mfcont, .mfcont2, .mfcont3 {
@@ -87,7 +87,7 @@
 	aspect-ratio: 8/5;
 	margin: 5px auto 0 auto;
 	box-shadow: 0 0 20px 6px #545454;
-	border-radius: 1%;
+	border-radius: 0;
 	padding: 0;
 	border: solid 2px;
 	overflow: hidden;
@@ -183,7 +183,7 @@
 	align-items: center;
 	width: 26%;
 	background-color: white;
-	border-radius: 12px;
+	border-radius: 0;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 	padding: 1.5vw;
 	transition: transform 0.3s;
