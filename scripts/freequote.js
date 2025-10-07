@@ -299,33 +299,56 @@ document.addEventListener('DOMContentLoaded', () => {
       const client = window.supabase;
       if (!client) throw new Error('Supabase not loaded');
     
-      // 1) Try by phone
-      let { data: existing, error: exErr } = await client
+      // Canonical and 10-digit forms
+      const e164 = contactInfo.phone; // already E.164 (e.g. +17315551234)
+      const ten  = (e164 || '').replace(/\D/g, '').slice(-10);
+    
+      let existing = null;
+    
+      // 1) Try by E.164
+      const r1 = await client
         .from('contacts')
         .select('id, phones, emails')
-        .contains('phones', [contactInfo.phone])
+        .contains('phones', [e164])
         .maybeSingle();
+      if (r1.data) existing = r1.data;
     
-      // 2) Try by email if not found
+      // 2) Try by 10-digit if not found
+      if (!existing && ten) {
+        const r2 = await client
+          .from('contacts')
+          .select('id, phones, emails')
+          .contains('phones', [ten])
+          .maybeSingle();
+        if (r2.data) existing = r2.data;
+      }
+    
+      // 3) Try by email if not found
       if (!existing && contactInfo.email) {
-        const r = await client
+        const r3 = await client
           .from('contacts')
           .select('id, phones, emails')
           .contains('emails', [contactInfo.email])
           .maybeSingle();
-        existing = r.data;
+        if (r3.data) existing = r3.data;
       }
     
       let contactId;
       if (existing) {
         contactId = existing.id;
       } else {
+        // Save both formats (E.164 first). If the 10-digit is the same content, keep just one.
+        const tenFromE164 = (e164 || '').replace(/\D/g, '').slice(-10);
+        const phonesArr = tenFromE164 && tenFromE164 !== e164
+          ? [e164, tenFromE164]
+          : [e164];
+    
         const { data: contact, error: contactError } = await client
           .from('contacts')
           .insert({
             first_name: contactInfo.first_name,
-            last_name: contactInfo.last_name,
-            phones: [contactInfo.phone],
+            last_name:  contactInfo.last_name,
+            phones: phonesArr,
             emails: [contactInfo.email],
             zip: contactInfo.zip,
             contact_status: 'new',
@@ -340,12 +363,13 @@ document.addEventListener('DOMContentLoaded', () => {
         contactId = contact.id;
       }
     
+      // Insert one lead per product type — store canonical number on leads
       const leadRows = productTypes.map(pt => ({
         first_name: contactInfo.first_name,
-        last_name: contactInfo.last_name,
-        zip: contactInfo.zip,
-        phone: [contactInfo.phone],   // leads table keeps array
-        lead_type: 'Web',
+        last_name:  contactInfo.last_name,
+        zip:        contactInfo.zip,
+        phone:      [e164],
+        lead_type:  'Web',
         product_type: pt,
         contact_id: contactId,
         submitted_by: window.FVG_WEBSITE_SUBMITTER_ID,
@@ -436,8 +460,8 @@ document.addEventListener('DOMContentLoaded', () => {
         first_name: firstName.value.trim(),
         last_name:  lastName.value.trim(),
         zip:        zip.value.trim(),
-        phone:      ten,                         // <-- string, not array
-        email:      email.value.trim(),          // <-- include email
+        phone:      e164Prospect,                // <-- canonical E.164
+        email:      email.value.trim(),
         notes:      notesParts.join(' || ')
       };
       const { contactId, leads } = await insertContactAndLeads(contactInfo, pickedTypes);
@@ -529,7 +553,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const scheduleModal = document.getElementById('schedule-modal');
         scheduleModal.style.display = 'flex';
       };
-      
+      document.getElementById('cancel-schedule-btn')?.addEventListener('click', () => {
+        document.getElementById('schedule-modal').style.display = 'none';
+        callModal.style.display = 'flex';
+      });
       document.getElementById('confirm-schedule-btn').onclick = async (e) => {
         e.preventDefault();
         const dateInput = document.getElementById('schedule-datetime');
