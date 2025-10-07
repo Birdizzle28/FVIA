@@ -5,7 +5,7 @@
   flex-direction: column;
   background-color: #ffffff;
   padding: 25px 30px;
-  border-radius: 12px;
+  border-radius: 0;
   box-shadow: 0 0 15px 5px #545454;
   width: 90%;
   max-width: 400px;
@@ -28,7 +28,7 @@
   padding: 10px;
   margin-bottom: 15px;
   border: 1px solid #ccc;
-  border-radius: 10px;
+  border-radius: 0;
   font-size: 16px;
 }
 
@@ -37,7 +37,7 @@
   background-color: #545454;
   color: #e9e7ed;
   border: none;
-  border-radius: 10px;
+  border-radius: 0;
   font-size: 16px;
   cursor: pointer;
   transition: background 0.2s ease-in-out;
