@@ -535,15 +535,13 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             // Call the Netlify function. Send both naming styles to match any handler.
+            const agentNumber    = toNumber;       // E.164 (the chosen agent)
+            const prospectNumber = e164Prospect;   // E.164 (you computed earlier)
+            
             const resp = await fetch('/.netlify/functions/makeCall', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                toNumber,
-                fromNumber,
-                to: toNumber,
-                from: fromNumber
-              })
+              body: JSON.stringify({ agentNumber, prospectNumber })
             });
             
             // Read raw text so we can see the real error if it fails
