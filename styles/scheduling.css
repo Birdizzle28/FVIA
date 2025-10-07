@@ -3,7 +3,7 @@
   max-width: 90%;
   margin: 20px auto;
   background-color: white;
-  border-radius: 8px;
+  border-radius: 0;
   padding: 20px;
 }
 
@@ -24,7 +24,7 @@
   background-color: #5e2a4b;
   color: white;
   border: none;
-  border-radius: 5px;
+  border-radius: 0;
   padding: 10px 15px;
   font-weight: bold;
   cursor: pointer;
