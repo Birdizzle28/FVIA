@@ -77,10 +77,9 @@
 			<a class="fab fa-google" href="#"></a>
 		</div>
 		<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
-		<!-- Chat Bubble Button -->
+		<!--
 	<button id="chat-bubble"><i class="fas fa-comment-dots"></i></button>
 	
-	<!-- Chat Window -->
 	<div id="chat-window">
 	  <div id="chat-header">Chat with us</div>
 	  <div id="chat-body">
@@ -90,22 +89,9 @@
 	    <input type="text" placeholder="Type a message..." />
 	    <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
 	  </div>
-	</div> 
+	</div> -->
 	</footer>
 	<script type="module" src="scripts/script.js"></script>
 	<script type="module" src="scripts/general.js"></script>
-	<script>
-	  const allowed = sessionStorage.getItem("siteAccess");
-	
-	  if (!allowed) {
-	    const pass = prompt("Enter password to view the site:");
-	    if (pass !== "BigBirdleWordle") {
-	      document.write("Access Denied");
-	      throw new Error("Wrong password");
-	    } else {
-	      sessionStorage.setItem("siteAccess", "true");
-	    }
-	  }
-	</script>
 </body>
 </html>
