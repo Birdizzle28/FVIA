@@ -49,26 +49,35 @@ function downloadText(filename, text, mime='text/vcard;charset=utf-8') {
 }
 
 // ---------- UI sections (your existing tab behavior preserved) ----------
-const navButtons = {
-  view:    $('#nav-view'),
-  submit:  $('#nav-submit'),
-  request: $('#nav-request'),
-  contacts: $('#nav-contacts')
-};
-const sections = {
-  view:    $('#lead-viewer-section'),
-  submit:  $('#submit-lead-section'),
-  request: $('#request-leads-section'),
-  contacts: $('#contacts-section')
-};
+const getNavButtons = () => ({
+  view:    document.querySelector('#nav-view'),
+  submit:  document.querySelector('#nav-submit'),
+  request: document.querySelector('#nav-request'),
+  contacts:document.querySelector('#nav-contacts')
+});
+
+const getSections = () => ({
+  view:    document.querySelector('#lead-viewer-section'),
+  submit:  document.querySelector('#submit-lead-section'),
+  request: document.querySelector('#request-leads-section'),
+  contacts:document.querySelector('#contacts-section')
+});
+
 function hideAll() {
-  Object.values(sections).filter(Boolean).forEach(s => s.style.display = 'none');
-  Object.values(navButtons).filter(Boolean).forEach(b => b.classList.remove('active'));
+  const secs = getSections();
+  Object.values(secs).forEach(el => { if (el) el.style.display = 'none'; });
+  const navs = getNavButtons();
+  Object.values(navs).forEach(btn => btn?.classList.remove('active'));
 }
+
 function showSection(name) {
+  const secs = getSections();
+  const navs = getNavButtons();
   hideAll();
-  sections[name].style.display = 'block';
-  navButtons[name].classList.add('active');
+  const sec = secs[name];
+  if (sec) sec.style.display = 'block';
+  const btn = navs[name];
+  btn?.classList.add('active');
 }
 
 // ---------- header dropdown init (same as maps/scheduling) ----------
