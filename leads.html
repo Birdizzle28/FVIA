@@ -4,370 +4,164 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Leads | Family Values Insurance Agency</title>
+
+  <!-- Same CSS stack as your other Agent Hub pages -->
   <link rel="stylesheet" href="styles/agentstyle.css" />
-  <link rel="stylesheet" href="styles/leads.css" />
+  <link rel="stylesheet" href="styles/dashboard.css" />
   <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
 </head>
+
 <body id="dashboardbody">
+  <!-- Header: exact structure from maps/scheduling -->
   <header class="index-grid-header">
-    <div id="logofvcontainer">
-      <div id="logodiv">
-        <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
-      </div>
-      <div id="fvdiv">
-        <p><strong>Family Values</strong></p>
-      </div>
-    </div>
-    <div id="navcontainer">
-      <nav class="header-flex-container">
-        <a id="thread-tab" href="thread.html">Thread</a>
-        <div class="dropdown">
-          <button id="agent-hub-toggle" class="dropbtn">Agent Hub ▾</button>
-          <div id="agent-hub-menu" class="dropdown-content">
-            <a href="leads.html">My Leads</a>
-            <a href="scheduling.html">Scheduling</a>
-            <a href="maps.html">Map & Routing</a>
-            <a href="calculator.html">Insurance Calculator</a>
-          </div>
-        </div>
-        <a id="resources-tab" href="resources.html">Resources</a>
-        <a id="admin-tab"href="admin.html" class="admin-only">Admin</a>
-        <a id="profile-tab" href="profile.html">Profile</a>
-      </nav>
-    </div>
-  </header>
+			<div id="logofvcontainer">
+				<div id="logodiv">
+					<a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+				</div>
+				<div id="fvdiv">
+					<p><strong>Family Values Group</strong></p>
+				</div>
+			</div>
+			<div id="navcontainer">
+				<nav class="header-flex-container">
+					<a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
+					<a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
+					<div id="menu-toggle">
+						<i class="fa-solid fa-bars"></i>
+					</div>
+				</nav>
+			</div>
+		</header>
+
+		<!-- Mobile Menu -->
+		<div id="mobile-menu">
+			<a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
+			
+			<!-- Toolkit parent (acts like a toggle, not a link) -->
+			<button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
+				<i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
+				<i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
+			</button>
+			
+			<!-- Submenu that expands between Toolkit and Commissions -->
+			<div id="toolkit-submenu" class="submenu" hidden>
+				<a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
+				<a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
+				<a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
+				<a href="calendar.html"><i class="fa-solid fa-calendar-days"></i><span>Calendar</span></a>
+			</div>
+			<a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
+			<a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
+			<a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
+			<a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
+			<a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
+		</div>
 
   <main class="auth-container">
-    <!-- Single-page navigation -->
-    <nav id="lead-page-nav">
-      <button id="nav-view" class="active">View</button>
-      <button id="nav-submit">Submit</button>
-      <button id="nav-request">Request</button>
-    </nav>
+    <!-- ===== Your existing tabs/sections (View / Submit / Request) stay as-is ===== -->
+    <!-- I’m just showing the part where we add the Contacts tab trigger + panel. -->
 
-    <!-- Lead Viewer Section -->
-    <section id="lead-viewer-section" class="lead-section">
-      <h3>Lead Viewer</h3>
-      <div id="agent-leads-viewer">
-        <div id="agent-filters">
-          <input id="agent-date-range" placeholder="Select date range" readonly>
-          <label for="agent-date-order">Order:</label>
-          <select id="agent-date-order">
-            <option value="desc">Most Recent</option>
-            <option value="asc">Oldest</option>
-          </select>
-          <input type="text" id="agent-zip-filter" placeholder="ZIP">
-          <input type="text" id="agent-city-filter" placeholder="City">
-          <select id="agent-state-filter">
-            <option value="">Select State</option>
-            <option value="AL">Alabama</option>
-            <option value="AK">Alaska</option>
-            <option value="AZ">Arizona</option>
-            <option value="AR">Arkansas</option>
-            <option value="CA">California</option>
-            <option value="CO">Colorado</option>
-            <option value="CT">Connecticut</option>
-            <option value="DE">Delaware</option>
-            <option value="FL">Florida</option>
-            <option value="GA">Georgia</option>
-            <option value="HI">Hawaii</option>
-            <option value="ID">Idaho</option>
-            <option value="IL">Illinois</option>
-            <option value="IN">Indiana</option>
-            <option value="IA">Iowa</option>
-            <option value="KS">Kansas</option>
-            <option value="KY">Kentucky</option>
-            <option value="LA">Louisiana</option>
-            <option value="ME">Maine</option>
-            <option value="MD">Maryland</option>
-            <option value="MA">Massachusetts</option>
-            <option value="MI">Michigan</option>
-            <option value="MN">Minnesota</option>
-            <option value="MS">Mississippi</option>
-            <option value="MO">Missouri</option>
-            <option value="MT">Montana</option>
-            <option value="NE">Nebraska</option>
-            <option value="NV">Nevada</option>
-            <option value="NH">New Hampshire</option>
-            <option value="NJ">New Jersey</option>
-            <option value="NM">New Mexico</option>
-            <option value="NY">New York</option>
-            <option value="NC">North Carolina</option>
-            <option value="ND">North Dakota</option>
-            <option value="OH">Ohio</option>
-            <option value="OK">Oklahoma</option>
-            <option value="OR">Oregon</option>
-            <option value="PA">Pennsylvania</option>
-            <option value="RI">Rhode Island</option>
-            <option value="SC">South Carolina</option>
-            <option value="SD">South Dakota</option>
-            <option value="TN">Tennessee</option>
-            <option value="TX">Texas</option>
-            <option value="UT">Utah</option>
-            <option value="VT">Vermont</option>
-            <option value="VA">Virginia</option>
-            <option value="WA">Washington</option>
-            <option value="WV">West Virginia</option>
-            <option value="WI">Wisconsin</option>
-            <option value="WY">Wyoming</option>
-          </select>
-          <input type="text" id="agent-first-name-filter" placeholder="First Name">
-          <input type="text" id="agent-last-name-filter" placeholder="Last Name">
-          <select id="agent-lead-type-filter">
-            <option value="">Select Lead Type</option>
-            <option value="Facebook">Facebook</option>
-            <option value="Google SEO">Google SEO</option>
-            <option value="Referral">Referral</option>
-            <option value="Other">Other</option>
-          </select>
-          <select id="agent-product-type-filter">
-            <option value="">Any</option>
-          </select>
-          <input type="text" id="agent-notes-filter" placeholder="Notes">
-          <button id="agent-apply-filters">Apply Filters</button>
-          <button id="agent-reset-filters">Reset Filters</button>
-        </div>
+    <!-- Add this fourth tab button alongside your existing View/Submit/Request buttons -->
+    <div class="lead-tabs">
+      <button id="nav-view"    class="tab-button">View</button>
+      <button id="nav-submit"  class="tab-button">Submit</button>
+      <button id="nav-request" class="tab-button">Request</button>
+      <button id="nav-contacts" class="tab-button">Contacts</button>
+    </div>
 
-        <div id="agent-leads-table-container">
-          <table id="agent-leads-table">
-            <thead>
-              <tr>
-                <th><input type="checkbox" id="select-all" /></th>
-                <th>Submitted</th>
-                <th>Agent</th>
-                <th>First</th>
-                <th>Last</th>
-                <th>Age</th>
-                <th>Phone(s)</th>
-                <th>Address</th>
-                <th>City</th>
-                <th>State</th>
-                <th>ZIP</th>
-                <th>Type</th>
-                <th>Product Type</th>
-                <th>Notes</th>
-              </tr>
-            </thead>
-            <tbody></tbody>
-          </table>
-          <div id="agent-pagination-controls">
-            <button id="agent-prev-page">Previous</button>
-            <span id="agent-current-page">Page 1</span>
-            <button id="agent-next-page">Next</button>
-          </div>
-        </div>
+    <!-- Existing sections: #lead-viewer-section / #submit-lead-section / #request-leads-section -->
+    <!-- … keep your current markup here unchanged … -->
 
-        <div id="agent-export-controls">
-          <button id="agent-edit-btn">Edit</button>
-          <button id="agent-archive-btn">Archive</button>
-          <button id="agent-export-btn">Export</button>
-          <div id="agent-export-options" style="display: none;">
-            <button id="agent-export-pdf">PDF</button>
-            <button id="agent-export-csv">CSV</button>
-            <button id="agent-export-print">Print</button>
-          </div>
+    <!-- New Contacts panel -->
+    <section id="contacts-section" class="lead-section" style="display:none;">
+      <h3>Contacts</h3>
+
+      <div class="card" style="margin-bottom:12px;">
+        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+          <button id="contacts-select-toggle" class="see-all" title="Toggle selection mode">
+            <i class="fa-regular fa-square-check"></i> Select
+          </button>
+          <button id="contacts-select-all" class="see-all" style="display:none;">
+            <i class="fa-solid fa-check-double"></i> Select All
+          </button>
+
+          <input id="contacts-search" type="search" placeholder="Search name, phone, email…" style="padding:8px;border:1px solid #d6d9e2;border-radius:0;min-width:240px;">
+          <select id="contacts-order" style="padding:8px;border:1px solid #d6d9e2;border-radius:0;">
+            <option value="created_desc">Newest first</option>
+            <option value="created_asc">Oldest first</option>
+            <option value="name_asc">Name A → Z</option>
+            <option value="name_desc">Name Z → A</option>
+          </select>
+
+          <button id="contacts-refresh" class="see-all" style="margin-left:auto;">
+            <i class="fa-solid fa-rotate"></i> Refresh
+          </button>
         </div>
       </div>
-    </section>
 
-    <!-- Lead Submission Section -->
-    <section id="submit-lead-section" class="lead-section" style="display: none;">
-      <h3>Submit a Lead</h3>
-      <form id="lead-form">
-        <input type="hidden" id="editing-lead-id" name="editing-lead-id" />
-        <input type="text" id="lead-first" placeholder="First Name" required />
-        <input type="text" id="lead-last" placeholder="Last Name" required />
-        <input type="number" id="lead-age" placeholder="Age" required />
-        <input type="text" id="lead-address" name="lead-address" placeholder="Street Address (Optional)" />
-        <input type="text" id="lead-city" placeholder="City" />
-        <select id="lead-state" name="lead-state" required>
-          <option value="" disabled selected hidden>Select State</option>
-          <option value="AL">Alabama</option>
-          <option value="AK">Alaska</option>
-          <option value="AZ">Arizona</option>
-          <option value="AR">Arkansas</option>
-          <option value="CA">California</option>
-          <option value="CO">Colorado</option>
-          <option value="CT">Connecticut</option>
-          <option value="DE">Delaware</option>
-          <option value="FL">Florida</option>
-          <option value="GA">Georgia</option>
-          <option value="HI">Hawaii</option>
-          <option value="ID">Idaho</option>
-          <option value="IL">Illinois</option>
-          <option value="IN">Indiana</option>
-          <option value="IA">Iowa</option>
-          <option value="KS">Kansas</option>
-          <option value="KY">Kentucky</option>
-          <option value="LA">Louisiana</option>
-          <option value="ME">Maine</option>
-          <option value="MD">Maryland</option>
-          <option value="MA">Massachusetts</option>
-          <option value="MI">Michigan</option>
-          <option value="MN">Minnesota</option>
-          <option value="MS">Mississippi</option>
-          <option value="MO">Missouri</option>
-          <option value="MT">Montana</option>
-          <option value="NE">Nebraska</option>
-          <option value="NV">Nevada</option>
-          <option value="NH">New Hampshire</option>
-          <option value="NJ">New Jersey</option>
-          <option value="NM">New Mexico</option>
-          <option value="NY">New York</option>
-          <option value="NC">North Carolina</option>
-          <option value="ND">North Dakota</option>
-          <option value="OH">Ohio</option>
-          <option value="OK">Oklahoma</option>
-          <option value="OR">Oregon</option>
-          <option value="PA">Pennsylvania</option>
-          <option value="RI">Rhode Island</option>
-          <option value="SC">South Carolina</option>
-          <option value="SD">South Dakota</option>
-          <option value="TN">Tennessee</option>
-          <option value="TX">Texas</option>
-          <option value="UT">Utah</option>
-          <option value="VT">Vermont</option>
-          <option value="VA">Virginia</option>
-          <option value="WA">Washington</option>
-          <option value="WV">West Virginia</option>
-          <option value="WI">Wisconsin</option>
-          <option value="WY">Wyoming</option>
-        </select>
-        <input type="text" id="lead-zip" placeholder="ZIP Code" />
-        <div id="phone-inputs">
-          <div class="phone-line">
-            <input type="tel" name="lead-phone" placeholder="(123) 456-7890" maxlength="14" required />
-            <button type="button" class="add-phone-btn">+</button>
+      <div id="contacts-list" class="card" style="padding:0;">
+        <!-- rows injected by JS -->
+      </div>
+
+      <!-- Bulk bar appears only when any selected -->
+      <div id="contacts-bulk-actions" style="display:none;position:sticky;bottom:0;background:#fff;border-top:1px solid #e9eaf0;padding:10px;display:flex;gap:12px;justify-content:space-between;align-items:center;">
+        <div><strong><span id="contacts-selected-count">0</span></strong> selected</div>
+        <button id="contacts-bulk-save" class="see-all">
+          <i class="fa-solid fa-download"></i> Save selected to phone (.vcf)
+        </button>
+      </div>
+
+      <!-- Contact detail modal/drawer -->
+      <div id="contact-detail-modal" class="overlay" aria-hidden="true">
+        <div class="overlay-backdrop" data-close></div>
+        <div class="overlay-panel">
+          <div class="overlay-header">
+            <h2 id="contact-modal-name">Contact</h2>
+            <button class="overlay-close" data-close>&times;</button>
           </div>
+          <div class="overlay-body" id="contact-modal-body"><!-- injected --></div>
         </div>
-        <select id="lead-type" required>
-          <option value="">Select Lead Type</option>
-          <option value="Facebook">Facebook</option>
-          <option value="Google SEO">Google SEO</option>
-          <option value="Referral">Referral</option>
-          <option value="Other">Other</option>
-        </select>
-        <div class="form-group">
-          <label for="lead-product-type">Product Type:</label>
-          <select id="lead-product-type" name="product_type" required>
-            <!-- Options will be populated dynamically from agent profile -->
-          </select>
-        </div>
-        <textarea id="lead-notes" placeholder="Notes (optional)"></textarea>
-        <button type="submit">Submit Lead</button>
-      </form>
-      <p id="lead-message"></p>
-    </section>
-
-    <!-- Lead Request Section -->
-    <section id="request-leads-section" class="lead-section" style="display: none;">
-      <h3>Request Leads</h3>
-      <form id="lead-request-form">
-        <input type="text" id="request-city" placeholder="City" />
-        <select id="request-state" required>
-          <option value="" disabled selected hidden>Select State</option>
-          <option value="AL">Alabama</option>
-          <option value="AK">Alaska</option>
-          <option value="AZ">Arizona</option>
-          <option value="AR">Arkansas</option>
-          <option value="CA">California</option>
-          <option value="CO">Colorado</option>
-          <option value="CT">Connecticut</option>
-          <option value="DE">Delaware</option>
-          <option value="FL">Florida</option>
-          <option value="GA">Georgia</option>
-          <option value="HI">Hawaii</option>
-          <option value="ID">Idaho</option>
-          <option value="IL">Illinois</option>
-          <option value="IN">Indiana</option>
-          <option value="IA">Iowa</option>
-          <option value="KS">Kansas</option>
-          <option value="KY">Kentucky</option>
-          <option value="LA">Louisiana</option>
-          <option value="ME">Maine</option>
-          <option value="MD">Maryland</option>
-          <option value="MA">Massachusetts</option>
-          <option value="MI">Michigan</option>
-          <option value="MN">Minnesota</option>
-          <option value="MS">Mississippi</option>
-          <option value="MO">Missouri</option>
-          <option value="MT">Montana</option>
-          <option value="NE">Nebraska</option>
-          <option value="NV">Nevada</option>
-          <option value="NH">New Hampshire</option>
-          <option value="NJ">New Jersey</option>
-          <option value="NM">New Mexico</option>
-          <option value="NY">New York</option>
-          <option value="NC">North Carolina</option>
-          <option value="ND">North Dakota</option>
-          <option value="OH">Ohio</option>
-          <option value="OK">Oklahoma</option>
-          <option value="OR">Oregon</option>
-          <option value="PA">Pennsylvania</option>
-          <option value="RI">Rhode Island</option>
-          <option value="SC">South Carolina</option>
-          <option value="SD">South Dakota</option>
-          <option value="TN">Tennessee</option>
-          <option value="TX">Texas</option>
-          <option value="UT">Utah</option>
-          <option value="VT">Vermont</option>
-          <option value="VA">Virginia</option>
-          <option value="WA">Washington</option>
-          <option value="WV">West Virginia</option>
-          <option value="WI">Wisconsin</option>
-          <option value="WY">Wyoming</option>
-        </select>
-        <input type="text" id="request-zip" placeholder="ZIP Code" />
-        <select id="request-type">
-          <option value="">Select Lead Type</option>
-          <option value="Facebook">Facebook</option>
-          <option value="Google SEO">Google SEO</option>
-          <option value="Referral">Referral</option>
-          <option value="Other">Other</option>
-        </select>
-        <div class="filter-group">
-          <label for="filter-product-type">Product Type:</label>
-          <select id="filter-product-type">
-            <option value="">Any</option>
-            <!-- Options will be populated dynamically from agent profile -->
-          </select>
-        </div>
-        <label for="request-count">How many leads?</label>
-        <input type="number" id="request-count" name="request-count" min="1" required />
-        <textarea id="request-notes" placeholder="Notes (optional)"></textarea>
-        <button type="submit">Submit Request</button>
-      </form>
-      <p id="request-message"></p>
+      </div>
     </section>
   </main>
 
+  <!-- Footer: exact structure from your other Agent Hub pages -->
   <footer class="index-grid-footer">
-    <img id="footerlogo" src="../Pics/img17.png" alt="FVIA Footer Logo" />
-    <hr class="footerhr" />
-    <div id="footercontact">
-      <a class="contactcontainer" href="mailto:fvinsuranceagency@gmail.com">
-        <span class="fa fa-envelope"></span>
-        <span class="contactcontcontacts">fvinsuranceagency@gmail.com</span>
-      </a>
-      <a class="contactcontainer" href="tel:+17316934739">
-        <span class="fa fa-phone"></span>
-        <span class="contactcontcontacts">(731) 693-4739</span>
-      </a>
-    </div>
-    <hr class="footerhr" />
-    <div id="footersocial">
-      <a class="fab fa-facebook-f" href="#"></a>
-      <a class="fab fa-linkedin-in" href="#"></a>
-      <a class="fab fa-instagram" href="#"></a>
-      <a class="fab fa-youtube" href="#"></a>
-      <a class="fab fa-google" href="#"></a>
-    </div>
-    <p><em>© 2025 Family Values Insurance Agency. All Rights Reserved.</em></p>
-  </footer>
-  
+  <img id="footerlogo" src="Pics/img17.png">
+  <hr class="footerhr">
+  <div id="footercontact">
+    <a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
+      <span class="fa fa-envelope"></span>
+      <span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+    </a>
+    <p> | </p>
+    <a class="contactcontainer" href="tel:+16292437980">
+      <span class="fa fa-phone"></span>
+      <span class="contactcontcontacts">+1-629-243-7980</span>
+    </a>
+  </div>
+  <hr class="footerhr">
+  <div id="footersocial">
+    <a class="fab fa-facebook-f" href="#"></a>
+    <a class="fab fa-linkedin-in" href="#"></a>
+    <a class="fab fa-instagram" href="#"></a>
+    <a class="fab fa-youtube" href="#"></a>
+    <a class="fab fa-google" href="#"></a>
+  </div>
+  <!-- Footer links section (below social icons) -->
+  <div id="footerlinks">
+    <a href="faqs.html">FAQs</a>
+    <a href="terms.html">Terms</a>
+    <a href="accessibility.html">Accessibility</a>
+    <a href="privacy.html">Privacy</a>
+  </div>
+  <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+</footer>
+
+  <!-- JS -->
   <script type="module" src="scripts/leads.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
