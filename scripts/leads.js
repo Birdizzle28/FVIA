@@ -335,6 +335,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!agentProfile?.is_admin) $('.admin-only')?.style && ($('.admin-only').style.display = 'none');
 
   // tabs
+  const navs = getNavButtons();
   navButtons.view?.addEventListener('click', () => showSection('view'));
   navButtons.submit?.addEventListener('click', () => showSection('submit'));
   navButtons.request?.addEventListener('click', () => showSection('request'));
