@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Leads | Family Values Insurance Agency</title>
+  <title>Leads | Family Values Group</title>
 
   <!-- Same CSS stack as your other Agent Hub pages -->
   <link rel="stylesheet" href="styles/agentstyle.css" />
@@ -126,6 +126,119 @@
         </div>
       </div>
     </section>
+	  <section id="lead-viewer-section" class="lead-section" style="display:block;">
+		  <h3>View Leads</h3>
+		
+		  <div class="card" style="margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+		    <label style="display:flex;align-items:center;gap:8px;">
+		      <input type="checkbox" id="select-all"> Select All
+		    </label>
+		
+		    <button id="agent-archive-btn" class="see-all" title="Archive selected">
+		      <i class="fa-solid fa-box-archive"></i> Archive Selected
+		    </button>
+		
+		    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+		      <button id="agent-prev-page" class="see-all">Prev</button>
+		      <span id="agent-current-page">Page 1</span>
+		      <button id="agent-next-page" class="see-all">Next</button>
+		    </div>
+		  </div>
+		
+		  <div class="card" style="padding:0;overflow:auto;">
+		    <table id="agent-leads-table" style="width:100%;border-collapse:collapse;">
+		      <thead>
+		        <tr>
+		          <th style="width:36px;"><!-- master checkbox lives above in toolbar --></th>
+		          <th>Date</th>
+		          <th>Agent</th>
+		          <th>First</th>
+		          <th>Last</th>
+		          <th>Age</th>
+		          <th>Phone(s)</th>
+		          <th>Address</th>
+		          <th>City</th>
+		          <th>State</th>
+		          <th>ZIP</th>
+		          <th>Lead Type</th>
+		          <th>Product</th>
+		          <th>Notes</th>
+		        </tr>
+		      </thead>
+		      <tbody><!-- populated by JS --></tbody>
+		    </table>
+		  </div>
+		</section>
+		<section id="submit-lead-section" class="lead-section" style="display:none;">
+		  <h3>Submit a Lead</h3>
+		  <div class="card">
+		    <form id="lead-form" class="form">
+		      <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;">
+		        <label class="grow">First Name<input id="lead-first" type="text" required></label>
+		        <label class="grow">Last Name<input id="lead-last" type="text" required></label>
+		        <label class="grow">Age<input id="lead-age" type="number" min="0"></label>
+		      </div>
+		      <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+		        <label class="grow">Address<input id="lead-address" type="text"></label>
+		        <label class="grow">City<input id="lead-city" type="text"></label>
+		        <label>State
+		          <select id="lead-state" required>
+		            <option value="">—</option>
+		            <!-- add states -->
+		          </select>
+		        </label>
+		        <label>ZIP<input id="lead-zip" type="text" inputmode="numeric" maxlength="10"></label>
+		      </div>
+		      <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+		        <label class="grow">Product Type
+		          <select id="lead-product-type"><option value="">—</option></select>
+		        </label>
+		        <label class="grow">Lead Type
+		          <select id="lead-type">
+		            <option>Referral</option><option>Facebook</option>
+		            <option>Google SEO</option><option>Other</option>
+		          </select>
+		        </label>
+		      </div>
+		      <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+		        <label class="grow">Phone #1<input name="lead-phone" type="tel" placeholder="(###) ###-####"></label>
+		        <label class="grow">Phone #2<input name="lead-phone" type="tel" placeholder="(###) ###-####"></label>
+		      </div>
+		      <label style="display:block;margin-top:8px;">Notes<textarea id="lead-notes" rows="3"></textarea></label>
+		      <button type="submit" class="see-all" style="margin-top:10px;">Submit Lead</button>
+		      <p id="lead-message" style="margin-top:8px;"></p>
+		    </form>
+		  </div>
+		</section>
+		<section id="request-leads-section" class="lead-section" style="display:none;">
+		  <h3>Request Leads</h3>
+		  <div class="card">
+		    <form id="lead-request-form" class="form">
+		      <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;">
+		        <label class="grow">City<input id="request-city" type="text"></label>
+		        <label>State
+		          <select id="request-state" required>
+		            <option value="">—</option>
+		            <!-- add states -->
+		          </select>
+		        </label>
+		        <label>ZIP<input id="request-zip" type="text"></label>
+		      </div>
+		      <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
+		        <label class="grow">Lead Type
+		          <select id="request-type">
+		            <option>Referral</option><option>Facebook</option>
+		            <option>Google SEO</option><option>Other</option>
+		          </select>
+		        </label>
+		        <label>Quantity<input id="request-count" type="number" min="1" value="10"></label>
+		      </div>
+		      <label style="display:block;margin-top:8px;">Notes<textarea id="request-notes" rows="3"></textarea></label>
+		      <button type="submit" class="see-all" style="margin-top:10px;">Submit Request</button>
+		      <p id="request-message" style="margin-top:8px;"></p>
+		    </form>
+		  </div>
+		</section>
   </main>
 
   <!-- Footer: exact structure from your other Agent Hub pages -->
