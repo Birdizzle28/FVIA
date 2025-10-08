@@ -336,10 +336,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // tabs
   const navs = getNavButtons();
-  navButtons.view?.addEventListener('click', () => showSection('view'));
-  navButtons.submit?.addEventListener('click', () => showSection('submit'));
-  navButtons.request?.addEventListener('click', () => showSection('request'));
-  navButtons.contacts?.addEventListener('click', async () => {
+  navs.view?.addEventListener('click', () => showSection('view'));
+  navs.submit?.addEventListener('click', () => showSection('submit'));
+  navs.request?.addEventListener('click', () => showSection('request'));
+  navs.contacts?.addEventListener('click', async () => {
     showSection('contacts');
     await loadContacts();
   });
