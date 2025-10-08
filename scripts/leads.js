@@ -97,9 +97,14 @@ async function fetchAgentProfile() {
 
 // ---------- Leads table ----------
 function updatePaginationControls() {
-  $('#agent-current-page')?.textContent = `Page ${agentCurrentPage}`;
-  $('#agent-prev-page')?.toggleAttribute('disabled', agentCurrentPage === 1);
-  $('#agent-next-page')?.toggleAttribute('disabled', agentCurrentPage === agentTotalPages);
+  const pgEl = $('#agent-current-page');
+  if (pgEl) pgEl.textContent = `Page ${agentCurrentPage}`;
+
+  const prev = $('#agent-prev-page');
+  if (prev) prev.toggleAttribute('disabled', agentCurrentPage === 1);
+
+  const next = $('#agent-next-page');
+  if (next) next.toggleAttribute('disabled', agentCurrentPage === agentTotalPages);
 }
 
 async function loadAgentLeads() {
