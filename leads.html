@@ -173,39 +173,82 @@
 		  <h3>Submit a Lead</h3>
 		  <div class="card">
 		    <form id="lead-form" class="form">
-		      <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;">
-		        <label class="grow">First Name<input id="lead-first" type="text" required></label>
-		        <label class="grow">Last Name<input id="lead-last" type="text" required></label>
-		        <label class="grow">Age<input id="lead-age" type="number" min="0"></label>
+		      <div class="form-grid">
+		        <div class="field">
+		          <input id="lead-first" type="text" placeholder=" " required>
+		          <label for="lead-first">First Name</label>
+		        </div>
+		        <div class="field">
+		          <input id="lead-last" type="text" placeholder=" " required>
+		          <label for="lead-last">Last Name</label>
+		        </div>
+		        <div class="field">
+		          <input id="lead-age" type="number" placeholder=" " min="0">
+		          <label for="lead-age">Age</label>
+		        </div>
 		      </div>
-		      <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
-		        <label class="grow">Address<input id="lead-address" type="text"></label>
-		        <label class="grow">City<input id="lead-city" type="text"></label>
-		        <label>State
+		
+		      <div class="form-grid form-row">
+		        <div class="field" style="grid-column: span 2;">
+		          <input id="lead-address" type="text" placeholder=" ">
+		          <label for="lead-address">Street Address</label>
+		        </div>
+		        <div class="field">
+		          <input id="lead-city" type="text" placeholder=" ">
+		          <label for="lead-city">City</label>
+		        </div>
+		        <div class="field">
 		          <select id="lead-state" required>
-		            <option value="">—</option>
+		            <option value="" disabled selected hidden></option>
 		            <!-- add states -->
 		          </select>
-		        </label>
-		        <label>ZIP<input id="lead-zip" type="text" inputmode="numeric" maxlength="10"></label>
+		          <label for="lead-state">State</label>
+		        </div>
+		        <div class="field">
+		          <input id="lead-zip" type="text" placeholder=" " inputmode="numeric" maxlength="10">
+		          <label for="lead-zip">ZIP</label>
+		        </div>
 		      </div>
-		      <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
-		        <label class="grow">Product Type
-		          <select id="lead-product-type"><option value="">—</option></select>
-		        </label>
-		        <label class="grow">Lead Type
-		          <select id="lead-type">
-		            <option>Referral</option><option>Facebook</option>
-		            <option>Google SEO</option><option>Other</option>
+		
+		      <div class="form-grid form-row">
+		        <div class="field">
+		          <select id="lead-product-type">
+		            <option value="" disabled selected hidden></option>
+		            <!-- add product types -->
 		          </select>
-		        </label>
+		          <label for="lead-product-type">Product Type</label>
+		        </div>
+		        <div class="field">
+		          <select id="lead-type">
+		            <option value="" disabled selected hidden></option>
+		            <option>Referral</option>
+		            <option>Facebook</option>
+		            <option>Google SEO</option>
+		            <option>Other</option>
+		          </select>
+		          <label for="lead-type">Lead Source</label>
+		        </div>
 		      </div>
-		      <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
-		        <label class="grow">Phone #1<input name="lead-phone" type="tel" placeholder="(###) ###-####"></label>
-		        <label class="grow">Phone #2<input name="lead-phone" type="tel" placeholder="(###) ###-####"></label>
+		
+		      <div class="form-grid form-row">
+		        <div class="field">
+		          <input name="lead-phone" type="tel" placeholder=" " inputmode="tel">
+		          <label>Phone #1</label>
+		        </div>
+		        <div class="field">
+		          <input name="lead-phone" type="tel" placeholder=" " inputmode="tel">
+		          <label>Phone #2</label>
+		        </div>
 		      </div>
-		      <label style="display:block;margin-top:8px;">Notes<textarea id="lead-notes" rows="3"></textarea></label>
-		      <button type="submit" class="see-all btn btn--primary" style="margin-top:10px;">Submit Lead</button>
+		
+		      <div class="form-grid form-row">
+		        <div class="field" style="grid-column: 1 / -1;">
+		          <textarea id="lead-notes" placeholder=" " rows="4"></textarea>
+		          <label for="lead-notes">Notes</label>
+		        </div>
+		      </div>
+		
+		      <button type="submit" class="btn btn--primary" style="margin-top:12px;">Submit Lead</button>
 		      <p id="lead-message" style="margin-top:8px;"></p>
 		    </form>
 		  </div>
@@ -214,27 +257,49 @@
 		  <h3>Request Leads</h3>
 		  <div class="card">
 		    <form id="lead-request-form" class="form">
-		      <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;">
-		        <label class="grow">City<input id="request-city" type="text"></label>
-		        <label>State
+		      <div class="form-grid">
+		        <div class="field">
+		          <input id="request-city" type="text" placeholder=" ">
+		          <label for="request-city">City</label>
+		        </div>
+		        <div class="field">
 		          <select id="request-state" required>
-		            <option value="">—</option>
+		            <option value="" disabled selected hidden></option>
 		            <!-- add states -->
 		          </select>
-		        </label>
-		        <label>ZIP<input id="request-zip" type="text"></label>
+		          <label for="request-state">State</label>
+		        </div>
+		        <div class="field">
+		          <input id="request-zip" type="text" placeholder=" ">
+		          <label for="request-zip">ZIP</label>
+		        </div>
 		      </div>
-		      <div class="row" style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;">
-		        <label class="grow">Lead Type
+		
+		      <div class="form-grid form-row">
+		        <div class="field">
 		          <select id="request-type">
-		            <option>Referral</option><option>Facebook</option>
-		            <option>Google SEO</option><option>Other</option>
+		            <option value="" disabled selected hidden></option>
+		            <option>Referral</option>
+		            <option>Facebook</option>
+		            <option>Google SEO</option>
+		            <option>Other</option>
 		          </select>
-		        </label>
-		        <label>Quantity<input id="request-count" type="number" min="1" value="10"></label>
+		          <label for="request-type">Lead Type</label>
+		        </div>
+		        <div class="field">
+		          <input id="request-count" type="number" min="1" value="10" placeholder=" ">
+		          <label for="request-count">Quantity</label>
+		        </div>
 		      </div>
-		      <label style="display:block;margin-top:8px;">Notes<textarea id="request-notes" rows="3"></textarea></label>
-		      <button type="submit" class="see-all btn btn--primary" style="margin-top:10px;">Submit Request</button>
+		
+		      <div class="form-grid form-row">
+		        <div class="field" style="grid-column: 1 / -1;">
+		          <textarea id="request-notes" rows="4" placeholder=" "></textarea>
+		          <label for="request-notes">Notes</label>
+		        </div>
+		      </div>
+		
+		      <button type="submit" class="btn btn--primary" style="margin-top:12px;">Submit Request</button>
 		      <p id="request-message" style="margin-top:8px;"></p>
 		    </form>
 		  </div>
