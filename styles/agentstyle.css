@@ -1,84 +1,84 @@
 /* Global font */
 * {
-  font-family: Bellota Text;
+  font-family: Bellota Text ;
 }
 /* Loading screen overlay */
 #loading-screen {
-  position: fixed;
-  z-index: 999;
-  background: white;
-  color: black;
-  width: 100vw;
-  height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 1.5rem;
+  position: fixed !important;
+  z-index: 999 !important;
+  background: white !important;
+  color: black !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 1.5rem !important;
 }
 
 /* Debug message banner */
 #debug-msg {
-  position: fixed;
-  top: 10px;
-  left: 0;
-  right: 0;
-  z-index: 10000;
-  text-align: center;
-  font-weight: bold;
-  color: red;
+  position: fixed !important;
+  top: 10px !important;
+  left: 0 !important;
+  right: 0 !important;
+  z-index: 10000 !important;
+  text-align: center !important;
+  font-weight: bold !important;
+  color: red !important;
 	box-sizing: content-box !important;
 }
 
 /* Dashboard background */
 #dashboardbody {
-  background-color: white;
-  margin: 0;
-  background-image: radial-gradient(#915864, #353468);
-  min-height: 80vw;
+  background-color: white !important;
+  margin: 0 !important;
+  background-image: radial-gradient(#915864, #353468) !important;
+  min-height: 80vw !important;
 	box-sizing: content-box !important;
 }
 
 /* Grid layout for main sections */
 .index-grid {
-  margin: 0;
-  color: white;
-  width: 100%;
-  display: grid;
+  margin: 0 !important;
+  color: white !important;
+  width: 100% !important;
+  display: grid !important;
   grid-template-areas:
     "indexheader"
     "indexmain"
-    "indexfooter";
+    "indexfooter" !important;
 	box-sizing: content-box !important;
 }
 
 /* Header styling */
 .index-grid-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
   background-color: #ed9ea5 !important;
-  padding: 10px 20px;
-  flex-wrap: wrap;
-	grid-area: indexheader;
+  padding: 10px 20px !important;
+  flex-wrap: wrap !important;
+	grid-area: indexheader !important;
 	box-sizing: border-box !important;
 }
 #logofvcontainer {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  flex-shrink: 0;
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  flex-shrink: 0 !important;
 	box-sizing: content-box !important;
 }
 #logodiv {
-  display: flex;
-  align-items: center;
-  margin-right: 10px;
+  display: flex !important;
+  align-items: center !important;
+  margin-right: 10px !important;
 	box-sizing: content-box !important;
 }
 #headerlogo {
-	width: 8vw;
-	aspect-ratio: 1/1;
-	max-width: 60px;
+	width: 8vw !important;
+	aspect-ratio: 1/1 !important;
+	max-width: 60px !important;
 	box-sizing: content-box !important;
 }
 #fvdiv {
