@@ -47,6 +47,18 @@ function downloadText(filename, text, mime='text/vcard;charset=utf-8') {
   a.href = url; a.download = filename; a.click();
   URL.revokeObjectURL(url);
 }
+// Floating labels for selects (and safety for inputs on initial load)
+document.querySelectorAll('.field select, .field input, .field textarea').forEach(el => {
+  const parent = el.closest('.field');
+  const set = () => {
+    if (!parent) return;
+    const hasValue = (el.tagName === 'SELECT') ? !!el.value : !!el.value.trim();
+    parent.classList.toggle('filled', hasValue);
+  };
+  el.addEventListener('change', set);
+  el.addEventListener('input', set);
+  set(); // initialize
+});
 
 // ---------- UI sections (your existing tab behavior preserved) ----------
 const getNavButtons = () => ({
