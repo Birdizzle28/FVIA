@@ -1,93 +1,315 @@
-/* Leads page sections styling */
-.lead-section {
-  max-width: 90%;
-  margin: 20px auto;
-  background-color: #fff;
-  border-radius: 0;
-  padding: 20px;
+/* styles/leads.css
+   Page-specific polish for Leads (incl. Contacts tab)
+   — Matches Admin look while feeling like a real contacts app.
+*/
+
+/* --- Base harmony with Admin --- */
+:root {
+  --ink: #353468;
+  --muted: #5f6472;
+  --line: #e9eaf0;
+  --line-2: #d6d9e2;
+  --bg-soft: #f6f7fb;
+  --bg-soft-2: #f9fafe;
+  --brand: #1d4ed8; /* deep-ish blue used on focus/active */
 }
-#lead-filters {
+
+body#dashboardbody {
+  font-family: "Bellota Text", system-ui, -apple-system, Segoe UI, Roboto, Arial, "Helvetica Neue", sans-serif;
+  color: var(--ink);
+}
+
+/* --- Cards & sections (Admin-like) --- */
+.card {
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: 0 1px 0 rgba(17, 24, 39, 0.02);
+  padding: 14px;
+}
+
+.lead-section h3 {
+  margin: 0 0 8px 0;
+  font-size: 1.15rem;
+  letter-spacing: 0.1px;
+}
+
+/* --- Tab buttons (mirrors Admin square tabs) --- */
+.lead-tabs {
   display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 15px;
+  gap: 8px;
+  align-items: center;
+  border-bottom: 1px solid var(--line);
+  margin: 10px 0 14px;
 }
-#lead-filters input,
-#lead-filters select {
-  padding: 5px;
-  font-size: 0.9em;
-}
-/* Single-page navigation bar */
-#lead-page-nav {
-  display: flex;
-  justify-content: center;
-  gap: 10px;
-  margin: 10px auto;
-  width: 90%;
-}
-#lead-page-nav button {
-  background-color: #ed9ea5;
-  color: #353468;
+
+.lead-tabs .tab-button {
+  appearance: none;
   border: none;
-  padding: 8px 16px;
-  font-weight: bold;
-  border-radius: 0;
+  background: transparent;
+  color: var(--muted);
+  padding: 10px 12px;
+  margin: 0;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  border-bottom: 2px solid transparent;
   cursor: pointer;
 }
-#lead-page-nav button.active {
-  background-color: #353468;
-  color: #fff;
+
+.lead-tabs .tab-button:hover { color: var(--ink); }
+.lead-tabs .tab-button.active {
+  color: var(--ink);
+  border-bottom-color: var(--ink);
 }
 
-/* Lead viewer table and filters */
-#agent-filters {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-bottom: 15px;
+/* --- “See All” style buttons (Admin vibe) --- */
+.see-all {
+  background: #fff;
+  border: 1px solid var(--line-2);
+  padding: 8px 12px;
+  font-weight: 600;
+  cursor: pointer;
+  outline: none;
+  border-radius: 0; /* square, like admin */
 }
-#agent-filters input,
-#agent-filters select {
-  padding: 5px;
-  font-size: 0.9em;
-}
+.see-all:hover { background: var(--bg-soft-2); }
+.see-all:active { transform: translateY(1px); }
 
-/* Lead management table styles */
-#agent-leads-table-container {
-  overflow-x: auto;
-}
+/* --- Table polish (View tab) --- */
 #agent-leads-table {
   width: 100%;
   border-collapse: collapse;
+  background: #fff;
+  border: 1px solid var(--line);
 }
+
 #agent-leads-table th,
 #agent-leads-table td {
-  border: 1px solid #ccc;
-  padding: 8px;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 8px;
   text-align: left;
-  font-size: 0.9em;
-  white-space: nowrap; /* prevent wrapping to enable horizontal scroll */
+  vertical-align: top;
+  font-size: 0.96rem;
 }
+
 #agent-leads-table thead th {
+  background: var(--bg-soft-2);
+  font-weight: 700;
+}
+
+#agent-leads-table tbody tr:hover {
+  background: #fff;
+  outline: 1px solid var(--line);
+}
+
+/* Checkbox column */
+#agent-leads-table td:first-child,
+#agent-leads-table th:first-child {
+  width: 36px;
+}
+
+/* --- Contacts: list layout --- */
+#contacts-section .contacts-header h3 {
+  font-size: 1.15rem;
+}
+
+#contacts-list {
+  padding: 0; /* rows have their own padding */
+}
+
+/* Header row */
+#contacts-list .contacts-head,
+#contacts-list > .head-row {
+  display: grid;
+  grid-template-columns: 46px 1.2fr 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 10px 14px;
+  background: var(--bg-soft-2);
+  border-bottom: 1px solid var(--line);
+  font-weight: 700;
+}
+
+/* Contact rows */
+#contacts-list .contact-row {
+  display: grid;
+  grid-template-columns: 46px 1.2fr 1fr 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+  background: #fff;
+  cursor: pointer;
+}
+
+#contacts-list .contact-row:hover {
+  background: #fff;
+  outline: 1px solid var(--line);
+}
+
+#contacts-list .contact-row .c-name {
+  color: var(--ink);
+  font-weight: 700;
+}
+
+#contacts-list .contact-row .c-phone,
+#contacts-list .contact-row .c-email {
+  color: var(--muted);
+  font-size: 0.96rem;
+}
+
+/* Left cell: avatar or checkbox */
+#contacts-list .contact-row i.fa-user {
+  font-size: 1rem;
+  opacity: 0.9;
+}
+#contacts-list .contact-row input[type="checkbox"] {
+  width: 16px; height: 16px;
+}
+
+/* Top controls */
+#contacts-section .card > .row input[type="search"],
+#contacts-section .card > .row select {
+  border-radius: 0;
+}
+
+/* Bulk bar (sticky) */
+#contacts-bulk-actions {
   position: sticky;
-  top: 0;
-  background-color: #f4f4f4;
+  bottom: 0;
+  border-top: 1px solid var(--line);
+  background: #fff;
+  padding: 10px 12px;
+  display: none; /* toggled by JS */
+  align-items: center;
+  gap: 12px;
   z-index: 2;
-  cursor: pointer;
-}
-#agent-leads-table thead th:first-child {
-  cursor: default;
 }
 
-/* Master checkbox alignment */
-#select-all {
-  cursor: pointer;
+/* “Select” mode */
+#contacts-select-toggle { border-color: var(--line); }
+#contacts-select-all { border-color: var(--line); }
+
+/* --- Overlay / Modal for contact detail (Admin-like) --- */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
 }
 
-/* Export and action buttons spacing */
-#agent-export-controls {
-  margin-top: 10px;
+.overlay.open { display: flex; }
+
+.overlay-backdrop {
+  position: absolute; inset: 0;
+  background: rgba(17, 24, 39, 0.36);
 }
-#agent-export-controls > button:not(:last-child) {
-  margin-right: 10px;
+
+.overlay-panel {
+  position: relative;
+  width: min(720px, 96vw);
+  max-height: 90vh;
+  overflow: auto;
+  background: #fff;
+  border: 1px solid var(--line);
+  box-shadow: 0 12px 30px rgba(17, 24, 39, 0.18);
+}
+
+.overlay-header {
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--line);
+  padding: 12px 14px;
+  background: var(--bg-soft-2);
+}
+
+.overlay-header h2 {
+  font-size: 1.15rem;
+  margin: 0;
+}
+
+.overlay-close {
+  background: #fff;
+  border: 1px solid var(--line-2);
+  padding: 6px 10px;
+  cursor: pointer;
+  border-radius: 0;
+}
+.overlay-close:hover { background: var(--bg-soft-2); }
+
+.overlay-body {
+  padding: 14px;
+  color: var(--ink);
+}
+
+.overlay-body p {
+  margin: 0 0 10px;
+  line-height: 1.35;
+}
+.overlay-body a {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+/* “Save to phone” button inside modal */
+#contact-save-one {
+  background: #fff;
+  border: 1px solid var(--line-2);
+  border-radius: 0;
+}
+
+/* --- Pagination strip (View tab) --- */
+#agent-prev-page, #agent-next-page {
+  min-width: 86px;
+}
+
+/* --- Responsive tweaks --- */
+@media (max-width: 960px) {
+  #contacts-list .contacts-head,
+  #contacts-list .contact-row {
+    grid-template-columns: 36px 1fr 1fr;
+  }
+  #contacts-list .contacts-head > :last-child,
+  #contacts-list .contact-row > :last-child {
+    display: none; /* hide email column on narrow screens */
+  }
+}
+
+@media (max-width: 640px) {
+  .lead-tabs { gap: 4px; }
+  .lead-tabs .tab-button { padding: 8px 10px; font-size: 0.95rem; }
+
+  #contacts-list .contacts-head,
+  #contacts-list .contact-row {
+    grid-template-columns: 32px 1fr;
+  }
+  #contacts-list .contact-row .c-phone { display: none; }
+}
+
+/* --- Small polish for the Agent Hub dropdown button to match Admin --- */
+.dropbtn {
+  background: #fff;
+  border: 1px solid var(--line-2);
+  border-radius: 0;
+  padding: 8px 10px;
+  font-weight: 600;
+}
+.dropbtn:hover { background: var(--bg-soft-2); }
+
+.dropdown-content {
+  border-radius: 0;
+  border: 1px solid var(--line);
+  box-shadow: 0 6px 20px rgba(17, 24, 39, 0.08);
+}
+
+/* --- Inputs look “admin” --- */
+input[type="text"], input[type="search"], input[type="tel"], input[type="number"], select, textarea {
+  border: 1px solid var(--line-2);
+  border-radius: 0;
+  background: #fff;
+  color: var(--ink);
+}
+input:focus, select:focus, textarea:focus {
+  outline: 2px solid var(--brand);
+  outline-offset: 0;
 }
