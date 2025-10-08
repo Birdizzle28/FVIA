@@ -156,6 +156,15 @@ async function loadAgentLeads() {
     `;
     tbody.appendChild(tr);
   });
+  const master = document.querySelector('#select-all');
+  if (master) {
+    document.querySelectorAll('.lead-checkbox').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const boxes = Array.from(document.querySelectorAll('.lead-checkbox'));
+        master.checked = boxes.length > 0 && boxes.every(b => b.checked);
+      });
+    });
+  }
 
   updatePaginationControls();
 }
