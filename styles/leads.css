@@ -194,3 +194,104 @@ a, button{ outline-color: var(--brand); }
   #contacts-list .contact-row{ grid-template-columns: 36px 1fr; }
   #contacts-list .contact-row .c-phone{ display:none; }
 }
+/* ---------- Floating labels + uniform field sizing ---------- */
+.form-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.field{
+  position: relative;
+}
+
+.field input,
+.field select,
+.field textarea{
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  border-radius: 10px;
+  padding: 14px 12px 12px;         /* extra top padding for the label */
+  line-height: 1.2;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+/* Make heights consistent across input types */
+.field input[type="text"],
+.field input[type="search"],
+.field input[type="tel"],
+.field input[type="number"],
+.field select{
+  height: 44px;
+  -webkit-appearance: none;
+  appearance: none;
+  background-position: right 10px center;
+  background-repeat: no-repeat;
+}
+
+/* Placeholder hack (use placeholder=" ") to enable :placeholder-shown */
+.field input::placeholder,
+.field textarea::placeholder{ color: transparent; }
+
+/* The label itself */
+.field label{
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  color: var(--muted);
+  font-size: 0.98rem;
+  line-height: 1;
+  pointer-events: none;
+  transform-origin: left top;
+  transition: transform .15s ease, color .15s ease, background .15s ease, font-size .15s ease, top .15s ease;
+  background: transparent;
+  padding: 0 4px;
+}
+
+/* Float on focus or when filled (inputs & textarea via :placeholder-shown) */
+.field input:focus,
+.field textarea:focus{ border-color: var(--brand); outline: 3px solid rgba(37,99,235,.28); }
+
+.field input:focus + label,
+.field input:not(:placeholder-shown) + label,
+.field textarea:focus + label,
+.field textarea:not(:placeholder-shown) + label,
+.field.filled label,                 /* for selects (JS toggles .filled) */
+.field select:focus + label{
+  color: var(--ink);
+  font-size: 0.78rem;
+  top: -7px;
+  transform: translateY(0);
+  background: #fff;                 /* creates a chip effect over the border */
+}
+
+/* Keep the chip readable over the border */
+.field.filled label,
+.field input:focus + label,
+.field input:not(:placeholder-shown) + label,
+.field textarea:focus + label,
+.field textarea:not(:placeholder-shown) + label{
+  padding: 0 6px;
+}
+
+/* Textarea sizing */
+.field textarea{
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* Row separators in cards for nicer rhythm */
+.form-row{ margin-top: 10px; }
+
+/* Optional: subtle caret for selects */
+.field select{
+  background-image:
+    linear-gradient(45deg, transparent 50%, #9aa0aa 50%),
+    linear-gradient(135deg, #9aa0aa 50%, transparent 50%);
+  background-position:
+    calc(100% - 22px) calc(50% - 4px),
+    calc(100% - 16px) calc(50% - 4px);
+  background-size: 6px 6px, 6px 6px;
+}
