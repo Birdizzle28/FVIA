@@ -31,11 +31,11 @@
 
 /* Dashboard background */
 #dashboardbody {
-  background-color: white !important;
-  margin: 0 !important;
-  background-image: radial-gradient(#915864, #353468) !important;
-  min-height: 80vw !important;
-	box-sizing: content-box !important;
+  background-color: white;
+  margin: 0;
+  background-image: radial-gradient(#915864, #353468);
+  min-height: 80vw;
+	box-sizing: content-box;
 }
 
 /* Grid layout for main sections */
