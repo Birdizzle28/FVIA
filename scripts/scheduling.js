@@ -8,24 +8,6 @@ const supabase = createClient(
 );
 
 document.addEventListener('DOMContentLoaded', async () => {
-  /* ---------------- Auth gate + header dropdown ---------------- */
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) { window.location.href = 'login.html'; return; }
-  const user = session.user;
-
-  // Agent Hub dropdown (kept consistent with other pages)
-  const toggle = document.getElementById('agent-hub-toggle');
-  const menu   = document.getElementById('agent-hub-menu');
-  if (menu) menu.style.display = 'none';
-  toggle?.addEventListener('click', (e) => {
-    e.stopPropagation();
-    if (!menu) return;
-    menu.style.display = (menu.style.display === 'block') ? 'none' : 'block';
-  });
-  document.addEventListener('click', (e) => {
-    if (!e.target.closest('.dropdown') && menu) menu.style.display = 'none';
-  });
-
   /* ---------------- Flatpickr ---------------- */
   const dtInput = document.getElementById('datetime');
   const fp = flatpickr('#datetime', {
@@ -35,6 +17,23 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   /* ---------------- Helpers ---------------- */
+    /* ---------------- Floating labels bootstrap ---------------- */
+  function initFloatingLabels(scope = document){
+    const fields = scope.querySelectorAll('.fl-field');
+    fields.forEach(fl => {
+      const input = fl.querySelector('input, textarea, select');
+      if (!input) return;
+
+      const setHV = () => fl.classList.toggle('has-value', !!input.value.trim());
+      setHV(); // initial (handles browser autofill)
+
+      input.addEventListener('focus', () => fl.classList.add('is-focused'));
+      input.addEventListener('blur',  () => { fl.classList.remove('is-focused'); setHV(); });
+      input.addEventListener('input', setHV);
+      input.addEventListener('change', setHV);
+    });
+  }
+  initFloatingLabels();
   const toE164 = (v) => {
     if (!v) return null;
     const s = String(v).trim();
