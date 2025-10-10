@@ -22,7 +22,40 @@ async function geocodeZip(zip) {
   }
   return null;
 }
+function attachFloatingHandlers(root=document) {
+  root.querySelectorAll('.field select, .field input, .field textarea').forEach(el => {
+    const parent = el.closest('.field');
+    const set = () => {
+      if (!parent) return;
+      const hasValue = (el.tagName === 'SELECT') ? !!el.value : !!String(el.value || '').trim();
+      parent.classList.toggle('filled', hasValue);
+    };
+    el.addEventListener('change', set);
+    el.addEventListener('input', set);
+    set();
+  });
+}
 
+function addPhoneField(value = '') {
+  const list = document.querySelector('#phone-list');
+  if (!list) return;
+  const idx = list.querySelectorAll('.field').length + 1;
+
+  const wrap = document.createElement('div');
+  wrap.className = 'phone-row';
+
+  wrap.innerHTML = `
+    <div class="field">
+      <input type="tel" placeholder=" " inputmode="tel" name="lead-phone" value="${value}">
+      <label>Phone ${idx}</label>
+    </div>
+    <button type="button" class="icon-btn remove-phone" title="Remove">
+      <i class="fa-solid fa-xmark"></i>
+    </button>
+  `;
+  list.appendChild(wrap);
+  attachFloatingHandlers(wrap);
+}
 // Utility: Calculate haversine distance (miles) between two lat/lng coordinates
 function haversineDistance(coord1, coord2) {
   const toRad = x => x * Math.PI / 180;
@@ -596,4 +629,22 @@ document.addEventListener('DOMContentLoaded', async () => {
   } else {
     agentHubBtn?.classList.remove('active-page');
   }
+  // ---- dynamic phones (Submit) ----
+addPhoneField(); // start with one row
+document.getElementById('add-phone')?.addEventListener('click', (e) => {
+  e.preventDefault();
+  addPhoneField();
+});
+document.addEventListener('click', (e) => {
+  const btn = e.target.closest('.remove-phone');
+  if (!btn) return;
+  const row = btn.closest('.phone-row');
+  row?.remove();
+  // re-number labels
+  document.querySelectorAll('#phone-list .field label').forEach((lab, i) => lab.textContent = `Phone ${i+1}`);
+});
+
+// If your submit logic needs the array, collect as:
+// const phones = Array.from(document.querySelectorAll('[name="lead-phone"]'))
+//   .map(i => i.value.trim()).filter(Boolean);
 });
