@@ -1,101 +1,295 @@
-/* Map container */
-#map {
-  position: relative;
-  z-index: 1; /* so that the overlay panel can sit above */
+/* ============================
+   Maps & Routing — Admin Theme
+   Square, modern, on-brand
+   ============================ */
+
+/* ---- Design tokens (match admin/dashboard look) ---- */
+:root{
+  --ink: #353468;           /* primary text */
+  --muted:#6b7280;          /* secondary text */
+  --brand:#ed9ea5;          /* agency pink */
+  --brand-deep:#5e2a4b;     /* deep plum used for buttons/hover */
+  --panel:#ffffff;          /* cards/panels */
+  --soft:#f6f7fb;           /* page bg under cards */
+  --line:#e7e9ef;           /* borders & dividers */
+  --shadow-1:0 12px 30px rgba(15,23,42,.08);
 }
 
-/* Routing side panel (hidden by default) */
-#route-panel {
-  position: fixed;
-  top: 0;
-  right: -400px;
-  width: 360px;
-  height: 100%;
-  background: #fff;
-  border-left: 2px solid #ccc;
-  box-shadow: -4px 0 10px rgba(0,0,0,0.1);
-  z-index: 1000;
-  transition: right 0.3s ease;
+/* Page main container already comes from agentstyle.css;
+   just ensure the inner area looks like dashboard cards */
+.auth-container{
+  background: var(--soft);
+  box-shadow: none;
+  width: 100%;
+  padding: 0;
+  margin: 0;
+}
+
+/* constrain content like admin panels */
+.map-wrap{
+  max-width: 1100px;
+  margin: 24px auto 40px;
+  padding: 0 16px;
+}
+
+/* ---- Filters card ---- */
+#map-filters{
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-1);
+  padding: 14px 14px 12px;
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  align-items: end;
+}
+
+#map-filters .filter-group{
   display: flex;
   flex-direction: column;
-  padding: 1rem;
-}
-#route-panel.open {
-  right: 0;
-}
-.panel-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-#close-route-panel {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-}
-#route-stops-list {
-  flex: 1;
-  margin: 1rem 0;
-  overflow-y: auto;
-  border: 1px solid #ddd;
-  padding: 0.5rem;
-}
-.route-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.5rem;
+  gap: 6px;
 }
 
-/* Panel toggle button (floating over map) */
-#route-panel-toggle {
-  position: fixed;
-  bottom: 80px;
-  right: 20px;
-  z-index: 1001;
-  background: #007bff;
-  color: #fff;
-  border: none;
-  font-size: 1.5rem;
-  padding: 0.5rem 0.75rem;
-  border-radius: 50%;
-  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-  cursor: pointer;
-}
-
-/* Route stop items in the list */
-.route-stop {
-  cursor: grab;
-  user-select: none;
-  padding: 4px 0;
-  border-bottom: 1px solid #eee;
-}
-.route-stop:last-child {
-  border-bottom: none;
-}
-.route-stop.dragging {
-  opacity: 0.5;
-}
-
-/* Inputs and select in route panel */
-#route-panel input,
-#route-panel select {
-  width: 100%;
-  padding: 8px;
-  margin-bottom: 0.5rem;
-  border: 1px solid #ccc;
-  border-radius: 0;
+#map-filters label{
+  font-weight: 700;
+  color: var(--ink);
   font-size: 0.95rem;
 }
 
-/* (Optional) style for route action buttons */
-.route-actions button {
-  padding: 8px 12px;
-  border: none;
+#map-filters input,
+#map-filters select{
+  border: 1px solid var(--line);
+  background: #fff;
   border-radius: 0;
-  background: #f0f0f0;
+  padding: 10px 10px;
+  font-size: 0.95rem;
+  color: var(--ink);
+  outline: none;
+}
+#map-filters input:focus,
+#map-filters select:focus{
+  border-color: var(--brand-deep);
+  box-shadow: 0 0 0 2px rgba(94,42,75,.15);
+}
+
+/* Action buttons */
+#apply-map-filters,
+#reset-map-filters{
+  align-self: stretch;
+  height: 40px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  font-weight: 800;
   cursor: pointer;
 }
-.route-actions button:hover:enabled {
-  background: #e0e0e0;
+#apply-map-filters{
+  background: var(--brand-deep);
+  color: #fff;
+  border-color: var(--brand-deep);
+}
+#apply-map-filters:hover{ background:#482039; }
+
+#reset-map-filters{
+  background: #fff;
+  color: var(--ink);
+}
+#reset-map-filters:hover{
+  background: #f0f1f6;
+}
+
+/* ZIP input only shows when method=zip */
+#filter-center-zip[hidden]{ display:none !important; }
+
+/* View toggle bar */
+#view-toggle-container{
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-1);
+  padding: 10px 14px;
+  margin-bottom: 12px;
+}
+#view-toggle-container label{
+  color: var(--ink);
+  font-weight: 700;
+  margin-right: 8px;
+}
+#lead-view-select{
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 8px 10px;
+  font-size: .95rem;
+}
+
+/* ---- Map card ---- */
+.map-card{
+  background: var(--panel);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-1);
+  padding: 12px;
+}
+#map{
+  width: 100%;
+  height: 640px;
+  border: 1px solid var(--line);
+  box-shadow: inset 0 1px 0 rgba(0,0,0,.03);
+}
+
+/* ---- Route Planner Floating Toggle ---- */
+#route-panel-toggle{
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 1001;
+  background: var(--brand);
+  color: #353468;
+  border: 1px solid #e8b9be;
+  font-size: 20px;
+  padding: 10px 12px;
+  line-height: 1;
+  border-radius: 0;
+  box-shadow: 0 10px 16px rgba(0,0,0,.12);
+  cursor: pointer;
+}
+#route-panel-toggle:hover{
+  background: #f2b9bf;
+}
+
+/* ---- Route Planner Sliding Panel ---- */
+#route-panel{
+  position: fixed;
+  top: 0;
+  right: -420px;
+  width: 380px;
+  height: 100%;
+  background: var(--panel);
+  border-left: 1px solid var(--line);
+  box-shadow: -12px 0 30px rgba(0,0,0,.12);
+  z-index: 1100;
+  transition: right .28s ease;
+  display: flex;
+  flex-direction: column;
+}
+#route-panel.open{ right: 0; }
+
+.panel-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+.panel-header h2{
+  margin: 0;
+  font-size: 1.05rem;
+  color: var(--ink);
+}
+#close-route-panel{
+  background: transparent;
+  border: 0;
+  font-size: 28px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.route-settings{
+  padding: 12px 14px 0;
+  border-bottom: 1px solid var(--line);
+}
+.route-settings label{
+  color: var(--ink);
+  font-weight: 700;
+  font-size: .95rem;
+}
+.route-settings .custom-addresses{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin: 10px 0 8px;
+}
+.route-settings input,
+.route-settings select{
+  border: 1px solid var(--line);
+  border-radius: 0;
+  padding: 9px 10px;
+  font-size: .95rem;
+  color: var(--ink);
+}
+.route-settings input:focus,
+.route-settings select:focus{
+  border-color: var(--brand-deep);
+  box-shadow: 0 0 0 2px rgba(94,42,75,.15);
+}
+
+#route-stops-list{
+  flex: 1;
+  margin: 10px 14px;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  padding: 8px 8px;
+  background: #fff;
+}
+.route-stop{
+  cursor: grab;
+  user-select: none;
+  padding: 8px 6px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  font-size: .95rem;
+}
+.route-stop:last-child{ border-bottom: none; }
+.route-stop.dragging{ opacity: .5; }
+
+/* Summary + Actions */
+.route-summary{
+  padding: 8px 14px 0;
+  border-top: 1px solid var(--line);
+  color: var(--ink);
+}
+.route-summary a{
+  color: #1e6fff;
+  text-decoration: none;
+  font-weight: 700;
+}
+.route-summary a:hover{ text-decoration: underline; }
+
+.route-actions{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding: 10px 14px 14px;
+}
+.route-actions button{
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 0;
+  cursor: pointer;
+  font-weight: 800;
+  background: #fff;
+  color: var(--ink);
+}
+#optimize-route{
+  background: #fff;
+}
+#start-route{
+  background: var(--brand-deep);
+  color: #fff;
+  border-color: var(--brand-deep);
+}
+#start-route:hover{ background:#482039; }
+.route-actions button:disabled{
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+/* Small help text */
+.helper{
+  color: var(--muted);
+  font-size: .9rem;
+  margin-left: 6px;
+}
+
+/* Mobile adjustments */
+@media (max-width: 680px){
+  #route-panel{ width: 100%; }
+  #map{ height: 520px; }
 }
