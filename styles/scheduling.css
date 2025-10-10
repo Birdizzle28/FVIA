@@ -1,70 +1,136 @@
-/* Container for the scheduling section (white card layout similar to profile section) */
-.schedule-section {
-  max-width: 90%;
-  margin: 20px auto;
-  background-color: white;
-  border-radius: 0;
-  padding: 20px;
+/* ===== Theme tokens aligned with Admin look ===== */
+:root{
+  --ink:#353468;              /* dark ink */
+  --muted:#6b7280;            /* secondary text */
+  --panel:#ffffff;            /* cards */
+  --panel-line:#d6d9e2;       /* borders */
+  --page:#f6f7fb;             /* page bg */
+  --brand:#ed9ea5;            /* agency pink */
+  --brand-ink:#482039;        /* deep plum for hovers/press */
+  --accent:#444387;           /* indigo-ish from header text */
+  --shadow:0 14px 30px rgba(0,0,0,.06);
 }
 
-/* Appointment form styles */
-#appointment-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  margin-bottom: 20px;
+/* Page area similar to dashboard panels */
+main{ background:var(--page); width:100%; }
+.card-ish{
+  max-width: 1100px;
+  margin: 24px auto;
+  padding: 16px;
+  background: var(--panel);
+  border: 1px solid var(--panel-line);
+  border-radius: 0;           /* square */
+  box-shadow: var(--shadow);
 }
-/* Ensure form inputs fill width (inherits .form-group styles from existing CSS) */
-#appointment-form .form-group {
+
+/* Headings */
+.dash-title{
+  margin: 6px 0 16px;
+  font-size: clamp(22px,2.4vw,32px);
+  color: var(--ink);
+  font-weight: 800;
+}
+
+/* ===== Floating label form ===== */
+.fl-form{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  margin-bottom: 18px;
+}
+
+/* Row helper (matches your style) */
+.row{ display:flex; gap:12px; flex-wrap:wrap; }
+.grow{ flex:1 1 220px; }
+
+/* Floating field container */
+.fl-field{
+  position: relative;
+  display: block;
+}
+
+/* Inputs (square, match admin theme) */
+.fl-field input{
   width: 100%;
-}
-/* Style for the form submit button */
-#appointment-form button {
-  align-self: flex-start; /* align button to left (you can center if desired) */
-  background-color: #5e2a4b;
-  color: white;
-  border: none;
+  background: #fff;
+  border: 1px solid var(--panel-line);
   border-radius: 0;
-  padding: 10px 15px;
-  font-weight: bold;
+  padding: 14px 12px;
+  font: inherit;
+  color: var(--ink);
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+
+/* Label sits over input */
+.fl-field label{
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  padding: 0 6px;
+  color: var(--muted);
+  pointer-events: none;
+  transition: all .12s ease;
+}
+
+/* Focus / has-value states */
+.fl-field.is-focused input,
+.fl-field.has-value input{
+  border-color: var(--brand);
+  box-shadow: 0 0 0 2px rgba(237,158,165,.2);
+}
+.fl-field.is-focused label,
+.fl-field.has-value label{
+  top: 0;
+  transform: translateY(-60%);
+  background: #fff;
+  color: var(--accent);
+  font-size: 12px;
+}
+
+/* Invalid helper (if you add .is-invalid on the input or wrapper) */
+.fl-field.is-invalid input{ border-color:#d12c2c; box-shadow:0 0 0 2px rgba(209,44,44,.12); }
+.fl-field.is-invalid label{ color:#d12c2c; }
+
+/* Button aligned to theme */
+.btn-primary{
+  align-self: flex-start;
+  background: var(--brand);
+  color: #fff;
+  border: 1px solid var(--brand);
+  border-radius: 0;
+  padding: 10px 16px;
+  font-weight: 700;
   cursor: pointer;
 }
-/* Hover state for the button */
-#appointment-form button:hover {
-  background-color: #482039;
-}
+.btn-primary:hover{ background: var(--brand-ink); border-color: var(--brand-ink); }
 
-/* Calendar element should fill the container */
-#calendar {
-  width: 100%;
-  /* Provide a minimum height so calendar always shows (e.g., month view) */
-  min-height: 600px;
+/* Calendar container card */
+.calendar-card{
+  width:100%;
+  min-height:600px;
   margin-top: 10px;
+  border: 1px solid var(--panel-line);
+  border-radius: 0;
 }
 
-/* FullCalendar theming with CSS variables (v6+) */
-:root {
-  /* Buttons (Prev/Next/Today) styling to match theme */
-  --fc-button-bg-color: #5e2a4b;
-  --fc-button-border-color: #5e2a4b;
+/* ===== FullCalendar theming (v6+) ===== */
+.fc{ font-family: Bellota Text, sans-serif; }
+:root{
+  --fc-button-bg-color: var(--brand);
+  --fc-button-border-color: var(--brand);
   --fc-button-text-color: #ffffff;
-  --fc-button-hover-bg-color: #472037;    /* slightly darker on hover */
-  --fc-button-active-bg-color: #331429;   /* darker when active/clicked */
+  --fc-button-hover-bg-color: var(--brand-ink);
+  --fc-button-active-bg-color: var(--brand-ink);
+  --fc-today-bg-color: rgba(237,158,165,0.18);
+  --fc-highlight-color: rgba(68,67,135,0.12);
+  --fc-event-bg-color: var(--brand);
+  --fc-event-border-color: var(--brand);
+  --fc-event-text-color: #fff;
+}
+.fc .fc-daygrid-day-number{ font-size:.9em; }
 
-  /* Current day highlight and selection */
-  --fc-today-bg-color: rgba(237, 158, 165, 0.2); /* light pink translucent for today */
-  --fc-highlight-color: rgba(94, 42, 75, 0.15);   /* translucent purple for selection */
-  
-  /* Event colors */
-  --fc-event-bg-color: #ed9ea5;    /* use agency pink for events */
-  --fc-event-border-color: #ed9ea5;
-  --fc-event-text-color: #fff;     /* white text on colored events */
-}
-/* If needed, override any specific FullCalendar default font to use Bellota Text */
-.fc {
-  font-family: Bellota Text, sans-serif;
-}
-/* (Optional) Smaller font for day numbers or event text if needed for compact view */
-.fc .fc-daygrid-day-number {
-  font-size: 0.85em;
-}
+/* Small tweak so floating label over date/time doesn’t clip */
+#datetime{ background:#fff; }
