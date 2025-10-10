@@ -17,7 +17,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   /* ---------------- Helpers ---------------- */
-    /* ---------------- Floating labels bootstrap ---------------- */
   function initFloatingLabels(scope = document){
     const fields = scope.querySelectorAll('.fl-field');
     fields.forEach(fl => {
