@@ -8,7 +8,7 @@ main {
 /* ==== folder tabs (square, flush-left, no seam, no scroll) ==== */
 :root{
   --brand-purple: #353468;    
-  --brand-pink:   #444387;  
+  --brand-pink:   #f7d2d6;  
   --tab-bg: #eceff7;
   --tab-bg-active:var(--brand-pink);
   --tab-border:var(--brand-purple);
