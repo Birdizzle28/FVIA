@@ -241,7 +241,7 @@ main {
 
 /* mini list */
 .lead-mini h3{ margin:10px 0; color:var(--ink); }
-.mini-table{ width:100%; border-collapse:collapse; background:#fff; }
+.mini-table{ width:100%; border-collapse:collapse; background:var(--brand-pink); }
 .mini-table th, .mini-table td{
   text-align:left; padding:8px; border:1px solid var(--brand-purple); white-space:nowrap;
 }
