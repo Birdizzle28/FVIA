@@ -1,52 +1,45 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Leads | Family Values Group</title>
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<title>Leads | Family Values Group</title>
+		<link rel="stylesheet" href="styles/agentstyle.css" />
+		<link rel="stylesheet" href="styles/leads.css" />
+		<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+	</head>
 
-  <!-- Same CSS stack as your other Agent Hub pages -->
-  <link rel="stylesheet" href="styles/agentstyle.css" />
-  <link rel="stylesheet" href="styles/leads.css" />
-  <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
-</head>
-
-<body id="dashboardbody">
-  <!-- Header: exact structure from maps/scheduling -->
-  <header class="index-grid-header">
-			<div id="logofvcontainer">
-				<div id="logodiv">
-					<a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
-				</div>
-				<div id="fvdiv">
-					<p><strong>Family Values Group</strong></p>
-				</div>
-			</div>
-			<div id="navcontainer">
-				<nav class="header-flex-container">
-					<a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
-					<a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
-					<div id="menu-toggle">
-						<i class="fa-solid fa-bars"></i>
-					</div>
-				</nav>
-			</div>
+	<body id="dashboardbody">
+		<header class="index-grid-header">
+		<div id="logofvcontainer">
+		<div id="logodiv">
+		<a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+		</div>
+		<div id="fvdiv">
+		<p><strong>Family Values Group</strong></p>
+		</div>
+		</div>
+		<div id="navcontainer">
+		<nav class="header-flex-container">
+		<a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
+		<a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
+		<div id="menu-toggle">
+		<i class="fa-solid fa-bars"></i>
+		</div>
+		</nav>
+		</div>
 		</header>
-
+		
 		<!-- Mobile Menu -->
 		<div id="mobile-menu">
 			<a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
-			
-			<!-- Toolkit parent (acts like a toggle, not a link) -->
 			<button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
 				<i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
 				<i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
 			</button>
-			
-			<!-- Submenu that expands between Toolkit and Commissions -->
 			<div id="toolkit-submenu" class="submenu" hidden>
 				<a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
 				<a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
@@ -59,287 +52,263 @@
 			<a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
 			<a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
 		</div>
-
-  <main class="auth-container">
-    <!-- ===== Your existing tabs/sections (View / Submit / Request) stay as-is ===== -->
-    <!-- I’m just showing the part where we add the Contacts tab trigger + panel. -->
-
-    <!-- Add this fourth tab button alongside your existing View/Submit/Request buttons -->
-    <div class="lead-tabs">
-      <button id="nav-view"    class="tab-button">View</button>
-      <button id="nav-submit"  class="tab-button">Submit</button>
-      <button id="nav-request" class="tab-button">Request</button>
-      <button id="nav-contacts" class="tab-button">Contacts</button>
-    </div>
-
-    <!-- Existing sections: #lead-viewer-section / #submit-lead-section / #request-leads-section -->
-    <!-- … keep your current markup here unchanged … -->
-
-    <!-- New Contacts panel -->
-    <section id="contacts-section" class="lead-section" style="display:none;">
-      <h3>Contacts</h3>
-
-      <div class="card" style="margin-bottom:12px;">
-        <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
-          <button id="contacts-select-toggle" class="see-all" title="Toggle selection mode">
-            <i class="fa-regular fa-square-check"></i> Select
-          </button>
-          <button id="contacts-select-all" class="see-all" style="display:none;">
-            <i class="fa-solid fa-check-double"></i> Select All
-          </button>
-
-          <input id="contacts-search" type="search" placeholder="Search name, phone, email…" style="padding:8px;border:1px solid #d6d9e2;border-radius:0;min-width:240px;">
-          <select id="contacts-order" style="padding:8px;border:1px solid #d6d9e2;border-radius:0;">
-            <option value="created_desc">Newest first</option>
-            <option value="created_asc">Oldest first</option>
-            <option value="name_asc">Name A → Z</option>
-            <option value="name_desc">Name Z → A</option>
-          </select>
-
-          <button id="contacts-refresh" class="see-all" style="margin-left:auto;">
-            <i class="fa-solid fa-rotate"></i> Refresh
-          </button>
-        </div>
-      </div>
-
-      <div id="contacts-list" class="card" style="padding:0;">
-        <!-- rows injected by JS -->
-      </div>
-
-      <!-- Bulk bar appears only when any selected -->
-      <div id="contacts-bulk-actions" style="display:none;position:sticky;bottom:0;background:#fff;border-top:1px solid #e9eaf0;padding:10px;display:flex;gap:12px;justify-content:space-between;align-items:center;">
-        <div><strong><span id="contacts-selected-count">0</span></strong> selected</div>
-        <button id="contacts-bulk-save" class="see-all">
-          <i class="fa-solid fa-download"></i> Save selected to phone (.vcf)
-        </button>
-      </div>
-
-      <!-- Contact detail modal/drawer -->
-      <div id="contact-detail-modal" class="overlay" aria-hidden="true">
-        <div class="overlay-backdrop" data-close></div>
-        <div class="overlay-panel">
-          <div class="overlay-header">
-            <h2 id="contact-modal-name">Contact</h2>
-            <button class="overlay-close" data-close>&times;</button>
-          </div>
-          <div class="overlay-body" id="contact-modal-body"><!-- injected --></div>
-        </div>
-      </div>
-    </section>
-	  <section id="lead-viewer-section" class="lead-section" style="display:block;">
-		  <h3>View Leads</h3>
-		
-		  <div class="card" style="margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-		    <label style="display:flex;align-items:center;gap:8px;">
-		      <input type="checkbox" id="select-all"> Select All
-		    </label>
-		
-		    <button id="agent-archive-btn" class="see-all btn btn--primary" title="Archive selected">
-		      <i class="fa-solid fa-box-archive"></i> Archive Selected
-		    </button>
-		
-		    <div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
-		      <button id="agent-prev-page" class="see-all">Prev</button>
-		      <span id="agent-current-page">Page 1</span>
-		      <button id="agent-next-page" class="see-all">Next</button>
-		    </div>
-		  </div>
-		
-		  <div class="card" style="padding:0;overflow:auto;">
-		    <table id="agent-leads-table" style="width:100%;border-collapse:collapse;">
-		      <thead>
-		        <tr>
-		          <th style="width:36px;"><!-- master checkbox lives above in toolbar --></th>
-		          <th>Date</th>
-		          <th>Agent</th>
-		          <th>First</th>
-		          <th>Last</th>
-		          <th>Age</th>
-		          <th>Phone(s)</th>
-		          <th>Address</th>
-		          <th>City</th>
-		          <th>State</th>
-		          <th>ZIP</th>
-		          <th>Lead Type</th>
-		          <th>Product</th>
-		          <th>Notes</th>
-		        </tr>
-		      </thead>
-		      <tbody><!-- populated by JS --></tbody>
-		    </table>
-		  </div>
-		</section>
-		<section id="submit-lead-section" class="lead-section" style="display:none;">
-		  <h3>Submit a Lead</h3>
-		  <div class="card">
-		    <form id="lead-form" class="form">
-		      <div class="form-grid">
-		        <div class="field">
-		          <input id="lead-first" type="text" placeholder=" " required>
-		          <label for="lead-first">First Name</label>
-		        </div>
-		        <div class="field">
-		          <input id="lead-last" type="text" placeholder=" " required>
-		          <label for="lead-last">Last Name</label>
-		        </div>
-		        <div class="field">
-		          <input id="lead-age" type="number" placeholder=" " min="0">
-		          <label for="lead-age">Age</label>
-		        </div>
-		      </div>
-		
-		      <div class="form-grid form-row">
-		        <div class="field" style="grid-column: span 2;">
-		          <input id="lead-address" type="text" placeholder=" ">
-		          <label for="lead-address">Street Address</label>
-		        </div>
-		        <div class="field">
-		          <input id="lead-city" type="text" placeholder=" ">
-		          <label for="lead-city">City</label>
-		        </div>
-		        <div class="field">
-		          <select id="lead-state" required>
-		            <option value="" disabled selected hidden></option>
-		            <!-- add states -->
-		          </select>
-		          <label for="lead-state">State</label>
-		        </div>
-		        <div class="field">
-		          <input id="lead-zip" type="text" placeholder=" " inputmode="numeric" maxlength="10">
-		          <label for="lead-zip">ZIP</label>
-		        </div>
-		      </div>
-		
-		      <div class="form-grid form-row">
-		        <div class="field">
-		          <select id="lead-product-type">
-		            <option value="" disabled selected hidden></option>
-		            <!-- add product types -->
-		          </select>
-		          <label for="lead-product-type">Product Type</label>
-		        </div>
-		        <div class="field">
-		          <select id="lead-type">
-		            <option value="" disabled selected hidden></option>
-		            <option>Referral</option>
-		            <option>Facebook</option>
-		            <option>Google SEO</option>
-		            <option>Other</option>
-		          </select>
-		          <label for="lead-type">Lead Source</label>
-		        </div>
-		      </div>
-		
-		      <!-- Phones -->
-					<div class="form-grid form-row" id="phone-list"><!-- JS injects fields here --></div>
-					<button type="button" id="add-phone" class="btn" style="margin-top:6px;">
-					  <i class="fa-solid fa-plus"></i> Add phone
-					</button>
-		
-		      <div class="form-grid form-row">
-		        <div class="field" style="grid-column: 1 / -1;">
-		          <textarea id="lead-notes" placeholder=" " rows="4"></textarea>
-		          <label for="lead-notes">Notes</label>
-		        </div>
-		      </div>
-		
-		      <button type="submit" class="btn btn--primary" style="margin-top:12px;">Submit Lead</button>
-		      <p id="lead-message" style="margin-top:8px;"></p>
-		    </form>
-		  </div>
-		</section>
-		<section id="request-leads-section" class="lead-section" style="display:none;">
-		  <h3>Request Leads</h3>
-		  <div class="card">
-		    <form id="lead-request-form" class="form">
-		      <div class="form-grid">
-		        <div class="field">
-		          <input id="request-city" type="text" placeholder=" ">
-		          <label for="request-city">City</label>
-		        </div>
-		        <div class="field">
-		          <select id="request-state" required>
-		            <option value="" disabled selected hidden></option>
-		            <!-- add states -->
-		          </select>
-		          <label for="request-state">State</label>
-		        </div>
-		        <div class="field">
-		          <input id="request-zip" type="text" placeholder=" ">
-		          <label for="request-zip">ZIP</label>
-		        </div>
-		      </div>
-		
-		      <div class="form-grid form-row">
-		        <div class="field">
-		          <select id="request-type">
-		            <option value="" disabled selected hidden></option>
-		            <option>Referral</option>
-		            <option>Facebook</option>
-		            <option>Google SEO</option>
-		            <option>Other</option>
-		          </select>
-		          <label for="request-type">Lead Type</label>
-		        </div>
-		        <div class="field">
-		          <input id="request-count" type="number" min="1" value="10" placeholder=" ">
-		          <label for="request-count">Quantity</label>
-		        </div>
-		      </div>
-		
-		      <div class="form-grid form-row">
-		        <div class="field" style="grid-column: 1 / -1;">
-		          <textarea id="request-notes" rows="4" placeholder=" "></textarea>
-		          <label for="request-notes">Notes</label>
-		        </div>
-		      </div>
-		
-		      <button type="submit" class="btn btn--primary" style="margin-top:12px;">Submit Request</button>
-		      <p id="request-message" style="margin-top:8px;"></p>
-		    </form>
-		  </div>
-		</section>
-  </main>
-
-  <!-- Footer: exact structure from your other Agent Hub pages -->
-  <footer class="index-grid-footer">
-  <img id="footerlogo" src="Pics/img17.png">
-  <hr class="footerhr">
-  <div id="footercontact">
-    <a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
-      <span class="fa fa-envelope"></span>
-      <span class="contactcontcontacts">info@familyvaluesgroup.com</span>
-    </a>
-    <p> | </p>
-    <a class="contactcontainer" href="tel:+16292437980">
-      <span class="fa fa-phone"></span>
-      <span class="contactcontcontacts">+1-629-243-7980</span>
-    </a>
-  </div>
-  <hr class="footerhr">
-  <div id="footersocial">
-    <a class="fab fa-facebook-f" href="#"></a>
-    <a class="fab fa-linkedin-in" href="#"></a>
-    <a class="fab fa-instagram" href="#"></a>
-    <a class="fab fa-youtube" href="#"></a>
-    <a class="fab fa-google" href="#"></a>
-  </div>
-  <!-- Footer links section (below social icons) -->
-  <div id="footerlinks">
-    <a href="faqs.html">FAQs</a>
-    <a href="terms.html">Terms</a>
-    <a href="accessibility.html">Accessibility</a>
-    <a href="privacy.html">Privacy</a>
-  </div>
-  <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
-</footer>
-
-  <!-- JS -->
+			
+		<main class="auth-container">
+			<div class="lead-tabs">
+				<button id="nav-view"    class="tab-button">View</button>
+				<button id="nav-submit"  class="tab-button">Submit</button>
+				<button id="nav-request" class="tab-button">Request</button>
+				<button id="nav-contacts" class="tab-button">Contacts</button>
+			</div>
 	
-  <script type="module" src="scripts/leads.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-</body>
+			<section id="contacts-section" class="lead-section" style="display:none;">
+				<h3>Contacts</h3>
+				<div class="card" style="margin-bottom:12px;">
+					<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+						<button id="contacts-select-toggle" class="see-all" title="Toggle selection mode">
+							<i class="fa-regular fa-square-check"></i> Select
+						</button>
+						<button id="contacts-select-all" class="see-all" style="display:none;">
+							<i class="fa-solid fa-check-double"></i> Select All
+						</button>
+						<input id="contacts-search" type="search" placeholder="Search name, phone, email…" style="padding:8px;border:1px solid #d6d9e2;border-radius:0;min-width:240px;">
+						<select id="contacts-order" style="padding:8px;border:1px solid #d6d9e2;border-radius:0;">
+							<option value="created_desc">Newest first</option>
+							<option value="created_asc">Oldest first</option>
+							<option value="name_asc">Name A → Z</option>
+							<option value="name_desc">Name Z → A</option>
+						</select>
+						<button id="contacts-refresh" class="see-all" style="margin-left:auto;">
+						<i class="fa-solid fa-rotate"></i> Refresh
+						</button>
+					</div>
+				</div>
+				<div id="contacts-list" class="card" style="padding:0;">
+				<!-- rows injected by JS -->
+				</div>
+				<div id="contacts-bulk-actions" style="display:none;position:sticky;bottom:0;background:#fff;border-top:1px solid #e9eaf0;padding:10px;display:flex;gap:12px;justify-content:space-between;align-items:center;">
+					<div>
+						<strong><span id="contacts-selected-count">0</span></strong> selected
+					</div>
+					<button id="contacts-bulk-save" class="see-all">
+						<i class="fa-solid fa-download"></i> Save selected to phone (.vcf)
+					</button>
+				</div>
+				<div tid="contact-detail-modal" class="overlay" aria-hidden="true">
+					<div class="overlay-backdrop" data-close></div>
+					<div class="overlay-panel">
+						<div class="overlay-header">
+							<h2 id="contact-modal-name">Contact</h2>
+							<button class="overlay-close" data-close>&times;</button>
+						</div>
+						<div class="overlay-body" id="contact-modal-body"><!-- injected --></div>
+					</div>
+				</div>
+			</section>
+
+			<!--Lead Viewer-->
+			<section id="lead-viewer-section" class="lead-section" style="display:block;">
+				<h3>View Leads</h3>
+				<div class="card" style="margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+					<label style="display:flex;align-items:center;gap:8px;">
+						<input type="checkbox" id="select-all"> Select All
+					</label>
+					<button id="agent-archive-btn" class="see-all btn btn--primary" title="Archive selected">
+						<i class="fa-solid fa-box-archive"></i> Archive Selected
+					</button>
+					<div style="margin-left:auto;display:flex;gap:8px;align-items:center;">
+						<button id="agent-prev-page" class="see-all">Prev</button>
+						<span id="agent-current-page">Page 1</span>
+						<button id="agent-next-page" class="see-all">Next</button>
+					</div>
+				</div>
+				<div class="card" style="padding:0;overflow:auto;">
+					<table id="agent-leads-table" style="width:100%;border-collapse:collapse;">
+						<thead>
+							<tr>
+								<th style="width:36px;"><!-- master checkbox lives above in toolbar --></th>
+								<th>Date</th>
+								<th>Agent</th>
+								<th>First</th>
+								<th>Last</th>
+								<th>Age</th>
+								<th>Phone(s)</th>
+								<th>Address</th>
+								<th>City</th>
+								<th>State</th>
+								<th>ZIP</th>
+								<th>Lead Type</th>
+								<th>Product</th>
+								<th>Notes</th>
+							</tr>
+						</thead>
+						<tbody><!-- populated by JS --></tbody>
+					</table>
+				</div>
+			</section>
+
+			<!--Submit Lead Section-->
+			<section id="submit-lead-section" class="lead-section" style="display:none;">
+				<h3>Submit a Lead</h3>
+				<div class="card">
+					<form id="lead-form" class="form">
+						<div class="form-grid">
+						<div class="field">
+						<input id="lead-first" type="text" placeholder=" " required>
+						<label for="lead-first">First Name</label>
+						</div>
+						<div class="field">
+						<input id="lead-last" type="text" placeholder=" " required>
+						<label for="lead-last">Last Name</label>
+						</div>
+						<div class="field">
+						<input id="lead-age" type="number" placeholder=" " min="0">
+						<label for="lead-age">Age</label>
+						</div>
+						</div>
+						
+						<div class="form-grid form-row">
+						<div class="field" style="grid-column: span 2;">
+						<input id="lead-address" type="text" placeholder=" ">
+						<label for="lead-address">Street Address</label>
+						</div>
+						<div class="field">
+						<input id="lead-city" type="text" placeholder=" ">
+						<label for="lead-city">City</label>
+						</div>
+						<div class="field">
+						<select id="lead-state" required>
+						<option value="" disabled selected hidden></option>
+						<!-- add states -->
+						</select>
+						<label for="lead-state">State</label>
+						</div>
+						<div class="field">
+						<input id="lead-zip" type="text" placeholder=" " inputmode="numeric" maxlength="10">
+						<label for="lead-zip">ZIP</label>
+						</div>
+						</div>
+						
+						<div class="form-grid form-row">
+							<div class="field">
+								<select id="lead-product-type">
+									<option value="" disabled selected hidden></option>
+								</select>
+								<label for="lead-product-type">Product Type</label>
+							</div>
+							<div class="field">
+								<select id="lead-type">
+									<option value="" disabled selected hidden></option>
+									<option>Referral</option>
+									<option>Facebook</option>
+									<option>Google SEO</option>
+									<option>Other</option>
+								</select>
+								<label for="lead-type">Lead Source</label>
+							</div>
+						</div>
+						<div class="form-grid form-row" id="phone-list"><!-- JS injects fields here --></div>
+						<button type="button" id="add-phone" class="btn" style="margin-top:6px;">
+							<i class="fa-solid fa-plus"></i> Add phone
+						</button>
+						<div class="form-grid form-row">
+							<div class="field" style="grid-column: 1 / -1;">
+								<textarea id="lead-notes" placeholder=" " rows="4"></textarea>
+								<label for="lead-notes">Notes</label>
+							</div>
+						</div>
+						<button type="submit" class="btn btn--primary" style="margin-top:12px;">Submit Lead</button>
+						<p id="lead-message" style="margin-top:8px;"></p>
+					</form>
+				</div>
+			</section>
+
+			<!--Request Leads Section-->
+			<section id="request-leads-section" class="lead-section" style="display:none;">
+				<h3>Request Leads</h3>
+				<div class="card">
+					<form id="lead-request-form" class="form">
+						<div class="form-grid">
+							<div class="field">
+								<input id="request-city" type="text" placeholder=" ">
+								<label for="request-city">City</label>
+							</div>
+							<div class="field">
+								<select id="request-state" required>
+									<option value="" disabled selected hidden></option>
+									<!-- add states -->
+								</select>
+								<label for="request-state">State</label>
+							</div>
+							<div class="field">
+								<input id="request-zip" type="text" placeholder=" ">
+								<label for="request-zip">ZIP</label>
+							</div>
+						</div>
+						<div class="form-grid form-row">
+							<div class="field">
+								<select id="request-type">
+									<option value="" disabled selected hidden></option>
+									<option>Referral</option>
+									<option>Facebook</option>
+									<option>Google SEO</option>
+									<option>Other</option>
+								</select>
+								<label for="request-type">Lead Type</label>
+							</div>
+							<div class="field">
+								<input id="request-count" type="number" min="1" value="10" placeholder=" ">
+								<label for="request-count">Quantity</label>
+							</div>
+						</div>
+						<div class="form-grid form-row">
+							<div class="field" style="grid-column: 1 / -1;">
+								<textarea id="request-notes" rows="4" placeholder=" "></textarea>
+								<label for="request-notes">Notes</label>
+							</div>
+						</div>
+						<button type="submit" class="btn btn--primary" style="margin-top:12px;">Submit Request</button>
+						<p id="request-message" style="margin-top:8px;"></p>
+					</form>
+				</div>
+			</section>
+		</main>
+		
+		<!-- Footer -->
+		<footer class="index-grid-footer">
+			<img id="footerlogo" src="Pics/img17.png">
+			<hr class="footerhr">
+			<div id="footercontact">
+				<a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
+					<span class="fa fa-envelope"></span>
+					<span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+				</a>
+				<p> | </p>
+				<a class="contactcontainer" href="tel:+16292437980">
+					<span class="fa fa-phone"></span>
+					<span class="contactcontcontacts">+1-629-243-7980</span>
+				</a>
+			</div>
+			<hr class="footerhr">
+			<div id="footersocial">
+				<a class="fab fa-facebook-f" href="#"></a>
+				<a class="fab fa-linkedin-in" href="#"></a>
+				<a class="fab fa-instagram" href="#"></a>
+				<a class="fab fa-youtube" href="#"></a>
+				<a class="fab fa-google" href="#"></a>
+			</div>
+			<div id="footerlinks">
+				<a href="faqs.html">FAQs</a>
+				<a href="terms.html">Terms</a>
+				<a href="accessibility.html">Accessibility</a>
+				<a href="privacy.html">Privacy</a>
+			</div>
+			<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+		</footer>
+		<script type="module" src="scripts/leads.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+		<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+	</body>
 </html>
