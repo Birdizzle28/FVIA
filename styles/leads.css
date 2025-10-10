@@ -5,20 +5,23 @@
 
 /* ---------- Design tokens ---------- */
 :root{
-  --bg: #0f172a;                /* page bg behind auth container (subtle) */
-  --panel-bg: #ffffff;          /* cards / tables */
-  --ink: #0f172a;               /* primary text */
-  --muted: #5b6474;             /* secondary text */
-  --line: #e7e9ef;              /* borders & dividers */
-  --soft: #f7f9fc;              /* soft backgrounds / table head */
-  --brand: #2563eb;             /* accent (buttons, focus) */
-  --brand-ink: #0b3aa5;         /* pressed state */
-  --success: #059669;
-  --danger: #dc2626;
+  /* FV purple theme */
+  --ink: #2a274a;               /* deep ink (text) */
+  --muted: #5f5a84;             /* secondary text (purple-tinted) */
+  --brand: #353468;             /* primary accent: Family Values Group purple */
+  --brand-ink: #242247;         /* pressed/darker */
 
-  --radius: 10px;               /* subtle rounding for modern feel */
-  --shadow-1: 0 4px 14px rgba(15,23,42,.06);
-  --shadow-2: 0 10px 30px rgba(15,23,42,.08);
+  /* keep panels light but purple-tinted */
+  --panel-bg: #ffffff;
+  --soft: #f5f4fa;              /* table heads / soft bg (tinted) */
+  --line: #dcd9e8;              /* borders (tinted, not gray) */
+
+  --success: #2a8f6d;
+  --danger: #b22424;
+
+  --radius: 10px;
+  --shadow-1: 0 4px 14px rgba(37, 36, 80, .06);
+  --shadow-2: 0 10px 30px rgba(37, 36, 80, .10);
 }
 
 /* ---------- Page rhythm ---------- */
@@ -48,6 +51,8 @@ body#dashboardbody{
   margin: 6px 0 18px;
   padding: 6px 2px;
   border-bottom: 1px solid var(--line);
+   background: rgba(53,52,104,.10);
+   color: var(--brand);
 }
 .lead-tabs .tab-button{
   appearance: none; border: 0; background: transparent;
@@ -58,8 +63,8 @@ body#dashboardbody{
 }
 .lead-tabs .tab-button:hover{ background: var(--soft); color: var(--ink); }
 .lead-tabs .tab-button.active{
-  background: rgba(37,99,235,.08);
-  color: var(--brand);
+  background: rgba(53,52,104,.10);
+   color: var(--brand);
 }
 
 /* ---------- Cards & toolbars ---------- */
@@ -98,7 +103,7 @@ body#dashboardbody{
   background: var(--brand);
   color: #fff; border-color: transparent;
 }
-.btn--primary:hover{ background: #1e4fd6; }
+.btn--primary:hover{ background: #2f2e5d; }
 .btn--primary:active{ background: var(--brand-ink); }
 
 /* Subtle danger */
@@ -113,7 +118,7 @@ input[type="text"], input[type="search"], input[type="tel"], input[type="number"
   padding: 10px 12px;
 }
 input:focus, select:focus, textarea:focus{
-  outline: 3px solid rgba(37,99,235,.28);
+  outline: 2px solid rgba(53,52,104,.32);
   border-color: var(--brand);
 }
 
@@ -134,6 +139,8 @@ input:focus, select:focus, textarea:focus{
 }
 #agent-leads-table tbody tr:hover{ background: #fbfdff; }
 #agent-leads-table td:first-child, #agent-leads-table th:first-child{ width:44px; }
+#agent-leads-table,
+.card{ border-color: var(--line); }
 
 /* Pagination label */
 #agent-current-page{ font-weight: 700; color:#1d2433; }
@@ -197,8 +204,8 @@ a, button{ outline-color: var(--brand); }
 /* ---------- Floating labels + uniform field sizing ---------- */
 .form-grid{
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
 }
 
 .field{
@@ -212,8 +219,8 @@ a, button{ outline-color: var(--brand); }
   border: 1px solid var(--line);
   background: #fff;
   color: var(--ink);
-  border-radius: 10px;
-  padding: 14px 12px 12px;         /* extra top padding for the label */
+  border-radius: 8px;
+  padding: 12px 12px 10px;         /* extra top padding for the label */
   line-height: 1.2;
   transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
@@ -239,20 +246,21 @@ a, button{ outline-color: var(--brand); }
 .field label{
   position: absolute;
   left: 12px;
-  top: 12px;
+  top: 10px;
   color: var(--muted);
-  font-size: 0.98rem;
+  font-size: 0.96rem;
   line-height: 1;
   pointer-events: none;
   transform-origin: left top;
   transition: transform .15s ease, color .15s ease, background .15s ease, font-size .15s ease, top .15s ease;
   background: transparent;
   padding: 0 4px;
+   z-index: 1;  
 }
 
 /* Float on focus or when filled (inputs & textarea via :placeholder-shown) */
 .field input:focus,
-.field textarea:focus{ border-color: var(--brand); outline: 3px solid rgba(37,99,235,.28); }
+.field textarea:focus{ border-color: var(--brand); outline: 2px solid rgba(53,52,104,.28); }
 
 .field input:focus + label,
 .field input:not(:placeholder-shown) + label,
@@ -261,10 +269,11 @@ a, button{ outline-color: var(--brand); }
 .field.filled label,                 /* for selects (JS toggles .filled) */
 .field select:focus + label{
   color: var(--ink);
-  font-size: 0.78rem;
-  top: -7px;
+  font-size: 0.76rem;
+  top: -6px;
   transform: translateY(0);
-  background: #fff;                 /* creates a chip effect over the border */
+  background: #fff;     
+  padding: 0 6px
 }
 
 /* Keep the chip readable over the border */
@@ -294,4 +303,20 @@ a, button{ outline-color: var(--brand); }
     calc(100% - 22px) calc(50% - 4px),
     calc(100% - 16px) calc(50% - 4px);
   background-size: 6px 6px, 6px 6px;
+}
+/* Small inline icon button for removing a phone row */
+.icon-btn {
+  appearance: none; border: 1px solid var(--line);
+  background: #fff; color: var(--muted);
+  border-radius: 8px; padding: 8px 10px; cursor: pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.icon-btn:hover { background: var(--soft); color: var(--ink); }
+
+/* phone row layout: input + remove button aligned */
+.phone-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 8px;
+  align-items: center;
 }
