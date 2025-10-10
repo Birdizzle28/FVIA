@@ -215,13 +215,13 @@ a, button{ outline-color: var(--brand); }
 .field input,
 .field select,
 .field textarea{
-  width: 100%;
+  width: 75%;
   border: 1px solid var(--line);
   background: #fff;
   color: var(--ink);
   border-radius: 8px;
   padding: 12px 12px 10px;         /* extra top padding for the label */
-  line-height: 1.2;
+  line-height: 1;
   transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 
@@ -231,7 +231,6 @@ a, button{ outline-color: var(--brand); }
 .field input[type="tel"],
 .field input[type="number"],
 .field select{
-  height: 44px;
   -webkit-appearance: none;
   appearance: none;
   background-position: right 10px center;
