@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+		<title>Training | Family Values Group</title>
+		<link rel="stylesheet" href="styles/agentstyle.css" />
+		<link rel="stylesheet" href="styles/training.css" />
+		<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+	</head>
+	
+	<body id="dashboardbody">
+		
+		<!-- Header -->
+		<header class="index-grid-header">
+			<div id="logofvcontainer">
+				<div id="logodiv">
+					<a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+				</div>
+				<div id="fvdiv">
+					<p><strong>Family Values Group</strong></p>
+				</div>
+			</div>
+			<div id="navcontainer">
+				<nav class="header-flex-container">
+					<a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
+					<a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
+					<div id="menu-toggle">
+						<i class="fa-solid fa-bars"></i>
+					</div>
+				</nav>
+			</div>
+		</header>
+
+		<!-- Mobile Menu -->
+		<div id="mobile-menu">
+			<a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
+			
+			<!-- Toolkit parent (acts like a toggle, not a link) -->
+			<button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
+				<i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
+				<i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
+			</button>
+			
+			<!-- Submenu that expands between Toolkit and Commissions -->
+			<div id="toolkit-submenu" class="submenu" hidden>
+				<a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
+				<a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
+				<a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
+				<a href="calculator.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
+				<a href="marketing.html"><i class="fa-solid fa-handshake"></i><span>Marketing</span></a>
+			</div>
+			<a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
+			<a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
+			<a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
+			<a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
+			<a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
+		</div>
+
+  <main class="dash-wrap">
+    <h1 class="dash-title">Training</h1>
+
+    <!-- Tabs -->
+    <section class="folder-tabs" aria-label="Training Tabs">
+      <div class="tablist" role="tablist">
+        <button class="tab is-active" role="tab" data-tab="sessions" aria-selected="true">
+          <span class="icon"><i class="fa-solid fa-calendar-day"></i></span>
+          <span class="label">Upcoming Sessions</span>
+        </button>
+        <button class="tab" role="tab" data-tab="library" aria-selected="false">
+          <span class="icon"><i class="fa-solid fa-graduation-cap"></i></span>
+          <span class="label">Video Library</span>
+        </button>
+        <button class="tab" role="tab" data-tab="progress" aria-selected="false">
+          <span class="icon"><i class="fa-solid fa-check-circle"></i></span>
+          <span class="label">My Progress</span>
+        </button>
+      </div>
+
+      <div class="panels">
+        <!-- ===================== UPCOMING SESSIONS ===================== -->
+        <div id="panel-sessions" class="panel is-active">
+          <div class="card">
+            <h3>Find a Session</h3>
+            <div id="session-filters" class="filters">
+              <input id="session-search" type="text" placeholder="Search title or instructor…" />
+              <select id="session-type">
+                <option value="">Any type</option>
+                <option value="webinar">Webinar</option>
+                <option value="in_person">In-person</option>
+              </select>
+              <input id="session-date-range" type="text" placeholder="Date range" />
+              <button id="apply-session-filters">Apply</button>
+              <button id="reset-session-filters" class="muted">Reset</button>
+            </div>
+          </div>
+
+          <div id="sessions-list" class="card-grid"></div>
+
+          <div class="pager">
+            <button id="sessions-prev" disabled>Prev</button>
+            <span id="sessions-page">Page 1</span>
+            <button id="sessions-next" disabled>Next</button>
+          </div>
+        </div>
+
+        <!-- ===================== VIDEO LIBRARY ===================== -->
+        <div id="panel-library" class="panel">
+          <div class="card">
+            <h3>Browse Library</h3>
+            <div id="library-filters" class="filters">
+              <select id="video-category">
+                <option value="">All categories</option>
+                <option value="life">Life</option>
+                <option value="health">Health</option>
+                <option value="property_casualty">Property & Casualty</option>
+                <option value="compliance">Compliance (AML/CE)</option>
+              </select>
+              <input id="video-search" type="text" placeholder="Search titles…" />
+              <button id="apply-video-filters">Apply</button>
+              <button id="reset-video-filters" class="muted">Reset</button>
+            </div>
+          </div>
+
+          <div id="video-grid" class="card-grid"></div>
+
+          <!-- Inline YouTube player overlay -->
+          <div id="video-overlay" class="overlay" aria-hidden="true">
+            <div class="overlay-backdrop" data-close></div>
+            <div class="overlay-panel">
+              <div class="overlay-header">
+                <h2 id="overlay-video-title">Playing</h2>
+                <button class="overlay-close" data-close>&times;</button>
+              </div>
+              <div class="overlay-body">
+                <div id="yt-player-wrap">
+                  <div id="yt-player"></div>
+                </div>
+                <div class="video-actions">
+                  <button id="mark-complete" class="primary">Mark Complete</button>
+                  <span id="watch-progress" class="muted">Progress: 0%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ===================== MY PROGRESS ===================== -->
+        <div id="panel-progress" class="panel">
+          <div class="card">
+            <h3>Overview</h3>
+            <div class="stats">
+              <div class="stat"><span id="stat-videos-complete">0</span><label>Videos Completed</label></div>
+              <div class="stat"><span id="stat-sessions-attended">0</span><label>Sessions Attended</label></div>
+              <div class="stat"><span id="stat-overall">0%</span><label>Overall Completion</label></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Completed Items</h3>
+            <table id="progress-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Type</th>
+                  <th>Title</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody><!-- filled by JS --></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- Footer -->
+		<footer class="index-grid-footer">
+			<img id="footerlogo" src="Pics/img17.png">
+			<hr class="footerhr">
+			<div id="footercontact">
+				<a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
+				<span class="fa fa-envelope"></span>
+				<span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+			</a>
+			<p> | </p>
+			<a class="contactcontainer" href="tel:+16292437980">
+				<span class="fa fa-phone"></span>
+				<span class="contactcontcontacts">+1-629-243-7980</span>
+			</a>
+			</div>
+			<hr class="footerhr">
+			<div id="footersocial">
+				<a class="fab fa-facebook-f" href="#"></a>
+				<a class="fab fa-linkedin-in" href="#"></a>
+				<a class="fab fa-instagram" href="#"></a>
+				<a class="fab fa-youtube" href="#"></a>
+				<a class="fab fa-google" href="#"></a>
+			</div>
+			<!-- Footer links section (below social icons) -->
+			<div id="footerlinks">
+				<a href="faqs.html">FAQs</a>
+				<a href="terms.html">Terms</a>
+				<a href="accessibility.html">Accessibility</a>
+				<a href="privacy.html">Privacy</a>
+			</div>
+			<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+		</footer>
+		<script type="module" src="scripts/general.js"></script>
+		<script type="module" src="scripts/recruiting.js"></script>
+    <!-- Libs -->
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <!-- YouTube IFrame API -->
+    <script>
+      // YT API loader (async)
+      var tag=document.createElement('script'); tag.src="https://www.youtube.com/iframe_api";
+      document.head.appendChild(tag);
+    </script>
+	</body>
+</html>
