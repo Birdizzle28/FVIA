@@ -58,7 +58,7 @@ main {
 .folder-tabs .panels{
   border:1px solid var(--tab-border);
   border-top:none;         /* removes the seam under the active tab */
-  background:#fff;
+  background:var(--brand-pink);
   border-radius:0;         /* square */
   box-shadow:0 14px 30px rgba(0,0,0,.06);
   padding:16px;
@@ -82,7 +82,6 @@ main {
 
 .panel{ display:none; }
 .panel.is-active{ display:block; background-color: var(--brand-pink);}
-.is-active { background-color: var(--brand-pink);}
 /* ==== mobile tabs: smaller, slight overlap, icons only ==== */
 @media (max-width: 640px){
   .folder-tabs .tablist{
@@ -317,4 +316,4 @@ input:checked + .slider::before {
   display:flex; align-items:center; justify-content:space-between;
   gap:16px; margin:6px 0 14px;
 }
-.panel.is-active .card, .stay-white{ background:#fff !important;}
+.panel.is-active .card{ background:#fff !important;}
