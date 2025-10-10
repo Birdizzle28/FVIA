@@ -14,113 +14,77 @@
 	
 	<body id="dashboardbody">
 		
-		<!-- Header -->
 		<header class="index-grid-header">
-			<div id="logofvcontainer">
-				<div id="logodiv">
-					<a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
-				</div>
-				<div id="fvdiv">
-					<p><strong>Family Values Group</strong></p>
-				</div>
-			</div>
-			<div id="navcontainer">
-				<nav class="header-flex-container">
-					<a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
-					<a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
-					<div id="menu-toggle">
-						<i class="fa-solid fa-bars"></i>
-					</div>
-				</nav>
-			</div>
-		</header>
-
-		<!-- Mobile Menu -->
-		<div id="mobile-menu">
-			<a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
-			
-			<!-- Toolkit parent (acts like a toggle, not a link) -->
-			<button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
-				<i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
-				<i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
-			</button>
-			
-			<!-- Submenu that expands between Toolkit and Commissions -->
-			<div id="toolkit-submenu" class="submenu" hidden>
-				<a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
-				<a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
-				<a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
-				<a href="calculator.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
-				<a href="marketing.html"><i class="fa-solid fa-handshake"></i><span>Marketing</span></a>
-			</div>
-			<a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
-			<a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
-			<a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
-			<a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
-			<a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
-		</div>
+    <div id="logofvcontainer">
+      <div id="logodiv">
+        <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+      </div>
+      <div id="fvdiv">
+        <p><strong>Family Values</strong></p>
+        <p>Insurance Agency</p>
+      </div>
+    </div>
+    <div id="navcontainer">
+      <nav class="header-flex-container">
+        <a id="thread-tab" href="thread.html">Thread</a>
+        <div class="dropdown">
+          <button id="agent-hub-toggle" class="dropbtn">Agent Hub ▾</button>
+          <div id="agent-hub-menu" class="dropdown-content">
+            <a href="leads.html">My Leads</a>
+            <a href="scheduling.html">Scheduling</a>
+            <a href="maps.html">Map & Routing</a>
+            <a href="calculator.html">Insurance Calculator</a>
+          </div>
+        </div>
+        <a id="resources-tab" href="resources.html">Resources</a>
+        <a id="admin-tab" href="admin.html" class="admin-only">Admin</a>
+        <a id="profile-tab" href="profile.html">Profile</a>
+      </nav>
+    </div>
+  </header>
 
   <main class="dash-wrap">
-    <h1 class="dash-title">Downline Activity Hub</h1>
+    <h1 class="dash-title">Downline Tree</h1>
 
     <div id="schema-warning" class="schema-warning" style="display:none;">
-      <strong>Heads up:</strong> To track downlines, add a <code>recruiter_id uuid</code> column to <code>agents</code> referencing <code>agents.id</code>.
+      <strong>Heads up:</strong> Add a <code>recruiter_id uuid</code> column to <code>agents</code> (FK to <code>agents.id</code>) to enable downline trees.
     </div>
 
-    <section class="card" id="team-summary-card">
-      <h3>My Team Snapshot</h3>
-      <div class="team-metrics">
-        <div class="metric"><div class="num" id="metric-count">0</div><div class="lbl">Direct Recruits</div></div>
-        <div class="metric"><div class="num" id="metric-24h">0</div><div class="lbl">Activities (24h)</div></div>
-        <div class="metric"><div class="num" id="metric-7d">0</div><div class="lbl">Activities (7d)</div></div>
-        <div class="metric"><div class="num" id="metric-issued">0</div><div class="lbl">Issued Policies (30d)</div></div>
-      </div>
-      <div id="recruit-list" class="recruit-list"></div>
-    </section>
-
     <section class="card">
-      <h3>Activity Feed</h3>
-      <div class="filters-row">
-        <select id="agent-filter"></select>
-        <select id="kind-filter">
-          <option value="">All Activity Types</option>
-          <option value="call_outbound">Call Outbound</option>
-          <option value="call_inbound">Call Inbound</option>
-          <option value="sms">SMS</option>
-          <option value="email">Email</option>
-          <option value="meeting">Meeting</option>
-          <option value="quote_started">Quote Started</option>
-          <option value="quote_finalized">Quote Finalized</option>
-          <option value="status_change">Status Change</option>
-          <option value="import_event">Import Event</option>
-          <option value="note">Note</option>
-          <option value="task_created">Task Created</option>
-        </select>
-        <input id="date-range" type="text" placeholder="Date range" />
-        <input id="search-text" type="text" placeholder="Search summary/details…" />
-        <button id="apply-filters" class="see-all">Apply</button>
-        <button id="reset-filters" class="see-all">Reset</button>
+      <div class="tree-toolbar">
+        <div class="left">
+          <button id="expand-all" class="see-all">Expand all</button>
+          <button id="collapse-all" class="see-all">Collapse all</button>
+        </div>
+        <div class="right">
+          <input id="tree-search" type="text" placeholder="Search agent name…" />
+        </div>
       </div>
 
-      <div class="table-wrap">
-        <table id="activity-table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Agent</th>
-              <th>Type</th>
-              <th>Summary</th>
-              <th>Contact/Lead</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
-      </div>
+      <div class="tree-wrap">
+        <ul id="downline-tree" class="tree"></ul>
 
-      <div class="pager">
-        <button id="prev-page" class="see-all">Prev</button>
-        <span id="page-label">Page 1</span>
-        <button id="next-page" class="see-all">Next</button>
+        <aside id="agent-panel" class="agent-panel">
+          <div class="panel-header">
+            <h3 id="panel-name">Select an agent</h3>
+            <button id="panel-close" title="Close">&times;</button>
+          </div>
+          <div class="panel-body">
+            <div class="mini-metrics">
+              <div><div class="num" id="m-24h">0</div><div class="lbl">Activities (24h)</div></div>
+              <div><div class="num" id="m-7d">0</div><div class="lbl">Activities (7d)</div></div>
+              <div><div class="num" id="m-issued30">0</div><div class="lbl">Issued (30d)</div></div>
+            </div>
+            <div class="panel-meta">
+              <p><strong>Email:</strong> <span id="panel-email">—</span></p>
+              <p><strong>Products:</strong> <span id="panel-products">—</span></p>
+              <p><strong>Joined:</strong> <span id="panel-joined">—</span></p>
+            </div>
+            <hr/>
+            <h4>Recent Activity</h4>
+            <ul id="panel-activity" class="activity-list"></ul>
+          </div>
+        </aside>
       </div>
     </section>
   </main>
