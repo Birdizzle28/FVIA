@@ -70,7 +70,7 @@ main {
   grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
 }
 .card{
-  border:1px solid #e9eaf0;
+  border:1px solid var(--brand-purple);
   border-radius:0;         /* square */
   padding:18px;
   box-shadow:0 2px 8px rgba(0,0,0,.05);
@@ -123,7 +123,7 @@ main {
 .slide {
   flex: 0 0 100%;
   padding: 16px;
-  border-right: 1px solid #eef0f6;  /* faint divider between slides */
+  border-right: .5px solid #eef0f6;  /* faint divider between slides */
   box-sizing: border-box;
 }
 .slide:last-child { border-right: none; }
@@ -207,7 +207,7 @@ main {
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
 }
 .overlay-item {
-  border: 1px solid #e9eaf0; padding: 12px; background: #fff; cursor: pointer;
+  border: 1px solid var(--brand-purple); padding: 12px; background: #fff; cursor: pointer;
 }
 .overlay-item:hover { background: #f8faff; }
 
@@ -234,7 +234,7 @@ main {
   margin-bottom:14px;
 }
 .stat{
-  border:1px solid #e9eaf0; background:#fff; padding:14px;
+  border:1px solid var(--brand-purple); background:#fff; padding:14px;
 }
 .stat-top{ display:flex; align-items:center; gap:8px; color:#5f6472; font-weight:700; }
 .stat .num{ font-size:28px; font-weight:800; color:var(--ink); margin-top:6px; }
@@ -243,7 +243,7 @@ main {
 .lead-mini h3{ margin:10px 0; color:var(--ink); }
 .mini-table{ width:100%; border-collapse:collapse; background:#fff; }
 .mini-table th, .mini-table td{
-  text-align:left; padding:8px; border:1px solid #e9eaf0; white-space:nowrap;
+  text-align:left; padding:8px; border:1px solid var(--brand-purple); white-space:nowrap;
 }
 .mini-table tbody tr:nth-child(even){ background:#f8f9fc; }
 
