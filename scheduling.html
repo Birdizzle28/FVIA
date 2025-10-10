@@ -43,31 +43,37 @@
   </header>
 
   <main class="auth-container">
-    <section class="schedule-section">
-      <h2>Appointment Scheduler</h2>
-      <!-- Appointment Booking Form -->
-      <form id="appointment-form">
-        <div class="form-group">
-          <label for="title">Appointment Title:</label>
-          <input type="text" id="title" name="title" required />
+    <section class="schedule-section card-ish">
+      <h2 class="dash-title">Appointment Scheduler</h2>
+
+      <!-- Appointment Booking Form w/ Floating Labels -->
+      <form id="appointment-form" class="fl-form">
+        <div class="fl-field">
+          <input type="text" id="title" name="title" autocomplete="off" />
+          <label for="title">Appointment Title</label>
         </div>
-        <div class="form-group">
-          <label for="client-name">Client Name:</label>
-          <input type="text" id="client-name" name="clientName" placeholder="e.g. John Doe" />
+
+        <div class="row">
+          <div class="fl-field grow">
+            <input type="text" id="client-name" name="clientName" autocomplete="off" />
+            <label for="client-name">Client Name</label>
+          </div>
+          <div class="fl-field grow">
+            <input type="text" id="client-contact" name="clientContact" autocomplete="off" />
+            <label for="client-contact">Client Contact (Email or Phone)</label>
+          </div>
         </div>
-        <div class="form-group">
-          <label for="client-contact">Client Contact (Email or Phone):</label>
-          <input type="text" id="client-contact" name="clientContact" placeholder="email or phone number" />
+
+        <div class="fl-field">
+          <input type="text" id="datetime" name="datetime" required autocomplete="off" />
+          <label for="datetime">Date & Time</label>
         </div>
-        <div class="form-group">
-          <label for="datetime">Date & Time:</label>
-          <input type="text" id="datetime" name="datetime" required placeholder="Select date and time" />
-        </div>
-        <button type="submit" id="create-appointment">Create Appointment</button>
+
+        <button type="submit" id="create-appointment" class="btn-primary">Create Appointment</button>
       </form>
 
-      <!-- Calendar container -->
-      <div id="calendar"></div>
+      <!-- Calendar -->
+      <div id="calendar" class="calendar-card"></div>
     </section>
   </main>
 
