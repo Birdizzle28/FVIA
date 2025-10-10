@@ -289,7 +289,9 @@ a, button{ outline-color: var(--brand); }
   min-height: 100px;
   resize: vertical;
 }
-
+option {
+   width:100%;
+}
 /* Row separators in cards for nicer rhythm */
 .form-row{ margin-top: 10px; }
 
