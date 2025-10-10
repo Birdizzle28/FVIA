@@ -316,4 +316,4 @@ input:checked + .slider::before {
   display:flex; align-items:center; justify-content:space-between;
   gap:16px; margin:6px 0 14px;
 }
-.panel.is-active .card{ background:#fff !important;}
+.panel.is-active .card, .stay-white{ background:#fff !important;}
