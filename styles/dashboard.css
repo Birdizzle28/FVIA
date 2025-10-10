@@ -2,6 +2,7 @@
 main {
   background: #f6f7fb;           /* softer, light gray-blue */
   width: 100%;
+  margin: 0 !important;
 }
 
 /* ==== folder tabs (square, flush-left, no seam, no scroll) ==== */
