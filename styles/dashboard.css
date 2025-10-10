@@ -6,16 +6,18 @@ main {
 
 /* ==== folder tabs (square, flush-left, no seam, no scroll) ==== */
 :root{
+  --brand-purple: #353468;    
+  --brand-pink:   #ed9ea5;  
   --tab-bg: #eceff7;
-  --tab-bg-active:#ffffff;
-  --tab-border:#d6d9e2;
-  --ink:#353468;
+  --tab-bg-active:var(--brand-pink);
+  --tab-border:var(--brand-purple);
+  --ink:var(--brand-purple);
   --muted:#6b7280;
 }
 
 .dash-wrap{ max-width:1100px; margin:24px auto; padding:0 16px; }
 .dash-title{
-  margin:6px 0 14px;
+  margin:0 0 14px !important;
   font-size:clamp(22px,2.8vw,34px);
   color:var(--ink);
   font-weight:800;
@@ -254,10 +256,11 @@ main {
 }
 .btn-link:hover{ background:#eceff7; }
 .availability-toggle {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: 10px;
   margin-top: 15px;
+  font-weight:700;
 }
 
 .switch {
@@ -309,3 +312,8 @@ input:checked + .slider::before {
   font-weight: bold;
   color: #555;
 }
+.dash-header-row{
+  display:flex; align-items:center; justify-content:space-between;
+  gap:16px; margin:6px 0 14px;
+}
+.panel.is-active .card{ background:#fff; }
