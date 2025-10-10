@@ -16,7 +16,7 @@ main {
   --muted:#6b7280;
 }
 
-.dash-wrap{ max-width:1100px; margin:24px auto; padding:0 16px; }
+.dash-wrap{ max-width:1100px; margin:0 auto; padding:0 16px; }
 .dash-title{
   margin:0 0 14px !important;
   font-size:clamp(22px,2.8vw,34px);
