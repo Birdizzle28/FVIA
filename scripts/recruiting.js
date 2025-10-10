@@ -5,10 +5,9 @@ const supabase = createClient(
 );
 
 let me = null;
-let downline = [];
-let downlineIds = [];
-let currentPage = 1;
-const PAGE_SIZE = 25;
+let agents = [];
+let byUpline = new Map();
+let searchIndex = [];
 
 function initMenus() {
   const toggle = document.getElementById("agent-hub-toggle");
@@ -24,10 +23,6 @@ function initMenus() {
   });
 }
 
-function fmtDate(iso) {
-  try { return new Date(iso).toLocaleString(); } catch { return ''; }
-}
-
 async function requireSession() {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return null; }
@@ -40,9 +35,10 @@ async function fetchMe(userId) {
   return data;
 }
 
-async function fetchDownline() {
+async function fetchAgents() {
   try {
-    const { data, error } = await supabase.from('agents').select('id, full_name, email, created_at, product_types').eq('recruiter_id', me.id);
+    const { data, error } = await supabase.from('agents')
+      .select('id, recruiter_id, full_name, email, created_at, product_types, is_admin, is_active');
     if (error) throw error;
     return data || [];
   } catch (e) {
@@ -51,161 +47,207 @@ async function fetchDownline() {
   }
 }
 
-function fillTeamSummary() {
-  document.getElementById('metric-count').textContent = String(downline.length);
-  const list = document.getElementById('recruit-list');
-  list.innerHTML = '';
-  downline.forEach(a => {
-    const el = document.createElement('div');
-    el.className = 'recruit-card';
-    const prods = Array.isArray(a.product_types) ? a.product_types.join(', ') : (a.product_types || '');
-    el.innerHTML = `<div class="name">${a.full_name}</div>
-      <div class="meta">${a.email}</div>
-      <div class="meta">Since: ${new Date(a.created_at).toLocaleDateString()}</div>
-      <div class="meta">Products: ${prods || '—'}</div>`;
-    list.appendChild(el);
+function buildIndex() {
+  byUpline.clear();
+  agents.forEach(a => {
+    const key = a.recruiter_id || 'root';
+    if (!byUpline.has(key)) byUpline.set(key, []);
+    byUpline.get(key).push(a);
+  });
+  searchIndex = agents.map(a => ({ id: a.id, name: (a.full_name || '').toLowerCase() }));
+}
+
+function isAdmin(a) { return a?.is_admin === true; }
+
+function rootsFor(user) {
+  if (isAdmin(user)) return (byUpline.get('root') || []).slice();
+  return [user];
+}
+
+function nodeBadgeHTML(a) {
+  const active = a.is_active ? 'Active' : 'Inactive';
+  const prods = Array.isArray(a.product_types) ? a.product_types.join(', ') : (a.product_types || '');
+  return `
+    <span class="badge">${active}</span>
+    ${prods ? `<span class="badge">${prods}</span>` : ''}
+  `;
+}
+
+function liNode(a, hasChildren) {
+  const li = document.createElement('li');
+  li.dataset.id = a.id;
+  li.className = hasChildren ? 'collapsed' : '';
+  li.innerHTML = `
+    <div class="node">
+      <span class="chev">${hasChildren ? '▸' : ''}</span>
+      <span class="name">${a.full_name}</span>
+      <span class="badges">${nodeBadgeHTML(a)}</span>
+    </div>
+  `;
+  if (hasChildren) {
+    const ul = document.createElement('ul');
+    li.appendChild(ul);
+  }
+  return li;
+}
+
+function buildSubtree(parentEl, parentAgent) {
+  const kids = byUpline.get(parentAgent.id) || [];
+  const ul = parentEl.querySelector(':scope > ul') || document.createElement('ul');
+  if (!parentEl.contains(ul)) parentEl.appendChild(ul);
+  ul.innerHTML = '';
+  kids.sort((a,b) => a.full_name.localeCompare(b.full_name)).forEach(child => {
+    const hasChildren = (byUpline.get(child.id) || []).length > 0;
+    const li = liNode(child, hasChildren);
+    ul.appendChild(li);
   });
 }
 
-function buildAgentFilter() {
-  const sel = document.getElementById('agent-filter');
-  sel.innerHTML = `<option value="">All Recruits</option>`;
-  downline.forEach(a => {
-    const opt = document.createElement('option');
-    opt.value = a.id;
-    opt.textContent = a.full_name;
-    sel.appendChild(opt);
-  });
-  try { new Choices(sel, { shouldSort: false, itemSelectText: '' }); } catch {}
+function expand(li) {
+  if (!li.classList.contains('collapsed')) return;
+  const id = li.dataset.id;
+  const agent = agents.find(a => a.id === id);
+  buildSubtree(li, agent);
+  li.classList.remove('collapsed');
+  const chev = li.querySelector('.chev'); if (chev) chev.textContent = '▾';
 }
 
-function initDatePicker() {
-  flatpickr('#date-range', { mode: 'range', dateFormat: 'Y-m-d' });
+function collapse(li) {
+  if (li.classList.contains('collapsed')) return;
+  li.classList.add('collapsed');
+  const chev = li.querySelector('.chev'); if (chev) chev.textContent = '▸';
 }
 
-function getFilters() {
-  const agentId = document.getElementById('agent-filter').value || '';
-  const kind = document.getElementById('kind-filter').value || '';
-  const q = (document.getElementById('search-text').value || '').trim();
-  const dr = document.getElementById('date-range').value;
-  let start = null, end = null;
-  if (dr && dr.includes(' to ')) {
-    const [s, e] = dr.split(' to ');
-    const sd = new Date(s); const ed = new Date(e); ed.setHours(23,59,59,999);
-    if (!isNaN(sd) && !isNaN(ed)) { start = sd.toISOString(); end = ed.toISOString(); }
-  }
-  return { agentId, kind, q, start, end };
+function expandAll() {
+  document.querySelectorAll('#downline-tree li').forEach(li => expand(li));
+}
+function collapseAll() {
+  document.querySelectorAll('#downline-tree li').forEach(li => collapse(li));
 }
 
-async function fetchActivityPage() {
-  const { agentId, kind, q, start, end } = getFilters();
-  let actorIds = downlineIds.slice();
-  if (agentId) actorIds = actorIds.filter(id => id === agentId);
-  if (actorIds.length === 0) return { rows: [], total: 0 };
-
-  let query = supabase.from('activities')
-    .select('*', { count: 'exact' })
-    .in('actor_user_id', actorIds);
-
-  if (kind) query = query.eq('kind', kind);
-  if (start) query = query.gte('created_at', start);
-  if (end) query = query.lte('created_at', end);
-  if (q) query = query.or(`summary.ilike.%${q}%,details.ilike.%${q}%`);
-
-  query = query.order('created_at', { ascending: false }).range((currentPage-1)*PAGE_SIZE, currentPage*PAGE_SIZE - 1);
-
-  const { data, count, error } = await query;
-  if (error) { console.error(error); return { rows: [], total: 0 }; }
-  return { rows: data || [], total: count || 0 };
-}
-
-async function hydrateNames(rows) {
-  const contactIds = Array.from(new Set(rows.map(r => r.contact_id).filter(Boolean)));
-  const leadIds = Array.from(new Set(rows.map(r => r.lead_id).filter(Boolean)));
-  const agentMap = new Map(downline.map(a => [a.id, a.full_name]));
-  const contactMap = new Map();
-  const leadMap = new Map();
-
-  if (contactIds.length) {
-    const { data } = await supabase.from('contacts').select('id, full_name').in('id', contactIds);
-    (data || []).forEach(c => contactMap.set(c.id, c.full_name));
-  }
-  if (leadIds.length) {
-    const { data } = await supabase.from('leads').select('id, first_name, last_name').in('id', leadIds);
-    (data || []).forEach(l => leadMap.set(l.id, `${l.first_name || ''} ${l.last_name || ''}`.trim()));
-  }
-
-  return rows.map(r => ({
-    date: fmtDate(r.created_at),
-    agent: agentMap.get(r.actor_user_id) || '—',
-    kind: r.kind,
-    summary: r.summary || '',
-    target: r.contact_id ? (contactMap.get(r.contact_id) || r.contact_id) :
-            r.lead_id ? (leadMap.get(r.lead_id) || r.lead_id) : '—'
-  }));
-}
-
-function renderTable(rows) {
-  const tb = document.querySelector('#activity-table tbody');
-  tb.innerHTML = '';
-  rows.forEach(r => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td>${r.date}</td><td>${r.agent}</td><td>${r.kind}</td><td>${r.summary}</td><td>${r.target}</td>`;
-    tb.appendChild(tr);
+function renderTree() {
+  const host = document.getElementById('downline-tree');
+  host.innerHTML = '';
+  const roots = rootsFor(me);
+  roots.sort((a,b) => (a.full_name || '').localeCompare(b.full_name || ''));
+  roots.forEach(rootAgent => {
+    const hasChildren = (byUpline.get(rootAgent.id) || []).length > 0;
+    const li = liNode(rootAgent, hasChildren);
+    host.appendChild(li);
+    if (hasChildren) expand(li);
   });
 }
 
-function renderPager(total) {
-  const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  document.getElementById('page-label').textContent = `Page ${currentPage} / ${pages}`;
-  document.getElementById('prev-page').disabled = currentPage <= 1;
-  document.getElementById('next-page').disabled = currentPage >= pages;
+function bindTreeEvents() {
+  const tree = document.getElementById('downline-tree');
+  tree.addEventListener('click', (e) => {
+    const node = e.target.closest('.node');
+    if (!node) return;
+    const li = node.closest('li');
+    const id = li.dataset.id;
+    const a = agents.find(x => x.id === id);
+    if (li.classList.contains('collapsed')) expand(li); else collapse(li);
+    openPanel(a);
+  });
+  document.getElementById('expand-all').addEventListener('click', expandAll);
+  document.getElementById('collapse-all').addEventListener('click', collapseAll);
+  const panel = document.getElementById('agent-panel');
+  document.getElementById('panel-close').addEventListener('click', () => panel.classList.remove('open'));
 }
 
-async function loadMetrics() {
+function bindSearch() {
+  const input = document.getElementById('tree-search');
+  input.addEventListener('input', () => {
+    const q = input.value.trim().toLowerCase();
+    if (!q) {
+      document.querySelectorAll('#downline-tree .node').forEach(n => n.style.background='');
+      return;
+    }
+    const hits = new Set(searchIndex.filter(r => r.name.includes(q)).map(r => r.id));
+    document.querySelectorAll('#downline-tree li').forEach(li => {
+      const match = hits.has(li.dataset.id);
+      li.querySelector('.node').style.background = match ? 'rgba(237,158,165,0.25)' : '';
+      if (match) {
+        let cur = li.parentElement.closest('li');
+        while (cur) { expand(cur); cur = cur.parentElement.closest('li'); }
+      }
+    });
+  });
+}
+
+async function panelMetrics(agentId) {
   const now = Date.now();
   const d24 = new Date(now - 24*3600*1000).toISOString();
-  const d7 = new Date(now - 7*24*3600*1000).toISOString();
-  let q1 = supabase.from('activities').select('id', { count: 'exact', head: true }).in('actor_user_id', downlineIds).gte('created_at', d24);
-  let q2 = supabase.from('activities').select('id', { count: 'exact', head: true }).in('actor_user_id', downlineIds).gte('created_at', d7);
-  const { count: c24 } = await q1; const { count: c7 } = await q2;
-  document.getElementById('metric-24h').textContent = String(c24 || 0);
-  document.getElementById('metric-7d').textContent = String(c7 || 0);
-
+  const d7  = new Date(now - 7*24*3600*1000).toISOString();
   const d30 = new Date(now - 30*24*3600*1000).toISOString();
+
+  const [{ count: c24 }] = await Promise.all([
+    supabase.from('activities').select('id',{count:'exact',head:true})
+      .eq('actor_user_id', agentId).gte('created_at', d24)
+  ]);
+
+  const { count: c7 } = await supabase.from('activities').select('id',{count:'exact',head:true})
+      .eq('actor_user_id', agentId).gte('created_at', d7);
+
   const { data: issuedActs } = await supabase.from('activities')
-    .select('policy_id').in('actor_user_id', downlineIds)
-    .eq('kind','status_change').gte('created_at', d30);
-  const issuedCount = (issuedActs || []).filter(a => !!a.policy_id).length;
-  document.getElementById('metric-issued').textContent = String(issuedCount);
+      .select('policy_id, kind, created_at')
+      .eq('actor_user_id', agentId)
+      .eq('kind','status_change')
+      .gte('created_at', d30);
+
+  const issued = (issuedActs || []).filter(x => !!x.policy_id).length;
+  return { c24: c24 || 0, c7: c7 || 0, issued };
 }
 
-async function loadFeed() {
-  const { rows, total } = await fetchActivityPage();
-  const hydrated = await hydrateNames(rows);
-  renderTable(hydrated);
-  renderPager(total);
+async function panelRecent(agentId) {
+  const { data, error } = await supabase.from('activities')
+    .select('created_at, kind, summary')
+    .eq('actor_user_id', agentId)
+    .order('created_at', { ascending:false })
+    .limit(10);
+  if (error) return [];
+  return data || [];
 }
 
-function bindFilterButtons() {
-  document.getElementById('apply-filters').addEventListener('click', () => { currentPage = 1; loadFeed(); });
-  document.getElementById('reset-filters').addEventListener('click', () => {
-    document.getElementById('agent-filter').value = '';
-    document.getElementById('kind-filter').value = '';
-    document.getElementById('date-range').value = '';
-    document.getElementById('search-text').value = '';
-    currentPage = 1; loadFeed();
+function setText(id, txt) { const el = document.getElementById(id); if (el) el.textContent = txt || '—'; }
+
+async function openPanel(a) {
+  const panel = document.getElementById('agent-panel');
+  setText('panel-name', a.full_name || '—');
+  setText('panel-email', a.email || '—');
+  const prods = Array.isArray(a.product_types) ? a.product_types.join(', ') : (a.product_types || '');
+  setText('panel-products', prods || '—');
+  try { setText('panel-joined', new Date(a.created_at).toLocaleDateString()); } catch { setText('panel-joined','—'); }
+
+  const { c24, c7, issued } = await panelMetrics(a.id);
+  setText('m-24h', String(c24));
+  setText('m-7d', String(c7));
+  setText('m-issued30', String(issued));
+
+  const items = await panelRecent(a.id);
+  const ul = document.getElementById('panel-activity');
+  ul.innerHTML = '';
+  items.forEach(it => {
+    const li = document.createElement('li');
+    li.textContent = `${new Date(it.created_at).toLocaleString()} — ${it.kind} — ${it.summary || ''}`;
+    ul.appendChild(li);
   });
-  document.getElementById('prev-page').addEventListener('click', () => { if (currentPage > 1) { currentPage--; loadFeed(); } });
-  document.getElementById('next-page').addEventListener('click', () => { currentPage++; loadFeed(); });
+
+  panel.classList.add('open');
 }
 
 function subscribeRealtime() {
-  const channel = supabase.channel('activities_all')
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'activities' }, payload => {
-      if (downlineIds.includes(payload.new?.actor_user_id || payload.old?.actor_user_id)) loadFeed();
-    }).subscribe();
-  window.addEventListener('beforeunload', () => { try { supabase.removeChannel(channel); } catch {} });
+  const ch = supabase.channel('agents_activities')
+    .on('postgres_changes', { event:'*', schema:'public', table:'agents' }, async () => {
+      agents = await fetchAgents(); buildIndex(); renderTree();
+    })
+    .on('postgres_changes', { event:'*', schema:'public', table:'activities' }, () => {
+      const openName = document.getElementById('panel-name')?.textContent || '';
+      const current = agents.find(a => a.full_name === openName);
+      if (current) openPanel(current);
+    })
+    .subscribe();
+  window.addEventListener('beforeunload', () => { try { supabase.removeChannel(ch); } catch {} });
 }
 
 (async () => {
@@ -215,14 +257,13 @@ function subscribeRealtime() {
   me = await fetchMe(user.id);
   if (!me) { window.location.href = 'login.html'; return; }
 
-  downline = await fetchDownline();
-  downlineIds = downline.map(a => a.id);
-
-  fillTeamSummary();
-  buildAgentFilter();
-  initDatePicker();
-  bindFilterButtons();
-  await loadMetrics();
-  await loadFeed();
+  agents = await fetchAgents();
+  buildIndex();
+  renderTree();
+  bindTreeEvents();
+  bindSearch();
   subscribeRealtime();
+
+  const adminLink = document.querySelector('.admin-only');
+  if (me && me.is_admin !== true && adminLink) adminLink.style.display = 'none';
 })();
