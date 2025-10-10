@@ -8,7 +8,7 @@ main {
 /* ==== folder tabs (square, flush-left, no seam, no scroll) ==== */
 :root{
   --brand-purple: #353468;    
-  --brand-pink:   #ed9ea5;  
+  --brand-pink:   #444387;  
   --tab-bg: #eceff7;
   --tab-bg-active:var(--brand-pink);
   --tab-border:var(--brand-purple);
@@ -81,7 +81,7 @@ main {
 .card-link:hover{ text-decoration:underline; }
 
 .panel{ display:none; }
-.panel.is-active{ display:block; }
+.panel.is-active{ display:block; background-color: var(--brand-pink);}
 
 /* ==== mobile tabs: smaller, slight overlap, icons only ==== */
 @media (max-width: 640px){
