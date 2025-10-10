@@ -1,379 +1,103 @@
-// scripts/training.js
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
-// ====== Supabase init (same project as your other pages) ======
-const supabase = createClient(
-  'https://ddlbgkolnayqrxslzsxn.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
-);
-
-// ====== Globals ======
-let me = null;
-let isAdmin = false;
-
-// Sessions paging
-let sessPage = 1;
-const SESS_PAGE_SIZE = 8;
-
-// Cache for current YT playing
-let ytPlayer = null;
-let ytVideo = null; // { id, title, youtube_id }
-
-// ====== Utilities ======
-function fmtDate(d) {
-  const dt = (d instanceof Date) ? d : new Date(d);
-  return dt.toLocaleString();
-}
-const q = (sel, root = document) => root.querySelector(sel);
-const qa = (sel, root = document) => Array.from(root.querySelectorAll(sel));
-
-// Dropdown menu behavior (Agent Hub) like in other pages
-function initHubMenu() {
-  const toggle = document.getElementById("agent-hub-toggle");
-  const menu = document.getElementById("agent-hub-menu");
-  if (!toggle || !menu) return;
-  menu.style.display = "none";
-  toggle.addEventListener("click", (e) => {
-    e.stopPropagation();
-    menu.style.display = (menu.style.display === "block") ? "none" : "block";
-  });
-  document.addEventListener("click", (e) => {
-    if (!e.target.closest(".dropdown")) menu.style.display = "none";
-  });
-}
-
-// ====== Auth/session gate ======
-async function requireSession() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    window.location.href = 'login.html';
-    return null;
-  }
-  const user = session.user;
-  const { data: agent } = await supabase.from('agents').select('*').eq('id', user.id).single();
-  if (!agent) {
-    alert('Agent profile not found.');
-    return null;
-  }
-  // Hide Admin link if not admin
-  if (!agent.is_admin) {
-    const adminLink = document.querySelector('.admin-only');
-    if (adminLink) adminLink.style.display = 'none';
-  }
-  me = agent;
-  isAdmin = !!agent.is_admin;
-  return agent;
-}
-
-// ====== Filters/widgets ======
-function initFilters() {
-  try { new Choices('#session-type', { shouldSort:false, searchEnabled:false }); } catch {}
-  try { new Choices('#video-category', { shouldSort:false, searchEnabled:false }); } catch {}
-  flatpickr('#session-date-range', { mode:'range', dateFormat:'Y-m-d' });
-}
-
-// ====== UPCOMING SESSIONS ======
-async function loadSessions(page = 1) {
-  const search = q('#session-search').value.trim();
-  const tType = q('#session-type').value;
-  const dr = q('#session-date-range').value;
-
-  let query = supabase.from('training_sessions')
-    .select('*', { count: 'exact' })
-    .gte('start_time', new Date().toISOString());
-
-  if (search) {
-    // search title OR instructor
-    query = query.or(`title.ilike.%${search}%,instructor.ilike.%${search}%`);
-  }
-  if (tType) query = query.eq('type', tType);
-  if (dr && dr.includes(' to ')) {
-    const [start, end] = dr.split(/\s*to\s*/);
-    query = query.gte('start_time', new Date(start).toISOString())
-                 .lte('start_time', new Date(end + 'T23:59:59').toISOString());
-  }
-
-  query = query.order('start_time', { ascending:true })
-               .range((page-1)*SESS_PAGE_SIZE, page*SESS_PAGE_SIZE - 1);
-
-  const { data, error, count } = await query;
-  if (error) { console.error(error); return; }
-
-  renderSessions(data || []);
-  // pager
-  const totalPages = Math.max(1, Math.ceil((count || 0) / SESS_PAGE_SIZE));
-  q('#sessions-page').textContent = `Page ${page} of ${totalPages}`;
-  q('#sessions-prev').disabled = page <= 1;
-  q('#sessions-next').disabled = page >= totalPages;
-}
-
-function renderSessions(list) {
-  const host = q('#sessions-list');
-  host.innerHTML = '';
-  if (!list.length) {
-    host.innerHTML = `<div class="session-card"><em>No upcoming sessions match your filters.</em></div>`;
-    return;
-  }
-  list.forEach(s => {
-    const capText = (s.capacity && s.registered_count != null)
-      ? `${s.registered_count}/${s.capacity} seats`
-      : (s.capacity ? `${s.capacity} seats` : '—');
-
-    const card = document.createElement('div');
-    card.className = 'session-card';
-    card.innerHTML = `
-      <h3>${s.title}</h3>
-      <div class="session-meta">
-        <span class="badge ${s.type}">${s.type === 'in_person' ? 'In-person' : 'Webinar'}</span>
-        &nbsp;•&nbsp; ${fmtDate(s.start_time)}
-        ${s.location ? ` &nbsp;•&nbsp; ${s.location}` : ''}
-      </div>
-      <p>${s.description || ''}</p>
-      <div class="session-actions">
-        <button class="primary" data-enroll="${s.id}">RSVP</button>
-        ${s.join_url ? `<a class="ghost" href="${s.join_url}" target="_blank">Join/Details</a>` : ''}
-        <span class="muted">${capText}</span>
-      </div>
-    `;
-    host.appendChild(card);
-  });
-
-  // wire enroll buttons
-  qa('[data-enroll]').forEach(btn => {
-    btn.addEventListener('click', () => enrollInSession(btn.getAttribute('data-enroll')));
-  });
-}
-
-async function enrollInSession(sessionId) {
-  if (!me) return;
-  // prevent double-enroll
-  const { data: existing } = await supabase.from('training_enrollments')
-    .select('id').eq('session_id', sessionId).eq('agent_id', me.id).maybeSingle();
-  if (existing) { alert('You are already enrolled.'); return; }
-
-  const { error } = await supabase.from('training_enrollments').insert({
-    session_id: sessionId,
-    agent_id: me.id,
-    status: 'registered'
-  });
-  if (error) { console.error(error); alert('Could not RSVP.'); return; }
-
-  alert('✅ Registered! We’ll see you there.');
-  // Optional: increment a cached registered_count via RPC; for now just reload sessions
-  loadSessions(sessPage);
-}
-
-// ====== VIDEO LIBRARY ======
-async function loadVideos() {
-  const cat = q('#video-category').value;
-  const search = q('#video-search').value.trim();
-
-  let query = supabase.from('training_videos').select('*').order('created_at', { ascending:false });
-  if (cat) query = query.eq('category', cat);
-  if (search) query = query.ilike('title', `%${search}%`);
-
-  const { data, error } = await query;
-  if (error) { console.error(error); return; }
-  renderVideos(data || []);
-}
-
-function renderVideos(list) {
-  const host = q('#video-grid');
-  host.innerHTML = '';
-  if (!list.length) {
-    host.innerHTML = `<div class="video-card"><em>No videos found.</em></div>`;
-    return;
-  }
-  list.forEach(v => {
-    const card = document.createElement('div');
-    card.className = 'video-card';
-    card.innerHTML = `
-      <h3>${v.title}</h3>
-      <div class="video-meta">
-        <span class="badge">${(v.category || '').replaceAll('_',' ') || 'General'}</span>
-        ${v.length_min ? ` • ${v.length_min} mins` : ''}
-      </div>
-      <p>${v.description || ''}</p>
-      <div class="video-actions">
-        <button class="primary" data-play="${v.id}">Play</button>
-        <button class="ghost" data-mark="${v.id}">Mark Complete</button>
-      </div>
-    `;
-    host.appendChild(card);
-  });
-
-  qa('[data-play]').forEach(btn => {
-    btn.addEventListener('click', () => openVideoOverlay(btn.getAttribute('data-play')));
-  });
-  qa('[data-mark]').forEach(btn => {
-    btn.addEventListener('click', () => markVideoComplete(btn.getAttribute('data-mark')));
-  });
-}
-
-// Overlay controls + YT integration
-window.onYouTubeIframeAPIReady = () => {
-  // created on demand in openVideoOverlay
-};
-async function openVideoOverlay(videoId) {
-  // fetch video metadata (need youtube_id)
-  const { data: v, error } = await supabase.from('training_videos').select('*').eq('id', videoId).single();
-  if (error || !v) { console.error(error); return; }
-  ytVideo = v;
-
-  q('#overlay-video-title').textContent = v.title || 'Playing';
-  const overlay = q('#video-overlay');
-  overlay.classList.add('open'); overlay.setAttribute('aria-hidden','false');
-
-  // Create or load player
-  const mount = q('#yt-player');
-  mount.innerHTML = ''; // reset
-  ytPlayer = new YT.Player('yt-player', {
-    videoId: v.youtube_id,
-    playerVars: { rel:0, modestbranding:1 },
-    events: {
-      onStateChange: (e) => {
-        // 1 = playing, 2 = paused, 0 = ended
-        if (e.data === 0) { // ended
-          // auto-mark complete
-          markVideoComplete(v.id, true);
-        }
-      }
-    }
-  });
-
-  // Mark complete button
-  q('#mark-complete').onclick = () => markVideoComplete(v.id);
-
-  // (Light) progress ping every 10s (if playable)
-  let ticker = setInterval(async () => {
-    if (!ytPlayer || !ytPlayer.getDuration) return;
-    try {
-      const dur = ytPlayer.getDuration?.() || 0;
-      const cur = ytPlayer.getCurrentTime?.() || 0;
-      if (dur > 0) q('#watch-progress').textContent = `Progress: ${Math.round((cur/dur)*100)}%`;
-      // upsert progress row occasionally
-      if (me && v) {
-        await supabase.from('training_progress').upsert({
-          agent_id: me.id,
-          item_type: 'video',
-          item_id: v.id,
-          percent: Math.min(100, Math.round((cur/dur)*100)) || 0
-        }, { onConflict: 'agent_id,item_type,item_id' });
-      }
-    } catch {}
-  }, 10000);
-
-  // Close overlay
-  overlay.addEventListener('click', (e) => {
-    if (e.target.matches('[data-close], .overlay-backdrop')) {
-      clearInterval(ticker);
-      try { ytPlayer?.stopVideo?.(); } catch {}
-      overlay.classList.remove('open'); overlay.setAttribute('aria-hidden','true');
-    }
-  }, { once:true });
-}
-
-async function markVideoComplete(videoId, quiet=false) {
-  if (!me) return;
-  const { error } = await supabase.from('training_progress').upsert({
-    agent_id: me.id,
-    item_type: 'video',
-    item_id: videoId,
-    completed: true,
-    completed_at: new Date().toISOString(),
-    percent: 100
-  }, { onConflict: 'agent_id,item_type,item_id' });
-  if (error) { console.error(error); if(!quiet) alert('Could not mark complete.'); return; }
-  if (!quiet) alert('✅ Marked complete.');
-  loadMyProgress();
-}
-
-// ====== PROGRESS ======
-async function loadMyProgress() {
-  if (!me) return;
-  const { data, error } = await supabase
-    .from('training_progress')
-    .select('*')
-    .eq('agent_id', me.id)
-    .order('completed_at', { ascending:false });
-  if (error) { console.error(error); return; }
-
-  // Stats
-  const videos = (data || []).filter(r => r.item_type === 'video' && r.completed);
-  const sessions = (data || []).filter(r => r.item_type === 'session' && r.completed);
-  q('#stat-videos-complete').textContent = videos.length;
-  q('#stat-sessions-attended').textContent = sessions.length;
-
-  // crude overall: count of completed items / (completed + incomplete uniques)
-  // (Optional) For now, just % of completed rows among rows.
-  const overallPct = data?.length ? Math.round((data.filter(r=>r.completed).length / data.length)*100) : 0;
-  q('#stat-overall').textContent = `${overallPct}%`;
-
-  // Table
-  const tbody = q('#progress-table tbody');
-  tbody.innerHTML = '';
-  for (const row of (data || [])) {
-    let title = '';
-    if (row.item_type === 'video') {
-      const { data: v } = await supabase.from('training_videos').select('title').eq('id', row.item_id).maybeSingle();
-      title = v?.title || '(Video)';
-    } else {
-      const { data: s } = await supabase.from('training_sessions').select('title').eq('id', row.item_id).maybeSingle();
-      title = s?.title || '(Session)';
-    }
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td>${row.completed_at ? new Date(row.completed_at).toLocaleDateString() : '—'}</td>
-      <td>${row.item_type}</td>
-      <td>${title}</td>
-      <td>${row.completed ? 'Completed' : `${row.percent ?? 0}%`}</td>
-    `;
-    tbody.appendChild(tr);
-  }
-}
-
-// ====== Event wiring ======
-document.addEventListener('DOMContentLoaded', async () => {
-  initHubMenu();
-
-  const agent = await requireSession();
-  if (!agent) return;
-
-  // Tabs reuse your dashboard tab logic
-  document.addEventListener('click', (e) => {
-    const btn = e.target.closest('.folder-tabs .tab');
-    if (!btn) return;
-    const tabs   = btn.parentElement.querySelectorAll('.tab');
-    const panels = btn.closest('.folder-tabs').querySelectorAll('.panel');
-    const id     = btn.dataset.tab;
-    tabs.forEach(t => {
-      const active = t === btn;
-      t.classList.toggle('is-active', active);
-      t.setAttribute('aria-selected', active ? 'true' : 'false');
+// Minimal interactivity: tabs + placeholder math (so UI works today).
+document.addEventListener('DOMContentLoaded', () => {
+  // Tabs
+  const tabs = Array.from(document.querySelectorAll('.product-tabs .tab'));
+  const panels = Array.from(document.querySelectorAll('.panel'));
+  tabs.forEach(btn => {
+    btn.addEventListener('click', () => {
+      tabs.forEach(b => b.classList.toggle('is-active', b === btn));
+      panels.forEach(p => p.classList.toggle('is-active', p.id === `panel-${btn.dataset.tab}`));
     });
-    panels.forEach(p => p.classList.toggle('is-active', p.id === `panel-${id}`));
   });
 
-  initFilters();
+  // --- Simple placeholder calc helpers (replace later with your real formulas) ---
+  const money = n => isFinite(n) ? `$${(+n).toFixed(2)}` : '$—';
 
-  // Sessions
-  document.getElementById('apply-session-filters').addEventListener('click', () => { sessPage = 1; loadSessions(sessPage); });
-  document.getElementById('reset-session-filters').addEventListener('click', () => {
-    q('#session-search').value = ''; q('#session-type').value = '';
-    q('#session-date-range').value = '';
-    sessPage = 1; loadSessions(sessPage);
-  });
-  document.getElementById('sessions-prev').addEventListener('click', () => { if (sessPage>1){ sessPage--; loadSessions(sessPage);} });
-  document.getElementById('sessions-next').addEventListener('click', () => { sessPage++; loadSessions(sessPage); });
-
-  // Library
-  document.getElementById('apply-video-filters').addEventListener('click', () => loadVideos());
-  document.getElementById('reset-video-filters').addEventListener('click', () => {
-    q('#video-category').value = ''; q('#video-search').value = ''; loadVideos();
+  // Final Expense
+  document.getElementById('fe-calc')?.addEventListener('click', () => {
+    const age = +document.getElementById('fe-age').value || 0;
+    const smoker = document.getElementById('fe-smoker').value === 'yes';
+    const face = +document.getElementById('fe-face').value || 0;
+    // toy estimate: base per-$1k grows slightly with age; smoker adds 35%; +$3 fee
+    const per1k = (age < 60 ? 4.0 : age < 70 ? 6.0 : 9.0) * (smoker ? 1.35 : 1);
+    const monthly = per1k * (face / 1000) + 3;
+    document.getElementById('fe-result').hidden = false;
+    document.getElementById('fe-price').textContent = money(monthly);
+    document.getElementById('fe-breakdown').textContent = `Toy estimate • ${face ? `$${face.toLocaleString()}` : '—'} face amount`;
   });
 
-  // Initial loads
-  await loadSessions(sessPage);
-  await loadVideos();
-  await loadMyProgress();
+  // Term Life
+  document.getElementById('term-calc')?.addEventListener('click', () => {
+    const age = +document.getElementById('term-age').value || 0;
+    const smoker = document.getElementById('term-smoker').value === 'yes';
+    const face = +document.getElementById('term-face').value || 0;
+    const term = +document.getElementById('term-length').value || 10;
+    const klass = document.getElementById('term-class').value || 'Standard';
+    let per1k = (age < 40 ? 0.15 : age < 50 ? 0.28 : age < 60 ? 0.55 : 1.1);
+    if (smoker) per1k *= 1.9;
+    per1k *= (term === 20 ? 1.25 : term === 30 ? 1.6 : 1);
+    per1k *= (klass === 'Preferred' ? 0.85 : 1);
+    const monthly = per1k * (face / 1000) + 2.5;
+    document.getElementById('term-result').hidden = false;
+    document.getElementById('term-price').textContent = money(monthly);
+    document.getElementById('term-breakdown').textContent = `${term}-yr • ${klass}`;
+  });
+
+  // Auto
+  document.getElementById('auto-calc')?.addEventListener('click', () => {
+    const state = (document.getElementById('auto-state').value || 'TN').toUpperCase();
+    const age = +document.getElementById('auto-age').value || 30;
+    const acc = +document.getElementById('auto-acc').value || 0;
+    const vio = +document.getElementById('auto-viol').value || 0;
+    const sym = +document.getElementById('auto-sym').value || 10;
+    const cov = document.getElementById('auto-cov').value;
+    const baseMap = { TN: 68, MS: 72, AR: 70, KY: 85, AL: 74, GA: 88 };
+    const base = baseMap[state] ?? 80;
+    let driver = 1.0;
+    if (age < 21) driver *= 1.8; else if (age < 25) driver *= 1.4; else if (age >= 70) driver *= 1.2;
+    driver *= (1 + 0.25 * acc) * (1 + 0.10 * vio);
+    const vehicle = 0.7 + (sym - 1) * (0.4 / 26);
+    const coverage = cov === 'full' ? 1.45 : 1.0;
+    const monthly = (base * driver * vehicle * coverage) * 1.06; // small pay-plan bump
+    document.getElementById('auto-result').hidden = false;
+    document.getElementById('auto-price').textContent = money(monthly);
+    document.getElementById('auto-breakdown').textContent = `${state} • ${cov === 'full' ? 'Full' : 'Liability'}`;
+  });
+
+  // Home
+  document.getElementById('home-calc')?.addEventListener('click', () => {
+    const state = (document.getElementById('home-state').value || 'TN').toUpperCase();
+    const covA = +document.getElementById('home-a').value || 250000;
+    const ded = document.getElementById('home-ded').value;
+    const pc = +document.getElementById('home-pc').value || 5;
+    const roof = document.getElementById('home-roof').value === 'yes';
+    const masonry = document.getElementById('home-masonry').value === 'yes';
+    const per1k = ({TN:1.25, MS:1.55, AR:1.40, KY:1.45, AL:1.60, GA:1.50}[state] ?? 1.50);
+    const pcMult = 0.90 + (pc - 1) * 0.025;
+    let annual = (covA / 1000) * per1k * pcMult;
+    const dedMult = ({'1000':1.00,'2500':0.93,'5000':0.86}[ded] ?? 1);
+    annual *= dedMult;
+    if (roof) annual *= 0.97;
+    if (masonry) annual *= 0.98;
+    const monthly = annual / 12;
+    document.getElementById('home-result').hidden = false;
+    document.getElementById('home-price').textContent = money(monthly);
+    document.getElementById('home-breakdown').textContent = `${state} • PC${pc} • Ded ${ded ? `$${(+ded).toLocaleString()}` : '—'}`;
+  });
+
+  // Pro Liability (placeholder math only)
+  document.getElementById('pro-calc')?.addEventListener('click', () => {
+    const rev = +document.getElementById('pro-rev').value || 150000;
+    const limit = document.getElementById('pro-limit').value; // 1x2, 1x1, 500x1...
+    const ded = document.getElementById('pro-ded').value;
+    let per1k = 0.9;                 // toy base per $1k revenue
+    if (limit === '1x2') per1k *= 1.05;
+    if (limit === '500x1') per1k *= 0.85;
+    if (ded === '0') per1k *= 1.08;
+    const annual = (rev / 1000) * per1k;
+    const monthly = Math.max(annual / 12, 45); // simple min-prem floor
+    document.getElementById('pro-result').hidden = false;
+    document.getElementById('pro-price').textContent = money(monthly);
+    document.getElementById('pro-breakdown').textContent = `${(rev).toLocaleString()} revenue • ${limit} • Ded $${(+ded).toLocaleString()}`;
+  });
 });
