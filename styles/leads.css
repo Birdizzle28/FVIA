@@ -207,16 +207,22 @@ a, button{ outline-color: var(--brand); }
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 10px;
 }
-
+.form-grid > * { min-width: 0; }
 .field{
   position: relative;
+   min-width: 0;
 }
-
+.field select{
+  padding-right: 36px;
+}
 .field input,
 .field select,
 .field textarea{
-  width: 75%;
+  width: 100%;
   border: 1px solid var(--line);
+   max-width: 100%;
+   box-sizing: border-box;
+  display: block;
   background: #fff;
   color: var(--ink);
   border-radius: 8px;
@@ -288,9 +294,6 @@ a, button{ outline-color: var(--brand); }
 .field textarea{
   min-height: 100px;
   resize: vertical;
-}
-option {
-   width:100%;
 }
 /* Row separators in cards for nicer rhythm */
 .form-row{ margin-top: 10px; }
