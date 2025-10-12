@@ -33,6 +33,19 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnStep2 = document.getElementById('btn-step2');
   const btnSubmit= document.getElementById('btn-submit');
   const BUSINESS_NUMBER = '+16292437980';
+  
+  // --- Normalize helpers ---
+  const norm = (s) => (s || '').toString().trim().toLowerCase();
+  const digits10 = (s) => (s || '').toString().replace(/\D/g,'').slice(-10);
+  
+  // Phones can be E.164 "+1XXXXXXXXXX" or 10-digit; we match on 10-digit overlap.
+  const hasPhoneOverlap = (arr1 = [], arr2 = []) => {
+    const set1 = new Set(arr1.map(digits10).filter(Boolean));
+    for (const p of arr2.map(digits10).filter(Boolean)) {
+      if (set1.has(p)) return true;
+    }
+    return false;
+  };
 
   // Add once near the other helpers (REPLACE your current toE164)
   const toE164 = (v) => {
@@ -46,6 +59,65 @@ document.addEventListener('DOMContentLoaded', () => {
     return `+${d}`;                                           // fallback
   };
 
+  /**
+   * Find an existing "duplicate" lead by:
+   * - same normalized first & last name AND
+   * - (same phone OR same email OR same zip)
+   * Only checks recent/open leads to avoid blocking historical records.
+   *
+   * @returns existing lead row or null
+   */
+  async function findDuplicateLeadByNamePlusOne({
+    first_name, last_name, phoneArr, email, zip, product_type,
+    windowDays = 90
+  }) {
+    const client = window.supabase;
+    if (!client) throw new Error('Supabase not loaded');
+  
+    const now = Date.now();
+    const sinceIso = new Date(now - windowDays*24*60*60*1000).toISOString();
+    const nFirst = norm(first_name);
+    const nLast  = norm(last_name);
+  
+    // 1) Pull recent candidates with same name (limit for safety)
+    // Also join contact to check their emails/phones if needed.
+    const { data: candidates, error } = await client
+      .from('leads')
+      .select('id, first_name, last_name, phone, zip, product_type, status, created_at, contacts:contact_id(emails, phones, zip)')
+      .gte('created_at', sinceIso)
+      .ilike('first_name', nFirst)   // case-insensitive exact after lower(norm) on client
+      .ilike('last_name', nLast)
+      .limit(1000);
+    if (error) throw new Error(error.message);
+  
+    // 2) See if any candidate matches "name + one other"
+    const emailsArr = (email ? [email] : []).map((e) => norm(e));
+    const ourPhones = phoneArr || [];
+  
+    for (const c of (candidates || [])) {
+      // Double-check name match on client with our normalizer (keeps it strict)
+      if (norm(c.first_name) !== nFirst || norm(c.last_name) !== nLast) continue;
+  
+      const candPhonesFromLead   = Array.isArray(c.phone) ? c.phone : [];
+      const candPhonesFromContact= Array.isArray(c.contacts?.phones) ? c.contacts.phones : [];
+      const candEmails           = Array.isArray(c.contacts?.emails) ? c.contacts.emails : [];
+      const candZip              = c.zip || c.contacts?.zip || null;
+  
+      const phoneMatch = hasPhoneOverlap(ourPhones, [...candPhonesFromLead, ...candPhonesFromContact]);
+      const emailMatch = emailsArr.length ? candEmails.map(norm).some(e => emailsArr.includes(e)) : false;
+      const zipMatch   = zip && candZip ? String(zip).trim() === String(candZip).trim() : false;
+  
+      const oneOtherMatches = phoneMatch || emailMatch || zipMatch;
+  
+      if (oneOtherMatches) {
+        // Optional: also require same product_type to be considered duplicate
+        if (!product_type || !c.product_type || norm(product_type) === norm(c.product_type)) {
+          return c; // found duplicate
+        }
+      }
+    }
+    return null;
+  }
   function hideAllModals() {
     document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
   }
@@ -400,25 +472,51 @@ document.addEventListener('DOMContentLoaded', () => {
     
       // Insert one lead per product type — store canonical number on leads (E.164 preferred)
       const leadPhone = e164 ? [e164] : (tenFromE164 ? [tenFromE164] : []);
-      const leadRows = productTypes.map(pt => ({
-        first_name: contactInfo.first_name,
-        last_name:  contactInfo.last_name,
-        zip:        contactInfo.zip || null,
-        phone:      leadPhone,
-        lead_type:  'Web',
-        product_type: pt,
-        contact_id: contactId,
-        submitted_by: window.FVG_WEBSITE_SUBMITTER_ID,
-        submitted_by_name: window.FVG_WEBSITE_SUBMITTER_NAME || 'Website Lead'
-      }));
-    
-      const { data: leads, error: leadsError } = await client
-        .from('leads')
-        .insert(leadRows)
-        .select('id, product_type');
-      if (leadsError) throw new Error(leadsError.message);
-    
-      return { contactId, leads };
+      const insertedOrExisting = [];
+      const leadPhone = e164 ? [e164] : (tenFromE164 ? [tenFromE164] : []);
+      const candidateEmail = contactInfo.email && contactInfo.email.trim() ? contactInfo.email.trim() : null;
+      
+      for (const pt of productTypes) {
+        // 1) Check duplicate by (name) + (phone OR email OR zip), within last 90 days
+        const dup = await findDuplicateLeadByNamePlusOne({
+          first_name: contactInfo.first_name,
+          last_name:  contactInfo.last_name,
+          phoneArr:   leadPhone,
+          email:      candidateEmail,
+          zip:        contactInfo.zip || null,
+          product_type: pt,
+          windowDays: 90
+        });
+      
+        // 2) If duplicate exists AND it's still "open", treat as duplicate and reuse it
+        if (dup && ['new','open','pending'].includes((dup.status || '').toLowerCase())) {
+          insertedOrExisting.push({ id: dup.id, product_type: dup.product_type, duplicate: true });
+          continue;
+        }
+      
+        // 3) Otherwise insert fresh lead
+        const { data: one, error: insErr } = await client
+          .from('leads')
+          .insert([{
+            first_name: contactInfo.first_name,
+            last_name:  contactInfo.last_name,
+            zip:        contactInfo.zip || null,
+            phone:      leadPhone,
+            lead_type:  'Web',
+            product_type: pt,
+            contact_id: contactId,
+            submitted_by: window.FVG_WEBSITE_SUBMITTER_ID,
+            submitted_by_name: window.FVG_WEBSITE_SUBMITTER_NAME || 'Website Lead',
+            status: 'new'
+          }])
+          .select('id, product_type')
+          .single();
+      
+        if (insErr) throw new Error(insErr.message);
+        insertedOrExisting.push({ id: one.id, product_type: one.product_type, duplicate: false });
+      }
+      
+      return { contactId, leads: insertedOrExisting };
     }
   
   btnSubmit.addEventListener('click', async () => {
