@@ -297,62 +297,95 @@ document.addEventListener('DOMContentLoaded', () => {
     return (pairs.length || ref) ? `utm:${pairs.join('|')}${pairs.length && ref ? ' || ' : ''}${ref}` : '';
   }
 
+    // REPLACE your existing insertContactAndLeads with this version
     async function insertContactAndLeads(contactInfo, productTypes) {
       const client = window.supabase;
       if (!client) throw new Error('Supabase not loaded');
     
-      // Canonical and 10-digit forms
-      const e164 = contactInfo.phone; // already E.164 (e.g. +17315551234)
-      const ten  = (e164 || '').replace(/\D/g, '').slice(-10);
+      // Normalize inputs
+      const e164 = contactInfo.phone ? String(contactInfo.phone).trim() : null; // should already be E.164
+      const tenFromE164 = (e164 || '').replace(/\D/g, '').slice(-10);
+      const emailClean = (contactInfo.email || '').trim();
+      const emailArr = emailClean ? [emailClean] : [];
     
+      if (!e164 && !tenFromE164 && emailArr.length === 0) {
+        throw new Error('Provide at least one phone or email.');
+      }
+    
+      // Try find existing contact: E.164 -> 10-digit -> email
       let existing = null;
     
-      // 1) Try by E.164
-      const r1 = await client
-        .from('contacts')
-        .select('id, phones, emails')
-        .contains('phones', [e164])
-        .maybeSingle();
-      if (r1.data) existing = r1.data;
+      if (e164) {
+        const r1 = await client
+          .from('contacts')
+          .select('id, phones, emails, zip, notes')
+          .contains('phones', [e164])
+          .maybeSingle();
+        if (r1.data) existing = r1.data;
+      }
     
-      // 2) Try by 10-digit if not found
-      if (!existing && ten) {
+      if (!existing && tenFromE164) {
         const r2 = await client
           .from('contacts')
-          .select('id, phones, emails')
-          .contains('phones', [ten])
+          .select('id, phones, emails, zip, notes')
+          .contains('phones', [tenFromE164])
           .maybeSingle();
         if (r2.data) existing = r2.data;
       }
     
-      // 3) Try by email if not found
-      if (!existing && contactInfo.email) {
+      if (!existing && emailArr.length) {
         const r3 = await client
           .from('contacts')
-          .select('id, phones, emails')
-          .contains('emails', [contactInfo.email])
+          .select('id, phones, emails, zip, notes')
+          .contains('emails', [emailArr[0]])
           .maybeSingle();
         if (r3.data) existing = r3.data;
       }
     
-      let contactId;
-      if (existing) {
-        contactId = existing.id;
-      } else {
-        // Save both formats (E.164 first). If the 10-digit is the same content, keep just one.
-        const tenFromE164 = (e164 || '').replace(/\D/g, '').slice(-10);
-        const phonesArr = tenFromE164 && tenFromE164 !== e164
-          ? [e164, tenFromE164]
-          : [e164];
+      // Build phones array to store (E.164 + 10-digit if distinct)
+      const phonesArr = (e164 && tenFromE164 && tenFromE164 !== e164)
+        ? [e164, tenFromE164]
+        : (e164 ? [e164] : (tenFromE164 ? [tenFromE164] : []));
     
-        const { data: contact, error: contactError } = await client
+      // CREATE or UPDATE contact
+      let contactId;
+    
+      if (existing) {
+        // Merge phones/emails & update basic fields (zip, notes) without losing existing values
+        const mergedPhones = Array.from(new Set([...(existing.phones || []), ...phonesArr].filter(Boolean)));
+        const mergedEmails = Array.from(new Set([...(existing.emails || []), ...emailArr].filter(Boolean)));
+        const newZip   = contactInfo.zip || existing.zip || null;
+        const newNotes = contactInfo.notes
+          ? (existing.notes ? `${existing.notes} || ${contactInfo.notes}` : contactInfo.notes)
+          : (existing.notes || null);
+    
+        const { data: updated, error: uerr } = await client
+          .from('contacts')
+          .update({
+            first_name: contactInfo.first_name || null, // keep if null? (Supabase keeps old value if null not supplied)
+            last_name:  contactInfo.last_name  || null,
+            phones: mergedPhones,
+            emails: mergedEmails,
+            zip: newZip,
+            tcpaconsent: true,
+            consent_source: 'website',
+            consent_at: new Date().toISOString(),
+            notes: newNotes
+          })
+          .eq('id', existing.id)
+          .select('id')
+          .single();
+        if (uerr) throw new Error(uerr.message);
+        contactId = updated.id;
+      } else {
+        const { data: inserted, error: ierr } = await client
           .from('contacts')
           .insert({
             first_name: contactInfo.first_name,
             last_name:  contactInfo.last_name,
             phones: phonesArr,
-            emails: [contactInfo.email],
-            zip: contactInfo.zip,
+            emails: emailArr,                 // <- will be [] if no email (good)
+            zip: contactInfo.zip || null,
             contact_status: 'new',
             tcpaconsent: true,
             consent_source: 'website',
@@ -361,16 +394,17 @@ document.addEventListener('DOMContentLoaded', () => {
           })
           .select('id')
           .single();
-        if (contactError) throw new Error(contactError.message);
-        contactId = contact.id;
+        if (ierr) throw new Error(ierr.message);
+        contactId = inserted.id;
       }
     
-      // Insert one lead per product type — store canonical number on leads
+      // Insert one lead per product type — store canonical number on leads (E.164 preferred)
+      const leadPhone = e164 ? [e164] : (tenFromE164 ? [tenFromE164] : []);
       const leadRows = productTypes.map(pt => ({
         first_name: contactInfo.first_name,
         last_name:  contactInfo.last_name,
-        zip:        contactInfo.zip,
-        phone:      [e164],
+        zip:        contactInfo.zip || null,
+        phone:      leadPhone,
         lead_type:  'Web',
         product_type: pt,
         contact_id: contactId,
@@ -382,11 +416,11 @@ document.addEventListener('DOMContentLoaded', () => {
         .from('leads')
         .insert(leadRows)
         .select('id, product_type');
-    
       if (leadsError) throw new Error(leadsError.message);
+    
       return { contactId, leads };
     }
-
+  
   btnSubmit.addEventListener('click', async () => {
     [firstName, lastName, phone, email].forEach(clearInvalid);
   
