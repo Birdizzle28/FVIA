@@ -9,26 +9,21 @@ const headers = {
   "Content-Type": "application/json"
 };
 
-// Call Control actions
-const act = (id, action, body = {}) =>
-  fetch(`${TAPI}/calls/${id}/actions/${action}`, {
+// Log-aware Call Control action helper
+const act = async (id, action, body = {}) => {
+  const r = await fetch(`${TAPI}/calls/${id}/actions/${action}`, {
     method: "POST",
     headers,
     body: JSON.stringify(body)
   });
-// If the CLIENT leg answered, bridge the agent leg to it
-if (eventType === "call.answered") {
-  const answeredId = payload?.data?.payload?.call_control_id;
-  const { data: sess } = await supabase
-    .from("call_sessions").select("*")
-    .eq("client_call_id", answeredId)
-    .maybeSingle();
-
-  if (sess) {
-    await act(sess.telnyx_call_id, "transfer_call", { to: answeredId });
-    return { statusCode: 200, body: "OK" };
+  const txt = await r.text();
+  if (!r.ok) {
+    console.error("Telnyx action failed", { action, status: r.status, txt });
+  } else {
+    console.log("Telnyx action ok", { action, txt });
   }
-}
+  return { ok: r.ok, status: r.status, body: txt };
+};
 
 export async function handler(event) {
   try {
@@ -38,22 +33,40 @@ export async function handler(event) {
 
     const payload = JSON.parse(event.body || "{}");
     const eventType = payload?.data?.event_type;
-    const callId = payload?.data?.payload?.call_control_id;
+    const callId    = payload?.data?.payload?.call_control_id;
 
+    console.log("TELNYX EVENT", { eventType, callId });
+
+    // Some events (like app-level pings) won’t have a call id—ignore
     if (!callId) return { statusCode: 200, body: "OK" };
 
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-    // Find the session created when we placed the agent leg
+    // Session matching for agent leg (we stored telnyx_call_id when creating the agent call)
     const { data: session } = await supabase
       .from("call_sessions")
       .select("*")
       .eq("telnyx_call_id", callId)
       .maybeSingle();
 
-    // 1) Agent answered: whisper + gather
+    // ---- Option B: safer bridging ----
+    // If THIS answered leg is the CLIENT leg we created earlier, bridge the agent to it.
+    if (eventType === "call.answered") {
+      const answeredId = callId; // this event's leg
+      const { data: sess } = await supabase
+        .from("call_sessions").select("*")
+        .eq("client_call_id", answeredId)
+        .maybeSingle();
+
+      if (sess) {
+        await act(sess.telnyx_call_id, "transfer_call", { to: answeredId });
+        return { statusCode: 200, body: "OK" };
+      }
+    }
+
+    // 1) Agent answered → whisper + gather (only when this leg is the AGENT leg we started)
     if (eventType === "call.answered" && session) {
-      // Load lead + contact for whisper details (best effort)
+      // Build whisper (best-effort)
       let name = "Prospect";
       let summary = "";
 
@@ -71,7 +84,6 @@ export async function handler(event) {
         if (lead?.zip)         summary += `ZIP ${lead.zip}. `;
       }
 
-      // Whisper message (then gather)
       await act(callId, "speak", {
         language: "en-US",
         voice: "female",
@@ -92,15 +104,14 @@ export async function handler(event) {
 
     // 2) Agent responded (handle both gather + raw dtmf)
     if ((eventType === "call.dtmf.received" || eventType === "call.gather.ended") && session) {
-      // digit location differs by event type
       const digit =
         eventType === "call.dtmf.received"
           ? payload?.data?.payload?.digit
-          : (payload?.data?.payload?.digits || "")[0]; // first digit from gather
-    
+          : (payload?.data?.payload?.digits || "")[0];
+
       if (digit === "1" && session.prospect_number) {
         // Place prospect leg
-        const newCallRes = await fetch(`${TAPI}/calls`, {
+        const r = await fetch(`${TAPI}/calls`, {
           method: "POST",
           headers,
           body: JSON.stringify({
@@ -109,30 +120,25 @@ export async function handler(event) {
             from: process.env.TELNYX_FROM_NUMBER
           })
         });
-        const newCallJson = await newCallRes.json();
-    
-        if (!newCallRes.ok) {
+        const newCallJson = await r.json();
+
+        if (!r.ok) {
           await act(callId, "speak", { payload: "Unable to reach the client." });
-          return { statusCode: newCallRes.status, body: JSON.stringify(newCallJson) };
+          return { statusCode: r.status, body: JSON.stringify(newCallJson) };
         }
-    
+
         const clientCallId = newCallJson?.data?.id;
-    
-        // (Option A) transfer immediately — Telnyx will bridge when the client answers
+
+        // Store client leg; we'll bridge when THAT leg answers (see call.answered above)
         await supabase
           .from("call_sessions")
           .update({ client_call_id: clientCallId })
           .eq("id", session.id);
-        
+
         await act(callId, "speak", { payload: "Dialing the client now." });
-    
-        // (Option B - safer): store clientCallId and wait for client's call.answered, then transfer.
-        // Uncomment if you want that pattern instead:
-        // await supabase.from("call_sessions").update({ client_call_id: clientCallId }).eq("id", session.id);
-    
         return { statusCode: 200, body: "OK" };
       }
-    
+
       // Any key other than 1 → hang up
       await act(callId, "hangup", {});
       return { statusCode: 200, body: "OK" };
@@ -140,8 +146,7 @@ export async function handler(event) {
 
     // 3) Clean up on hangup (optional)
     if (eventType === "call.hangup" && session) {
-      // (Optional) mark ended, or delete the row—your call
-      // await supabase.from("call_sessions").delete().eq("id", session.id);
+      // e.g., await supabase.from("call_sessions").delete().eq("id", session.id);
       return { statusCode: 200, body: "OK" };
     }
 
