@@ -473,7 +473,6 @@ document.addEventListener('DOMContentLoaded', () => {
       // Insert one lead per product type — store canonical number on leads (E.164 preferred)
       const leadPhone = e164 ? [e164] : (tenFromE164 ? [tenFromE164] : []);
       const insertedOrExisting = [];
-      const leadPhone = e164 ? [e164] : (tenFromE164 ? [tenFromE164] : []);
       const candidateEmail = contactInfo.email && contactInfo.email.trim() ? contactInfo.email.trim() : null;
       
       for (const pt of productTypes) {
