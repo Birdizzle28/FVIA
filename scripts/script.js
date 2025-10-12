@@ -172,7 +172,6 @@ window.addEventListener("load", () => {
 }
   const container = document.getElementById("agent-cards-container");
   if (!container) {
-    alert("❌ Container not found!");
     return;
   }
 
