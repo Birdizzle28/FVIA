@@ -613,24 +613,42 @@ document.addEventListener('DOMContentLoaded', () => {
       const btnSchedule = document.getElementById('btn-schedule');
       
       async function assignLeadToAgent(leadId, productType) {
-        const { data: agents, error } = await supabase
+        // 1) Get active agents who sell this product
+        const { data: agents, error: errAgents } = await supabase
           .from('agents')
-          .select('id, full_name, product_types, phone')
+          .select('id, full_name, product_types, phone, is_active')
           .eq('is_active', true);
-      
-        if (error || !agents?.length) throw new Error('No active agents found.');
+        if (errAgents) throw new Error(errAgents.message);
+        if (!agents?.length) throw new Error('No active agents found.');
       
         const eligible = agents.filter(a =>
           Array.isArray(a.product_types) &&
           a.product_types.some(pt => pt.toLowerCase() === productType.toLowerCase())
         );
-      
         if (!eligible.length) throw new Error('No eligible agent for this product type.');
       
-        // pick first available
-        const chosen = eligible[0];
-        const now = new Date().toISOString();
+        // 2) Of those, filter to agents currently ONLINE
+        //    Assumes you have agent_availability with (agent_id uuid, available bool)
+        const eligibleIds = eligible.map(a => a.id);
+        const { data: availRows, error: errAvail } = await supabase
+          .from('agent_availability')
+          .select('agent_id, available')
+          .in('agent_id', eligibleIds)
+          .eq('available', true);
+        if (errAvail) throw new Error(errAvail.message);
       
+        const onlineSet = new Set((availRows || []).map(r => r.agent_id));
+        const online = eligible.filter(a => onlineSet.has(a.id));
+      
+        if (!online.length) {
+          throw new Error('No agents are online right now.');
+        }
+      
+        // 3) Pick your strategy (first online, or round-robin, etc.)
+        const chosen = online[0];
+      
+        // 4) Assign lead to the chosen agent (same as before)
+        const now = new Date().toISOString();
         await supabase.from('leads')
           .update({ assigned_to: chosen.id, assigned_at: now })
           .eq('id', leadId);
@@ -673,13 +691,14 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             
             // Call the Netlify function. Send both naming styles to match any handler.
-            const agentNumber    = toNumber;       // E.164 (the chosen agent)
-            const prospectNumber = e164Prospect;   // E.164 (you computed earlier)
+            const agentId        = chosen.id;      // pass id so server can re-check availability
+            const agentNumber    = toNumber;       // E.164
+            const prospectNumber = e164Prospect;   // E.164
             
             const resp = await fetch('/.netlify/functions/makeCall', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ agentNumber, prospectNumber })
+              body: JSON.stringify({ agentId, agentNumber, prospectNumber, leadId: lead.id })
             });
             
             // Read raw text so we can see the real error if it fails
