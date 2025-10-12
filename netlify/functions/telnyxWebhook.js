@@ -37,7 +37,12 @@ export async function handler(event) {
 
     console.log("TELNYX EVENT", { eventType, callId });
 
-    // Some events (like app-level pings) won’t have a call id—ignore
+        // ===== TEMP TEST: force whisper on any answered call =====
+    if (eventType === "call.answered" && callId) {
+      await act(callId, "speak", { payload: "Test whisper from webhook." });
+      // return { statusCode: 200, body: "OK" }; // ← uncomment to isolate just this test
+    }
+    
     if (!callId) return { statusCode: 200, body: "OK" };
 
     const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
