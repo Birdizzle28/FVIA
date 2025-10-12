@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Also join contact to check their emails/phones if needed.
     const { data: candidates, error } = await client
       .from('leads')
-      .select('id, first_name, last_name, phone, zip, product_type, status, created_at, contacts:contact_id(emails, phones, zip)')
+      .select('id, first_name, last_name, phone, zip, product_type, created_at, contacts:contact_id(emails, phones, zip)')
       .gte('created_at', sinceIso)
       .ilike('first_name', nFirst)   // case-insensitive exact after lower(norm) on client
       .ilike('last_name', nLast)
@@ -496,7 +496,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       
         // 2) If duplicate exists AND it's still "open", treat as duplicate and reuse it
-        if (dup && ['new','open','pending'].includes((dup.status || '').toLowerCase())) {
+        if (dup) {
           insertedOrExisting.push({ id: dup.id, product_type: dup.product_type, duplicate: true });
           continue;
         }
