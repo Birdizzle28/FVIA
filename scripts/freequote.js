@@ -431,22 +431,30 @@ document.addEventListener('DOMContentLoaded', () => {
           ? (existing.notes ? `${existing.notes} || ${contactInfo.notes}` : contactInfo.notes)
           : (existing.notes || null);
     
+        const updatePayload = {
+          phones: mergedPhones,
+          emails: mergedEmails,
+          zip: newZip,
+          tcpaconsent: true,
+          consent_source: 'website',
+          consent_at: new Date().toISOString(),
+          notes: newNotes
+        };
+        // only update names if you actually have values
+        if (contactInfo.first_name && contactInfo.first_name.trim()) {
+          updatePayload.first_name = contactInfo.first_name.trim();
+        }
+        if (contactInfo.last_name && contactInfo.last_name.trim()) {
+          updatePayload.last_name = contactInfo.last_name.trim();
+        }
+        
         const { data: updated, error: uerr } = await client
           .from('contacts')
-          .update({
-            first_name: contactInfo.first_name || null, // keep if null? (Supabase keeps old value if null not supplied)
-            last_name:  contactInfo.last_name  || null,
-            phones: mergedPhones,
-            emails: mergedEmails,
-            zip: newZip,
-            tcpaconsent: true,
-            consent_source: 'website',
-            consent_at: new Date().toISOString(),
-            notes: newNotes
-          })
+          .update(updatePayload)
           .eq('id', existing.id)
           .select('id')
           .single();
+        
         if (uerr) throw new Error(uerr.message);
         contactId = updated.id;
       } else {
