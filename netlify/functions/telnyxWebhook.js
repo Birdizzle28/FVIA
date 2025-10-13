@@ -3,7 +3,6 @@ import fetch from "node-fetch";
 import { createClient } from "@supabase/supabase-js";
 
 const TAPI = "https://api.telnyx.com/v2";
-
 const headers = {
   "Authorization": `Bearer ${process.env.TELNYX_API_KEY}`,
   "Content-Type": "application/json"
@@ -47,14 +46,14 @@ export async function handler(event) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // ===== Agent leg session (we stored telnyx_call_id when we dialed the agent) =====
+    // Agent leg session we created first
     const { data: session } = await supabase
       .from("call_sessions")
       .select("*")
       .eq("telnyx_call_id", callId)
       .maybeSingle();
 
-    // ===== Also check if THIS call is the client leg we created later =====
+    // Is THIS the client leg answering?
     let sessClient = null;
     if (eventType === "call.answered") {
       const res = await supabase
@@ -70,15 +69,14 @@ export async function handler(event) {
       eventType
     });
 
-    // --- If the CLIENT leg answered, bridge the agent to it and return ---
+    // Client leg answered → bridge now
     if (eventType === "call.answered" && sessClient) {
-      await act(sessClient.telnyx_call_id, "transfer_call", { to: callId }); // no voice/lang here
+      await act(sessClient.telnyx_call_id, "transfer_call", { to: callId });
       return { statusCode: 200, body: "OK" };
     }
 
-    // --- If the AGENT leg answered (or session missing), whisper + gather ---
+    // Agent leg answered → whisper + gather
     if (eventType === "call.answered") {
-      // Build whisper best-effort
       let name = "Prospect";
       let summary = "";
 
@@ -108,17 +106,20 @@ export async function handler(event) {
         minimum_digits: 1,
         maximum_digits: 1,
         inter_digit_timeout_ms: 4000,
+        valid_digits: "1",                        // ← added
         payload: "Press 1 to connect now, or any other key to cancel."
       });
 
       return { statusCode: 200, body: "OK" };
     }
 
-    // --- Agent pressed a key (requires agent session so we know the prospect) ---
+    // DTMF / gather result
     if ((eventType === "call.dtmf.received" || eventType === "call.gather.ended") && session) {
+      const dtmfPayload = payload?.data?.payload || {};       // ← added
       const digit = eventType === "call.dtmf.received"
-        ? payload?.data?.payload?.digit
-        : (payload?.data?.payload?.digits || "")[0];
+        ? dtmfPayload.digit
+        : (dtmfPayload.digits || "")[0];
+      console.log("DTMF/GATHER DIGIT", { eventType, digit, raw: dtmfPayload }); // ← added
 
       if (digit === "1" && session.prospect_number) {
         // Place prospect leg
@@ -139,31 +140,45 @@ export async function handler(event) {
             language: "en-US",
             payload: "Unable to reach the client."
           });
-          return { statusCode: r.status, body: JSON.stringify(newCallJson) };
+        } else {
+          const clientCallId = newCallJson?.data?.id;
+          await supabase
+            .from("call_sessions")
+            .update({ client_call_id: clientCallId })
+            .eq("id", session.id);
+
+          await act(callId, "speak", {
+            voice: VOICE,
+            language: "en-US",
+            payload: "Dialing the client now."
+          });
         }
+        return { statusCode: r.status || 200, body: JSON.stringify(newCallJson) };
+      }
 
-        const clientCallId = newCallJson?.data?.id;
-
-        // Store client leg; when THAT leg answers we bridge in call.answered above
-        await supabase
-          .from("call_sessions")
-          .update({ client_call_id: clientCallId })
-          .eq("id", session.id);
-
+      if (digit !== "1") {
         await act(callId, "speak", {
           voice: VOICE,
           language: "en-US",
-          payload: "Dialing the client now."
+          payload: "Got it. Canceling."
         });
+        await act(callId, "hangup", {});
         return { statusCode: 200, body: "OK" };
       }
 
-      // Any other key → hang up
-      await act(callId, "hangup", {}); // no voice/lang here
+      // No digit captured → reprompt once
+      await act(callId, "gather_using_speak", {               // ← added (reprompt)
+        voice: VOICE,
+        language: "en-US",
+        minimum_digits: 1,
+        maximum_digits: 1,
+        inter_digit_timeout_ms: 4000,
+        valid_digits: "1",
+        payload: "Sorry, I didn’t catch that. Press 1 to connect now."
+      });
       return { statusCode: 200, body: "OK" };
     }
 
-    // --- optional cleanup ---
     if (eventType === "call.hangup" && session) {
       return { statusCode: 200, body: "OK" };
     }
