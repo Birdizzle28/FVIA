@@ -695,27 +695,6 @@ document.addEventListener('DOMContentLoaded', () => {
             const agentNumber    = toNumber;       // E.164
             const prospectNumber = e164Prospect;   // E.164
           
-            // right before the fetch to /.netlify/functions/makeCall
-            console.log("makeCall →", {
-              agentId: chosen.id,
-              agentNumber: toNumber,
-              prospectNumber: e164Prospect,
-              leadId: lead.id
-            });
-            
-            if (!chosen?.id || !toNumber || !e164Prospect) {
-              alert("Missing agentId/agentNumber/prospectNumber — not calling server");
-              throw new Error("Missing param(s) for makeCall");
-            }
-            
-            const resp = await fetch('/.netlify/functions/makeCall', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ agentId: chosen.id, agentNumber: toNumber, prospectNumber: e164Prospect, leadId: lead.id })
-            });
-            
-            const rawText = await resp.text();
-            console.log('makeCall status:', resp.status, 'body:', rawText);
             const resp = await fetch('/.netlify/functions/makeCall', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
