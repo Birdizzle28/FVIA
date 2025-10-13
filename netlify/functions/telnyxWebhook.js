@@ -8,10 +8,9 @@ const headers = {
   "Content-Type": "application/json"
 };
 
-// Your preferred voice
 const VOICE = "Telnyx.KokoroTTS.af";
 
-// Call Control helper
+// Call Control helper with logging
 const act = async (id, action, body = {}) => {
   const r = await fetch(`${TAPI}/calls/${id}/actions/${action}`, {
     method: "POST",
@@ -19,8 +18,12 @@ const act = async (id, action, body = {}) => {
     body: JSON.stringify(body)
   });
   const txt = await r.text();
-  if (!r.ok) console.error("Telnyx action failed", { id, action, status: r.status, txt });
-  return { ok: r.ok, status: r.status, body: txt };
+  const ok = r.ok;
+  if (!ok) console.error("Telnyx action failed", { id, action, status: r.status, txt });
+  else     console.log("Telnyx action ok",     { id, action, status: r.status, txt });
+  // try to parse JSON so we can inspect error codes
+  let json; try { json = JSON.parse(txt); } catch { json = { raw: txt }; }
+  return { ok, status: r.status, body: json };
 };
 
 export async function handler(event) {
@@ -35,12 +38,9 @@ export async function handler(event) {
 
     if (!callId) return { statusCode: 200, body: "OK" };
 
-    const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-    // Look up each leg separately
+    // Look up legs explicitly
     const [{ data: sessAgent }, { data: sessClient }] = await Promise.all([
       supabase.from("call_sessions").select("*").eq("telnyx_call_id", callId).maybeSingle(),
       supabase.from("call_sessions").select("*").eq("client_call_id", callId).maybeSingle()
@@ -49,23 +49,20 @@ export async function handler(event) {
     const isAgentLeg  = !!sessAgent;
     const isClientLeg = !!sessClient;
 
-    // ========== ANSWERED ==========
+    // ========= CALL.ANSWERED =========
     if (eventType === "call.answered") {
-      // Client leg answered → just bridge, no TTS for client
+      // Client leg answered → try to bridge agent ↔ client (backup path)
       if (isClientLeg) {
-        await supabase.from("call_sessions")
-          .update({ client_answered_at: new Date().toISOString() })
-          .eq("id", sessClient.id);
-
-        await act(sessClient.telnyx_call_id, "transfer_call", { to: callId });
+        console.log("Client leg answered; attempting transfer (backup).", { agent_leg: sessClient.telnyx_call_id, client_leg: callId });
+        const xfer = await act(sessClient.telnyx_call_id, "transfer_call", { to: callId });
+        if (!xfer.ok) console.error("Transfer (backup) failed", xfer);
+        await supabase.from("call_sessions").update({ client_answered_at: new Date().toISOString() }).eq("id", sessClient.id);
         return { statusCode: 200, body: "OK" };
       }
 
       // Agent leg answered → whisper + gather
       if (isAgentLeg) {
-        await supabase.from("call_sessions")
-          .update({ agent_answered_at: new Date().toISOString() })
-          .eq("id", sessAgent.id);
+        await supabase.from("call_sessions").update({ agent_answered_at: new Date().toISOString() }).eq("id", sessAgent.id);
 
         let name = "Prospect";
         let summary = "";
@@ -100,13 +97,13 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // ========== DTMF / GATHER (agent only) ==========
+    // ========= DTMF / GATHER (agent only) =========
     if ((eventType === "call.dtmf.received" || eventType === "call.gather.ended") && isAgentLeg) {
       const p = payload?.data?.payload || {};
       const digit = eventType === "call.dtmf.received" ? p.digit : (p.digits || "")[0];
 
       if (digit === "1" && sessAgent.prospect_number) {
-        // Dial client leg
+        // 1) Create client leg
         const r = await fetch(`${TAPI}/calls`, {
           method: "POST",
           headers,
@@ -117,41 +114,39 @@ export async function handler(event) {
           })
         });
         const txt = await r.text();
-        let newCallJson; try { newCallJson = JSON.parse(txt); } catch { newCallJson = { raw: txt }; }
-
+        let create; try { create = JSON.parse(txt); } catch { create = { raw: txt }; }
         if (!r.ok) {
-          await act(sessAgent.telnyx_call_id, "speak", {
-            voice: VOICE, language: "en-US",
-            payload: "Unable to reach the client."
-          });
+          console.error("Create client leg failed", { status: r.status, txt });
+          await act(sessAgent.telnyx_call_id, "speak", { voice: VOICE, language: "en-US", payload: "Unable to reach the client." });
           return { statusCode: r.status, body: txt };
         }
 
-        const clientCallId = newCallJson?.data?.id;
-
+        const clientCallId = create?.data?.id;
         await supabase.from("call_sessions")
           .update({ client_call_id: clientCallId, client_started_at: new Date().toISOString() })
           .eq("id", sessAgent.id);
 
-        // Optional: let agent know we’re dialing (agent hears it, client does not)
+        // 2) **IMMEDIATE TRANSFER** (primary path)
+        console.log("Attempting immediate transfer", { agent_leg: sessAgent.telnyx_call_id, client_leg: clientCallId });
+        const xfer = await act(sessAgent.telnyx_call_id, "transfer_call", { to: clientCallId });
+        if (!xfer.ok) console.error("Immediate transfer failed", xfer);
+
+        // Optional: short confirmation to agent; client hears nothing
         await act(sessAgent.telnyx_call_id, "speak", {
           voice: VOICE, language: "en-US",
-          payload: "Dialing the client now."
+          payload: "Connecting you now."
         });
 
         return { statusCode: 200, body: "OK" };
       }
 
       if (digit && digit !== "1") {
-        await act(sessAgent.telnyx_call_id, "speak", {
-          voice: VOICE, language: "en-US",
-          payload: "Got it. Canceling."
-        });
+        await act(sessAgent.telnyx_call_id, "speak", { voice: VOICE, language: "en-US", payload: "Got it. Canceling." });
         await act(sessAgent.telnyx_call_id, "hangup", {});
         return { statusCode: 200, body: "OK" };
       }
 
-      // No digit: reprompt agent
+      // No digit → reprompt
       await act(sessAgent.telnyx_call_id, "gather_using_speak", {
         voice: VOICE, language: "en-US",
         minimum_digits: 1, maximum_digits: 1,
@@ -161,7 +156,7 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // ========== HANGUP ==========
+    // ========= HANGUP =========
     if (eventType === "call.hangup" && (isAgentLeg || isClientLeg)) {
       return { statusCode: 200, body: "OK" };
     }
