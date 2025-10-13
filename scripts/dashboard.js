@@ -44,10 +44,7 @@ document.addEventListener('DOMContentLoaded', () => {
       this.go(this.i, false);
       this.startAuto();
     }
-    rebuildTrack() {
-      this.track.innerHTML = '';
-      this.slides.forEach(sl => this.track.appendChild(sl));
-    }
+    rebuildTrack() { this.track.innerHTML = ''; this.slides.forEach(sl => this.track.appendChild(sl)); }
     setupDots() {
       this.dots.innerHTML = '';
       this.slides.forEach((_, idx) => {
@@ -65,13 +62,10 @@ document.addEventListener('DOMContentLoaded', () => {
     bind() {
       this.prev?.addEventListener('click', () => { this.go(this.i - 1); this.restartAuto(); });
       this.next?.addEventListener('click', () => { this.go(this.i + 1); this.restartAuto(); });
-
-      // keyboard
       this.root.addEventListener('keydown', (e) => {
         if (e.key === 'ArrowLeft')  { e.preventDefault(); this.go(this.i - 1); this.restartAuto(); }
         if (e.key === 'ArrowRight') { e.preventDefault(); this.go(this.i + 1); this.restartAuto(); }
       });
-
       // drag / swipe
       let startX = 0, curX = 0, dragging = false;
       const start = (x) => { dragging = true; startX = curX = x; this.track.style.transition = 'none'; this.pause(); };
@@ -91,20 +85,13 @@ document.addEventListener('DOMContentLoaded', () => {
       this.track.addEventListener('mousedown', (e) => start(e.clientX));
       window.addEventListener('mousemove', (e) => move(e.clientX));
       window.addEventListener('mouseup', end);
-
-      // hover/focus pause
       this.root.addEventListener('pointerenter', () => this.pause());
       this.root.addEventListener('pointerleave', () => this.resume());
       this.root.addEventListener('focusin',      () => this.pause());
       this.root.addEventListener('focusout',     () => this.resume());
-
       window.addEventListener('resize', () => this.go(this.i, false));
     }
-    _translateBy(dx) {
-      const w = this.root.clientWidth;
-      const base = -this.i * w;
-      this.track.style.transform = `translateX(${base + dx}px)`;
-    }
+    _translateBy(dx) { const w = this.root.clientWidth; const base = -this.i * w; this.track.style.transform = `translateX(${base + dx}px)`; }
     go(idx, save = true) {
       const len = Math.max(1, this.slides.length);
       this.i = ((idx % len) + len) % len;
@@ -113,17 +100,8 @@ document.addEventListener('DOMContentLoaded', () => {
       Array.from(this.dots.children).forEach((d, j) => d.setAttribute('aria-current', j === this.i ? 'true' : 'false'));
       if (save && this.remember) localStorage.setItem(`carousel:${this.key}`, String(this.i));
     }
-    restoreIndex() {
-      const v = localStorage.getItem(`carousel:${this.key}`);
-      const n = v ? parseInt(v, 10) : 0;
-      return Number.isFinite(n) ? n : 0;
-    }
-    startAuto() {
-      if (this.autoplayMs > 0 && this.slides.length > 1) {
-        this.stopAuto();
-        this._timer = setInterval(() => this.go(this.i + 1), this.autoplayMs);
-      }
-    }
+    restoreIndex() { const v = localStorage.getItem(`carousel:${this.key}`); const n = v ? parseInt(v, 10) : 0; return Number.isFinite(n) ? n : 0; }
+    startAuto() { if (this.autoplayMs > 0 && this.slides.length > 1) { this.stopAuto(); this._timer = setInterval(() => this.go(this.i + 1), this.autoplayMs); } }
     stopAuto() { if (this._timer) { clearInterval(this._timer); this._timer = null; } }
     pause()    { this.stopAuto(); }
     resume()   { this.startAuto(); }
@@ -156,9 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         card.innerHTML = `<h3>${el.querySelector('h3')?.textContent || 'Item'}</h3>
                           <p>${el.querySelector('p')?.textContent || ''}</p>`;
         card.addEventListener('click', () => {
-          if (activeCarousel && idx < activeCarousel.slides.length) {
-            activeCarousel.go(idx);
-          }
+          if (activeCarousel && idx < activeCarousel.slides.length) activeCarousel.go(idx);
           closeOverlay();
         });
         overlayGrid.appendChild(card);
@@ -176,23 +152,15 @@ document.addEventListener('DOMContentLoaded', () => {
     activeCarousel?.resume();
     activeCarousel = null;
   };
-  overlay.addEventListener('click', (e) => {
-    if (e.target.matches('[data-close], .overlay-backdrop')) closeOverlay();
-  });
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && overlay.classList.contains('open')) closeOverlay();
-  });
+  overlay.addEventListener('click', (e) => { if (e.target.matches('[data-close], .overlay-backdrop')) closeOverlay(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeOverlay(); });
 
   document.querySelectorAll('.see-all').forEach(btn => {
     btn.addEventListener('click', () => {
       const key  = btn.dataset.overlay; // announcements | sales | reminders
       const host = btn.closest('.carousel');
       const inst = host ? carousels.find(c => c.root === host) : null;
-      const titleMap = {
-        announcements: 'All Announcements',
-        sales: 'All Sales Entries',
-        reminders: 'All Tasks & Reminders'
-      };
+      const titleMap = { announcements: 'All Announcements', sales: 'All Sales Entries', reminders: 'All Tasks & Reminders' };
       const items = inst ? inst.getAllSlides() : [];
       openOverlay(titleMap[key] || 'All Items', items, inst);
     });
@@ -201,47 +169,30 @@ document.addEventListener('DOMContentLoaded', () => {
   /* ---------- LEAD SNAPSHOT ---------- */
   (async function initLeadSnapshot(){
     let userId = null;
-    try {
-      const { data: { session} } = await supabase.auth.getSession();
-      userId = session?.user?.id || null;
-    } catch {}
+    try { const { data: { session} } = await supabase.auth.getSession(); userId = session?.user?.id || null; } catch {}
 
     const rangeSel = document.getElementById('lead-range');
     const scopeRadios = document.querySelectorAll('input[name="lead-scope"]');
     const el = id => document.getElementById(id);
     const setText = (id, v) => { const n = el(id); if (n) n.textContent = String(v); };
 
+    // infer stage from timestamps/closed_status (leads has no 'stage' column)
     function inferStage(row){
-      const s = (row.stage || '').toLowerCase();
-      if (s) return s;
-      if (row.closed_at || row.is_closed) return 'closed';
-      if (row.quoted_at || /quoted/i.test(row.notes||'')) return 'quoted';
-      if (row.contacted_at || /contacted/i.test(row.notes||'')) return 'contacted';
+      if (row.closed_at || ['won','lost'].includes((row.closed_status||'').toLowerCase())) return 'closed';
+      if (row.quoted_at)     return 'quoted';
+      if (row.contacted_at)  return 'contacted';
       return 'new';
     }
     function fmtDate(d){ try { return new Date(d).toLocaleDateString(undefined, { month:'short', day:'numeric' }); } catch { return ''; } }
 
     async function fetchLeads(days, scope){
-      if (!window.supabase) {
-        const now = Date.now();
-        return [
-          { first_name:'Tara', last_name:'Ng', product_type:'life', zip:'38120', created_at:new Date(now-864e5*2), stage:'new' },
-          { first_name:'Mark', last_name:'L', product_type:'auto', zip:'38119', created_at:new Date(now-864e5*3), stage:'contacted' },
-          { first_name:'Ada', last_name:'B', product_type:'home', zip:'38128', created_at:new Date(now-864e5*4), stage:'quoted' },
-          { first_name:'Jon', last_name:'R', product_type:'life', zip:'38134', created_at:new Date(now-864e5*5), stage:'closed' },
-          { first_name:'Maya', last_name:'C', product_type:'life', zip:'38133', created_at:new Date(now-864e5*1), stage:'new' },
-        ];
-      }
       let q = supabase.from('leads')
-        .select('id, first_name, last_name, zip, product_type, stage, notes, created_at, assigned_to, submitted_by, quoted_at, contacted_at, closed_at')
+        .select('id, first_name, last_name, zip, product_type, notes, created_at, assigned_to, submitted_by, quoted_at, contacted_at, closed_at, closed_status')
         .order('created_at', { ascending:false });
 
-      if (scope === 'mine' && userId) {
-        q = q.or(`assigned_to.eq.${userId},submitted_by.eq.${userId}`);
-      }
+      if (scope === 'mine' && userId) q = q.or(`assigned_to.eq.${userId},submitted_by.eq.${userId}`);
       if (days && Number(days) > 0) {
-        const since = new Date();
-        since.setDate(since.getDate() - Number(days));
+        const since = new Date(); since.setDate(since.getDate() - Number(days));
         q = q.gte('created_at', since.toISOString());
       }
       const { data, error } = await q.limit(200);
@@ -251,13 +202,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function renderCounts(rows){
       const counts = { new:0, contacted:0, quoted:0, closed:0 };
-      rows.forEach(r => {
-        const k = inferStage(r);
-        if (k === 'contacted') counts.contacted++;
-        else if (k === 'quoted') counts.quoted++;
-        else if (k === 'closed' || k === 'won') counts.closed++;
-        else counts.new++;
-      });
+      rows.forEach(r => { const k = inferStage(r); counts[k] = (counts[k]||0) + 1; });
       setText('stat-new', counts.new);
       setText('stat-contacted', counts.contacted);
       setText('stat-quoted', counts.quoted);
@@ -269,19 +214,11 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!tbody) return;
       tbody.innerHTML = '';
       const newOnes = rows.filter(r => inferStage(r) === 'new').slice(0,5);
-      if (newOnes.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="4">No new leads in this range.</td></tr>`;
-        return;
-      }
+      if (newOnes.length === 0) { tbody.innerHTML = `<tr><td colspan="4">No new leads in this range.</td></tr>`; return; }
       newOnes.forEach(r => {
         const tr = document.createElement('tr');
         const name = [r.first_name, r.last_name].filter(Boolean).join(' ') || '—';
-        tr.innerHTML = `
-          <td>${name}</td>
-          <td>${r.product_type || '—'}</td>
-          <td>${r.zip || '—'}</td>
-          <td>${r.created_at ? fmtDate(r.created_at) : '—'}</td>
-        `;
+        tr.innerHTML = `<td>${name}</td><td>${r.product_type || '—'}</td><td>${r.zip || '—'}</td><td>${r.created_at ? fmtDate(r.created_at) : '—'}</td>`;
         tbody.appendChild(tr);
       });
     }
@@ -309,15 +246,8 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       const { data: { session } } = await supabase.auth.getSession();
       user = session?.user;
-      if (!user) {
-        console.warn("No user found — redirecting to login");
-        window.location.href = "login.html";
-        return;
-      }
-    } catch (err) {
-      console.error("Error fetching session:", err);
-      return;
-    }
+      if (!user) { console.warn("No user found — redirecting to login"); window.location.href = "login.html"; return; }
+    } catch (err) { console.error("Error fetching session:", err); return; }
 
     const { data, error } = await supabase
       .from("agent_availability")
@@ -348,94 +278,87 @@ document.addEventListener('DOMContentLoaded', () => {
           { agent_id: user.id, available: isAvailable, last_changed_at: new Date().toISOString() },
           { onConflict: "agent_id" }
         );
-      if (error) {
-        alert("Could not update availability: " + error.message);
-        switchEl.checked = !isAvailable;
-      }
+      if (error) { alert("Could not update availability: " + error.message); switchEl.checked = !isAvailable; }
     });
   })();
 
   /* ---------- COMMISSION & RECRUITING SNAPSHOTS ---------- */
-  // Try two common policies shapes; fall back gracefully
-  async function fetchPoliciesFlex(startYearISO) {
-    // Try A: client_first/client_last/status
-    let q = supabase.from('policies')
-      .select('carrier_name, client_first, client_last, status, annual_premium, issued_at')
+
+  // Try policies direct; if columns missing, fall back to policy_status_history join
+  async function fetchPoliciesForSnapshot(startYearISO) {
+    // Attempt A: policies has issued_at + annual_premium
+    let res = await supabase.from('policies')
+      .select('status, carrier_name, annual_premium, issued_at')
       .gte('issued_at', startYearISO)
       .order('issued_at', { ascending:false })
-      .limit(100);
+      .limit(200);
+    if (!res.error) return { mode:'direct', rows: res.data || [] };
 
-    let res = await q;
-    if (!res.error) {
-      return (res.data || []).map(r => ({
-        carrier: r.carrier_name || '—',
-        clientFirst: r.client_first,
-        clientLast:  r.client_last,
-        status: (r.status || '').toLowerCase(),
-        ap: Number(r.annual_premium) || 0,
-        issued_at: r.issued_at
-      }));
-    }
+    // Attempt B: pull events from policy_status_history and join policies
+    const res2 = await supabase.from('policy_status_history')
+      .select('event_type, event_at, policy:policies(status, carrier_name, annual_premium)')
+      .gte('event_at', startYearISO)
+      .in('event_type', ['issued','in_force'])   // treat these as "issued"
+      .order('event_at', { ascending:false })
+      .limit(500);
+    if (!res2.error) return { mode:'via_events', rows: res2.data || [] };
 
-    // Try B: first_name/last_name/policy_status (or no status)
-    q = supabase.from('policies')
-      .select('carrier_name, first_name, last_name, policy_status, annual_premium, issued_at')
-      .gte('issued_at', startYearISO)
-      .order('issued_at', { ascending:false })
-      .limit(100);
-
-    res = await q;
-    if (!res.error) {
-      return (res.data || []).map(r => ({
-        carrier: r.carrier_name || '—',
-        clientFirst: r.first_name,
-        clientLast:  r.last_name,
-        status: (r.policy_status || '').toLowerCase(),
-        ap: Number(r.annual_premium) || 0,
-        issued_at: r.issued_at
-      }));
-    }
-
-    // If both fail (table missing or bad columns), return empty
-    console.warn('Policies query failed:', res.error);
-    return [];
+    console.warn('Policies query failed:', res.error || res2.error);
+    return { mode:'none', rows: [] };
   }
 
   async function loadCommissionSnapshot(){
-    let issuedMonth = 0, ytdAP = 0, pending = 0, chargebacks = 0;
+    let issuedMonth = 0, ytdAP = 0, pending = 0, chargebacksCount = 0;
     let rows = [];
     try{
       const now = new Date();
-      const startMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-      const startYear  = new Date(now.getFullYear(), 0, 1).toISOString();
+      const startMonthISO = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const startYearISO  = new Date(now.getFullYear(), 0, 1).toISOString();
 
-      const data = await fetchPoliciesFlex(startYear);
-      if (data.length) {
-        ytdAP = data.reduce((s,r)=> s + r.ap, 0);
+      const { mode, rows: data } = await fetchPoliciesForSnapshot(startYearISO);
+
+      if (mode === 'direct') {
+        ytdAP = data.reduce((s,r)=> s + (Number(r.annual_premium)||0), 0);
         issuedMonth = data
-          .filter(r => r.issued_at && new Date(r.issued_at) >= new Date(startMonth))
-          .reduce((s,r)=> s + r.ap, 0);
-        pending = data.filter(r => r.status === 'pending').length;
+          .filter(r => r.issued_at && new Date(r.issued_at) >= new Date(startMonthISO))
+          .reduce((s,r)=> s + (Number(r.annual_premium)||0), 0);
+
+        // pending from policies table if status exists
+        pending = data.filter(r => (r.status||'').toLowerCase() === 'pending').length;
 
         rows = data.slice(0,6).map(r=>({
-          carrier: r.carrier || '—',
-          client: `${r.clientFirst || ''} ${r.clientLast || ''}`.trim() || '—',
-          status: r.status || '—',
-          ap: r.ap,
+          carrier: r.carrier_name || '—',
+          client: '—',
+          status: (r.status || '').replace('_',' '),
+          ap: Number(r.annual_premium)||0,
           date: r.issued_at ? new Date(r.issued_at).toLocaleDateString() : '—'
+        }));
+      } else if (mode === 'via_events') {
+        ytdAP = data.reduce((s,r)=> s + (Number(r.policy?.annual_premium)||0), 0);
+        issuedMonth = data
+          .filter(r => r.event_at && new Date(r.event_at) >= new Date(startMonthISO))
+          .reduce((s,r)=> s + (Number(r.policy?.annual_premium)||0), 0);
+
+        // pending requires looking at policies table separately
+        const pendQ = await supabase.from('policies').select('status', { count:'exact', head:true }).eq('status','pending');
+        pending = pendQ.count || 0;
+
+        rows = data.slice(0,6).map(r=>({
+          carrier: r.policy?.carrier_name || '—',
+          client: '—',
+          status: (r.policy?.status || '').replace('_',' '),
+          ap: Number(r.policy?.annual_premium)||0,
+          date: r.event_at ? new Date(r.event_at).toLocaleDateString() : '—'
         }));
       }
 
-      // Optional chargebacks (skip silently if table missing)
-      try {
-        const cbQ = await supabase.from('policy_events')
-          .select('amount,created_at,type')
-          .gte('created_at', new Date(Date.now()-30*864e5).toISOString())
-          .eq('type','chargeback');
-        if(!cbQ.error && cbQ.data){
-          chargebacks = cbQ.data.reduce((s,r)=> s + Math.abs(Number(r.amount)||0), 0);
-        }
-      } catch {}
+      // Chargebacks = count of chargeback events in last 30d (amount not stored in this table)
+      const cbQ = await supabase.from('policy_status_history')
+        .select('event_type', { count:'exact', head:true })
+        .gte('event_at', new Date(Date.now() - 30*864e5).toISOString())
+        .eq('event_type','chargeback');
+      chargebacksCount = cbQ.count || 0;
+
     }catch(err){
       console.warn('Commission snapshot error:', err);
     }
@@ -444,7 +367,8 @@ document.addEventListener('DOMContentLoaded', () => {
     $('comm-issued-month') && ($('comm-issued-month').textContent = `$${Math.round(issuedMonth).toLocaleString()}`);
     $('comm-ytd-ap')      && ($('comm-ytd-ap').textContent      = `$${Math.round(ytdAP).toLocaleString()}`);
     $('comm-pending')     && ($('comm-pending').textContent     = String(pending));
-    $('comm-chargebacks') && ($('comm-chargebacks').textContent = `-$${Math.round(chargebacks).toLocaleString()}`);
+    // Show events count instead of dollars (schema has no amount on chargebacks)
+    $('comm-chargebacks') && ($('comm-chargebacks').textContent = `${chargebacksCount} events`);
 
     const tbody = document.getElementById('comm-recent-policies');
     if (tbody) {
@@ -455,8 +379,8 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function loadRecruitingSnapshot(){
-    let team=0, active=0, pipeline=0, interviews=0;
-    let activity=[];
+    // Use just agents table (no applicants table required)
+    let team=0, active=0; let activity=[];
     try{
       const agQ = await supabase.from('agents').select('id,is_active,full_name,created_at');
       if(!agQ.error && agQ.data){
@@ -467,20 +391,6 @@ document.addEventListener('DOMContentLoaded', () => {
           .slice(0,6)
           .map(a=>({ name:a.full_name||'—', stage:a.is_active?'Active':'Onboarding', owner:'—', date:new Date(a.created_at).toLocaleDateString() }));
       }
-
-      // Optional applicants table (skip if missing)
-      try {
-        const appQ = await supabase.from('applicants').select('name,stage,owner,created_at,interview_at');
-        if(!appQ.error && appQ.data){
-          pipeline   = appQ.data.filter(x=>['applied','screen','assessment','offer'].includes((x.stage||'').toLowerCase())).length;
-          const week = Date.now()+7*864e5;
-          interviews = appQ.data.filter(x=> x.interview_at && new Date(x.interview_at).getTime() <= week).length;
-          activity = appQ.data
-            .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))
-            .slice(0,6)
-            .map(x=>({ name:x.name||'Applicant', stage:(x.stage||'—'), owner:(x.owner||'—'), date:new Date(x.created_at).toLocaleDateString() }));
-        }
-      } catch {}
     }catch(err){
       console.warn('Recruiting snapshot error:', err);
     }
@@ -488,8 +398,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const $ = (id)=>document.getElementById(id);
     $('rec-team')       && ($('rec-team').textContent       = String(team));
     $('rec-active')     && ($('rec-active').textContent     = String(active));
-    $('rec-pipeline')   && ($('rec-pipeline').textContent   = String(pipeline));
-    $('rec-interviews') && ($('rec-interviews').textContent = String(interviews));
+    $('rec-pipeline')   && ($('rec-pipeline').textContent   = String(0));
+    $('rec-interviews') && ($('rec-interviews').textContent = String(0));
 
     const tbody = document.getElementById('rec-recent-activity');
     if (tbody) {
