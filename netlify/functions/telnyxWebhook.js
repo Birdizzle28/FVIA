@@ -9,6 +9,9 @@ const headers = {
   "Content-Type": "application/json"
 };
 
+// Use the same voice you liked in your test
+const VOICE = "Telnyx.KokoroTTS.af";
+
 // Log-aware Call Control action helper
 const act = async (id, action, body = {}) => {
   const r = await fetch(`${TAPI}/calls/${id}/actions/${action}`, {
@@ -18,9 +21,9 @@ const act = async (id, action, body = {}) => {
   });
   const txt = await r.text();
   if (!r.ok) {
-    console.error("Telnyx action failed", { action, status: r.status, txt });
+    console.error("Telnyx action failed", { id, action, status: r.status, txt });
   } else {
-    console.log("Telnyx action ok", { action, txt });
+    console.log("Telnyx action ok", { id, action, txt });
   }
   return { ok: r.ok, status: r.status, body: txt };
 };
@@ -31,49 +34,55 @@ export async function handler(event) {
       return { statusCode: 405, body: "Method Not Allowed" };
     }
 
-    const payload = JSON.parse(event.body || "{}");
+    const payload   = JSON.parse(event.body || "{}");
     const eventType = payload?.data?.event_type;
     const callId    = payload?.data?.payload?.call_control_id;
 
     console.log("TELNYX EVENT", { eventType, callId });
-    
     if (!callId) return { statusCode: 200, body: "OK" };
 
-    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+    // ---- Supabase (service role) ----
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
 
-    // Session matching for agent leg (we stored telnyx_call_id when creating the agent call)
+    // ===== Agent leg session (we stored telnyx_call_id when we dialed the agent) =====
     const { data: session } = await supabase
       .from("call_sessions")
       .select("*")
       .eq("telnyx_call_id", callId)
       .maybeSingle();
 
-    // ---- Option B: safer bridging ----
-    // If THIS answered leg is the CLIENT leg we created earlier, bridge the agent to it.
+    // ===== Also check if THIS call is the client leg we created later =====
+    let sessClient = null;
     if (eventType === "call.answered") {
-      const answeredId = callId; // this event's leg
-      const { data: sess } = await supabase
+      const res = await supabase
         .from("call_sessions").select("*")
-        .eq("client_call_id", answeredId)
+        .eq("client_call_id", callId)
         .maybeSingle();
-
-      if (sess) {
-        await act(sess.telnyx_call_id, "transfer_call", {
-          language: "en-US",
-          voice: "Telnyx.KokoroTTS.af",
-          to: answeredId 
-        });
-        return { statusCode: 200, body: "OK" };
-      }
+      sessClient = res.data || null;
     }
 
-    // 1) Agent answered → whisper + gather (only when this leg is the AGENT leg we started)
-    if (eventType === "call.answered" && session) {
-      // Build whisper (best-effort)
+    console.log("LEG CHECK", {
+      haveAgentSession: !!session,
+      isClientLeg: !!sessClient,
+      eventType
+    });
+
+    // --- If the CLIENT leg answered, bridge the agent to it and return ---
+    if (eventType === "call.answered" && sessClient) {
+      await act(sessClient.telnyx_call_id, "transfer_call", { to: callId }); // no voice/lang here
+      return { statusCode: 200, body: "OK" };
+    }
+
+    // --- If the AGENT leg answered (or session missing), whisper + gather ---
+    if (eventType === "call.answered") {
+      // Build whisper best-effort
       let name = "Prospect";
       let summary = "";
 
-      if (session.lead_id) {
+      if (session?.lead_id) {
         const { data: lead } = await supabase
           .from("leads")
           .select("first_name, last_name, product_type, contact_id, zip, contacts:contact_id(first_name, last_name)")
@@ -88,29 +97,28 @@ export async function handler(event) {
       }
 
       await act(callId, "speak", {
+        voice: VOICE,
         language: "en-US",
-        voice: "Telnyx.KokoroTTS.af",
-        payload: `New lead. ${name || "Prospect"}. ${summary}Press 1 to connect to the client.`
+        payload: `New lead. ${name}. ${summary}Press 1 to connect to the client.`
       });
 
       await act(callId, "gather_using_speak", {
+        voice: VOICE,
+        language: "en-US",
         minimum_digits: 1,
         maximum_digits: 1,
         inter_digit_timeout_ms: 4000,
-        language: "en-US",
-        voice: "Telnyx.KokoroTTS.af",
         payload: "Press 1 to connect now, or any other key to cancel."
       });
 
       return { statusCode: 200, body: "OK" };
     }
 
-    // 2) Agent responded (handle both gather + raw dtmf)
+    // --- Agent pressed a key (requires agent session so we know the prospect) ---
     if ((eventType === "call.dtmf.received" || eventType === "call.gather.ended") && session) {
-      const digit =
-        eventType === "call.dtmf.received"
-          ? payload?.data?.payload?.digit
-          : (payload?.data?.payload?.digits || "")[0];
+      const digit = eventType === "call.dtmf.received"
+        ? payload?.data?.payload?.digit
+        : (payload?.data?.payload?.digits || "")[0];
 
       if (digit === "1" && session.prospect_number) {
         // Place prospect leg
@@ -127,40 +135,36 @@ export async function handler(event) {
 
         if (!r.ok) {
           await act(callId, "speak", {
+            voice: VOICE,
             language: "en-US",
-            voice: "Telnyx.KokoroTTS.af",
-            payload: "Unable to reach the client." 
+            payload: "Unable to reach the client."
           });
           return { statusCode: r.status, body: JSON.stringify(newCallJson) };
         }
 
         const clientCallId = newCallJson?.data?.id;
 
-        // Store client leg; we'll bridge when THAT leg answers (see call.answered above)
+        // Store client leg; when THAT leg answers we bridge in call.answered above
         await supabase
           .from("call_sessions")
           .update({ client_call_id: clientCallId })
           .eq("id", session.id);
 
-        await act(callId, "speak", { 
+        await act(callId, "speak", {
+          voice: VOICE,
           language: "en-US",
-          voice: "Telnyx.KokoroTTS.af",
           payload: "Dialing the client now."
         });
         return { statusCode: 200, body: "OK" };
       }
 
-      // Any key other than 1 → hang up
-      await act(callId, "hangup", {
-        language: "en-US",
-        voice: "Telnyx.KokoroTTS.af",
-      });
+      // Any other key → hang up
+      await act(callId, "hangup", {}); // no voice/lang here
       return { statusCode: 200, body: "OK" };
     }
 
-    // 3) Clean up on hangup (optional)
+    // --- optional cleanup ---
     if (eventType === "call.hangup" && session) {
-      // e.g., await supabase.from("call_sessions").delete().eq("id", session.id);
       return { statusCode: 200, body: "OK" };
     }
 
