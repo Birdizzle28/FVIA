@@ -8,10 +8,10 @@ const headers = {
   "Content-Type": "application/json"
 };
 
-// Keep the voice you liked
+// Use the same voice you liked in your test
 const VOICE = "Telnyx.KokoroTTS.af";
 
-// Call Control action helper with logging
+// Log-aware Call Control action helper
 const act = async (id, action, body = {}) => {
   const r = await fetch(`${TAPI}/calls/${id}/actions/${action}`, {
     method: "POST",
@@ -19,14 +19,12 @@ const act = async (id, action, body = {}) => {
     body: JSON.stringify(body)
   });
   const txt = await r.text();
-  const ok = r.ok;
-  const status = r.status;
-  if (!ok) {
-    console.error("TELNYX ACTION FAIL", { id, action, status, body, txt });
+  if (!r.ok) {
+    console.error("Telnyx action failed", { id, action, status: r.status, txt });
   } else {
-    console.log("TELNYX ACTION OK", { id, action, status, body, txt });
+    console.log("Telnyx action ok", { id, action, txt });
   }
-  return { ok, status, body: txt };
+  return { ok: r.ok, status: r.status, body: txt };
 };
 
 export async function handler(event) {
@@ -39,62 +37,54 @@ export async function handler(event) {
     const eventType = payload?.data?.event_type;
     const callId    = payload?.data?.payload?.call_control_id;
 
-    console.log("TELNYX EVENT", { eventType, callId, raw: payload?.data?.payload });
-
+    console.log("TELNYX EVENT", { eventType, callId });
     if (!callId) return { statusCode: 200, body: "OK" };
 
-    // Supabase SR client
+    // ---- Supabase (service role) ----
     const supabase = createClient(
       process.env.SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // Try to find an agent session (we stored telnyx_call_id when we dialed the AGENT)
-    const { data: agentSession, error: sessionErr } = await supabase
+    // Agent leg session we created first
+    const { data: session } = await supabase
       .from("call_sessions")
       .select("*")
       .eq("telnyx_call_id", callId)
       .maybeSingle();
 
-    if (sessionErr) console.error("SUPABASE sessionErr", sessionErr);
-
-    // Also check if THIS call is the CLIENT leg we created later
+    // Is THIS the client leg answering?
     let sessClient = null;
     if (eventType === "call.answered") {
-      const { data: sc, error: scErr } = await supabase
-        .from("call_sessions")
-        .select("*")
+      const res = await supabase
+        .from("call_sessions").select("*")
         .eq("client_call_id", callId)
         .maybeSingle();
-      if (scErr) console.error("SUPABASE client-leg lookup error", scErr);
-      sessClient = sc || null;
+      sessClient = res.data || null;
     }
 
     console.log("LEG CHECK", {
-      isAgentLeg: !!agentSession,
-      isClientLeg: !!sessClient
+      haveAgentSession: !!session,
+      isClientLeg: !!sessClient,
+      eventType
     });
 
-    // If THIS is the CLIENT leg answering, bridge the agent to it (safety net / idempotent)
+    // Client leg answered → bridge now
     if (eventType === "call.answered" && sessClient) {
-      console.log("CLIENT LEG ANSWERED — bridging agent → client", {
-        agent_leg: sessClient.telnyx_call_id,
-        client_leg: callId
-      });
       await act(sessClient.telnyx_call_id, "transfer_call", { to: callId });
       return { statusCode: 200, body: "OK" };
     }
 
     // Agent leg answered → whisper + gather
-    if (eventType === "call.answered" && agentSession) {
+    if (eventType === "call.answered") {
       let name = "Prospect";
       let summary = "";
 
-      if (agentSession.lead_id) {
+      if (session?.lead_id) {
         const { data: lead } = await supabase
           .from("leads")
           .select("first_name, last_name, product_type, contact_id, zip, contacts:contact_id(first_name, last_name)")
-          .eq("id", agentSession.lead_id)
+          .eq("id", session.lead_id)
           .maybeSingle();
 
         const lf = lead?.first_name || lead?.contacts?.first_name || "";
@@ -116,32 +106,33 @@ export async function handler(event) {
         minimum_digits: 1,
         maximum_digits: 1,
         inter_digit_timeout_ms: 4000,
-        valid_digits: "1",
+        valid_digits: "1",                        // ← added
         payload: "Press 1 to connect now, or any other key to cancel."
       });
 
       return { statusCode: 200, body: "OK" };
     }
 
-    // DTMF / gather result on agent leg
-    if ((eventType === "call.dtmf.received" || eventType === "call.gather.ended") && agentSession) {
-      const p = payload?.data?.payload || {};
-      const digit = eventType === "call.dtmf.received" ? p.digit : (p.digits || "")[0];
-      console.log("DTMF/GATHER", { eventType, digit, p });
+    // DTMF / gather result
+    if ((eventType === "call.dtmf.received" || eventType === "call.gather.ended") && session) {
+      const dtmfPayload = payload?.data?.payload || {};       // ← added
+      const digit = eventType === "call.dtmf.received"
+        ? dtmfPayload.digit
+        : (dtmfPayload.digits || "")[0];
+      console.log("DTMF/GATHER DIGIT", { eventType, digit, raw: dtmfPayload }); // ← added
 
-      if (digit === "1" && agentSession.prospect_number) {
-        // Create CLIENT leg
+      if (digit === "1" && session.prospect_number) {
+        // Place prospect leg
         const r = await fetch(`${TAPI}/calls`, {
           method: "POST",
           headers,
           body: JSON.stringify({
-            connection_id: process.env.TELNYX_CONNECTION_ID, // must be same CC app as webhook!
-            to: agentSession.prospect_number,
+            connection_id: process.env.TELNYX_CONNECTION_ID,
+            to: session.prospect_number,
             from: process.env.TELNYX_FROM_NUMBER
           })
         });
         const newCallJson = await r.json();
-        console.log("CREATE CLIENT LEG", { status: r.status, newCallJson });
 
         if (!r.ok) {
           await act(callId, "speak", {
@@ -149,28 +140,20 @@ export async function handler(event) {
             language: "en-US",
             payload: "Unable to reach the client."
           });
-          return { statusCode: r.status, body: JSON.stringify(newCallJson) };
+        } else {
+          const clientCallId = newCallJson?.data?.id;
+          await supabase
+            .from("call_sessions")
+            .update({ client_call_id: clientCallId })
+            .eq("id", session.id);
+
+          await act(callId, "speak", {
+            voice: VOICE,
+            language: "en-US",
+            payload: "Dialing the client now."
+          });
         }
-
-        const clientCallId = newCallJson?.data?.id;
-
-        // Save client leg id
-        await supabase
-          .from("call_sessions")
-          .update({ client_call_id: clientCallId })
-          .eq("id", agentSession.id);
-
-        // **IMMEDIATE TRANSFER** (queues bridge; Telnyx will connect when client answers)
-        console.log("IMMEDIATE TRANSFER attempt", { agent_leg: callId, client_leg: clientCallId });
-        await act(callId, "transfer_call", { to: clientCallId });
-
-        await act(callId, "speak", {
-          voice: VOICE,
-          language: "en-US",
-          payload: "Dialing the client now."
-        });
-
-        return { statusCode: 200, body: JSON.stringify({ ok: true, clientCallId }) };
+        return { statusCode: r.status || 200, body: JSON.stringify(newCallJson) };
       }
 
       if (digit !== "1") {
@@ -183,8 +166,8 @@ export async function handler(event) {
         return { statusCode: 200, body: "OK" };
       }
 
-      // No/unknown digit → reprompt once
-      await act(callId, "gather_using_speak", {
+      // No digit captured → reprompt once
+      await act(callId, "gather_using_speak", {               // ← added (reprompt)
         voice: VOICE,
         language: "en-US",
         minimum_digits: 1,
@@ -196,8 +179,7 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // Optional cleanup
-    if (eventType === "call.hangup" && agentSession) {
+    if (eventType === "call.hangup" && session) {
       return { statusCode: 200, body: "OK" };
     }
 
