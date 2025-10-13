@@ -212,7 +212,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const setText = (id, v) => { const n = el(id); if (n) n.textContent = String(v); };
 
     function inferStage(row){
-      const s = (row.status || row.stage || '').toLowerCase();
+      const s = (row.stage || '').toLowerCase();
       if (s) return s;
       if (row.closed_at || row.is_closed) return 'closed';
       if (row.quoted_at || /quoted/i.test(row.notes||'')) return 'quoted';
@@ -225,15 +225,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!window.supabase) {
         const now = Date.now();
         return [
-          { first_name:'Tara', last_name:'Ng', product_type:'life', zip:'38120', created_at:new Date(now-864e5*2), status:'new' },
-          { first_name:'Mark', last_name:'L', product_type:'auto', zip:'38119', created_at:new Date(now-864e5*3), status:'contacted' },
-          { first_name:'Ada', last_name:'B', product_type:'home', zip:'38128', created_at:new Date(now-864e5*4), status:'quoted' },
-          { first_name:'Jon', last_name:'R', product_type:'life', zip:'38134', created_at:new Date(now-864e5*5), status:'closed' },
-          { first_name:'Maya', last_name:'C', product_type:'life', zip:'38133', created_at:new Date(now-864e5*1), status:'new' },
+          { first_name:'Tara', last_name:'Ng', product_type:'life', zip:'38120', created_at:new Date(now-864e5*2), stage:'new' },
+          { first_name:'Mark', last_name:'L', product_type:'auto', zip:'38119', created_at:new Date(now-864e5*3), stage:'contacted' },
+          { first_name:'Ada', last_name:'B', product_type:'home', zip:'38128', created_at:new Date(now-864e5*4), stage:'quoted' },
+          { first_name:'Jon', last_name:'R', product_type:'life', zip:'38134', created_at:new Date(now-864e5*5), stage:'closed' },
+          { first_name:'Maya', last_name:'C', product_type:'life', zip:'38133', created_at:new Date(now-864e5*1), stage:'new' },
         ];
       }
       let q = supabase.from('leads')
-        .select('id, first_name, last_name, zip, product_type, status, stage, notes, created_at, assigned_to, submitted_by, quoted_at, contacted_at, closed_at')
+        .select('id, first_name, last_name, zip, product_type, stage, notes, created_at, assigned_to, submitted_by, quoted_at, contacted_at, closed_at')
         .order('created_at', { ascending:false });
 
       if (scope === 'mine' && userId) {
@@ -356,6 +356,51 @@ document.addEventListener('DOMContentLoaded', () => {
   })();
 
   /* ---------- COMMISSION & RECRUITING SNAPSHOTS ---------- */
+  // Try two common policies shapes; fall back gracefully
+  async function fetchPoliciesFlex(startYearISO) {
+    // Try A: client_first/client_last/status
+    let q = supabase.from('policies')
+      .select('carrier_name, client_first, client_last, status, annual_premium, issued_at')
+      .gte('issued_at', startYearISO)
+      .order('issued_at', { ascending:false })
+      .limit(100);
+
+    let res = await q;
+    if (!res.error) {
+      return (res.data || []).map(r => ({
+        carrier: r.carrier_name || '—',
+        clientFirst: r.client_first,
+        clientLast:  r.client_last,
+        status: (r.status || '').toLowerCase(),
+        ap: Number(r.annual_premium) || 0,
+        issued_at: r.issued_at
+      }));
+    }
+
+    // Try B: first_name/last_name/policy_status (or no status)
+    q = supabase.from('policies')
+      .select('carrier_name, first_name, last_name, policy_status, annual_premium, issued_at')
+      .gte('issued_at', startYearISO)
+      .order('issued_at', { ascending:false })
+      .limit(100);
+
+    res = await q;
+    if (!res.error) {
+      return (res.data || []).map(r => ({
+        carrier: r.carrier_name || '—',
+        clientFirst: r.first_name,
+        clientLast:  r.last_name,
+        status: (r.policy_status || '').toLowerCase(),
+        ap: Number(r.annual_premium) || 0,
+        issued_at: r.issued_at
+      }));
+    }
+
+    // If both fail (table missing or bad columns), return empty
+    console.warn('Policies query failed:', res.error);
+    return [];
+  }
+
   async function loadCommissionSnapshot(){
     let issuedMonth = 0, ytdAP = 0, pending = 0, chargebacks = 0;
     let rows = [];
@@ -364,37 +409,36 @@ document.addEventListener('DOMContentLoaded', () => {
       const startMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const startYear  = new Date(now.getFullYear(), 0, 1).toISOString();
 
-      const issuedQ = await supabase.from('policies')
-        .select('carrier_name,client_first,client_last,status,annual_premium,issued_at')
-        .gte('issued_at', startYear)
-        .order('issued_at', { ascending:false })
-        .limit(50);
-
-      if(!issuedQ.error && issuedQ.data){
-        const data = issuedQ.data;
-        ytdAP = data.reduce((s,r)=> s + (Number(r.annual_premium)||0), 0);
+      const data = await fetchPoliciesFlex(startYear);
+      if (data.length) {
+        ytdAP = data.reduce((s,r)=> s + r.ap, 0);
         issuedMonth = data
           .filter(r => r.issued_at && new Date(r.issued_at) >= new Date(startMonth))
-          .reduce((s,r)=> s + (Number(r.annual_premium)||0), 0);
-        pending = data.filter(r => (r.status||'').toLowerCase()==='pending').length;
+          .reduce((s,r)=> s + r.ap, 0);
+        pending = data.filter(r => r.status === 'pending').length;
+
         rows = data.slice(0,6).map(r=>({
-          carrier: r.carrier_name||'—',
-          client: `${r.client_first||''} ${r.client_last||''}`.trim()||'—',
-          status: (r.status||'').replace('_',' '),
-          ap: Number(r.annual_premium)||0,
+          carrier: r.carrier || '—',
+          client: `${r.clientFirst || ''} ${r.clientLast || ''}`.trim() || '—',
+          status: r.status || '—',
+          ap: r.ap,
           date: r.issued_at ? new Date(r.issued_at).toLocaleDateString() : '—'
         }));
       }
 
-      const cbQ = await supabase.from('policy_events')
-        .select('amount,created_at,type')
-        .gte('created_at', new Date(Date.now()-30*864e5).toISOString())
-        .eq('type','chargeback');
-
-      if(!cbQ.error && cbQ.data){
-        chargebacks = cbQ.data.reduce((s,r)=> s + Math.abs(Number(r.amount)||0), 0);
-      }
-    }catch(_){}
+      // Optional chargebacks (skip silently if table missing)
+      try {
+        const cbQ = await supabase.from('policy_events')
+          .select('amount,created_at,type')
+          .gte('created_at', new Date(Date.now()-30*864e5).toISOString())
+          .eq('type','chargeback');
+        if(!cbQ.error && cbQ.data){
+          chargebacks = cbQ.data.reduce((s,r)=> s + Math.abs(Number(r.amount)||0), 0);
+        }
+      } catch {}
+    }catch(err){
+      console.warn('Commission snapshot error:', err);
+    }
 
     const $ = (id)=>document.getElementById(id);
     $('comm-issued-month') && ($('comm-issued-month').textContent = `$${Math.round(issuedMonth).toLocaleString()}`);
@@ -424,18 +468,22 @@ document.addEventListener('DOMContentLoaded', () => {
           .map(a=>({ name:a.full_name||'—', stage:a.is_active?'Active':'Onboarding', owner:'—', date:new Date(a.created_at).toLocaleDateString() }));
       }
 
-      const appQ = await supabase.from('applicants').select('name,stage,owner,created_at,interview_at');
-      if(!appQ.error && appQ.data){
-        pipeline   = appQ.data.filter(x=>['applied','screen','assessment','offer'].includes((x.stage||'').toLowerCase())).length;
-        const week = Date.now()+7*864e5;
-        interviews = appQ.data.filter(x=> x.interview_at && new Date(x.interview_at).getTime() <= week).length;
-        // prefer applicant activity if present
-        activity = appQ.data
-          .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))
-          .slice(0,6)
-          .map(x=>({ name:x.name||'Applicant', stage:(x.stage||'—'), owner:(x.owner||'—'), date:new Date(x.created_at).toLocaleDateString() }));
-      }
-    }catch(_){}
+      // Optional applicants table (skip if missing)
+      try {
+        const appQ = await supabase.from('applicants').select('name,stage,owner,created_at,interview_at');
+        if(!appQ.error && appQ.data){
+          pipeline   = appQ.data.filter(x=>['applied','screen','assessment','offer'].includes((x.stage||'').toLowerCase())).length;
+          const week = Date.now()+7*864e5;
+          interviews = appQ.data.filter(x=> x.interview_at && new Date(x.interview_at).getTime() <= week).length;
+          activity = appQ.data
+            .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))
+            .slice(0,6)
+            .map(x=>({ name:x.name||'Applicant', stage:(x.stage||'—'), owner:(x.owner||'—'), date:new Date(x.created_at).toLocaleDateString() }));
+        }
+      } catch {}
+    }catch(err){
+      console.warn('Recruiting snapshot error:', err);
+    }
 
     const $ = (id)=>document.getElementById(id);
     $('rec-team')       && ($('rec-team').textContent       = String(team));
