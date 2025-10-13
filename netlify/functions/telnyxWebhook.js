@@ -39,7 +39,11 @@ export async function handler(event) {
 
         // ===== TEMP TEST: force whisper on any answered call =====
     if (eventType === "call.answered" && callId) {
-      await act(callId, "speak", { payload: "Test whisper from webhook." });
+      await act(callId, "speak", {
+        language: "en-US",
+        voice: "Telnyx.KokoroTTS.af",
+        payload: "Test whisper from webhook."
+      });
       // return { statusCode: 200, body: "OK" }; // ← uncomment to isolate just this test
     }
     
@@ -64,7 +68,11 @@ export async function handler(event) {
         .maybeSingle();
 
       if (sess) {
-        await act(sess.telnyx_call_id, "transfer_call", { to: answeredId });
+        await act(sess.telnyx_call_id, "transfer_call", {
+          language: "en-US",
+          voice: "Telnyx.KokoroTTS.af",
+          to: answeredId 
+        });
         return { statusCode: 200, body: "OK" };
       }
     }
@@ -91,7 +99,7 @@ export async function handler(event) {
 
       await act(callId, "speak", {
         language: "en-US",
-        voice: "female",
+        voice: "Telnyx.KokoroTTS.af",
         payload: `New lead. ${name || "Prospect"}. ${summary}Press 1 to connect to the client.`
       });
 
@@ -100,7 +108,7 @@ export async function handler(event) {
         maximum_digits: 1,
         inter_digit_timeout_ms: 4000,
         language: "en-US",
-        voice: "female",
+        voice: "Telnyx.KokoroTTS.af",
         payload: "Press 1 to connect now, or any other key to cancel."
       });
 
@@ -128,7 +136,11 @@ export async function handler(event) {
         const newCallJson = await r.json();
 
         if (!r.ok) {
-          await act(callId, "speak", { payload: "Unable to reach the client." });
+          await act(callId, "speak", {
+            language: "en-US",
+            voice: "Telnyx.KokoroTTS.af",
+            payload: "Unable to reach the client." 
+          });
           return { statusCode: r.status, body: JSON.stringify(newCallJson) };
         }
 
@@ -140,12 +152,19 @@ export async function handler(event) {
           .update({ client_call_id: clientCallId })
           .eq("id", session.id);
 
-        await act(callId, "speak", { payload: "Dialing the client now." });
+        await act(callId, "speak", { 
+          language: "en-US",
+          voice: "Telnyx.KokoroTTS.af",
+          payload: "Dialing the client now."
+        });
         return { statusCode: 200, body: "OK" };
       }
 
       // Any key other than 1 → hang up
-      await act(callId, "hangup", {});
+      await act(callId, "hangup", {
+        language: "en-US",
+        voice: "Telnyx.KokoroTTS.af",
+      });
       return { statusCode: 200, body: "OK" };
     }
 
