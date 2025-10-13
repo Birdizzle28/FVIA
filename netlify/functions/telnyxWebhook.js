@@ -36,16 +36,6 @@ export async function handler(event) {
     const callId    = payload?.data?.payload?.call_control_id;
 
     console.log("TELNYX EVENT", { eventType, callId });
-
-        // ===== TEMP TEST: force whisper on any answered call =====
-    if (eventType === "call.answered" && callId) {
-      await act(callId, "speak", {
-        language: "en-US",
-        voice: "Telnyx.KokoroTTS.af",
-        payload: "Test whisper from webhook."
-      });
-      // return { statusCode: 200, body: "OK" }; // ← uncomment to isolate just this test
-    }
     
     if (!callId) return { statusCode: 200, body: "OK" };
 
