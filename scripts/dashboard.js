@@ -431,4 +431,90 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   })();
+  async function loadCommissionSnapshot(){
+    let issuedMonth = 0, ytdAP = 0, pending = 0, chargebacks = 0;
+    let rows = [];
+    try{
+      const now = new Date();
+      const startMonth = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+      const startYear  = new Date(now.getFullYear(), 0, 1).toISOString();
+  
+      const issuedQ = await supabase.from('policies').select('carrier_name,client_first,client_last,status,annual_premium,issued_at')
+        .gte('issued_at', startYear).order('issued_at', { ascending:false }).limit(8);
+  
+      if(!issuedQ.error && issuedQ.data){
+        const data = issuedQ.data;
+        ytdAP = data.reduce((s,r)=> s + (Number(r.annual_premium)||0), 0);
+        issuedMonth = data.filter(r => new Date(r.issued_at) >= new Date(startMonth))
+                          .reduce((s,r)=> s + (Number(r.annual_premium)||0), 0);
+        pending = data.filter(r => (r.status||'').toLowerCase()==='pending').length;
+        rows = data.slice(0,6).map(r=>({
+          carrier: r.carrier_name||'—',
+          client: `${r.client_first||''} ${r.client_last||''}`.trim()||'—',
+          status: (r.status||'').replace('_',' '),
+          ap: Number(r.annual_premium)||0,
+          date: r.issued_at ? new Date(r.issued_at).toLocaleDateString() : '—'
+        }));
+      }
+  
+      const cbQ = await supabase.from('policy_events').select('amount,created_at,type')
+        .gte('created_at', new Date(Date.now()-30*864e5).toISOString())
+        .eq('type','chargeback');
+      if(!cbQ.error && cbQ.data){
+        chargebacks = cbQ.data.reduce((s,r)=> s + Math.abs(Number(r.amount)||0), 0);
+      }
+    }catch(_){}
+  
+    const $ = (id)=>document.getElementById(id);
+    $('comm-issued-month').textContent = `$${Math.round(issuedMonth).toLocaleString()}`;
+    $('comm-ytd-ap').textContent      = `$${Math.round(ytdAP).toLocaleString()}`;
+    $('comm-pending').textContent     = String(pending);
+    $('comm-chargebacks').textContent = `-$${Math.round(chargebacks).toLocaleString()}`;
+  
+    const tbody = document.getElementById('comm-recent-policies');
+    tbody.innerHTML = rows.map(r=>`
+      <tr><td>${r.carrier}</td><td>${r.client}</td><td>${r.status||'—'}</td><td>$${Math.round(r.ap).toLocaleString()}</td><td>${r.date}</td></tr>
+    `).join('') || `<tr><td colspan="5">No policy data yet.</td></tr>`;
+  }
+  
+  async function loadRecruitingSnapshot(){
+    let team=0, active=0, pipeline=0, interviews=0;
+    let activity=[];
+    try{
+      const agQ = await supabase.from('agents').select('id,is_active,full_name,created_at,companies');
+      if(!agQ.error && agQ.data){
+        team   = agQ.data.length;
+        active = agQ.data.filter(a=>a.is_active).length;
+        activity = agQ.data.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))
+                           .slice(0,6)
+                           .map(a=>({ name:a.full_name||'—', stage:a.is_active?'Active':'Onboarding', owner:'—', date:new Date(a.created_at).toLocaleDateString() }));
+      }
+  
+      const appQ = await supabase.from('applicants').select('id,stage,owner,created_at,interview_at');
+      if(!appQ.error && appQ.data){
+        pipeline   = appQ.data.filter(x=>['applied','screen','assessment','offer'].includes((x.stage||'').toLowerCase())).length;
+        const week = Date.now()+7*864e5;
+        interviews = appQ.data.filter(x=> x.interview_at && new Date(x.interview_at).getTime() <= week).length;
+        activity = appQ.data.sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))
+                            .slice(0,6)
+                            .map(x=>({ name:x.name||'Applicant', stage:(x.stage||'—'), owner:(x.owner||'—'), date:new Date(x.created_at).toLocaleDateString() }));
+      }
+    }catch(_){}
+  
+    const $ = (id)=>document.getElementById(id);
+    $('rec-team').textContent       = String(team);
+    $('rec-active').textContent     = String(active);
+    $('rec-pipeline').textContent   = String(pipeline);
+    $('rec-interviews').textContent = String(interviews);
+  
+    const tbody = document.getElementById('rec-recent-activity');
+    tbody.innerHTML = activity.map(r=>`
+      <tr><td>${r.name}</td><td>${r.stage}</td><td>${r.owner}</td><td>${r.date}</td></tr>
+    `).join('') || `<tr><td colspan="4">No recruiting activity yet.</td></tr>`;
+  }
+  
+  document.addEventListener('DOMContentLoaded', () => {
+    loadCommissionSnapshot();
+    loadRecruitingSnapshot();
+  });
 });
