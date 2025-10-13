@@ -26,7 +26,14 @@ export async function handler(event) {
     }
 
     // Env checks
-    const { SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, TELNYX_API_KEY, TELNYX_CONNECTION_ID, TELNYX_FROM_NUMBER } = process.env;
+    const {
+      SUPABASE_URL,
+      SUPABASE_SERVICE_ROLE_KEY,
+      TELNYX_API_KEY,
+      TELNYX_CONNECTION_ID,
+      TELNYX_FROM_NUMBER
+    } = process.env;
+
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return { statusCode: 500, headers: cors(), body: JSON.stringify({ error: "Supabase env vars not set" }) };
     }
@@ -57,6 +64,11 @@ export async function handler(event) {
       return { statusCode: 409, headers: cors(), body: JSON.stringify({ ok:false, reason:"AGENT_OFFLINE" }) };
     }
 
+    // Include client_state so webhook can recover context even if the DB insert is missed/racy
+    const clientState = Buffer.from(
+      JSON.stringify({ leadId: leadId || null, prospectNumber })
+    ).toString("base64");
+
     // Start agent leg
     const telnyxRes = await fetch("https://api.telnyx.com/v2/calls", {
       method: "POST",
@@ -67,8 +79,9 @@ export async function handler(event) {
       body: JSON.stringify({
         connection_id: TELNYX_CONNECTION_ID,
         to: agentNumber,
-        from: TELNYX_FROM_NUMBER
-        // Your Call Control App must point to telnyx_webhook.js below
+        from: TELNYX_FROM_NUMBER,
+        client_state: clientState // ← key addition
+        // Your Call Control App must point to telnyx_webhook.js
       })
     });
     const telnyxJson = await telnyxRes.json();
@@ -77,6 +90,7 @@ export async function handler(event) {
     }
 
     const telnyx_call_id = telnyxJson?.data?.id;
+    console.log("Started agent leg", { telnyx_call_id, agentId, leadId });
 
     // Store session so webhook can find prospect + lead
     await supabase.from("call_sessions").insert({
