@@ -266,47 +266,83 @@
 			</section>
 			
 			<!-- Commission Snapshot -->
-			<section class="dash-wrap">
-				<h1 class="dash-title">Commission Snapshot</h1>
-				<div class="folder-tabs">
-					<section id="panel-commission" class="panel is-active stay-white" role="tabpanel" aria-labelledby="tab-commission">
-							<div class="card-grid">
-								<article class="card">
-									<h3>Paid YTD</h3>
-								</article>
-								<article class="card">
-									<h3>Pending</h3>
-								</article>
-								<article class="card">
-									<h3>Next Payout</h3>
-								</article>
-							</div>
-						</section>
-					</div>
+			<section class="card stay-white">
+				<div class="snapshot-head">
+					<h3>Commission Snapshot</h3>
+					<button class="see-all" data-overlay="sales">See all</button>
+				</div>
+			
+				<div class="snapshot-grid">
+					<article class="stat">
+						<div class="stat-top"><i class="fa-solid fa-receipt"></i><span>Issued (This Month)</span></div>
+						<div class="num" id="comm-issued-month">$0</div>
+					</article>
+					<article class="stat">
+						<div class="stat-top"><i class="fa-solid fa-sack-dollar"></i><span>YTD AP</span></div>
+						<div class="num" id="comm-ytd-ap">$0</div>
+					</article>
+					<article class="stat">
+						<div class="stat-top"><i class="fa-solid fa-hourglass-half"></i><span>Pending Apps</span></div>
+						<div class="num" id="comm-pending">0</div>
+					</article>
+					<article class="stat">
+						<div class="stat-top"><i class="fa-solid fa-rotate-left"></i><span>Chargebacks (30d)</span></div>
+						<div class="num bad" id="comm-chargebacks">-$0</div>
+					</article>
+				</div>
+			
+				<div class="mini">
+					<h4>Recent Policies</h4>
+					<table class="mini-table" aria-label="Recent policies">
+						<thead>
+							<tr>
+								<th>Carrier</th><th>Client</th><th>Status</th><th>AP</th><th>Date</th>
+							</tr>
+						</thead>
+						<tbody id="comm-recent-policies"></tbody>
+					</table>
 				</div>
 			</section>
 			
 			<!-- Recruiting Snapshot -->
-			<section class="dash-wrap">
-				<h1 class="dash-title">Recruiting Snapshot</h1>
-				<div class="folder-tabs">
-					<section id="panel-recruits" class="panel is-active stay-white" role="tabpanel" aria-labelledby="tab-recruits">
-							<div class="card-grid">
-								<article class="card">
-									<h3>Recruits</h3>
-								</article>
-								<article class="card">
-									<h3>Licensed</h3>
-								</article>
-								<article class="card">
-									<h3>Pending</h3>
-								</article>
-							</div>
-						</section>
-					</div>
+			<section class="card stay-white">
+				<div class="snapshot-head">
+					<h3>Recruiting Snapshot</h3>
+					<button class="see-all" data-overlay="reminders">See all</button>
+				</div>
+			
+				<div class="snapshot-grid">
+					<article class="stat">
+						<div class="stat-top"><i class="fa-solid fa-people-group"></i><span>Team Size</span></div>
+						<div class="num" id="rec-team">0</div>
+					</article>
+					<article class="stat">
+						<div class="stat-top"><i class="fa-solid fa-user-check"></i><span>Active Agents</span></div>
+						<div class="num" id="rec-active">0</div>
+					</article>
+					<article class="stat">
+						<div class="stat-top"><i class="fa-solid fa-seedling"></i><span>Pipeline</span></div>
+						<div class="num" id="rec-pipeline">0</div>
+					</article>
+					<article class="stat">
+						<div class="stat-top"><i class="fa-solid fa-calendar-check"></i><span>Interviews (7d)</span></div>
+						<div class="num" id="rec-interviews">0</div>
+					</article>
+				</div>
+			
+				<div class="mini">
+					<h4>Recent Recruiting Activity</h4>
+					<table class="mini-table" aria-label="Recent recruiting">
+						<thead>
+							<tr>
+								<th>Name</th><th>Stage</th><th>Owner</th><th>Date</th>
+							</tr>
+						</thead>
+						<tbody id="rec-recent-activity"></tbody>
+					</table>
 				</div>
 			</section>
-
+			
 			<!-- Personal Information -->
 			<section class="dash-wrap">
 				<h1 class="dash-title">Personal Information</h1>
