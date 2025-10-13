@@ -75,41 +75,34 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // Agent leg answered → whisper + gather
+    // Agent leg answered → single gather_using_speak (includes the whisper)
     if (eventType === "call.answered") {
       let name = "Prospect";
       let summary = "";
-
       if (session?.lead_id) {
         const { data: lead } = await supabase
           .from("leads")
-          .select("first_name, last_name, product_type, contact_id, zip, contacts:contact_id(first_name, last_name)")
+          .select("first_name, last_name, product_type, contact_id, zip, contacts:contact_id(first_name,last_name)")
           .eq("id", session.lead_id)
           .maybeSingle();
-
         const lf = lead?.first_name || lead?.contacts?.first_name || "";
         const ll = lead?.last_name  || lead?.contacts?.last_name  || "";
         name = `${lf} ${ll}`.trim() || name;
         if (lead?.product_type) summary += `Product: ${lead.product_type}. `;
         if (lead?.zip)         summary += `ZIP ${lead.zip}. `;
       }
-
-      await act(callId, "speak", {
-        voice: VOICE,
-        language: "en-US",
-        payload: `New lead. ${name}. ${summary}Press 1 to connect to the client.`
-      });
-
+    
       await act(callId, "gather_using_speak", {
         voice: VOICE,
         language: "en-US",
         minimum_digits: 1,
         maximum_digits: 1,
-        inter_digit_timeout_ms: 4000,
-        valid_digits: "1",                        // ← added
-        payload: "Press 1 to connect now, or any other key to cancel."
+        inter_digit_timeout_ms: 5000,
+        terminating_digits: "#",
+        valid_digits: "1",
+        payload: `New lead. ${name}. ${summary} Press 1 to connect to the client now.`
       });
-
+    
       return { statusCode: 200, body: "OK" };
     }
 
