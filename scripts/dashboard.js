@@ -121,7 +121,6 @@ document.addEventListener('DOMContentLoaded', () => {
     activeCarousel?.pause();
     overlayTitle.textContent = title;
     overlayGrid.innerHTML = '';
-
     if (!items.length) {
       const empty = document.createElement('div');
       empty.className = 'overlay-item';
@@ -133,10 +132,7 @@ document.addEventListener('DOMContentLoaded', () => {
         card.className = 'overlay-item';
         card.innerHTML = `<h3>${el.querySelector('h3')?.textContent || 'Item'}</h3>
                           <p>${el.querySelector('p')?.textContent || ''}</p>`;
-        card.addEventListener('click', () => {
-          if (activeCarousel && idx < activeCarousel.slides.length) activeCarousel.go(idx);
-          closeOverlay();
-        });
+        card.addEventListener('click', () => { if (activeCarousel && idx < activeCarousel.slides.length) activeCarousel.go(idx); closeOverlay(); });
         overlayGrid.appendChild(card);
       });
     }
@@ -154,10 +150,9 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   overlay.addEventListener('click', (e) => { if (e.target.matches('[data-close], .overlay-backdrop')) closeOverlay(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeOverlay(); });
-
   document.querySelectorAll('.see-all').forEach(btn => {
     btn.addEventListener('click', () => {
-      const key  = btn.dataset.overlay; // announcements | sales | reminders
+      const key  = btn.dataset.overlay;
       const host = btn.closest('.carousel');
       const inst = host ? carousels.find(c => c.root === host) : null;
       const titleMap = { announcements: 'All Announcements', sales: 'All Sales Entries', reminders: 'All Tasks & Reminders' };
@@ -176,7 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = id => document.getElementById(id);
     const setText = (id, v) => { const n = el(id); if (n) n.textContent = String(v); };
 
-    // infer stage from timestamps/closed_status (leads has no 'stage' column)
+    // infer stage from timestamps/closed_status (leads has no 'stage' col)
     function inferStage(row){
       if (row.closed_at || ['won','lost'].includes((row.closed_status||'').toLowerCase())) return 'closed';
       if (row.quoted_at)     return 'quoted';
@@ -191,10 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .order('created_at', { ascending:false });
 
       if (scope === 'mine' && userId) q = q.or(`assigned_to.eq.${userId},submitted_by.eq.${userId}`);
-      if (days && Number(days) > 0) {
-        const since = new Date(); since.setDate(since.getDate() - Number(days));
-        q = q.gte('created_at', since.toISOString());
-      }
+      if (days && Number(days) > 0) { const since = new Date(); since.setDate(since.getDate() - Number(days)); q = q.gte('created_at', since.toISOString()); }
       const { data, error } = await q.limit(200);
       if (error) { console.warn('Lead fetch error:', error); return []; }
       return data || [];
@@ -208,7 +200,6 @@ document.addEventListener('DOMContentLoaded', () => {
       setText('stat-quoted', counts.quoted);
       setText('stat-closed', counts.closed);
     }
-
     function renderMiniNew(rows){
       const tbody = document.getElementById('mini-new-leads');
       if (!tbody) return;
@@ -249,12 +240,7 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!user) { console.warn("No user found — redirecting to login"); window.location.href = "login.html"; return; }
     } catch (err) { console.error("Error fetching session:", err); return; }
 
-    const { data, error } = await supabase
-      .from("agent_availability")
-      .select("available")
-      .eq("agent_id", user.id)
-      .single();
-
+    const { data, error } = await supabase.from("agent_availability").select("available").eq("agent_id", user.id).single();
     if (error && error.code !== "PGRST116") console.error("Error fetching availability:", error);
 
     if (data) {
@@ -271,42 +257,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const isAvailable = switchEl.checked;
       statusEl.textContent = isAvailable ? "I’m Available" : "I’m Offline";
       statusEl.style.color = isAvailable ? "#4caf50" : "#999";
-
-      const { error } = await supabase
-        .from("agent_availability")
-        .upsert(
-          { agent_id: user.id, available: isAvailable, last_changed_at: new Date().toISOString() },
-          { onConflict: "agent_id" }
-        );
+      const { error } = await supabase.from("agent_availability").upsert(
+        { agent_id: user.id, available: isAvailable, last_changed_at: new Date().toISOString() },
+        { onConflict: "agent_id" }
+      );
       if (error) { alert("Could not update availability: " + error.message); switchEl.checked = !isAvailable; }
     });
   })();
 
-  /* ---------- COMMISSION & RECRUITING SNAPSHOTS ---------- */
-
-  // Try policies direct; if columns missing, fall back to policy_status_history join
-  async function fetchPoliciesForSnapshot(startYearISO) {
-    // Attempt A: policies has issued_at + annual_premium
-    let res = await supabase.from('policies')
-      .select('status, carrier_name, annual_premium, issued_at')
-      .gte('issued_at', startYearISO)
-      .order('issued_at', { ascending:false })
-      .limit(200);
-    if (!res.error) return { mode:'direct', rows: res.data || [] };
-
-    // Attempt B: pull events from policy_status_history and join policies
-    const res2 = await supabase.from('policy_status_history')
-      .select('event_type, event_at, policy:policies(status, carrier_name, annual_premium)')
-      .gte('event_at', startYearISO)
-      .in('event_type', ['issued','in_force'])   // treat these as "issued"
-      .order('event_at', { ascending:false })
-      .limit(500);
-    if (!res2.error) return { mode:'via_events', rows: res2.data || [] };
-
-    console.warn('Policies query failed:', res.error || res2.error);
-    return { mode:'none', rows: [] };
-  }
-
+  /* ---------- COMMISSION SNAPSHOT (matches your schema) ---------- */
   async function loadCommissionSnapshot(){
     let issuedMonth = 0, ytdAP = 0, pending = 0, chargebacksCount = 0;
     let rows = [];
@@ -315,50 +274,44 @@ document.addEventListener('DOMContentLoaded', () => {
       const startMonthISO = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const startYearISO  = new Date(now.getFullYear(), 0, 1).toISOString();
 
-      const { mode, rows: data } = await fetchPoliciesForSnapshot(startYearISO);
+      // Pull issued policies this year (premium_annual!) and join contact for name
+      const res = await supabase.from('policies')
+        .select('status, carrier_name, premium_annual, issued_at, contact:contacts(first_name,last_name)')
+        .not('issued_at','is', null)                 // only issued policies
+        .gte('issued_at', startYearISO)
+        .order('issued_at', { ascending:false })
+        .limit(200);
 
-      if (mode === 'direct') {
-        ytdAP = data.reduce((s,r)=> s + (Number(r.annual_premium)||0), 0);
+      if (!res.error && res.data) {
+        const data = res.data;
+        ytdAP = data.reduce((s,r)=> s + (Number(r.premium_annual)||0), 0);
         issuedMonth = data
           .filter(r => r.issued_at && new Date(r.issued_at) >= new Date(startMonthISO))
-          .reduce((s,r)=> s + (Number(r.annual_premium)||0), 0);
-
-        // pending from policies table if status exists
-        pending = data.filter(r => (r.status||'').toLowerCase() === 'pending').length;
+          .reduce((s,r)=> s + (Number(r.premium_annual)||0), 0);
 
         rows = data.slice(0,6).map(r=>({
           carrier: r.carrier_name || '—',
-          client: '—',
+          client: `${r.contact?.first_name || ''} ${r.contact?.last_name || ''}`.trim() || '—',
           status: (r.status || '').replace('_',' '),
-          ap: Number(r.annual_premium)||0,
+          ap: Number(r.premium_annual)||0,
           date: r.issued_at ? new Date(r.issued_at).toLocaleDateString() : '—'
         }));
-      } else if (mode === 'via_events') {
-        ytdAP = data.reduce((s,r)=> s + (Number(r.policy?.annual_premium)||0), 0);
-        issuedMonth = data
-          .filter(r => r.event_at && new Date(r.event_at) >= new Date(startMonthISO))
-          .reduce((s,r)=> s + (Number(r.policy?.annual_premium)||0), 0);
-
-        // pending requires looking at policies table separately
-        const pendQ = await supabase.from('policies').select('status', { count:'exact', head:true }).eq('status','pending');
-        pending = pendQ.count || 0;
-
-        rows = data.slice(0,6).map(r=>({
-          carrier: r.policy?.carrier_name || '—',
-          client: '—',
-          status: (r.policy?.status || '').replace('_',' '),
-          ap: Number(r.policy?.annual_premium)||0,
-          date: r.event_at ? new Date(r.event_at).toLocaleDateString() : '—'
-        }));
+      } else if (res.error) {
+        console.warn('Policies query failed:', res.error);
       }
 
-      // Chargebacks = count of chargeback events in last 30d (amount not stored in this table)
-      const cbQ = await supabase.from('policy_status_history')
-        .select('event_type', { count:'exact', head:true })
-        .gte('event_at', new Date(Date.now() - 30*864e5).toISOString())
-        .eq('event_type','chargeback');
-      chargebacksCount = cbQ.count || 0;
+      // Pending = all policies currently in 'pending' (not restricted by issued_at)
+      const pend = await supabase.from('policies').select('id', { count:'exact', head:true }).eq('status','pending');
+      pending = pend.count || 0;
 
+      // Optional: chargebacks count in last 30d if you later add policy_status_history table
+      try {
+        const cbQ = await supabase.from('policy_status_history')
+          .select('event_type', { count:'exact', head:true })
+          .gte('event_at', new Date(Date.now() - 30*864e5).toISOString())
+          .eq('event_type','chargeback');
+        chargebacksCount = cbQ.count || 0;
+      } catch {}
     }catch(err){
       console.warn('Commission snapshot error:', err);
     }
@@ -367,7 +320,6 @@ document.addEventListener('DOMContentLoaded', () => {
     $('comm-issued-month') && ($('comm-issued-month').textContent = `$${Math.round(issuedMonth).toLocaleString()}`);
     $('comm-ytd-ap')      && ($('comm-ytd-ap').textContent      = `$${Math.round(ytdAP).toLocaleString()}`);
     $('comm-pending')     && ($('comm-pending').textContent     = String(pending));
-    // Show events count instead of dollars (schema has no amount on chargebacks)
     $('comm-chargebacks') && ($('comm-chargebacks').textContent = `${chargebacksCount} events`);
 
     const tbody = document.getElementById('comm-recent-policies');
@@ -378,18 +330,20 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  /* ---------- RECRUITING SNAPSHOT (safe, no applicants required) ---------- */
   async function loadRecruitingSnapshot(){
-    // Use just agents table (no applicants table required)
     let team=0, active=0; let activity=[];
     try{
-      const agQ = await supabase.from('agents').select('id,is_active,full_name,created_at');
+      const agQ = await supabase.from('agents').select('id,is_active,full_name,created_at').order('created_at', {ascending:false}).limit(50);
       if(!agQ.error && agQ.data){
         team   = agQ.data.length;
         active = agQ.data.filter(a=>a.is_active).length;
-        activity = agQ.data
-          .sort((a,b)=>new Date(b.created_at)-new Date(a.created_at))
-          .slice(0,6)
-          .map(a=>({ name:a.full_name||'—', stage:a.is_active?'Active':'Onboarding', owner:'—', date:new Date(a.created_at).toLocaleDateString() }));
+        activity = agQ.data.slice(0,6).map(a=>({
+          name:a.full_name||'—',
+          stage:a.is_active?'Active':'Onboarding',
+          owner:'—',
+          date:new Date(a.created_at).toLocaleDateString()
+        }));
       }
     }catch(err){
       console.warn('Recruiting snapshot error:', err);
