@@ -95,6 +95,39 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Load agents list and populate dropdowns
   await loadAgentsForAdmin();
+  // Populate product types (union of all agent product_types)
+  (function hydrateAnncProducts(){
+    const sel = document.getElementById('annc-products');
+    if (!sel) return;
+    const set = new Set();
+    allAgents.forEach(a => (a.product_types||[]).forEach(p => set.add(p)));
+    [...set].sort().forEach(p => {
+      const opt = document.createElement('option');
+      opt.value = p; opt.textContent = p;
+      sel.appendChild(opt);
+    });
+    try { new Choices(sel, { removeItemButton:true, shouldSort:true }); } catch(_) {}
+  })();
+
+  // Populate agents list (multi-select)
+  (function hydrateAnncAgents(){
+    const sel = document.getElementById('annc-agent-ids');
+    if (!sel) return;
+    allAgents.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.id; opt.textContent = a.full_name;
+      sel.appendChild(opt);
+    });
+    try { new Choices(sel, { removeItemButton:true, shouldSort:true, searchEnabled:true }); } catch(_) {}
+  })();
+
+  // Enhance States multi-select
+  (function enhanceAnncStates(){
+    const sel = document.getElementById('annc-states');
+    if (!sel) return;
+    try { new Choices(sel, { removeItemButton:true, shouldSort:true, searchEnabled:true }); } catch(_) {}
+  })();
+  
   populateStatAgentSelect();
   // Initial data load
   await loadLeadsWithFilters();
@@ -402,6 +435,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     requests: document.getElementById('nav-requests'),
     history: document.getElementById('nav-history'),
     stats: document.getElementById('nav-stats'),
+    content: document.getElementById('nav-content'),
   };
 
   // Map sections to their IDs
@@ -410,6 +444,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     requests: document.getElementById('admin-requests-section'),
     history: document.getElementById('admin-history-section'),
     stats: document.getElementById('admin-stats-section'),
+    content: document.getElementById('admin-content-section'),
   };
 
   function hideAllAdminSections() {
@@ -433,7 +468,168 @@ document.addEventListener('DOMContentLoaded', async () => {
   navButtons.requests.addEventListener('click', () => showAdminSection('requests'));
   navButtons.history.addEventListener('click', () => showAdminSection('history'));
   navButtons.stats.addEventListener('click', () => showAdminSection('stats'));
+  navButtons.content.addEventListener('click', () => showAdminSection('content'));
 
+  // Open buttons
+  document.getElementById('open-annc-modal')?.addEventListener('click', () => openOverlay('annc-modal'));
+  document.getElementById('open-train-modal')?.addEventListener('click', () => openOverlay('train-modal'));
+  document.getElementById('open-mkt-modal')?.addEventListener('click', () => openOverlay('mkt-modal'));
+  document.getElementById('open-agent-modal')?.addEventListener('click', () => openOverlay('agent-modal'));
+
+  // Generic overlay helpers (reuse your existing overlay CSS)
+  function openOverlay(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('open');
+    el.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeOverlay(el){
+    el.classList.remove('open');
+    el.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+  }
+  document.querySelectorAll('.overlay [data-close], .overlay .overlay-backdrop').forEach(btn=>{
+    btn.addEventListener('click', (e)=> {
+      const wrap = e.target.closest('.overlay');
+      if (wrap) closeOverlay(wrap);
+    });
+  });
+
+  // flatpickr for scheduled publish/expire
+  try {
+    flatpickr('#annc-publish', { enableTime:true, dateFormat:'Y-m-d H:i' });
+    flatpickr('#annc-expires', { enableTime:true, dateFormat:'Y-m-d H:i' });
+  } catch(_) {}
+
+  // Audience scope toggles
+  const scopeSel = document.getElementById('annc-scope');
+  const wrapProducts = document.getElementById('annc-products-wrap');
+  const wrapStates   = document.getElementById('annc-states-wrap');
+  const wrapAgents   = document.getElementById('annc-agents-wrap');
+
+  function refreshAudienceUI() {
+    const v = scopeSel.value;
+    wrapProducts.style.display = (v === 'by_product') ? 'block' : 'none';
+    wrapStates.style.display   = (v === 'by_state')   ? 'block' : 'none';
+    wrapAgents.style.display   = (v === 'custom_agents') ? 'block' : 'none';
+  }
+  scopeSel?.addEventListener('change', refreshAudienceUI);
+  refreshAudienceUI();
+
+  // === 1) Announcements ===
+  document.getElementById('annc-form')?.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const msg = document.getElementById('annc-msg');
+    msg.textContent = '';
+    const { data: { session } } = await supabase.auth.getSession();
+    const me = session?.user?.id;
+
+    const title = document.getElementById('annc-title').value.trim();
+    const body  = document.getElementById('annc-body').value.trim();
+    const scope = document.getElementById('annc-scope').value;
+
+    const publishAt = document.getElementById('annc-publish').value.trim() || null;
+    const expiresAt = document.getElementById('annc-expires').value.trim() || null;
+
+    // audience payload
+    const payload = { scope };
+    if (scope === 'by_product') {
+      const sel = document.getElementById('annc-products');
+      payload.products = Array.from(sel?.selectedOptions||[]).map(o=>o.value);
+    }
+    if (scope === 'by_state') {
+      const sel = document.getElementById('annc-states');
+      payload.states = Array.from(sel?.selectedOptions||[]).map(o=>o.value);
+    }
+    if (scope === 'custom_agents') {
+      const sel = document.getElementById('annc-agent-ids');
+      payload.agent_ids = Array.from(sel?.selectedOptions||[]).map(o=>o.value);
+    }
+
+    const { error } = await supabase.from('announcements').insert({
+      title, body,
+      created_by: me || null,
+      audience: payload,
+      publish_at: publishAt ? new Date(publishAt).toISOString() : null,
+      expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+      is_active: true
+    });
+    if (error) { msg.textContent = '❌ ' + error.message; return; }
+    msg.textContent = '✅ Saved.';
+    setTimeout(()=> document.querySelector('#annc-modal .overlay-close')?.click(), 600);
+  });
+
+  // === 2) Training ===
+  document.getElementById('train-form')?.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const msg = document.getElementById('train-msg');
+    msg.textContent = '';
+    const { data: { session } } = await supabase.auth.getSession();
+    const me = session?.user?.id;
+
+    const title = document.getElementById('train-title').value.trim();
+    const desc  = document.getElementById('train-desc').value.trim();
+    const url   = document.getElementById('train-url').value.trim();
+    const tags  = document.getElementById('train-tags').value
+                    .split(',').map(s=>s.trim()).filter(Boolean);
+
+    const { error } = await supabase.from('training_materials').insert({
+      title, description: desc || null, url: url || null, tags: tags.length? tags : null,
+      created_by: me || null, is_published: true
+    });
+    if (error) { msg.textContent = '❌ ' + error.message; return; }
+    msg.textContent = '✅ Published.';
+    setTimeout(()=> document.querySelector('#train-modal .overlay-close')?.click(), 600);
+  });
+
+  // === 3) Marketing ===
+  document.getElementById('mkt-form')?.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const msg = document.getElementById('mkt-msg');
+    msg.textContent = '';
+    const { data: { session } } = await supabase.auth.getSession();
+    const me = session?.user?.id;
+
+    const title = document.getElementById('mkt-title').value.trim();
+    const desc  = document.getElementById('mkt-desc').value.trim();
+    const url   = document.getElementById('mkt-url').value.trim();
+    const tags  = document.getElementById('mkt-tags').value
+                    .split(',').map(s=>s.trim()).filter(Boolean);
+
+    const { error } = await supabase.from('marketing_assets').insert({
+      title, description: desc || null, url: url || null, tags: tags.length? tags : null,
+      created_by: me || null, is_published: true
+    });
+    if (error) { msg.textContent = '❌ ' + error.message; return; }
+    msg.textContent = '✅ Published.';
+    setTimeout(()=> document.querySelector('#mkt-modal .overlay-close')?.click(), 600);
+  });
+
+  // === 4) Pre-approve Agent ===
+  document.getElementById('agent-form')?.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    const msg = document.getElementById('agent-msg');
+    msg.textContent = '';
+
+    const first = document.getElementById('agent-first').value.trim();
+    const last  = document.getElementById('agent-last').value.trim();
+    const email = document.getElementById('agent-email').value.trim();
+    const agentId = document.getElementById('agent-id').value.trim();
+
+    if (!/^\w{2}-\w{7}$/i.test(agentId)) {
+      msg.textContent = '⚠️ Agent ID must look like "xx-xxxxxxx".';
+      return;
+    }
+
+    const { error } = await supabase.from('approved_agents').insert({
+      agent_id: agentId, is_registered: false, email, first_name: first, last_name: last
+    });
+
+    if (error) { msg.textContent = '❌ ' + error.message; return; }
+    msg.textContent = '✅ Pre-approved. Share the signup link with them.';
+    setTimeout(()=> document.querySelector('#agent-modal .overlay-close')?.click(), 800);
+  });
   // Hook up pagination buttons (place near the bottom of admin.js or inside DOMContentLoaded)
   const nextBtn = document.getElementById('next-page');
   const prevBtn = document.getElementById('prev-page');
