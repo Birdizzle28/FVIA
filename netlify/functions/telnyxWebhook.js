@@ -75,16 +75,18 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // Agent leg answered → single gather_using_speak (includes the whisper)
+    // --- If the AGENT leg answered (or session missing), whisper + gather ---
     if (eventType === "call.answered") {
       let name = "Prospect";
       let summary = "";
+    
       if (session?.lead_id) {
         const { data: lead } = await supabase
           .from("leads")
-          .select("first_name, last_name, product_type, contact_id, zip, contacts:contact_id(first_name,last_name)")
+          .select("first_name, last_name, product_type, contact_id, zip, contacts:contact_id(first_name, last_name)")
           .eq("id", session.lead_id)
           .maybeSingle();
+    
         const lf = lead?.first_name || lead?.contacts?.first_name || "";
         const ll = lead?.last_name  || lead?.contacts?.last_name  || "";
         name = `${lf} ${ll}`.trim() || name;
@@ -92,15 +94,15 @@ export async function handler(event) {
         if (lead?.zip)         summary += `ZIP ${lead.zip}. `;
       }
     
+      // One action that both whispers and gathers
       await act(callId, "gather_using_speak", {
-        voice: VOICE,
+        voice: "Telnyx.KokoroTTS.af",
         language: "en-US",
         minimum_digits: 1,
         maximum_digits: 1,
-        inter_digit_timeout_ms: 5000,
-        terminating_digits: "#",
         valid_digits: "1",
-        payload: `New lead. ${name}. ${summary} Press 1 to connect to the client now.`
+        inter_digit_timeout_ms: 6000,
+        payload: `New lead. ${name}. ${summary} Press 1 to connect now.`
       });
     
       return { statusCode: 200, body: "OK" };
