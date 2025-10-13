@@ -6,12 +6,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <link rel="stylesheet" href="styles/freequote.css" />
   <link rel="stylesheet" href="styles/general.css" />
-
   <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
-  
-  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
   <script type="module" src="scripts/general.js"></script>
   <script>
     window.FVG_SUPABASE_URL  = "https://ddlbgkolnayqrxslzsxn.supabase.co";
@@ -21,23 +18,9 @@
   </script>
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm";
-  
-    window.supabase = createClient(
-      window.FVG_SUPABASE_URL,
-      window.FVG_SUPABASE_ANON
-    );
+    window.supabase = createClient(window.FVG_SUPABASE_URL, window.FVG_SUPABASE_ANON);
   </script>
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      if (window.flatpickr) {
-        flatpickr('#schedule-datetime', {
-          enableTime: true,
-          dateFormat: 'Y-m-d H:i',
-          minDate: 'today'
-        });
-      }
-    });
-  </script>
+
   <script type="module" src="scripts/freequote.js"></script>
   <title>Get a Quote | Family Values Group</title>
 </head>
@@ -56,6 +39,7 @@
     </nav>
     <hr />
   </header>
+
   <div id="mobile-menu">
     <a href="about.html">About</a>
     <a href="contact.html">Support</a>
@@ -64,7 +48,6 @@
     <a href="login.html">Login</a>
   </div>
 
-  <!-- ===== Main ===== -->
   <main class="auth-container">
     <section id="free-quote-form">
       <h2 id="quote-heading">Let’s get you covered</h2>
@@ -79,13 +62,13 @@
               <input type="text" id="zip" placeholder=" " inputmode="numeric" maxlength="5" pattern="\d{5}" required />
               <label for="zip">Zip Code</label>
             </div>
-          
+
             <div class="fl-field age-box">
               <input type="number" id="age" placeholder=" " min="0" max="120" required />
               <label for="age">Age</label>
             </div>
           </div>
-          
+
           <!-- Floating label wrapper for the multi-select -->
           <div class="fl-field" id="cover-fl">
             <div class="multi-select" id="cover-select" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
@@ -93,7 +76,7 @@
               <i class="fa-solid fa-chevron-down ms-caret"></i>
             </div>
             <label for="cover-select">I want to cover…</label>
-          
+
             <div class="ms-menu" id="cover-menu" role="listbox" aria-multiselectable="true">
               <label class="ms-option"><input type="checkbox" value="Me" /> Me</label>
               <label class="ms-option"><input type="checkbox" value="Someone Else" /> Someone Else</label>
@@ -116,7 +99,7 @@
 
           <div class="fl-field">
             <select id="employee_count" required>
-              <option value="" disabled selected></option> <!-- empty to allow float -->
+              <option value="" disabled selected></option>
               <option>1</option>
               <option>2–9</option>
               <option>10–24</option>
@@ -126,7 +109,7 @@
             </select>
             <label for="employee_count">Employee Count</label>
           </div>
-          
+
           <div class="fl-field">
             <input type="text" id="business_name" placeholder=" " required />
             <label for="business_name">Business Name</label>
@@ -152,12 +135,12 @@
               <label for="last_name">Last Name</label>
             </div>
           </div>
-          
+
           <div class="fl-field">
             <input type="tel" id="phone" placeholder=" " inputmode="tel" required />
             <label for="phone">Phone Number</label>
           </div>
-          
+
           <div class="fl-field">
             <input type="email" id="email" placeholder=" " required />
             <label for="email">Email</label>
@@ -181,28 +164,6 @@
           <p id="result-body"></p>
           <div class="step-nav" id="result-actions"></div>
         </section>
-        <!-- === Call/Schedule Modal === -->
-        <div id="call-or-schedule" class="modal" style="display:none;">
-          <div class="modal-content">
-            <h3>How would you like to connect?</h3>
-            <p>We can call you now or schedule a time that works best for you.</p>
-            <div class="btn-group">
-              <button id="btn-call-now" class="cta">Call Now</button>
-              <button id="btn-schedule" class="cta alt">Schedule for Later</button>
-            </div>
-          </div>
-        </div>
-        <!-- === Schedule Modal === -->
-        <div id="schedule-modal" class="modal" style="display:none;">
-          <div class="modal-content">
-            <h3>Pick a time that works best for you</h3>
-            <input id="schedule-datetime" type="text" placeholder="Select date and time" />
-            <div class="btn-group" style="margin-top:1em;">
-              <button id="confirm-schedule-btn" class="cta">Confirm</button>
-              <button id="cancel-schedule-btn" class="cta alt">Cancel</button>
-            </div>
-          </div>
-        </div>
       </form>
     </section>
   </main>
@@ -212,14 +173,14 @@
     <hr class="footerhr" />
     <div id="footercontact">
       <a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
-				<span class="fa fa-envelope"></span>
-				<span class="contactcontcontacts">info@familyvaluesgroup.com</span>
-			</a>
-			<p> | </p>
-			<a class="contactcontainer" href="tel:+16292437980">
-				<span class="fa fa-phone"></span>
-				<span class="contactcontcontacts">+1-629-243-7980</span>
-			</a>
+        <span class="fa fa-envelope"></span>
+        <span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+      </a>
+      <p> | </p>
+      <a class="contactcontainer" href="tel:+16292437980">
+        <span class="fa fa-phone"></span>
+        <span class="contactcontcontacts">+1-629-243-7980</span>
+      </a>
     </div>
     <hr class="footerhr" />
     <div id="footersocial">
