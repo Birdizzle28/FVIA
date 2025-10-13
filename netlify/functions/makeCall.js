@@ -88,7 +88,7 @@ export async function handler(event) {
       return { statusCode: telnyxRes.status, headers: cors(), body: JSON.stringify(telnyxJson) };
     }
 
-    const telnyx_call_id = telnyxJson?.data?.id;
+    const telnyx_call_id = telnyxJson?.data?.id || telnyxJson?.data?.call_control_id;
     if (!telnyx_call_id) {
       // Hard fail so we don’t insert a NULL and confuse the webhook
       return {
