@@ -47,12 +47,21 @@ export async function handler(event) {
     );
 
     // Agent leg session we created first
-    const { data: session } = await supabase
+    let { data: session } = await supabase
       .from("call_sessions")
       .select("*")
       .eq("telnyx_call_id", callId)
       .maybeSingle();
-
+    
+    // Fallback: try matching as client_call_id if not found
+    if (!session) {
+      const { data: fallback } = await supabase
+        .from("call_sessions")
+        .select("*")
+        .eq("client_call_id", callId)
+        .maybeSingle();
+      session = fallback;
+    }
     // Is THIS the client leg answering?
     let sessClient = null;
     if (eventType === "call.answered") {
