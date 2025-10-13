@@ -2,13 +2,11 @@
 import fetch from "node-fetch";
 import { createClient } from "@supabase/supabase-js";
 
-function cors() {
-  return {
-    "Access-Control-Allow-Origin": "*",
-    "Access-Control-Allow-Methods": "POST,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, Authorization"
-  };
-}
+const cors = () => ({
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization"
+});
 
 export async function handler(event) {
   if (event.httpMethod === "OPTIONS") {
@@ -25,7 +23,6 @@ export async function handler(event) {
       return { statusCode: 400, headers: cors(), body: JSON.stringify({ error: "Missing agentId/agentNumber/prospectNumber" }) };
     }
 
-    // Env checks
     const {
       SUPABASE_URL,
       SUPABASE_SERVICE_ROLE_KEY,
@@ -43,7 +40,7 @@ export async function handler(event) {
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Re-check: agent must be active AND online
+    // Sanity: re-check agent
     const { data: agent, error: eAgent } = await supabase
       .from("agents")
       .select("id, is_active")
@@ -64,45 +61,69 @@ export async function handler(event) {
       return { statusCode: 409, headers: cors(), body: JSON.stringify({ ok:false, reason:"AGENT_OFFLINE" }) };
     }
 
-    // Include client_state so webhook can recover context even if the DB insert is missed/racy
-    const clientState = Buffer.from(
-      JSON.stringify({ leadId: leadId || null, prospectNumber })
-    ).toString("base64");
+    // Create the agent leg with Telnyx
+    const createPayload = {
+      connection_id: TELNYX_CONNECTION_ID,
+      to: agentNumber,
+      from: TELNYX_FROM_NUMBER
+    };
+    console.log("Telnyx create-call →", createPayload);
 
-    // Start agent leg
     const telnyxRes = await fetch("https://api.telnyx.com/v2/calls", {
       method: "POST",
       headers: {
         "Authorization": `Bearer ${TELNYX_API_KEY}`,
         "Content-Type": "application/json"
       },
-      body: JSON.stringify({
-        connection_id: TELNYX_CONNECTION_ID,
-        to: agentNumber,
-        from: TELNYX_FROM_NUMBER,
-        client_state: clientState // ← key addition
-        // Your Call Control App must point to telnyx_webhook.js
-      })
+      body: JSON.stringify(createPayload)
     });
-    const telnyxJson = await telnyxRes.json();
+
+    const telnyxText = await telnyxRes.text();
+    let telnyxJson;
+    try { telnyxJson = JSON.parse(telnyxText); } catch { telnyxJson = { raw: telnyxText }; }
+
+    console.log("Telnyx response", { status: telnyxRes.status, body: telnyxJson });
+
     if (!telnyxRes.ok) {
       return { statusCode: telnyxRes.status, headers: cors(), body: JSON.stringify(telnyxJson) };
     }
 
     const telnyx_call_id = telnyxJson?.data?.id;
-    console.log("Started agent leg", { telnyx_call_id, agentId, leadId });
+    if (!telnyx_call_id) {
+      // Hard fail so we don’t insert a NULL and confuse the webhook
+      return {
+        statusCode: 502,
+        headers: cors(),
+        body: JSON.stringify({ error: "No Telnyx call id in response", telnyxJson })
+      };
+    }
 
-    // Store session so webhook can find prospect + lead
-    await supabase.from("call_sessions").insert({
+    // Insert session with the agent leg id
+    const insertPayload = {
       telnyx_call_id,
       agent_id: agentId,
       lead_id: leadId || null,
       prospect_number: prospectNumber
-    });
+    };
+    console.log("Insert call_sessions →", insertPayload);
 
-    return { statusCode: 200, headers: cors(), body: JSON.stringify({ ok:true, telnyx_call_id }) };
+    const { data: inserted, error: iErr } = await supabase
+      .from("call_sessions")
+      .insert(insertPayload)
+      .select("id, telnyx_call_id, prospect_number")
+      .single();
+
+    if (iErr) {
+      console.error("call_sessions insert error", iErr);
+      return { statusCode: 500, headers: cors(), body: JSON.stringify({ error: "DB insert failed", details: iErr.message }) };
+    }
+
+    console.log("call_sessions inserted", inserted);
+
+    return { statusCode: 200, headers: cors(), body: JSON.stringify({ ok:true, telnyx_call_id, session_id: inserted.id }) };
 
   } catch (error) {
+    console.error("makeCall fatal", error);
     return { statusCode: 500, headers: cors(), body: JSON.stringify({ error: error.message }) };
   }
 }
