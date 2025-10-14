@@ -430,3 +430,50 @@ hr{ border:0; height:1px; background:#ececf5; }
   #leads-table{ font-size: .9rem; }
   #leads-table thead th, #leads-table tbody td{ padding: 10px 8px; }
 }
+
+/* ===== Generic overlay system (used by Content modals) ===== */
+.overlay { 
+  display: none; 
+  position: fixed; 
+  inset: 0; 
+  z-index: 9999; 
+}
+.overlay.open { 
+  display: flex; 
+}
+.overlay-backdrop { 
+  position: absolute; 
+  inset: 0; 
+  background: rgba(0,0,0,.5); 
+}
+.overlay-panel { 
+  position: relative; 
+  margin: auto; 
+  background: #fff; 
+  border-radius: 12px; 
+  padding: 16px; 
+  max-width: 720px; 
+  width: 92vw; 
+  max-height: 90vh; 
+  overflow: auto; 
+  box-shadow: var(--shadow); 
+}
+.overlay-header { 
+  display: flex; 
+  align-items: center; 
+  justify-content: space-between; 
+  gap: 12px; 
+}
+.overlay-close { 
+  background: none; 
+  border: 0; 
+  font-size: 28px; 
+  line-height: 1; 
+  cursor: pointer; 
+}
+.form-group { 
+  display: flex; 
+  flex-direction: column; 
+  gap: 6px; 
+  margin: 8px 0; 
+}
