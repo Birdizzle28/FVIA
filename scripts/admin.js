@@ -16,145 +16,105 @@ let rangeEnd = null;
 let allowedProductsFilter = null;
 // ---- KPI helpers ----
 const DAY_MS = 864e5;
-const PERSISTENCY_DAYS = 90; // change if you want 13-month, etc.
+const PERSISTENCY_DAYS = 90;
 
 const safeDiv = (num, den) => (den > 0 ? num / den : NaN);
 const fmtPct  = v => Number.isFinite(v) ? (Math.round(v * 1000) / 10) + '%' : '—';
 
 const getStage = l => String(l.status || l.stage || '').toLowerCase();
+const isContacted = l => !!l.contact_at || ['contacted','quoted','closed'].includes(getStage(l));
+const isQuoted = l => !!l.quote_at || ['quoted','closed'].includes(getStage(l));
+const isClosed = l => !!(l.issued_at || l.closed_at) || ['closed','issued','policy'].includes(getStage(l));
+const issuedAt = l => l.issued_at ? new Date(l.issued_at) : (l.closed_at ? new Date(l.closed_at) : null);
+const inRange = (d, start, end) => { if (!d) return false; const t = +d; return (!start || t >= +start) && (!end || t <= +end); };
 
-const isContacted = l =>
-  !!l.contact_at || ['contacted','quoted','closed'].includes(getStage(l));
+// ===== Helpers for announcements =====
+async function uploadAnnouncementImage(file, me) {
+  if (!file) return null;
+  const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+  const path = `annc_${me || 'anon'}_${Date.now()}.${ext}`;
+  const { error: upErr } = await supabase.storage.from('announcements').upload(path, file, {
+    cacheControl: '3600',
+    upsert: true,
+    contentType: file.type || 'application/octet-stream'
+  });
+  if (upErr) throw upErr;
+  const { data } = supabase.storage.from('announcements').getPublicUrl(path);
+  return data?.publicUrl || null;
+}
 
-const isQuoted = l =>
-  !!l.quote_at || ['quoted','closed'].includes(getStage(l));
-
-const isClosed = l =>
-  !!(l.issued_at || l.closed_at) || ['closed','issued','policy'].includes(getStage(l));
-
-const issuedAt = l => l.issued_at
-  ? new Date(l.issued_at)
-  : (l.closed_at ? new Date(l.closed_at) : null);
-
-const inRange = (d, start, end) => {
-  if (!d) return false;
-  const t = +d;
-  return (!start || t >= +start) && (!end || t <= +end);
-};
+function summarizeAudience(aud) {
+  if (!aud || !aud.scope) return 'All users';
+  switch (aud.scope) {
+    case 'admins': return 'Admins only';
+    case 'by_product': return `Products: ${(aud.products||[]).join(', ') || '—'}`;
+    case 'by_state': return `States: ${(aud.states||[]).join(', ') || '—'}`;
+    case 'custom_agents': return `Agents: ${(aud.agent_ids||[]).length}`;
+    default: return 'All users';
+  }
+}
 
 function populateStatAgentSelect() {
-    const sel = document.getElementById('stat-agent');
-    if (!sel) return;
-    sel.innerHTML = '<option value="">All agents</option>';
-    allAgents.forEach(a => {
-      const opt = document.createElement('option');
-      opt.value = a.id;
-      opt.textContent = a.full_name;
-      sel.appendChild(opt);
-    });
-  
-    // Optional: enhance with Choices.js (you already load it elsewhere)
-    try {
-      new Choices(sel, { shouldSort: false, searchEnabled: true, itemSelectText: '' });
-    } catch (_) {}
-  }
-document.addEventListener('DOMContentLoaded', async () => {
-  const toggle = document.getElementById("agent-hub-toggle");
+  const sel = document.getElementById('stat-agent');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">All agents</option>';
+  allAgents.forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a.id;
+    opt.textContent = a.full_name;
+    sel.appendChild(opt);
+  });
+  try { new Choices(sel, { shouldSort:false, searchEnabled:true, itemSelectText:'' }); } catch(_) {}
+}
 
-  // Require login session
+document.addEventListener('DOMContentLoaded', async () => {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) {
-    window.location.href = 'login.html';
-    return;
-  }
+  if (!session) { window.location.href = 'login.html'; return; }
   userId = session.user.id;
-  // Check if current user is admin
-  const { data: profile, error: profileError } = await supabase.from('agents').select('is_admin').eq('id', userId).single();
-  if (profileError) {
-    console.error('Failed to check admin status:', profileError);
-  }
-  if (!profile || profile.is_admin !== true) {
-    alert('Access denied.');
-    window.location.href = 'profile.html';
-    return;
-  }
+
+  const { data: profile } = await supabase.from('agents').select('is_admin').eq('id', userId).single();
+  if (!profile || profile.is_admin !== true) { alert('Access denied.'); window.location.href = 'profile.html'; return; }
   userRole = 'admin';
 
-  // Initialize date range picker
-  flatpickr('#date-range', {
-    mode: 'range',
-    dateFormat: 'Y-m-d',
-    onChange: function(selectedDates) {
-      rangeStart = selectedDates[0] ? selectedDates[0].toISOString().split('T')[0] : null;
-      rangeEnd = selectedDates[1] ? selectedDates[1].toISOString().split('T')[0] : null;
-      loadLeadsWithFilters();
-    }
+  flatpickr('#date-range', { mode:'range', dateFormat:'Y-m-d',
+    onChange: (ds)=>{ rangeStart = ds[0]?.toISOString().split('T')[0] || null; rangeEnd = ds[1]?.toISOString().split('T')[0] || null; loadLeadsWithFilters(); }
   });
-  // Enhance state filter with Choices.js
-  new Choices('#state-filter', { searchEnabled: true, itemSelectText: '' });
+  new Choices('#state-filter', { searchEnabled:true, itemSelectText:'' });
 
-  // Load agents list and populate dropdowns
   await loadAgentsForAdmin();
-  // Populate product types (union of all agent product_types)
+
+  // Populate Announcement multi-selects
   (function hydrateAnncProducts(){
-    const sel = document.getElementById('annc-products');
-    if (!sel) return;
-    const set = new Set();
-    allAgents.forEach(a => (a.product_types||[]).forEach(p => set.add(p)));
-    [...set].sort().forEach(p => {
-      const opt = document.createElement('option');
-      opt.value = p; opt.textContent = p;
-      sel.appendChild(opt);
-    });
+    const sel = document.getElementById('annc-products'); if (!sel) return;
+    const set = new Set(); (allAgents||[]).forEach(a => (a.product_types||[]).forEach(p => set.add(p)));
+    [...set].sort().forEach(p => { const o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); });
     try { new Choices(sel, { removeItemButton:true, shouldSort:true }); } catch(_) {}
   })();
-
-  // Populate agents list (multi-select)
   (function hydrateAnncAgents(){
-    const sel = document.getElementById('annc-agent-ids');
-    if (!sel) return;
-    allAgents.forEach(a => {
-      const opt = document.createElement('option');
-      opt.value = a.id; opt.textContent = a.full_name;
-      sel.appendChild(opt);
-    });
+    const sel = document.getElementById('annc-agent-ids'); if (!sel) return;
+    (allAgents||[]).forEach(a => { const o=document.createElement('option'); o.value=a.id; o.textContent=a.full_name; sel.appendChild(o); });
+    try { new Choices(sel, { removeItemButton:true, shouldSort:true, searchEnabled:true }); } catch(_) {}
+  })();
+  (function enhanceAnncStates(){
+    const sel = document.getElementById('annc-states'); if (!sel) return;
     try { new Choices(sel, { removeItemButton:true, shouldSort:true, searchEnabled:true }); } catch(_) {}
   })();
 
-  // Enhance States multi-select
-  (function enhanceAnncStates(){
-    const sel = document.getElementById('annc-states');
-    if (!sel) return;
-    try { new Choices(sel, { removeItemButton:true, shouldSort:true, searchEnabled:true }); } catch(_) {}
-  })();
-  
   populateStatAgentSelect();
-  // Initial data load
   await loadLeadsWithFilters();
   await loadRequestedLeads();
   await loadAssignmentHistory();
-  
+  await loadAnnouncements(); // NEW: load list on page load
+
   (function initStatRange(){
     const thirtyDaysAgo = new Date(Date.now() - 30*864e5);
-  
     statPicker = flatpickr('#stat-range-wrap', {
-      mode: 'range',
-      dateFormat: 'Y-m-d',
-      defaultDate: [thirtyDaysAgo, new Date()],
-      wrap: true,              // lets the button open the calendar
-      onChange: () => {
-        // only reload when NOT "All time"
-        if (!document.getElementById('stat-all-time').checked) {
-          loadAgentStats();
-        }
-      }
+      mode:'range', dateFormat:'Y-m-d', defaultDate:[thirtyDaysAgo, new Date()], wrap:true,
+      onChange:()=>{ if (!document.getElementById('stat-all-time').checked) loadAgentStats(); }
     });
-  
-    // All time toggle
     const allCb = document.getElementById('stat-all-time');
-    allCb.addEventListener('change', () => {
+    allCb.addEventListener('change', ()=> {
       const disabled = allCb.checked;
-      // visually/semantically disable the picker when All time
       document.getElementById('stat-range').disabled = disabled;
       document.querySelector('#stat-range-wrap .calendar-btn').disabled = disabled;
       loadAgentStats();
@@ -163,110 +123,62 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('stat-agent')?.addEventListener('change', loadAgentStats);
   document.getElementById('stat-range')?.addEventListener('change', loadAgentStats);
 
-  // Filter change events
-  document.querySelectorAll('#admin-filters input, #admin-filters select').forEach(el => {
-    el.addEventListener('change', loadLeadsWithFilters);
-  });
+  // Filter changes
+  document.querySelectorAll('#admin-filters input, #admin-filters select').forEach(el => el.addEventListener('change', loadLeadsWithFilters));
   document.getElementById('apply-filters').addEventListener('click', () => loadLeadsWithFilters());
   document.getElementById('reset-filters').addEventListener('click', () => {
-    document.querySelectorAll('#admin-filters input, #admin-filters select').forEach(el => {
-      if (el.tagName === 'SELECT') el.selectedIndex = 0;
-      else el.value = '';
-    });
-    rangeStart = null;
-    rangeEnd = null;
-    allowedProductsFilter = null;
-    loadLeadsWithFilters();
+    document.querySelectorAll('#admin-filters input, #admin-filters select').forEach(el => { if (el.tagName==='SELECT') el.selectedIndex=0; else el.value=''; });
+    rangeStart = null; rangeEnd = null; allowedProductsFilter = null; loadLeadsWithFilters();
   });
-  // Column header sorting
-  let currentSortColumn = null;
-  let currentSortDirection = 'asc';
+
+  // Table sorting
+  let currentSortColumn = null, currentSortDirection = 'asc';
   document.querySelectorAll('#leads-table th[data-column]').forEach(th => {
     th.addEventListener('click', () => {
       const column = th.getAttribute('data-column');
-      if (currentSortColumn === column) {
-        currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
-      } else {
-        currentSortColumn = column;
-        currentSortDirection = 'asc';
-      }
+      if (currentSortColumn === column) currentSortDirection = currentSortDirection === 'asc' ? 'desc' : 'asc';
+      else { currentSortColumn = column; currentSortDirection = 'asc'; }
       document.getElementById('sort-by').value = column;
       document.getElementById('date-order').value = currentSortDirection;
       loadLeadsWithFilters();
     });
   });
 
-  // Bulk-assign: choosing an agent should NOT reload the table.
-  // We only store which products they’re eligible for (used at assign time).
+  // Bulk assign
   document.getElementById('bulk-assign-agent').addEventListener('change', e => {
     const agentId = e.target.value;
-  
-    // Keep existing checked rows
-    selectedLeads = new Set(
-      Array.from(document.querySelectorAll('.lead-checkbox:checked'))
-        .map(cb => cb.dataset.leadId)
-    );
-  
-    if (!agentId) {
-      allowedProductsFilter = null;
-      return;
-    }
-  
+    selectedLeads = new Set(Array.from(document.querySelectorAll('.lead-checkbox:checked')).map(cb => cb.dataset.leadId));
+    if (!agentId) { allowedProductsFilter = null; return; }
     const agent = allAgents.find(a => a.id === agentId);
     if (agent && agent.product_types) {
-      // normalize to array
-      allowedProductsFilter = Array.isArray(agent.product_types)
-        ? agent.product_types.slice()
-        : String(agent.product_types).split(',').map(s => s.trim()).filter(Boolean);
-    } else {
-      allowedProductsFilter = null;
-    }
+      allowedProductsFilter = Array.isArray(agent.product_types) ? agent.product_types.slice()
+        : String(agent.product_types).split(',').map(s=>s.trim()).filter(Boolean);
+    } else allowedProductsFilter = null;
   });
 
-  // Bulk assign leads button
   document.getElementById('bulk-assign-btn').addEventListener('click', async () => {
     const selectedIds = Array.from(selectedLeads);
-    if (selectedIds.length === 0) {
-      alert('⚠️ No leads selected');
-      return;
-    }
+    if (!selectedIds.length) { alert('⚠️ No leads selected'); return; }
     const agentId = document.getElementById('bulk-assign-agent').value;
-    if (!agentId) {
-      alert('⚠️ No agent selected');
-      return;
-    }
-    // Validate product eligibility for selected leads
+    if (!agentId) { alert('⚠️ No agent selected'); return; }
     const agentInfo = allAgents.find(a => a.id === agentId);
     if (agentInfo && Array.isArray(agentInfo.product_types) && agentInfo.product_types.length) {
       let ineligibleFound = false;
       for (let id of selectedLeads) {
         const row = document.querySelector(`input[data-lead-id="${id}"]`)?.closest('tr');
-        const product = row?.querySelector('.lead-product')?.textContent.trim(); // <-- was .lead-type
-        if (product && !agentInfo.product_types.includes(product)) {
-          ineligibleFound = true;
-          break;
-        }
+        const product = row?.querySelector('.lead-product')?.textContent.trim();
+        if (product && !agentInfo.product_types.includes(product)) { ineligibleFound = true; break; }
       }
-      if (ineligibleFound) {
-        alert('❌ One or more selected leads have product types this agent is not eligible for.');
-        return;
-      }
+      if (ineligibleFound) { alert('❌ One or more selected leads have product types this agent is not eligible for.'); return; }
     }
-    // Check if any selected lead is already assigned to someone (reassign warning)
     const needsReassignConfirm = selectedIds.some(id => {
       const row = document.querySelector(`input[data-lead-id="${id}"]`)?.closest('tr');
       const currentAgent = row?.querySelector('td:nth-child(3)')?.textContent;
       return currentAgent && currentAgent !== 'Unassigned';
     });
-    if (needsReassignConfirm) {
-      // Show confirmation modal
-      document.getElementById('reassign-warning-modal').style.display = 'flex';
-    } else {
-      alert('✅ Assigning leads to agent ID: ' + agentId);
-      await assignLeads(agentId);
-    }
+    if (needsReassignConfirm) document.getElementById('reassign-warning-modal').style.display = 'flex';
+    else { alert('✅ Assigning leads…'); await assignLeads(agentId); }
   });
-  // Modal confirmation handlers
   document.getElementById('submit-anyway-btn').addEventListener('click', async () => {
     const agentId = document.getElementById('bulk-assign-agent').value;
     await assignLeads(agentId);
@@ -276,160 +188,104 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('reassign-warning-modal').style.display = 'none';
   });
 
-  // --- Export dropdown toggle (robust) ---
+  // Export dropdown toggle
   const exportBtn = document.getElementById('export-btn');
   const exportOptions = document.getElementById('export-options');
-  
   if (exportBtn && exportOptions) {
     exportBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+      e.preventDefault(); e.stopPropagation();
       exportOptions.style.display = (exportOptions.style.display === 'block') ? 'none' : 'block';
     });
-  
-    // prevent inside clicks from bubbling to document (which hides the menu)
     exportOptions.addEventListener('click', (e) => e.stopPropagation());
-  
-    // close when clicking anywhere else
-    document.addEventListener('click', () => {
-      exportOptions.style.display = 'none';
-    });
+    document.addEventListener('click', () => { exportOptions.style.display = 'none'; });
   }
-  
-  // After each export action, hide the menu:
-  ['export-csv','export-pdf','export-print'].forEach(id => {
-    const btn = document.getElementById(id);
-    btn?.addEventListener('click', () => {
-      exportOptions.style.display = 'none';
-    });
-  });
+  ['export-csv','export-pdf','export-print'].forEach(id => document.getElementById(id)?.addEventListener('click', () => { exportOptions.style.display = 'none'; }));
 
-  // CSV Export
+  // CSV
   document.getElementById('export-csv').addEventListener('click', () => {
     const leads = getSelectedLeadsData();
-    if (!leads.length) {
-      alert('No leads selected.');
-      return;
-    }
+    if (!leads.length) { alert('No leads selected.'); return; }
     const headers = Object.keys(leads[0]).join(',');
     const rows = leads.map(lead => Object.values(lead).map(v => `"${v}"`).join(','));
     const csvContent = [headers, ...rows].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'leads.csv';
-    link.click();
+    const link = document.createElement('a'); link.href = URL.createObjectURL(blob); link.download = 'leads.csv'; link.click();
   });
-  // Print Export
+  // Print
   document.getElementById('export-print').addEventListener('click', () => {
     const leads = getSelectedLeadsData();
-    if (!leads.length) {
-      alert('No leads selected.');
-      return;
-    }
-    const printWindow = window.open('', '_blank');
-    printWindow.document.write(`
-      <html>
-        <head>
-          <link href="https://fonts.googleapis.com/css2?family=Bellota+Text&display=swap" rel="stylesheet">
-          <style>
-            body { font-family: 'Bellota Text', sans-serif; padding: 30px; text-align: center; }
-            .logo { width: 60px; height: 60px; object-fit: contain; display: block; margin: 0 auto 10px auto; }
-            .label { display: inline-block; font-weight: bold; width: 150px; text-align: right; margin-right: 10px; }
-            .value { display: inline-block; text-align: left; }
-            p { text-align: left; margin: 6px 0 6px 100px; }
-            .footer { margin-top: 30px; font-size: 10px; text-align: center; color: #777; }
-            .lead-page { page-break-after: always; }
-          </style>
-        </head>
-        <body>
-          ${leads.map(lead => `
-            <div class="lead-page">
-              <img src="/Pics/img6.png" class="logo" />
-              <h2>Family Values Insurance Agency</h2>
-              <h4>Lead Confirmation Form</h4>
-              <p><span class="label">First Name:</span> <span class="value">${lead.first_name}</span></p>
-              <p><span class="label">Last Name:</span> <span class="value">${lead.last_name}</span></p>
-              <p><span class="label">Age:</span> <span class="value">${lead.age}</span></p>
-              <p><span class="label">Phone:</span> <span class="value">${lead.phone}</span></p>
-              <p><span class="label">Lead Type:</span> <span class="value">${lead.leadType}</span></p>
-              <p><span class="label">City:</span> <span class="value">${lead.city}</span></p>
-              <p><span class="label">State:</span> <span class="value">${lead.state}</span></p>
-              <p><span class="label">ZIP:</span> <span class="value">${lead.zip}</span></p>
-              <p><span class="label">Address:</span> <span class="value">${lead.address}</span></p>
-              <p><span class="label">Agent Assigned:</span> <span class="value">${lead.agent}</span></p>
-              <p><span class="label">Submitted At:</span> <span class="value">${lead.submittedAt}</span></p>
-              <div class="footer">Generated on ${new Date().toLocaleDateString()}</div>
-            </div>
-          `).join('')}
-        </body>
-      </html>
+    if (!leads.length) { alert('No leads selected.'); return; }
+    const win = window.open('', '_blank');
+    win.document.write(`
+      <html><head>
+        <link href="https://fonts.googleapis.com/css2?family=Bellota+Text&display=swap" rel="stylesheet">
+        <style>
+          body { font-family: 'Bellota Text', sans-serif; padding: 30px; text-align: center; }
+          .logo { width: 60px; height: 60px; object-fit: contain; display: block; margin: 0 auto 10px auto; }
+          .label { display: inline-block; font-weight: bold; width: 150px; text-align: right; margin-right: 10px; }
+          .value { display: inline-block; text-align: left; }
+          p { text-align: left; margin: 6px 0 6px 100px; }
+          .footer { margin-top: 30px; font-size: 10px; text-align: center; color: #777; }
+          .lead-page { page-break-after: always; }
+        </style>
+        </head><body>
+        ${leads.map(lead => `
+          <div class="lead-page">
+            <img src="/Pics/img6.png" class="logo" />
+            <h2>Family Values Insurance Agency</h2>
+            <h4>Lead Confirmation Form</h4>
+            <p><span class="label">First Name:</span> <span class="value">${lead.first_name}</span></p>
+            <p><span class="label">Last Name:</span> <span class="value">${lead.last_name}</span></p>
+            <p><span class="label">Age:</span> <span class="value">${lead.age}</span></p>
+            <p><span class="label">Phone:</span> <span class="value">${lead.phone}</span></p>
+            <p><span class="label">Lead Type:</span> <span class="value">${lead.leadType}</span></p>
+            <p><span class="label">City:</span> <span class="value">${lead.city}</span></p>
+            <p><span class="label">State:</span> <span class="value">${lead.state}</span></p>
+            <p><span class="label">ZIP:</span> <span class="value">${lead.zip}</span></p>
+            <p><span class="label">Address:</span> <span class="value">${lead.address}</span></p>
+            <p><span class="label">Agent Assigned:</span> <span class="value">${lead.agent}</span></p>
+            <p><span class="label">Submitted At:</span> <span class="value">${lead.submittedAt}</span></p>
+            <div class="footer">Generated on ${new Date().toLocaleDateString()}</div>
+          </div>
+        `).join('')}
+      </body></html>
     `);
-    printWindow.document.close();
-    printWindow.print();
+    win.document.close(); win.print();
   });
-  // PDF Export
+  // PDF
   document.getElementById('export-pdf').addEventListener('click', () => {
     const leads = getSelectedLeadsData();
-    if (!leads.length) {
-      alert('No leads selected.');
-      return;
-    }
+    if (!leads.length) { alert('No leads selected.'); return; }
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    const logoImg = new Image();
-    logoImg.src = '/Pics/img6.png';
+    const logoImg = new Image(); logoImg.src = '/Pics/img6.png';
     logoImg.onload = () => {
-      leads.forEach((lead, index) => {
-        if (index !== 0) doc.addPage();
+      leads.forEach((lead, i) => {
+        if (i) doc.addPage();
         doc.addImage(logoImg, 'PNG', 90, 10, 30, 30);
-        doc.setFontSize(18);
-        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(18); doc.setFont('helvetica', 'bold');
         doc.text('Family Values Insurance Agency', 105, 50, { align: 'center' });
-        doc.setFontSize(14);
-        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(14); doc.setFont('helvetica', 'normal');
         doc.text('Lead Confirmation Form', 105, 60, { align: 'center' });
-        const startY = 80;
-        const lineHeight = 10;
-        const labelX = 20;
-        const valueX = 70;
+        const startY = 80, lineH = 10, labelX = 20, valueX = 70;
         const fields = [
-          ['First Name', lead.first_name],
-          ['Last Name', lead.last_name],
-          ['Age', lead.age],
-          ['Phone', lead.phone],
-          ['Lead Type', lead.leadType],
-          ['City', lead.city],
-          ['State', lead.state],
-          ['ZIP', lead.zip],
-          ['Address', lead.address],
-          ['Agent Assigned', lead.agent],
-          ['Submitted At', lead.submittedAt]
+          ['First Name', lead.first_name], ['Last Name', lead.last_name], ['Age', lead.age],
+          ['Phone', lead.phone], ['Lead Type', lead.leadType], ['City', lead.city],
+          ['State', lead.state], ['ZIP', lead.zip], ['Address', lead.address],
+          ['Agent Assigned', lead.agent], ['Submitted At', lead.submittedAt]
         ];
-        fields.forEach(([label, value], i) => {
-          const y = startY + i * lineHeight;
-          doc.setFont('helvetica', 'bold');
-          doc.text(`${label}:`, labelX, y);
-          doc.setFont('helvetica', 'normal');
-          doc.text(value || '—', valueX, y);
+        fields.forEach(([label, value], idx) => {
+          const y = startY + idx * lineH; doc.setFont('helvetica', 'bold'); doc.text(`${label}:`, labelX, y);
+          doc.setFont('helvetica', 'normal'); doc.text(value || '—', valueX, y);
         });
-        doc.setFontSize(10);
-        doc.setTextColor(120);
+        doc.setFontSize(10); doc.setTextColor(120);
         doc.text(`Generated on ${new Date().toLocaleDateString()}`, 105, 285, { align: 'center' });
       });
       doc.save('FVIA_Leads.pdf');
     };
     logoImg.onerror = () => alert('❌ Failed to load logo for PDF.');
   });
-  const agentHubBtn = document.getElementById('admin-tab');
-  const hubPages = ['admin']; // Add more if needed 
-  console.log("Page Path:", window.location.pathname); // debug
-  console.log("Found Agent Hub Button:", agentHubBtn); // debug
-  if (hubPages.some(page => window.location.pathname.includes(page))) {
-    agentHubBtn?.classList.add('active-page');
-  } else {
-    agentHubBtn?.classList.remove('active-page');
-  }
+
   const navButtons = {
     all: document.getElementById('nav-all'),
     requests: document.getElementById('nav-requests'),
@@ -437,8 +293,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     stats: document.getElementById('nav-stats'),
     content: document.getElementById('nav-content'),
   };
-
-  // Map sections to their IDs
   const sections = {
     all: document.getElementById('admin-all-section'),
     requests: document.getElementById('admin-requests-section'),
@@ -446,68 +300,37 @@ document.addEventListener('DOMContentLoaded', async () => {
     stats: document.getElementById('admin-stats-section'),
     content: document.getElementById('admin-content-section'),
   };
-
-  function hideAllAdminSections() {
-    Object.values(sections).forEach(sec => sec.style.display = 'none');
-    Object.values(navButtons).forEach(btn => btn.classList.remove('active'));
-  }
-
-  function showAdminSection(name) {
-    hideAllAdminSections();
-    sections[name].style.display = 'block';
-    navButtons[name].classList.add('active');
+  function hideAllAdminSections(){ Object.values(sections).forEach(sec => sec.style.display='none'); Object.values(navButtons).forEach(btn => btn.classList.remove('active')); }
+  function showAdminSection(name){
+    hideAllAdminSections(); sections[name].style.display='block'; navButtons[name].classList.add('active');
     if (name === 'history') loadAssignmentHistory();
-    if (name === 'stats')   loadAgentStats();
+    if (name === 'stats') loadAgentStats();
+    if (name === 'content') loadAnnouncements(); // refresh when switching back
   }
-
-  // Initial view
   showAdminSection('all');
-
-  // Attach click handlers
   navButtons.all.addEventListener('click', () => showAdminSection('all'));
   navButtons.requests.addEventListener('click', () => showAdminSection('requests'));
   navButtons.history.addEventListener('click', () => showAdminSection('history'));
   navButtons.stats.addEventListener('click', () => showAdminSection('stats'));
   navButtons.content.addEventListener('click', () => showAdminSection('content'));
 
-  // Open buttons
+  // Overlays
   document.getElementById('open-annc-modal')?.addEventListener('click', () => openOverlay('annc-modal'));
   document.getElementById('open-train-modal')?.addEventListener('click', () => openOverlay('train-modal'));
   document.getElementById('open-mkt-modal')?.addEventListener('click', () => openOverlay('mkt-modal'));
   document.getElementById('open-agent-modal')?.addEventListener('click', () => openOverlay('agent-modal'));
-
-  // Generic overlay helpers (reuse your existing overlay CSS)
-  function openOverlay(id){
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.classList.add('open');
-    el.setAttribute('aria-hidden','false');
-    document.body.style.overflow = 'hidden';
-  }
-  function closeOverlay(el){
-    el.classList.remove('open');
-    el.setAttribute('aria-hidden','true');
-    document.body.style.overflow = '';
-  }
+  function openOverlay(id){ const el = document.getElementById(id); if (!el) return; el.classList.add('open'); el.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; }
+  function closeOverlay(el){ el.classList.remove('open'); el.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
   document.querySelectorAll('.overlay [data-close], .overlay .overlay-backdrop').forEach(btn=>{
-    btn.addEventListener('click', (e)=> {
-      const wrap = e.target.closest('.overlay');
-      if (wrap) closeOverlay(wrap);
-    });
+    btn.addEventListener('click', (e)=> { const wrap = e.target.closest('.overlay'); if (wrap) closeOverlay(wrap); });
   });
 
-  // flatpickr for scheduled publish/expire
-  try {
-    flatpickr('#annc-publish', { enableTime:true, dateFormat:'Y-m-d H:i' });
-    flatpickr('#annc-expires', { enableTime:true, dateFormat:'Y-m-d H:i' });
-  } catch(_) {}
+  try { flatpickr('#annc-publish', { enableTime:true, dateFormat:'Y-m-d H:i' }); flatpickr('#annc-expires', { enableTime:true, dateFormat:'Y-m-d H:i' }); } catch(_) {}
 
-  // Audience scope toggles
   const scopeSel = document.getElementById('annc-scope');
   const wrapProducts = document.getElementById('annc-products-wrap');
   const wrapStates   = document.getElementById('annc-states-wrap');
   const wrapAgents   = document.getElementById('annc-agents-wrap');
-
   function refreshAudienceUI() {
     const v = scopeSel.value;
     wrapProducts.style.display = (v === 'by_product') ? 'block' : 'none';
@@ -517,191 +340,94 @@ document.addEventListener('DOMContentLoaded', async () => {
   scopeSel?.addEventListener('change', refreshAudienceUI);
   refreshAudienceUI();
 
-  // === 1) Announcements ===
+  // === Announcements (Create/Upload) ===
   document.getElementById('annc-form')?.addEventListener('submit', async (e)=>{
     e.preventDefault();
-    const msg = document.getElementById('annc-msg');
-    msg.textContent = '';
+    const msg = document.getElementById('annc-msg'); msg.textContent = '';
     const { data: { session } } = await supabase.auth.getSession();
     const me = session?.user?.id;
 
     const title = document.getElementById('annc-title').value.trim();
     const body  = document.getElementById('annc-body').value.trim();
-    const scope = document.getElementById('annc-scope').value;
+    const linkUrl = document.getElementById('annc-link').value.trim() || null;
+    const imgFile = document.getElementById('annc-image').files[0] || null;
 
+    const scope = document.getElementById('annc-scope').value;
     const publishAt = document.getElementById('annc-publish').value.trim() || null;
     const expiresAt = document.getElementById('annc-expires').value.trim() || null;
 
-    // audience payload
-    const payload = { scope };
-    if (scope === 'by_product') {
-      const sel = document.getElementById('annc-products');
-      payload.products = Array.from(sel?.selectedOptions||[]).map(o=>o.value);
-    }
-    if (scope === 'by_state') {
-      const sel = document.getElementById('annc-states');
-      payload.states = Array.from(sel?.selectedOptions||[]).map(o=>o.value);
-    }
-    if (scope === 'custom_agents') {
-      const sel = document.getElementById('annc-agent-ids');
-      payload.agent_ids = Array.from(sel?.selectedOptions||[]).map(o=>o.value);
+    const audience = { scope };
+    if (scope === 'by_product') audience.products = Array.from(document.getElementById('annc-products')?.selectedOptions||[]).map(o=>o.value);
+    if (scope === 'by_state')   audience.states = Array.from(document.getElementById('annc-states')?.selectedOptions||[]).map(o=>o.value);
+    if (scope === 'custom_agents') audience.agent_ids = Array.from(document.getElementById('annc-agent-ids')?.selectedOptions||[]).map(o=>o.value);
+
+    let image_url = null;
+    try {
+      if (imgFile) image_url = await uploadAnnouncementImage(imgFile, me);
+    } catch (err) {
+      msg.textContent = '❌ Image upload failed: ' + (err?.message || err);
+      return;
     }
 
     const { error } = await supabase.from('announcements').insert({
       title, body,
+      link_url: linkUrl || null,
+      image_url: image_url || null,
       created_by: me || null,
-      audience: payload,
+      audience,
       publish_at: publishAt ? new Date(publishAt).toISOString() : null,
       expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
       is_active: true
     });
     if (error) { msg.textContent = '❌ ' + error.message; return; }
     msg.textContent = '✅ Saved.';
+    await loadAnnouncements();
     setTimeout(()=> document.querySelector('#annc-modal .overlay-close')?.click(), 600);
+    // reset form
+    e.target.reset();
   });
 
-  // === 2) Training ===
-  document.getElementById('train-form')?.addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const msg = document.getElementById('train-msg');
-    msg.textContent = '';
-    const { data: { session } } = await supabase.auth.getSession();
-    const me = session?.user?.id;
-
-    const title = document.getElementById('train-title').value.trim();
-    const desc  = document.getElementById('train-desc').value.trim();
-    const url   = document.getElementById('train-url').value.trim();
-    const tags  = document.getElementById('train-tags').value
-                    .split(',').map(s=>s.trim()).filter(Boolean);
-
-    const { error } = await supabase.from('training_materials').insert({
-      title, description: desc || null, url: url || null, tags: tags.length? tags : null,
-      created_by: me || null, is_published: true
-    });
-    if (error) { msg.textContent = '❌ ' + error.message; return; }
-    msg.textContent = '✅ Published.';
-    setTimeout(()=> document.querySelector('#train-modal .overlay-close')?.click(), 600);
-  });
-
-  // === 3) Marketing ===
-  document.getElementById('mkt-form')?.addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const msg = document.getElementById('mkt-msg');
-    msg.textContent = '';
-    const { data: { session } } = await supabase.auth.getSession();
-    const me = session?.user?.id;
-
-    const title = document.getElementById('mkt-title').value.trim();
-    const desc  = document.getElementById('mkt-desc').value.trim();
-    const url   = document.getElementById('mkt-url').value.trim();
-    const tags  = document.getElementById('mkt-tags').value
-                    .split(',').map(s=>s.trim()).filter(Boolean);
-
-    const { error } = await supabase.from('marketing_assets').insert({
-      title, description: desc || null, url: url || null, tags: tags.length? tags : null,
-      created_by: me || null, is_published: true
-    });
-    if (error) { msg.textContent = '❌ ' + error.message; return; }
-    msg.textContent = '✅ Published.';
-    setTimeout(()=> document.querySelector('#mkt-modal .overlay-close')?.click(), 600);
-  });
-
-  // === 4) Pre-approve Agent ===
-  document.getElementById('agent-form')?.addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const msg = document.getElementById('agent-msg');
-    msg.textContent = '';
-
-    const first = document.getElementById('agent-first').value.trim();
-    const last  = document.getElementById('agent-last').value.trim();
-    const email = document.getElementById('agent-email').value.trim();
-    const agentId = document.getElementById('agent-id').value.trim();
-
-    if (!/^\w{2}-\w{7}$/i.test(agentId)) {
-      msg.textContent = '⚠️ Agent ID must look like "xx-xxxxxxx".';
-      return;
-    }
-
-    const { error } = await supabase.from('approved_agents').insert({
-      agent_id: agentId, is_registered: false, email, first_name: first, last_name: last
-    });
-
-    if (error) { msg.textContent = '❌ ' + error.message; return; }
-    msg.textContent = '✅ Pre-approved. Share the signup link with them.';
-    setTimeout(()=> document.querySelector('#agent-modal .overlay-close')?.click(), 800);
-  });
-  // Hook up pagination buttons (place near the bottom of admin.js or inside DOMContentLoaded)
+  // Pagination buttons
   const nextBtn = document.getElementById('next-page');
   const prevBtn = document.getElementById('prev-page');
-  
-  nextBtn?.addEventListener('click', async () => {
-    // You can optionally check currentPage against the totalPages, but the disabled
-    // attribute already prevents clicks when at the last page.
-    currentPage++;
-    await loadLeadsWithFilters();
-  });
-  
-  prevBtn?.addEventListener('click', async () => {
-    if (currentPage > 1) {
-      currentPage--;
-      await loadLeadsWithFilters();
-    }
-  });
+  nextBtn?.addEventListener('click', async () => { currentPage++; await loadLeadsWithFilters(); });
+  prevBtn?.addEventListener('click', async () => { if (currentPage > 1) { currentPage--; await loadLeadsWithFilters(); } });
 }); // end DOMContentLoaded
 
-// Load active agents and populate filters
+// Load active agents
 async function loadAgentsForAdmin() {
-  // Try to select allowed product categories if such field exists
   let { data, error } = await supabase.from('agents').select('id, full_name, product_types').eq('is_active', true);
   if (error) {
-    // Fallback without products field if query failed
     const { data: dataFallback, error: err2 } = await supabase.from('agents').select('id, full_name').eq('is_active', true);
-    if (err2) {
-      console.error('Error loading agents:', err2);
-      return;
-    }
+    if (err2) { console.error('Error loading agents:', err2); return; }
     data = dataFallback;
   }
   allAgents = data || [];
-  // Normalize products field to array of strings
   allAgents.forEach(agent => {
     if (agent.product_types) {
-      if (Array.isArray(agent.product_types)) {
-        // already array
-      } else if (typeof agent.product_types === 'string') {
-        agent.product_types = agent.product_types.split(',').map(s => s.trim());
-      } else {
-        agent.product_types = null;
-      }
+      if (Array.isArray(agent.product_types)) { /* ok */ }
+      else if (typeof agent.product_types === 'string') agent.product_types = agent.product_types.split(',').map(s => s.trim());
+      else agent.product_types = null;
     }
   });
-  // Populate agent filter and bulk-assign dropdowns
   const agentFilterEl = document.getElementById('agent-filter');
   const bulkAssignEl = document.getElementById('bulk-assign-agent');
   agentFilterEl.innerHTML = '<option value="">All Agents</option>';
   bulkAssignEl.innerHTML = '<option value="">Select Agent</option>';
   allAgents.forEach(agent => {
-    const opt1 = document.createElement('option');
-    opt1.value = agent.id;
-    opt1.textContent = agent.full_name;
-    agentFilterEl.appendChild(opt1);
-    const opt2 = document.createElement('option');
-    opt2.value = agent.id;
-    opt2.textContent = agent.full_name;
-    bulkAssignEl.appendChild(opt2);
+    const opt1 = document.createElement('option'); opt1.value = agent.id; opt1.textContent = agent.full_name; agentFilterEl.appendChild(opt1);
+    const opt2 = document.createElement('option'); opt2.value = agent.id; opt2.textContent = agent.full_name; bulkAssignEl.appendChild(opt2);
   });
-  // Enhance selects with Choices.js
-  new Choices(agentFilterEl, { shouldSort: false, searchEnabled: true, placeholder: true, itemSelectText: '' });
-  new Choices(bulkAssignEl, { shouldSort: false, searchEnabled: true, placeholder: true, itemSelectText: '' });
+  new Choices(agentFilterEl, { shouldSort:false, searchEnabled:true, placeholder:true, itemSelectText:'' });
+  new Choices(bulkAssignEl, { shouldSort:false, searchEnabled:true, placeholder:true, itemSelectText:'' });
 }
-// Load leads with current filters and pagination
+
+// Leads table
 async function loadLeadsWithFilters() {
-  const tbody = document.querySelector('#leads-table tbody');
-  if (!tbody) return;
+  const tbody = document.querySelector('#leads-table tbody'); if (!tbody) return;
   const prevSelection = new Set(selectedLeads);
-  tbody.innerHTML = '';
-  document.getElementById('selected-count').textContent = '0';
-  // Build query based on filters
+  tbody.innerHTML = ''; document.getElementById('selected-count').textContent = '0';
+
   let query = supabase.from('leads').select('*', { count: 'exact' });
   const orderDir = document.getElementById('date-order').value;
   const sortBy = document.getElementById('sort-by').value || 'created_at';
@@ -713,6 +439,7 @@ async function loadLeadsWithFilters() {
   const last = document.getElementById('last-name-filter').value.trim();
   const type = document.getElementById('lead-type-filter').value;
   const assignedVal = document.getElementById('assigned-filter').value;
+
   if (agentVal) query = query.eq('assigned_to', agentVal);
   if (rangeStart) query = query.gte('created_at', rangeStart);
   if (rangeEnd) query = query.lte('created_at', rangeEnd);
@@ -722,54 +449,33 @@ async function loadLeadsWithFilters() {
   if (first) query = query.ilike('first_name', `%${first}%`);
   if (last) query = query.ilike('last_name', `%${last}%`);
   if (type) query = query.ilike('product_type', `%${type}%`);
-  if (assignedVal === 'true') {
-    query = query.not('assigned_to', 'is', null);
-  } else if (assignedVal === 'false') {
-    query = query.is('assigned_to', null);
-  }
+  if (assignedVal === 'true') query = query.not('assigned_to', 'is', null);
+  else if (assignedVal === 'false') query = query.is('assigned_to', null);
+
   const from = (currentPage - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
   const { data: leads, error, count } = await query.order(sortBy, { ascending: orderDir === 'asc' }).range(from, to);
-  if (error) {
-    console.error('Error loading leads:', error);
-    tbody.innerHTML = '<tr><td colspan="14">Error loading leads.</td></tr>';
-    return;
-  }
+  if (error) { console.error('Error loading leads:', error); tbody.innerHTML = '<tr><td colspan="14">Error loading leads.</td></tr>'; return; }
+
   const totalCount = count || 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
   document.getElementById('current-page').textContent = `Page ${currentPage} of ${totalPages}`;
   document.getElementById('prev-page').disabled = currentPage <= 1;
   document.getElementById('next-page').disabled = currentPage >= totalPages;
-  // Populate leads table
+
   (leads || []).forEach(lead => {
     const tr = document.createElement('tr');
-    // Selection checkbox cell
     const checkboxTd = document.createElement('td');
     const checkbox = document.createElement('input');
-    checkbox.type = 'checkbox';
-    checkbox.classList.add('lead-checkbox');
-    checkbox.dataset.leadId = lead.id;
+    checkbox.type = 'checkbox'; checkbox.classList.add('lead-checkbox'); checkbox.dataset.leadId = lead.id;
     checkbox.addEventListener('change', e => {
       const id = String(lead.id);
-      if (e.target.checked) {
-        selectedLeads.add(id);
-      } else {
-        selectedLeads.delete(id);
-      }
-      document.getElementById('selected-count').textContent = selectedLeads.size;
-      toggleExportVisibility();
+      if (e.target.checked) selectedLeads.add(id); else selectedLeads.delete(id);
+      document.getElementById('selected-count').textContent = selectedLeads.size; toggleExportVisibility();
     });
-    checkboxTd.appendChild(checkbox);
-    tr.appendChild(checkboxTd);
-    // restore checkbox state if it was previously selected
-    if (prevSelection.has(String(lead.id))) {
-      checkbox.checked = true;
-      selectedLeads.add(String(lead.id));
-    }
-    // Assigned agent name (or Unassigned)
+    checkboxTd.appendChild(checkbox); tr.appendChild(checkboxTd);
+    if (prevSelection.has(String(lead.id))) { checkbox.checked = true; selectedLeads.add(String(lead.id)); }
     const agentName = lead.assigned_to ? (allAgents.find(a => a.id === lead.assigned_to)?.full_name || 'Unassigned') : 'Unassigned';
-    // Other fields
-    const phoneText = Array.isArray(lead.phone) ? lead.phone.join(', ') : (lead.phone || '');
     const cellMap = {
       'lead-date': new Date(lead.created_at).toLocaleDateString(),
       'lead-agent': agentName,
@@ -785,41 +491,27 @@ async function loadLeadsWithFilters() {
       'lead-notes': lead.notes || '',
       'lead-product': lead.product_type || ''
     };
-    for (const [cls, text] of Object.entries(cellMap)) {
-      const td = document.createElement('td');
-      td.classList.add(cls);
-      td.textContent = text;
-      tr.appendChild(td);
-    }
+    for (const [cls, text] of Object.entries(cellMap)) { const td = document.createElement('td'); td.classList.add(cls); td.textContent = text; tr.appendChild(td); }
     tbody.appendChild(tr);
   });
   document.getElementById('selected-count').textContent = String(selectedLeads.size);
   toggleExportVisibility();
 }
+
 const selectAllBox = document.getElementById('select-all');
 selectAllBox?.addEventListener('change', (e) => {
   const checked = e.target.checked;
-  document.querySelectorAll('.lead-checkbox').forEach(cb => {
-    cb.checked = checked;
-    // fire the change event to update selectedLeads and UI
-    cb.dispatchEvent(new Event('change'));
-  });
+  document.querySelectorAll('.lead-checkbox').forEach(cb => { cb.checked = checked; cb.dispatchEvent(new Event('change')); });
 });
-// Load lead requests list (admin view of all requests)
+
+// Requests
 async function loadRequestedLeads() {
   const container = document.getElementById('requested-leads-container');
   if (!container) return;
   container.innerHTML = 'Loading...';
   const { data: requests, error } = await supabase.from('lead_requests').select('*').order('created_at', { ascending: false });
-  if (error) {
-    console.error('Error loading requests:', error);
-    container.innerHTML = '<p>Error loading requests.</p>';
-    return;
-  }
-  if (!requests || requests.length === 0) {
-    container.innerHTML = '<p>No lead requests found.</p>';
-    return;
-  }
+  if (error) { console.error('Error loading requests:', error); container.innerHTML = '<p>Error loading requests.</p>'; return; }
+  if (!requests?.length) { container.innerHTML = '<p>No lead requests found.</p>'; return; }
   container.innerHTML = requests.map(req => `
     <div class="lead-request-box" data-request-id="${req.id}">
       <strong>Requested By:</strong> ${req.submitted_by_name || 'Unknown'}<br>
@@ -833,8 +525,7 @@ async function loadRequestedLeads() {
       <button class="delete-request-btn">Delete</button>
       <hr>
     </div>
-  `).join('') || '<p>No lead requests found.</p>';
-  // Delete request handlers
+  `).join('');
   document.querySelectorAll('.delete-request-btn').forEach(btn => {
     btn.addEventListener('click', async e => {
       const box = e.target.closest('.lead-request-box');
@@ -842,39 +533,22 @@ async function loadRequestedLeads() {
       if (!requestId) return;
       if (!confirm('Are you sure you want to delete this request?')) return;
       const { error: deleteError } = await supabase.from('lead_requests').delete().eq('id', requestId);
-      if (deleteError) {
-        alert('❌ Failed to delete request.');
-        console.error(deleteError);
-      } else {
-        box.remove();
-        alert('✅ Request deleted.');
-      }
+      if (deleteError) { alert('❌ Failed to delete request.'); console.error(deleteError); }
+      else { box.remove(); alert('✅ Request deleted.'); }
     });
   });
 }
 
-// Load assignment history table
+// Assignment history
 async function loadAssignmentHistory() {
   const tbody = document.querySelector('#assignment-history-table tbody');
   if (!tbody) return;
   tbody.innerHTML = 'Loading...';
   const { data: history, error } = await supabase.from('lead_assignments')
-    .select(`
-      lead_id,
-      assigned_at,
-      assigned_to_agent:assigned_to(full_name),
-      assigned_by_agent:assigned_by(full_name)
-    `)
+    .select(`lead_id, assigned_at, assigned_to_agent:assigned_to(full_name), assigned_by_agent:assigned_by(full_name)`)
     .order('assigned_at', { ascending: false });
-  if (error) {
-    console.error('Error loading history:', error);
-    tbody.innerHTML = '<tr><td colspan="4">Error loading history.</td></tr>';
-    return;
-  }
-  if (!history || history.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="4">No assignment history yet.</td></tr>';
-    return;
-  }
+  if (error) { console.error('Error loading history:', error); tbody.innerHTML = '<tr><td colspan="4">Error loading history.</td></tr>'; return; }
+  if (!history?.length) { tbody.innerHTML = '<tr><td colspan="4">No assignment history yet.</td></tr>'; return; }
   tbody.innerHTML = '';
   history.forEach(entry => {
     const tr = document.createElement('tr');
@@ -889,54 +563,27 @@ async function loadAssignmentHistory() {
     tbody.appendChild(tr);
   });
 }
-let chartWeekly, chartProducts, chartAssignments;
 
+let chartWeekly, chartProducts, chartAssignments;
 async function loadAgentStats() {
   const isAll = document.getElementById('stat-all-time')?.checked === true;
   const agentId = document.getElementById('stat-agent')?.value || '';
-  // Tear down any existing charts once per run
-  chartWeekly?.destroy();
-  chartProducts?.destroy();
-  chartAssignments?.destroy();
-  
+  chartWeekly?.destroy(); chartProducts?.destroy(); chartAssignments?.destroy();
   let start = null, end = null;
   if (!isAll) {
-    // get the two dates from the flatpickr range (statPicker is created in DOMContentLoaded)
     const dates = statPicker?.selectedDates || [];
-    if (dates.length === 2) {
-      [start, end] = dates;
-    } else {
-      // fallback: last 30 days
-      end = new Date();
-      start = new Date(end.getTime() - 30 * 864e5);
-    }
+    if (dates.length === 2) [start, end] = dates;
+    else { end = new Date(); start = new Date(end.getTime() - 30 * 864e5); }
   }
   const startISO = start ? start.toISOString() : null;
-  // include the full end-day until 23:59:59.999
   const endISO = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999).toISOString() : null;
-  
-  // base query
-  let q = supabase
-    .from('leads')
-    .select('*', { count: 'exact' });
-  
-  // only constrain by date when NOT all-time
-  if (!isAll && startISO && endISO) {
-    q = q.gte('created_at', startISO).lte('created_at', endISO);
-  }
-  
-  // filter by agent if chosen (keep as assigned_to; switch to submitted_by if you prefer)
-  if (agentId) {
-    q = q.eq('assigned_to', agentId);
-  }
-  
-  const { data: leads, error } = await q;
-  if (error) {
-    console.error('Stats load error:', error);
-    return;
-  }
 
-  // ---------- KPIs ----------
+  let q = supabase.from('leads').select('*', { count: 'exact' });
+  if (!isAll && startISO && endISO) q = q.gte('created_at', startISO).lte('created_at', endISO);
+  if (agentId) q = q.eq('assigned_to', agentId);
+  const { data: leads, error } = await q;
+  if (error) { console.error('Stats load error:', error); return; }
+
   const kNew = leads.length;
   const assignedInWindow = leads.filter(l => {
     if (!l.assigned_at) return false;
@@ -945,7 +592,6 @@ async function loadAgentStats() {
     return t >= start.getTime() && t <= new Date(endISO).getTime();
   });
   const kAssigned = assignedInWindow.length;
-
   const ages = leads.map(l => Number(l.age)).filter(n => Number.isFinite(n) && n > 0);
   const avgAge = ages.length ? (ages.reduce((a,b)=>a+b,0)/ages.length) : NaN;
   const distinctAgents = new Set(assignedInWindow.map(l => l.assigned_to).filter(Boolean));
@@ -955,188 +601,104 @@ async function loadAgentStats() {
   document.getElementById('kpi-assigned').textContent = String(kAssigned);
   document.getElementById('kpi-avg-age').textContent = Number.isFinite(avgAge) ? (Math.round(avgAge * 10) / 10) : '—';
   document.getElementById('kpi-agents').textContent = String(kAgents);
-    // ===== New KPI block: contact / quote / close / persistency =====
-    // Base set for rates = leads returned by the query (created in window, or all-time)
-    const baseDen = leads.length;
-  
-    // Count stages with timestamp or status fallback
-    const contacted = leads.filter(isContacted).length;
-    const quoted    = leads.filter(isQuoted).length;
-    const closed    = leads.filter(isClosed).length;
-  
-    // Overall rates (denominator = all leads in window)
-    const contactRate = safeDiv(contacted, baseDen);
-    const quoteRate   = safeDiv(quoted, baseDen);
-    const closeRate   = safeDiv(closed, baseDen);
-  
-    // Persistency (90-day) — only policies issued within the window (or all time),
-    // AND old enough to judge (>= 90 days). Cancelled inside 90 days counts against.
-    const now = Date.now();
-  
-    const persistCandidates = leads.filter(l => {
-      if (!isClosed(l)) return false;
-      const ia = issuedAt(l);
-      if (!ia) return false;
-      // If a custom date range is active, require issue date to be in that range
-      if (!isAll && !inRange(ia, start, new Date(endISO))) return false;
-      // Must be at least 90 days old to be judged
-      return (now - +ia) >= PERSISTENCY_DAYS * DAY_MS;
-    });
-  
-    const persistent = persistCandidates.filter(l => {
-      const ia = issuedAt(l);
-      const canc = l.cancelled_at ? new Date(l.cancelled_at) : null;
-      // Persistent if never cancelled OR cancelled after the 90-day mark
-      return !canc || (+canc > (+ia + PERSISTENCY_DAYS * DAY_MS));
-    });
-  
-    const persistency = safeDiv(persistent.length, persistCandidates.length);
-  
-    // Paint the tiles
-    document.getElementById('kpi-contact').textContent     = fmtPct(contactRate);
-    document.getElementById('kpi-quote').textContent       = fmtPct(quoteRate);
-    document.getElementById('kpi-close').textContent       = fmtPct(closeRate);
-    document.getElementById('kpi-persistency').textContent = fmtPct(persistency);
 
-  // ---------- Time buckets for line chart (weekly or monthly) ----------
+  const baseDen = leads.length;
+  const contacted = leads.filter(isContacted).length;
+  const quoted    = leads.filter(isQuoted).length;
+  const closed    = leads.filter(isClosed).length;
+  const contactRate = safeDiv(contacted, baseDen);
+  const quoteRate   = safeDiv(quoted, baseDen);
+  const closeRate   = safeDiv(closed, baseDen);
+
+  const now = Date.now();
+  const persistCandidates = leads.filter(l => {
+    if (!isClosed(l)) return false;
+    const ia = issuedAt(l); if (!ia) return false;
+    if (!isAll && !inRange(ia, start, new Date(endISO))) return false;
+    return (now - +ia) >= PERSISTENCY_DAYS * DAY_MS;
+  });
+  const persistent = persistCandidates.filter(l => {
+    const ia = issuedAt(l);
+    const canc = l.cancelled_at ? new Date(l.cancelled_at) : null;
+    return !canc || (+canc > (+ia + PERSISTENCY_DAYS * DAY_MS));
+  });
+  const persistency = safeDiv(persistent.length, persistCandidates.length);
+
+  document.getElementById('kpi-contact').textContent     = fmtPct(contactRate);
+  document.getElementById('kpi-quote').textContent       = fmtPct(quoteRate);
+  document.getElementById('kpi-close').textContent       = fmtPct(closeRate);
+  document.getElementById('kpi-persistency').textContent = fmtPct(persistency);
+
   let timeLabels, timeCounts, chartLineLabel;
-  
   if (isAll) {
-    // All time → show last 12 months
-    const now = new Date();
-    const monthStarts = Array.from({ length: 12 }, (_, i) =>
-      new Date(now.getFullYear(), now.getMonth() - (11 - i), 1)
-    );
+    const nowD = new Date();
+    const monthStarts = Array.from({ length: 12 }, (_, i) => new Date(nowD.getFullYear(), nowD.getMonth() - (11 - i), 1));
     const monthCounts = new Array(12).fill(0);
-  
     for (const l of leads) {
       const dt = new Date(l.created_at);
       const base = monthStarts[0];
-      const diffMonths =
-        (dt.getFullYear() - base.getFullYear()) * 12 + (dt.getMonth() - base.getMonth());
+      const diffMonths = (dt.getFullYear() - base.getFullYear()) * 12 + (dt.getMonth() - base.getMonth());
       if (diffMonths >= 0 && diffMonths < 12) monthCounts[diffMonths]++;
     }
-  
-    timeLabels = monthStarts.map(d =>
-      `${d.toLocaleString('default', { month: 'short' })} ${String(d.getFullYear()).slice(-2)}`
-    );
-    timeCounts = monthCounts;
-    chartLineLabel = 'Monthly New Leads';
+    timeLabels = monthStarts.map(d => `${d.toLocaleString('default', { month: 'short' })} ${String(d.getFullYear()).slice(-2)}`);
+    timeCounts = monthCounts; chartLineLabel = 'Monthly New Leads';
   } else {
-    const totalDays =
-      Math.max(1, Math.round((+new Date(endISO) - +start) / 864e5) + 1);
-    const useMonthly = totalDays > 120; // > ~4 months → monthly
-  
+    const totalDays = Math.max(1, Math.round((+new Date(endISO) - +start) / 864e5) + 1);
+    const useMonthly = totalDays > 120;
     if (useMonthly) {
-      // monthly between start and end
-      const monthStarts = [];
-      const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+      const monthStarts = []; const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
       const last = new Date(end.getFullYear(), end.getMonth(), 1);
-      while (cursor <= last) {
-        monthStarts.push(new Date(cursor));
-        cursor.setMonth(cursor.getMonth() + 1);
-      }
-  
+      while (cursor <= last) { monthStarts.push(new Date(cursor)); cursor.setMonth(cursor.getMonth() + 1); }
       const monthCounts = new Array(monthStarts.length).fill(0);
       for (const l of leads) {
         const dt = new Date(l.created_at);
-        const idx = monthStarts.findIndex(
-          m => dt.getFullYear() === m.getFullYear() && dt.getMonth() === m.getMonth()
-        );
+        const idx = monthStarts.findIndex(m => dt.getFullYear() === m.getFullYear() && dt.getMonth() === m.getMonth());
         if (idx !== -1) monthCounts[idx]++;
       }
-  
-      timeLabels = monthStarts.map(d =>
-        `${d.toLocaleString('default', { month: 'short' })} ${String(d.getFullYear()).slice(-2)}`
-      );
-      timeCounts = monthCounts;
-      chartLineLabel = 'Monthly New Leads';
+      timeLabels = monthStarts.map(d => `${d.toLocaleString('default', { month: 'short' })} ${String(d.getFullYear()).slice(-2)}`);
+      timeCounts = monthCounts; chartLineLabel = 'Monthly New Leads';
     } else {
-      // weekly between start and end
       const weekMs = 7 * 864e5;
-      const bucketCount = Math.min(24, Math.max(1, Math.ceil(totalDays / 7))); // cap to keep it light
-      const bucketStarts = Array.from(
-        { length: bucketCount },
-        (_, i) => new Date(start.getTime() + i * weekMs)
-      );
+      const bucketCount = Math.min(24, Math.max(1, Math.ceil(totalDays / 7)));
+      const bucketStarts = Array.from({ length: bucketCount }, (_, i) => new Date(start.getTime() + i * weekMs));
       const weeklyCounts = new Array(bucketCount).fill(0);
-  
       for (const l of leads) {
         const t = new Date(l.created_at).getTime();
         const idx = Math.floor((t - start.getTime()) / weekMs);
         if (idx >= 0 && idx < bucketCount) weeklyCounts[idx]++;
       }
-  
-      timeLabels = bucketStarts.map(d =>
-        `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`
-      );
-      timeCounts = weeklyCounts;
-      chartLineLabel = 'Weekly New Leads';
+      timeLabels = bucketStarts.map(d => `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`);
+      timeCounts = weeklyCounts; chartLineLabel = 'Weekly New Leads';
     }
   }
-  
-  // (Optional) update the card title above the canvas
   const weeklyTitleEl = document.querySelector('#chart-weekly')?.previousElementSibling;
   if (weeklyTitleEl) weeklyTitleEl.textContent = chartLineLabel;
 
-  // ---------- Product mix ----------
-  const productCounts = {};
-  for (const l of leads) {
-    const key = (l.product_type || 'Unknown').trim() || 'Unknown';
-    productCounts[key] = (productCounts[key] || 0) + 1;
-  }
+  const productCounts = {}; for (const l of leads) { const key = (l.product_type || 'Unknown').trim() || 'Unknown'; productCounts[key] = (productCounts[key] || 0) + 1; }
   const productLabels = Object.keys(productCounts);
   const productValues = productLabels.map(k => productCounts[k]);
 
-  // ---------- Assignments by agent (in window) ----------
   const nameById = new Map(allAgents.map(a => [a.id, a.full_name]));
-  const assigns = {};
-  for (const l of assignedInWindow) {
-    const id = l.assigned_to || 'Unknown';
-    assigns[id] = (assigns[id] || 0) + 1;
-  }
+  const assigns = {}; for (const l of assignedInWindow) { const id = l.assigned_to || 'Unknown'; assigns[id] = (assigns[id] || 0) + 1; }
   const assignLabels = Object.keys(assigns).map(id => nameById.get(id) || 'Unassigned/Unknown');
   const assignValues = Object.keys(assigns).map(id => assigns[id]);
 
-  // --- Build charts (weekly/monthly line was already computed as timeLabels/timeCounts) ---
   const weeklyCtx = document.getElementById('chart-weekly').getContext('2d');
-  chartWeekly = new Chart(weeklyCtx, {
-    type: 'line',
-    data: { labels: timeLabels, datasets: [{ label: chartLineLabel, data: timeCounts, tension: 0.3 }] },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { display: false } },
-      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
-    }
-  });
-
+  chartWeekly = new Chart(weeklyCtx, { type:'line', data:{ labels: timeLabels, datasets:[{ label: chartLineLabel, data: timeCounts, tension:0.3 }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } } }});
   const productsCtx = document.getElementById('chart-products').getContext('2d');
-  chartProducts = new Chart(productsCtx, {
-    type: 'doughnut',
-    data: { labels: productLabels, datasets: [{ data: productValues }] },
-    options: { responsive:true, maintainAspectRatio:false, plugins: { legend: { position: 'bottom' } } }
-  });
-
+  chartProducts = new Chart(productsCtx, { type:'doughnut', data:{ labels: productLabels, datasets:[{ data: productValues }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom' } } }});
   const assignsCtx = document.getElementById('chart-assignments').getContext('2d');
-  chartAssignments = new Chart(assignsCtx, {
-    type: 'bar',
-    data: { labels: assignLabels, datasets: [{ label: 'Assignments', data: assignValues }] },
-    options: {
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins: { legend: { display:false } },
-      scales: { y: { beginAtZero:true, ticks: { precision:0 } } }
-    }
-  });
+  chartAssignments = new Chart(assignsCtx, { type:'bar', data:{ labels: assignLabels, datasets:[{ label:'Assignments', data: assignValues }] },
+    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } } }});
 }
-// Toggle export controls visibility
+
+// Toggle export UI
 function toggleExportVisibility() {
   const anyChecked = document.querySelectorAll('input.lead-checkbox:checked').length > 0;
   document.getElementById('export-controls').style.display = anyChecked ? 'block' : 'none';
 }
-
-// Collect selected leads data for export
 function getSelectedLeadsData() {
   return Array.from(document.querySelectorAll('input.lead-checkbox:checked')).map(cb => {
     const row = cb.closest('tr');
@@ -1155,58 +717,82 @@ function getSelectedLeadsData() {
     };
   });
 }
-
-// Assign selected leads to the given agent and log the assignments
 async function assignLeads(agentId) {
-  if (!agentId || selectedLeads.size === 0) {
-    alert('Please select leads and an agent.');
-    return;
-  }
+  if (!agentId || selectedLeads.size === 0) { alert('Please select leads and an agent.'); return; }
   const leadIds = Array.from(selectedLeads);
   const now = new Date().toISOString();
-  // Update leads table
-  const { error: updateError } = await supabase.from('leads')
-    .update({ assigned_to: agentId, assigned_at: now })
-    .in('id', leadIds);
-  if (updateError) {
-    alert('❌ Failed to assign leads: ' + updateError.message);
-    return;
-  }
-  // Log assignment history
+  const { error: updateError } = await supabase.from('leads').update({ assigned_to: agentId, assigned_at: now }).in('id', leadIds);
+  if (updateError) { alert('❌ Failed to assign leads: ' + updateError.message); return; }
   const { data: sessionData } = await supabase.auth.getSession();
   const currentUserId = sessionData?.session?.user?.id || userId;
-  const logs = leadIds.map(leadId => ({
-    lead_id: leadId,
-    assigned_to: agentId,
-    assigned_by: currentUserId,
-    assigned_at: now
-  }));
+  const logs = leadIds.map(leadId => ({ lead_id: leadId, assigned_to: agentId, assigned_by: currentUserId, assigned_at: now }));
   const { error: logError } = await supabase.from('lead_assignments').insert(logs);
-  if (logError) {
-    alert('⚠️ Leads assigned, but failed to log history: ' + logError.message);
-  } else {
-    alert('✅ Lead(s) successfully assigned.');
-  }
-  // Reset selection and refresh data
-  selectedLeads.clear();
-  document.getElementById('selected-count').textContent = '0';
-  await loadLeadsWithFilters();
-  await loadAssignmentHistory();
+  if (logError) { alert('⚠️ Leads assigned, but failed to log history: ' + logError.message); }
+  else { alert('✅ Lead(s) successfully assigned.'); }
+  selectedLeads.clear(); document.getElementById('selected-count').textContent = '0';
+  await loadLeadsWithFilters(); await loadAssignmentHistory();
 }
-/*AgentStatsPayload = {
-  period: { startISO, endISO },           // based on #stat-range
-  scope: 'team' | 'mine',                 // based on #stat-scope
 
-  kpis: {
-    newLeads: { value, deltaPct, spark: number[] },        // spark = mini trend points
-    contactRate: { valuePct, deltaPct, spark: number[] },
-    quoteRate:   { valuePct, deltaPct, spark: number[] },
-    closeRate:   { valuePct, deltaPct, spark: number[] },
-  },
+/* =========================
+   Announcements: List/Delete
+   ========================= */
+async function loadAnnouncements() {
+  const list = document.getElementById('annc-list');
+  if (!list) return;
+  list.innerHTML = 'Loading…';
+  // Expecting columns: id, title, body, image_url, link_url, audience, publish_at, expires_at, created_at
+  const { data, error } = await supabase.from('announcements')
+    .select('*')
+    .order('created_at', { ascending: false });
+  if (error) { console.error(error); list.innerHTML = '<p>Error loading announcements.</p>'; return; }
+  if (!data?.length) { list.innerHTML = '<p>No announcements yet.</p>'; return; }
 
-  weeklyCloses: { labels: string[], values: number[] },    // 12 buckets (week starts)
-  funnelDonut:  { labels: ['New','Contacted','Quoted','Closed'], values: number[] },
-  assignments:  { labels: string[], values: number[] },    // agents; last 30 days
-  progress:     { pct: number, label: string, targetText: string } // e.g., “37% of 50 closes”
+  list.innerHTML = data.map(a => `
+    <div class="annc-row" data-id="${a.id}" style="display:grid; grid-template-columns: 64px 1fr auto; gap:12px; align-items:center; padding:10px; border:1px solid #eee; border-radius:8px; margin-bottom:10px;">
+      <div class="thumb" style="width:64px; height:64px; background:#f7f7f7; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:6px;">
+        ${a.image_url ? `<img src="${a.image_url}" alt="" style="max-width:100%; max-height:100%;">` : `<i class="fa-regular fa-image"></i>`}
+      </div>
+      <div class="meta" style="min-width:0;">
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+          <strong>${a.title || '(no title)'}</strong>
+          ${a.link_url ? `<a href="${a.link_url}" target="_blank" rel="noopener" style="font-size:12px;"><i class="fa-solid fa-link"></i> Open link</a>` : ''}
+        </div>
+        <div style="font-size:12px; color:#666; margin-top:2px;">
+          Audience: ${summarizeAudience(a.audience)} · Published: ${a.publish_at ? new Date(a.publish_at).toLocaleString() : 'Now'}
+          ${a.expires_at ? ` · Expires: ${new Date(a.expires_at).toLocaleString()}` : ''}
+        </div>
+        <div style="font-size:13px; margin-top:6px; color:#333; white-space:pre-wrap;">${(a.body||'').slice(0,240)}${a.body && a.body.length>240 ? '…' : ''}</div>
+      </div>
+      <div class="actions" style="display:flex; flex-direction:column; gap:6px;">
+        <button class="annc-copy" title="Copy link JSON" style="padding:6px 10px;">Copy JSON</button>
+        <button class="annc-delete" style="padding:6px 10px; background:#ffe6e6; border:1px solid #ffb3b3;">Delete</button>
+      </div>
+    </div>
+  `).join('');
+
+  // Copy JSON (handy for debugging)
+  list.querySelectorAll('.annc-copy').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const row = e.target.closest('.annc-row');
+      const id = row?.getAttribute('data-id');
+      const a = data.find(x => String(x.id) === String(id));
+      if (!a) return;
+      navigator.clipboard?.writeText(JSON.stringify(a, null, 2));
+      btn.textContent = 'Copied!'; setTimeout(()=> btn.textContent = 'Copy JSON', 1200);
+    });
+  });
+
+  // Delete
+  list.querySelectorAll('.annc-delete').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const row = e.target.closest('.annc-row');
+      const id = row?.getAttribute('data-id');
+      if (!id) return;
+      if (!confirm('Delete this announcement?')) return;
+      const { error: delErr } = await supabase.from('announcements').delete().eq('id', id);
+      if (delErr) { alert('❌ Failed to delete.'); console.error(delErr); return; }
+      row.remove();
+      if (!document.querySelector('#annc-list .annc-row')) document.getElementById('annc-list').innerHTML = '<p>No announcements yet.</p>';
+    });
+  });
 }
-*/
