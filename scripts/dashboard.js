@@ -106,6 +106,17 @@ document.addEventListener('DOMContentLoaded', () => {
     pause()    { this.stopAuto(); }
     resume()   { this.startAuto(); }
     restartAuto(){ this.stopAuto(); this.startAuto(); }
+
+    // 🔥 allow replacing slides dynamically
+    setSlides(newSlides) {
+      this.allSlides = Array.from(newSlides);
+      this.slides = this.allSlides.slice(0, this.maxVisible);
+      this.rebuildTrack();
+      this.setupDots();
+      this.go(0, false);
+      this.restartAuto();
+    }
+
     getAllSlides(){ return this.allSlides; }
   }
   const carousels = Array.from(document.querySelectorAll('.carousel')).map(c => new Carousel(c));
@@ -161,6 +172,100 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
+  /* ---------- ANNOUNCEMENTS (live from Supabase) ---------- */
+  async function getMyAgentMini() {
+    const { data: { session } } = await supabase.auth.getSession();
+    const myId = session?.user?.id || null;
+    let me = { id: myId, is_admin: false, state: null, product_types: [] };
+    if (!myId) return me;
+
+    const { data: agent } = await supabase
+      .from('agents')
+      .select('is_admin, state, product_types')
+      .eq('id', myId)
+      .single();
+
+    if (agent) {
+      me.is_admin = !!agent.is_admin;
+      me.state = agent.state || null;
+      me.product_types = Array.isArray(agent.product_types)
+        ? agent.product_types
+        : (typeof agent.product_types === 'string'
+            ? agent.product_types.split(',').map(s=>s.trim()).filter(Boolean)
+            : []);
+    }
+    return me;
+  }
+  function makeAnncSlide(a) {
+    const art = document.createElement('article');
+    art.className = 'slide';
+    art.tabIndex = 0;
+    art.innerHTML = `
+      <h3>${a.title || 'Untitled'}</h3>
+      <p>${(a.body || '').replace(/\n/g,'<br>')}</p>
+    `;
+    return art;
+  }
+  async function loadAnnouncementsCarousel() {
+    const root = document.querySelector('.carousel[data-key="announcements"]');
+    if (!root) return;
+    const inst = carousels.find(c => c.root === root);
+
+    const me = await getMyAgentMini();
+
+    const { data: rows, error } = await supabase
+      .from('announcements')
+      .select('*')
+      .eq('is_active', true)
+      .order('publish_at', { ascending: false })
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.warn('Announcements load error:', error);
+      const empty = [makeAnncSlide({ title: 'No announcements', body: 'Nothing to show yet.' })];
+      return inst?.setSlides(empty);
+    }
+
+    const now = new Date();
+    const timeOk = (r) => {
+      const pub = r.publish_at ? new Date(r.publish_at) : null;
+      const exp = r.expires_at ? new Date(r.expires_at) : null;
+      if (pub && pub > now) return false;
+      if (exp && exp <= now) return false;
+      return true;
+    };
+    const showsForMe = (r) => {
+      const aud = r.audience || { scope: 'all' };
+      switch (aud.scope) {
+        case 'all': return true;
+        case 'admins': return me.is_admin;
+        case 'by_state': return me.state && (aud.states || []).includes(me.state);
+        case 'by_product': {
+          const want = new Set(aud.products || []);
+          return (me.product_types || []).some(p => want.has(p));
+        }
+        case 'custom_agents': return me.id && (aud.agent_ids || []).includes(me.id);
+        default: return false;
+      }
+    };
+
+    const list = (rows || []).filter(timeOk).filter(showsForMe);
+    const slides = list.length
+      ? list.map(makeAnncSlide)
+      : [makeAnncSlide({ title: 'No announcements', body: 'Nothing to show yet.' })];
+
+    inst?.setSlides(slides);
+  }
+  // initial load + realtime
+  loadAnnouncementsCarousel();
+  try {
+    supabase.channel('announcements-rt')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'announcements' }, loadAnnouncementsCarousel)
+      .subscribe();
+  } catch (e) {
+    console.warn('Realtime not available:', e);
+  }
+
   /* ---------- LEAD SNAPSHOT ---------- */
   (async function initLeadSnapshot(){
     let userId = null;
@@ -171,7 +276,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const el = id => document.getElementById(id);
     const setText = (id, v) => { const n = el(id); if (n) n.textContent = String(v); };
 
-    // infer stage from timestamps/closed_status (leads has no 'stage' col)
     function inferStage(row){
       if (row.closed_at || ['won','lost'].includes((row.closed_status||'').toLowerCase())) return 'closed';
       if (row.quoted_at)     return 'quoted';
@@ -265,7 +369,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   })();
 
-  /* ---------- COMMISSION SNAPSHOT (matches your schema) ---------- */
+  /* ---------- COMMISSION SNAPSHOT ---------- */
   async function loadCommissionSnapshot(){
     let issuedMonth = 0, ytdAP = 0, pending = 0, chargebacksCount = 0;
     let rows = [];
@@ -274,10 +378,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const startMonthISO = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const startYearISO  = new Date(now.getFullYear(), 0, 1).toISOString();
 
-      // Pull issued policies this year (premium_annual!) and join contact for name
       const res = await supabase.from('policies')
         .select('status, carrier_name, premium_annual, issued_at, contact:contacts(first_name,last_name)')
-        .not('issued_at','is', null)                 // only issued policies
+        .not('issued_at','is', null)
         .gte('issued_at', startYearISO)
         .order('issued_at', { ascending:false })
         .limit(200);
@@ -300,11 +403,9 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('Policies query failed:', res.error);
       }
 
-      // Pending = all policies currently in 'pending' (not restricted by issued_at)
       const pend = await supabase.from('policies').select('id', { count:'exact', head:true }).eq('status','pending');
       pending = pend.count || 0;
 
-      // Optional: chargebacks count in last 30d if you later add policy_status_history table
       try {
         const cbQ = await supabase.from('policy_status_history')
           .select('event_type', { count:'exact', head:true })
@@ -330,7 +431,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  /* ---------- RECRUITING SNAPSHOT (safe, no applicants required) ---------- */
+  /* ---------- RECRUITING SNAPSHOT ---------- */
   async function loadRecruitingSnapshot(){
     let team=0, active=0; let activity=[];
     try{
