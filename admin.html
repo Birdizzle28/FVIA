@@ -362,6 +362,7 @@
 	    </div>
 	  </div>
 	</section>
+
 	<section id="admin-content-section" class="panel" style="display:none;">
 	  <h3>Content & Roster</h3>
 	
@@ -394,6 +395,13 @@
 	      <button id="open-agent-modal" class="card-link">Add Agent</button>
 	    </div>
 	  </div>
+
+	  <!-- Manage Announcements -->
+	  <div class="card" style="margin-top:16px;">
+	    <h3>Manage Announcements</h3>
+	    <p>View, copy links, or delete announcements.</p>
+		<div id="annc-list" class="scroll-container"></div>
+	  </div>
 	
 	  <!-- ===== Modals ===== -->
 	
@@ -416,6 +424,19 @@
 	            <span>Message</span>
 	            <textarea id="annc-body" rows="4" required></textarea>
 	          </label>
+
+	          <!-- NEW: Optional URL -->
+	          <label class="form-group">
+	            <span>Link URL (optional)</span>
+	            <input id="annc-link" type="url" placeholder="https://example.com">
+	          </label>
+
+	          <!-- NEW: Optional Image -->
+	          <label class="form-group">
+	            <span>Image (optional)</span>
+	            <input id="annc-image" type="file" accept="image/*">
+	            <small>PNG/JPG/GIF. Uploaded to Supabase Storage.</small>
+	          </label>
 	
 	          <div class="form-row" style="display:flex; gap:12px; align-items:flex-end;">
 	            <label class="form-group" style="flex:1;">
@@ -437,7 +458,6 @@
 	            <label class="form-group" style="flex:1; display:none;" id="annc-states-wrap">
 	              <span>States</span>
 	              <select id="annc-states" multiple>
-	                <!-- simple 2-letter list; fill in as needed -->
 	                <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
 	                <option>CA</option><option>CO</option><option>CT</option><option>DC</option>
 	                <option>DE</option><option>FL</option><option>GA</option><option>HI</option>
