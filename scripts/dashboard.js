@@ -262,6 +262,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const art = document.createElement('article');
     art.className = 'slide annc';
     art.tabIndex = 0;
+  
     const hasImg = !!a.image_url;
     art.innerHTML = `
       <div class="annc-inner">
@@ -272,6 +273,18 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="annc-img">${hasImg ? `<img src="${a.image_url}" alt="">` : ''}</div>
       </div>
     `;
+  
+    // open detail on click or Enter/Space
+    const open = (e) => {
+      // don’t fire when user clicks a link inside (future-proof)
+      if (e.target.closest('a')) return;
+      openDetail(a);
+    };
+    art.addEventListener('click', open);
+    art.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e); }
+    });
+  
     return art;
   }
 
