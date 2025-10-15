@@ -112,6 +112,20 @@
 		<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
 	</footer>
 	<script type="module" src="scripts/general.js"></script>
+	<script>
+	  // Toggle show/hide for password fields
+	  document.addEventListener('click', (e) => {
+	    const btn = e.target.closest('.pw-toggle');
+	    if (!btn) return;
+	    const input = btn.parentElement.querySelector('input');
+	    const icon  = btn.querySelector('i');
+	    const isText = input.type === 'text';
+	    input.type = isText ? 'password' : 'text';
+	    btn.setAttribute('aria-label', isText ? 'Show password' : 'Hide password');
+	    icon.classList.toggle('fa-eye');
+	    icon.classList.toggle('fa-eye-slash');
+	  });
+	</script>
 	<script type="module">
 		  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 		
