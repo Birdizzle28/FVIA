@@ -95,66 +95,96 @@
 		  const message = document.getElementById('message');
 		
 		  form.addEventListener('submit', async (event) => {
-		    event.preventDefault();
-		    status.textContent = '⏳ Signing up...';
-		
-		    const agentId = document.getElementById('agent-id').value.trim();
-		    const firstName = document.getElementById('first-name').value.trim();
-		    const lastName = document.getElementById('last-name').value.trim();
-		    const email = document.getElementById('email').value.trim();
-		    const password = document.getElementById('password').value;
-		
-		    if (!agentId || !firstName || !lastName || !email || !password) {
-		      status.textContent = '⚠️ Fill out all fields.';
-		      return;
-		    }
-		
-		    const { data: approved, error: checkErr } = await supabase
-		      .from('approved_agents')
-		      .select('*')
-		      .eq('agent_id', agentId)
-		      .eq('is_registered', false)
-		      .single();
-		
-		    if (checkErr || !approved) {
-		      status.textContent = '❌ Invalid or already registered agent ID.';
-		      return;
-		    }
-		
-		    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-			  email,
-			  password,
-			  options: {
-			    emailRedirectTo: 'https://fv-ia.com/confirmed.html',
-			    data: {
-			      agent_id: agentId,
-			      first_name: firstName,
-			      last_name: lastName
+			  event.preventDefault();
+			  status.textContent = '⏳ Signing up...';
+			
+			  const agentId = document.getElementById('agent-id').value.trim();     // NPN (any format)
+			  const firstName = document.getElementById('first-name').value.trim();
+			  const lastName  = document.getElementById('last-name').value.trim();
+			  const email     = document.getElementById('email').value.trim();
+			  const password  = document.getElementById('password').value;
+			
+			  if (!agentId || !firstName || !lastName || !email || !password) {
+			    status.textContent = '⚠️ Fill out all fields.';
+			    return;
+			  }
+			
+			  // Check pre-approval & get recruiter_id
+			  const { data: approved, error: checkErr } = await supabase
+			    .from('approved_agents')
+			    .select('id, is_registered, recruiter_id')
+			    .eq('agent_id', agentId)
+			    .maybeSingle();
+			
+			  if (checkErr || !approved || approved.is_registered) {
+			    status.textContent = '❌ Invalid or already registered agent ID.';
+			    return;
+			  }
+			
+			  // Register auth user
+			  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+			    email,
+			    password,
+			    options: {
+			      emailRedirectTo: 'https://fv-ia.com/confirmed.html',
+			      data: {
+			        agent_id: agentId,       // store NPN in user metadata as well (optional)
+			        first_name: firstName,
+			        last_name : lastName
+			      }
+			    }
+			  });
+			
+			  if (signUpError) {
+			    status.textContent = '❌ Signup failed: ' + signUpError.message;
+			    return;
+			  }
+			
+			  status.textContent = '✅ Sign-up successful. Creating your profile…';
+			
+			  const authUserId = signUpData?.user?.id || null;
+			  const fullName = `${firstName} ${lastName}`.trim();
+			
+			  // Create the row in agents using the auth user id as the primary key
+			  // (agents.id is UUID and can be supplied explicitly)
+			  if (authUserId) {
+			    const { error: insertAgentErr } = await supabase
+			      .from('agents')
+			      .insert({
+			        id: authUserId,           // tie auth user to agents row
+			        email,
+			        agent_id: agentId,        // <-- NPN goes here
+			        full_name: fullName,
+			        first_name: firstName,
+			        last_name: lastName,
+			        is_active: true,
+			        is_admin: false,
+			        recruiter_id: approved?.recruiter_id || null,
+			        product_types: null
+			      });
+			
+			    if (insertAgentErr) {
+			      message.textContent = '⚠️ Profile created later: ' + insertAgentErr.message;
 			    }
 			  }
+			
+			  // Mark the pre-approval as claimed
+			  const { error: updateErr } = await supabase
+			    .from('approved_agents')
+			    .update({
+			      is_registered: true,
+			      first_name: firstName,
+			      last_name: lastName,
+			      email
+			    })
+			    .eq('agent_id', agentId);
+			
+			  if (updateErr) {
+			    message.textContent = '⚠️ Warning: couldn’t update approval record.';
+			  }
+			
+			  status.textContent = '✅ All set. Check your email to confirm your account.';
 			});
-		
-		    if (signUpError) {
-		      status.textContent = '❌ Signup failed: ' + signUpError.message;
-		      return;
-		    }
-		
-		    status.textContent = '✅ Sign-up successful. Check your email to confirm.';
-		
-		    const { error: updateErr } = await supabase
-		      .from('approved_agents')
-		      .update({
-		        is_registered: true,
-		        first_name: firstName,
-		        last_name: lastName,
-		        email: email
-		      })
-		      .eq('agent_id', agentId);
-		
-		    if (updateErr) {
-		      message.textContent = '⚠️ Warning: couldn’t update agent record.';
-		    }
-		  });
 		</script>
 		<script>
 		  const allowed = sessionStorage.getItem("siteAccess");
