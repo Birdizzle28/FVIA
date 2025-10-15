@@ -3,8 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <link rel="icon" type="image/png" href="/favicon.png">
-    <link rel="shortcut icon" href="/favicon.ico">
+    <!-- Favicon (modern) -->
+    <link rel="icon" type="image/png" href="/favicon.png?v=1" sizes="32x32">
+    <link rel="icon" type="image/png" href="/favicon.png?v=1" sizes="192x192">
+    
+    <!-- Old-school shortcut (silences GET /favicon.ico 404 if you add the file) -->
+    <link rel="shortcut icon" href="/favicon.ico?v=1">
+    
+    <!-- iOS / Android homescreen icon (optional) -->
+    <link rel="apple-touch-icon" href="/favicon.png?v=1">
+    
+    <!-- Optional tab color on mobile Chrome -->
     <meta name="theme-color" content="#353468">
     <title>Dashboard | Family Values Group</title>
     <link rel="stylesheet" href="styles/agentstyle.css" />
