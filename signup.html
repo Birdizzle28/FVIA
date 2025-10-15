@@ -39,19 +39,49 @@
 	<div class="auth-container">
 		<h2>Agent Sign-Up</h2>
 		<form id="signup-form">
-			<input type="text" id="first-name" placeholder="First Name" required>
-			<input type="text" id="last-name" placeholder="Last Name" required>
-			<input type="text" id="agent-id" placeholder="Agent ID (xx-xxxxxxx)" required>
-			<input type="email" id="email" placeholder="Email (used as username)" required>
-			<div class="password-wrapper">
-				<input type="password" id="password" placeholder="Password" required>
-				<span toggle="#password" class="fa fa-eye toggle-password"></span>
-			</div>
-			<div class="password-wrapper">
-				<input type="password" id="confirm-password" placeholder="Confirm Password" required>
-				<span toggle="#confirm-password" class="fa fa-eye toggle-password"></span>
-			</div>
-			<button type="submit">Sign Up</button>
+		  <!-- First Name -->
+		  <div class="float-field">
+		    <input id="first-name" type="text" placeholder=" " required>
+		    <label for="first-name">First Name</label>
+		  </div>
+		
+		  <!-- Last Name -->
+		  <div class="float-field">
+		    <input id="last-name" type="text" placeholder=" " required>
+		    <label for="last-name">Last Name</label>
+		  </div>
+		
+		  <!-- Agent ID (NPN) -->
+		  <div class="float-field">
+		    <input id="agent-id" type="text" placeholder=" " required>
+		    <label for="agent-id">Agent ID (NPN)</label>
+		  </div>
+		
+		  <!-- Email -->
+		  <div class="float-field">
+		    <input id="email" type="email" placeholder=" " required>
+		    <label for="email">Email (used as username)</label>
+		  </div>
+		
+		  <!-- Password -->
+		  <div class="float-field pw-field">
+		    <input id="password" type="password" placeholder=" " required>
+		    <label for="password">Password</label>
+		    <button type="button" class="pw-toggle" aria-label="Show password">
+		      <i class="fa-regular fa-eye"></i>
+		    </button>
+		  </div>
+		
+		  <!-- Confirm Password -->
+		  <div class="float-field pw-field">
+		    <input id="confirm-password" type="password" placeholder=" " required>
+		    <label for="confirm-password">Confirm Password</label>
+		    <button type="button" class="pw-toggle" aria-label="Show password">
+		      <i class="fa-regular fa-eye"></i>
+		    </button>
+		  </div>
+		
+		  <button type="submit">Sign Up</button>
 		</form>
 		<p class="switch-auth">Already have an account? <a href="login.html">Sign in here</a>.</p>
 		<p id="status">Activating your account…</p>
