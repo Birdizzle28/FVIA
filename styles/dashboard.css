@@ -350,7 +350,7 @@ input:checked + .slider::before {
 .annc-img {
   position: relative;
   overflow: hidden;
-  background: #eef1f8;
+  background: white;
 }
 .annc-img img {
   position: absolute; inset: 0;
@@ -380,15 +380,23 @@ input:checked + .slider::before {
 .overlay-item.image-card::before {
   content: "";
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(0,0,0,.15) 0%, rgba(0,0,0,.55) 100%);
+  background: linear-gradient(180deg, rgba(53,52,104,0) 0%, rgba(53,52,104,.58) 100%);
 }
 .overlay-item.image-card .card-content {
   position: relative;
   z-index: 2;
   width: 100%;
 }
-.overlay-item.image-card h3 { color: #fff; margin: 0 0 6px; }
-.overlay-item.image-card p { color: #e7ebf6; margin: 0 0 10px; }
+.overlay-item.image-card h3 {
+  color: #fff; 
+  margin: 0 0 6px; 
+  text-shadow: 0 2px 6px rgba(0,0,0,.35);
+}
+.overlay-item.image-card p { 
+  color: #f3f4fa;
+  margin: 0 0 10px; 
+  text-shadow: 0 2px 6px rgba(0,0,0,.25);
+}
 
 /* small action buttons in See All cards */
 .mini-actions {
@@ -400,15 +408,15 @@ input:checked + .slider::before {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  border: 1px solid rgba(255,255,255,.7);
-  background: rgba(0,0,0,.25);
+  border: 1px solid rgba(255,255,255,.85);
+  background: rgba(0,0,0,.18);
   color: #fff;
   padding: 6px 10px;
   cursor: pointer;
   text-decoration: none;
   font-weight: 700;
 }
-.icon-btn:hover { background: rgba(0,0,0,.35); }
+.icon-btn:hover { background: rgba(0,0,0,.28); }
 .icon-btn i { min-width: 14px; text-align: center; }
 
 /* ===== Detail overlay ===== */
