@@ -106,8 +106,6 @@ document.addEventListener('DOMContentLoaded', () => {
     pause()    { this.stopAuto(); }
     resume()   { this.startAuto(); }
     restartAuto(){ this.stopAuto(); this.startAuto(); }
-
-    // 🔥 allow replacing slides dynamically
     setSlides(newSlides) {
       this.allSlides = Array.from(newSlides);
       this.slides = this.allSlides.slice(0, this.maxVisible);
@@ -116,12 +114,11 @@ document.addEventListener('DOMContentLoaded', () => {
       this.go(0, false);
       this.restartAuto();
     }
-
     getAllSlides(){ return this.allSlides; }
   }
   const carousels = Array.from(document.querySelectorAll('.carousel')).map(c => new Carousel(c));
 
-  /* ---------- SEE ALL OVERLAY ---------- */
+  /* ---------- SEE ALL OVERLAY (generic) ---------- */
   const overlay = document.getElementById('dash-overlay');
   const overlayGrid = document.getElementById('overlay-grid');
   const overlayTitle = document.getElementById('overlay-title');
@@ -138,12 +135,16 @@ document.addEventListener('DOMContentLoaded', () => {
       empty.innerHTML = `<p>No items to show yet.</p>`;
       overlayGrid.appendChild(empty);
     } else {
+      // Default generic cards (used for sales/reminders). Announcements use a custom renderer below.
       items.forEach((el, idx) => {
         const card = document.createElement('div');
         card.className = 'overlay-item';
         card.innerHTML = `<h3>${el.querySelector('h3')?.textContent || 'Item'}</h3>
                           <p>${el.querySelector('p')?.textContent || ''}</p>`;
-        card.addEventListener('click', () => { if (activeCarousel && idx < activeCarousel.slides.length) activeCarousel.go(idx); closeOverlay(); });
+        card.addEventListener('click', () => {
+          if (activeCarousel && idx < activeCarousel.slides.length) activeCarousel.go(idx);
+          closeOverlay();
+        });
         overlayGrid.appendChild(card);
       });
     }
@@ -161,18 +162,78 @@ document.addEventListener('DOMContentLoaded', () => {
   };
   overlay.addEventListener('click', (e) => { if (e.target.matches('[data-close], .overlay-backdrop')) closeOverlay(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && overlay.classList.contains('open')) closeOverlay(); });
+
+  /* ---------- Announcement DETAIL overlay ---------- */
+  const detailOverlay = document.getElementById('annc-detail-overlay');
+  const detailBody = detailOverlay.querySelector('.annc-detail-body');
+  const detailTitle = detailOverlay.querySelector('#annc-detail-title');
+  function openDetail(annc) {
+    detailTitle.textContent = annc.title || 'Announcement';
+    detailBody.innerHTML = `
+      <div class="hero" style="background-image:url('${(annc.image_url || '').replace(/'/g,"\\'")}');"></div>
+      <div class="meta">
+        <h3>${annc.title || 'Untitled'}</h3>
+        <p>${(annc.body || '').replace(/\n/g,'<br>')}</p>
+        <div class="row"><strong>Visible:</strong> ${formatRange(annc.publish_at, annc.expires_at)}</div>
+        ${audienceLine(annc)}
+        <div class="cta">
+          ${annc.link_url ? `<a href="${annc.link_url}" target="_blank" rel="noopener"><i class="fa-solid fa-link"></i> Open link</a>` : ''}
+        </div>
+      </div>
+    `;
+    detailOverlay.classList.add('open');
+    detailOverlay.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+  }
+  function closeDetail(){
+    detailOverlay.classList.remove('open');
+    detailOverlay.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+  }
+  detailOverlay.addEventListener('click', (e) => { if (e.target.matches('[data-close], .overlay-backdrop')) closeDetail(); });
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && detailOverlay.classList.contains('open')) closeDetail(); });
+
+  function formatRange(pub, exp){
+    const f = (d)=> d ? new Date(d).toLocaleString() : 'Now';
+    const left = pub ? f(pub) : 'Now';
+    const right = exp ? f(exp) : 'No expiry';
+    return `${left} → ${right}`;
+  }
+  function audienceLine(a){
+    const aud = a.audience || { scope: 'all' };
+    const label = (() => {
+      switch (aud.scope) {
+        case 'all': return 'Everyone';
+        case 'admins': return 'Admins only';
+        case 'by_state': return `States: ${(aud.states||[]).join(', ')}`;
+        case 'by_product': return `Products: ${(aud.products||[]).join(', ')}`;
+        case 'custom_agents': return `Selected agents (${(aud.agent_ids||[]).length})`;
+        default: return '—';
+      }
+    })();
+    return `<div class="row"><strong>Audience:</strong> ${label}</div>`;
+  }
+
+  // “See all” button handlers (we’ll override Announcements to render image-backed cards)
   document.querySelectorAll('.see-all').forEach(btn => {
     btn.addEventListener('click', () => {
       const key  = btn.dataset.overlay;
       const host = btn.closest('.carousel');
       const inst = host ? carousels.find(c => c.root === host) : null;
       const titleMap = { announcements: 'All Announcements', sales: 'All Sales Entries', reminders: 'All Tasks & Reminders' };
-      const items = inst ? inst.getAllSlides() : [];
-      openOverlay(titleMap[key] || 'All Items', items, inst);
+      if (key === 'announcements') {
+        // Custom renderer using announcement rows (with images and buttons)
+        openAnnouncementsOverlay(inst);
+      } else {
+        const items = inst ? inst.getAllSlides() : [];
+        openOverlay(titleMap[key] || 'All Items', items, inst);
+      }
     });
   });
 
   /* ---------- ANNOUNCEMENTS (live from Supabase) ---------- */
+  let _announcements = []; // keep the filtered set for overlay rendering
+
   async function getMyAgentMini() {
     const { data: { session } } = await supabase.auth.getSession();
     const myId = session?.user?.id || null;
@@ -196,16 +257,24 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     return me;
   }
+
   function makeAnncSlide(a) {
     const art = document.createElement('article');
-    art.className = 'slide';
+    art.className = 'slide annc';
     art.tabIndex = 0;
+    const hasImg = !!a.image_url;
     art.innerHTML = `
-      <h3>${a.title || 'Untitled'}</h3>
-      <p>${(a.body || '').replace(/\n/g,'<br>')}</p>
+      <div class="annc-inner">
+        <div class="annc-text">
+          <h3>${a.title || 'Untitled'}</h3>
+          <p>${(a.body || '').replace(/\n/g,'<br>')}</p>
+        </div>
+        <div class="annc-img">${hasImg ? `<img src="${a.image_url}" alt="">` : ''}</div>
+      </div>
     `;
     return art;
   }
+
   async function loadAnnouncementsCarousel() {
     const root = document.querySelector('.carousel[data-key="announcements"]');
     if (!root) return;
@@ -223,6 +292,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (error) {
       console.warn('Announcements load error:', error);
       const empty = [makeAnncSlide({ title: 'No announcements', body: 'Nothing to show yet.' })];
+      _announcements = [];
       return inst?.setSlides(empty);
     }
 
@@ -250,12 +320,81 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const list = (rows || []).filter(timeOk).filter(showsForMe);
+    _announcements = list; // save for overlay
+
     const slides = list.length
       ? list.map(makeAnncSlide)
       : [makeAnncSlide({ title: 'No announcements', body: 'Nothing to show yet.' })];
 
     inst?.setSlides(slides);
   }
+
+  // Custom "See all" overlay for Announcements
+  function openAnnouncementsOverlay(inst){
+    const title = 'All Announcements';
+    activeCarousel = inst || null;
+    activeCarousel?.pause();
+    overlayTitle.textContent = title;
+    overlayGrid.innerHTML = '';
+
+    if (!_announcements.length) {
+      const empty = document.createElement('div');
+      empty.className = 'overlay-item';
+      empty.innerHTML = `<p>No items to show yet.</p>`;
+      overlayGrid.appendChild(empty);
+    } else {
+      _announcements.forEach((a, idx) => {
+        const bg = a.image_url ? ` style="background-image:url('${a.image_url.replace(/'/g,"\\'")}')"` : '';
+        const card = document.createElement('div');
+        card.className = `overlay-item image-card`;
+        card.setAttribute('data-annc-idx', String(idx));
+        card.innerHTML = `
+          <div class="card-bg"${bg}></div>
+          <div class="card-content">
+            <h3>${a.title || 'Untitled'}</h3>
+            <p>${(a.body || '').length > 140 ? (a.body.slice(0,140) + '…') : (a.body || '')}</p>
+            <div class="mini-actions">
+              <button class="icon-btn btn-eye" title="View details" data-idx="${idx}">
+                <i class="fa-solid fa-eye"></i> View
+              </button>
+              ${a.link_url ? `<a class="icon-btn btn-linkout" href="${a.link_url}" target="_blank" rel="noopener">
+                <i class="fa-solid fa-link"></i> Open link
+              </a>` : ''}
+            </div>
+          </div>
+        `;
+        // Make the background image apply on the card itself:
+        card.style.backgroundImage = a.image_url ? `url("${a.image_url}")` : 'none';
+        overlayGrid.appendChild(card);
+      });
+
+      // Eye button → open detail overlay
+      overlayGrid.querySelectorAll('.btn-eye').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const idx = Number(btn.getAttribute('data-idx')||'0');
+          const annc = _announcements[idx];
+          if (annc) openDetail(annc);
+        });
+      });
+
+      // Clicking the card (not the buttons) jumps carousel to that slide + closes overlay
+      overlayGrid.querySelectorAll('.overlay-item.image-card').forEach(card => {
+        card.addEventListener('click', (e) => {
+          if (e.target.closest('.mini-actions')) return; // ignore clicks on buttons
+          const idx = Number(card.getAttribute('data-annc-idx')||'0');
+          if (activeCarousel) activeCarousel.go(idx);
+          closeOverlay();
+        });
+      });
+    }
+
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    overlay.querySelector('.overlay-close')?.focus();
+    document.body.style.overflow = 'hidden';
+  }
+
   // initial load + realtime
   loadAnnouncementsCarousel();
   try {
