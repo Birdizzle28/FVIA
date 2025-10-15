@@ -77,6 +77,8 @@
   background: #fff;
   outline: none;
   transition: border-color .15s ease, box-shadow .15s ease;
+  height: 44px;
+  line-height:1.2;
 }
 .float-field input:focus{
   border-color: #ed9ea5;                 /* your pink */
@@ -86,7 +88,7 @@
   position: absolute;
   left: 12px;
   top: 50%;
-  transform: translateY(-50%);
+  transform: translateY(-56%);
   padding: 0 4px;
   background: #fff;
   color: #6b6b8a;                         /* muted indigo */
@@ -99,7 +101,7 @@
 .float-field input:focus + label,
 .float-field input:not(:placeholder-shown) + label{
   top: 0;
-  transform: translateY(-50%) scale(.92);
+  transform: translateY(-60%) scale(.92);
   color: #353468;                         /* indigo */
 }
 
@@ -111,9 +113,9 @@
   position: absolute;
   right: 8px;
   top: 50%;
-  transform: translateY(-50%);
-  height: 32px;
-  width: 32px;
+  transform: translateY(-52%);
+  height: 28px;
+  width: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -121,9 +123,10 @@
   background: transparent;
   color: #6b6b8a;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
 }
-.pw-field .pw-toggle:hover{ color: #353468; }
-.pw-field .pw-toggle:focus{ outline: 2px solid rgba(237,158,165,.35); }
+.pw-field .pw-toggle:hover{ color: #6b6b8a; }
+.pw-field .pw-toggle:focus{ outline: none; }
 
 /* Keep overall sizing consistent with your existing form */
 .auth-container input,
