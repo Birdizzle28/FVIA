@@ -82,6 +82,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   new Choices('#state-filter', { searchEnabled:true, itemSelectText:'' });
 
   await loadAgentsForAdmin();
+  await populateRecruiterSelect();
 
   // Populate Announcement multi-selects
   (function hydrateAnncProducts(){
@@ -392,6 +393,36 @@ document.addEventListener('DOMContentLoaded', async () => {
   const prevBtn = document.getElementById('prev-page');
   nextBtn?.addEventListener('click', async () => { currentPage++; await loadLeadsWithFilters(); });
   prevBtn?.addEventListener('click', async () => { if (currentPage > 1) { currentPage--; await loadLeadsWithFilters(); } });
+ 
+  document.getElementById('agent-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('agent-msg'); msg.textContent = '';
+  
+    const npn = document.getElementById('agent-id').value.trim();
+    const recruiterId = document.getElementById('agent-recruiter').value;
+  
+    if (!npn || !recruiterId) { msg.textContent = '⚠️ Enter NPN and choose recruiter.'; return; }
+  
+    // Upsert into approved_agents carrying recruiter_id forward
+    const { data: existing, error: existErr } = await supabase
+      .from('approved_agents')
+      .select('id,is_registered')
+      .eq('agent_id', npn)
+      .maybeSingle();
+  
+    if (existErr) { msg.textContent = '❌ Error checking approval: ' + existErr.message; return; }
+    if (existing?.is_registered) { msg.textContent = '❌ That agent ID is already registered.'; return; }
+  
+    const payload = { agent_id: npn, recruiter_id: recruiterId, is_registered: false };
+    const { error: upErr } = existing
+      ? await supabase.from('approved_agents').update(payload).eq('id', existing.id)
+      : await supabase.from('approved_agents').insert(payload);
+  
+    if (upErr) { msg.textContent = '❌ Could not save pre-approval: ' + upErr.message; return; }
+  
+    msg.textContent = '✅ Pre-approved. Share the signup link.';
+    setTimeout(()=> document.querySelector('#agent-modal [data-close]')?.click(), 700);
+  });
 }); // end DOMContentLoaded
 
 // Load active agents
@@ -420,6 +451,17 @@ async function loadAgentsForAdmin() {
   });
   new Choices(agentFilterEl, { shouldSort:false, searchEnabled:true, placeholder:true, itemSelectText:'' });
   new Choices(bulkAssignEl, { shouldSort:false, searchEnabled:true, placeholder:true, itemSelectText:'' });
+}
+function populateRecruiterSelect() {
+  const sel = document.getElementById('agent-recruiter');
+  if (!sel) return;
+  sel.innerHTML = '<option value="">Select recruiter…</option>';
+  (allAgents || []).forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a.id;
+    opt.textContent = a.full_name || a.id;
+    sel.appendChild(opt);
+  });
 }
 
 // Leads table
@@ -795,4 +837,5 @@ async function loadAnnouncements() {
       if (!document.querySelector('#annc-list .annc-row')) document.getElementById('annc-list').innerHTML = '<p>No announcements yet.</p>';
     });
   });
+  
 }
