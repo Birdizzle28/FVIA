@@ -61,3 +61,72 @@
   margin-top: 10px;
   color: red;
 }
+/* === Floating label fields (match site look) === */
+.float-field{
+  position: relative;
+  width: 100%;
+  margin-bottom: 15px;
+  font-family: 'Bellota Text', sans-serif;
+}
+.float-field input{
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid #ccc;
+  border-radius: 0;
+  font-size: 16px;
+  background: #fff;
+  outline: none;
+  transition: border-color .15s ease, box-shadow .15s ease;
+}
+.float-field input:focus{
+  border-color: #ed9ea5;                 /* your pink */
+  box-shadow: 0 0 0 3px rgba(237,158,165,.35);
+}
+.float-field label{
+  position: absolute;
+  left: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  padding: 0 4px;
+  background: #fff;
+  color: #6b6b8a;                         /* muted indigo */
+  font-size: 14px;
+  pointer-events: none;
+  transition: all .12s ease;
+}
+
+/* Raise the label when focused or when user typed something */
+.float-field input:focus + label,
+.float-field input:not(:placeholder-shown) + label{
+  top: 0;
+  transform: translateY(-50%) scale(.92);
+  color: #353468;                         /* indigo */
+}
+
+/* === Password field: keep full width & put eye inside === */
+.pw-field input{
+  padding-right: 44px;                    /* space for the eye */
+}
+.pw-field .pw-toggle{
+  position: absolute;
+  right: 8px;
+  top: 50%;
+  transform: translateY(-50%);
+  height: 32px;
+  width: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  background: transparent;
+  color: #6b6b8a;
+  cursor: pointer;
+}
+.pw-field .pw-toggle:hover{ color: #353468; }
+.pw-field .pw-toggle:focus{ outline: 2px solid rgba(237,158,165,.35); }
+
+/* Keep overall sizing consistent with your existing form */
+.auth-container input,
+.auth-container button{
+  border-radius: 0;
+}
