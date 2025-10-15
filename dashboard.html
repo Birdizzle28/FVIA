@@ -1,467 +1,343 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-		<title>Dashboard | Family Values Group</title>
-		<link rel="stylesheet" href="styles/agentstyle.css" />
-		<link rel="stylesheet" href="styles/dashboard.css" />
-		<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-	</head>
-	
-	<body id="dashboardbody">
-		
-		<!-- Header -->
-		<header class="index-grid-header">
-			<div id="logofvcontainer">
-				<div id="logodiv">
-					<a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
-				</div>
-				<div id="fvdiv">
-					<p><strong>Family Values Group</strong></p>
-				</div>
-			</div>
-			<div id="navcontainer">
-				<nav class="header-flex-container">
-					<a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
-					<a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
-					<div id="menu-toggle">
-						<i class="fa-solid fa-bars"></i>
-					</div>
-				</nav>
-			</div>
-		</header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Dashboard | Family Values Group</title>
+    <link rel="stylesheet" href="styles/agentstyle.css" />
+    <link rel="stylesheet" href="styles/dashboard.css" />
+    <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  </head>
+  <body id="dashboardbody">
+    <!-- Header -->
+    <header class="index-grid-header">
+      <div id="logofvcontainer">
+        <div id="logodiv">
+          <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+        </div>
+        <div id="fvdiv">
+          <p><strong>Family Values Group</strong></p>
+        </div>
+      </div>
+      <div id="navcontainer">
+        <nav class="header-flex-container">
+          <a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
+          <a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
+          <div id="menu-toggle"><i class="fa-solid fa-bars"></i></div>
+        </nav>
+      </div>
+    </header>
 
-		<!-- Mobile Menu -->
-		<div id="mobile-menu">
-			<a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
-			
-			<!-- Toolkit parent (acts like a toggle, not a link) -->
-			<button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
-				<i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
-				<i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
-			</button>
-			
-			<!-- Submenu that expands between Toolkit and Commissions -->
-			<div id="toolkit-submenu" class="submenu" hidden>
-				<a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
-				<a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
-				<a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
-				<a href="calculator.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
-				<a href="marketing.html"><i class="fa-solid fa-handshake"></i><span>Calculator</span></a>
-			</div>
-			<a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
-			<a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
-			<a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
-			<a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
-			<a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
-		</div>
+    <!-- Mobile Menu -->
+    <div id="mobile-menu">
+      <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
 
-		<!-- Main Page Content -->
-		<main>
-			<!-- Main Dashboard -->
-			<section class="dash-wrap">
-				<div class="dash-header-row">
-				<h1 class="dash-title">Main Dashboard</h1>
-				<div class="availability-toggle">
-				  <label class="switch">
-				    <input type="checkbox" id="availabilitySwitch" />
-				    <span class="slider"></span>
-				  </label>
-				  <span id="availabilityStatus">Unavailable</span>
-				</div>
-				</div>
-				<div class="folder-tabs">
-					<div class="tablist" role="tablist" aria-label="Dashboard sections">
-					  <button class="tab is-active" id="tab-announcements" data-tab="announcements" role="tab" aria-selected="true" aria-controls="panel-announcements" aria-label="Announcements">
-							<i class="fa-solid fa-bullhorn icon" aria-hidden="true"></i>
-							<span class="label">Announcements</span>
-					  </button>
-					
-					  <button class="tab" id="tab-sales" data-tab="sales" role="tab" aria-selected="false" aria-controls="panel-sales" aria-label="My Sales This Month">
-							<i class="fa-solid fa-chart-line icon" aria-hidden="true"></i>
-							<span class="label">My Sales This Month</span>
-					  </button>
-					
-					  <button class="tab" id="tab-reminders" data-tab="reminders" role="tab" aria-selected="false" aria-controls="panel-reminders" aria-label="Tasks and Reminders">
-							<i class="fa-solid fa-list-check icon" aria-hidden="true"></i>
-							<span class="label">Tasks/Reminders</span>
-					  </button>
-					</div>
-					
-					<div class="panels">
-						<!-- Announcements -->
-						<section id="panel-announcements" class="panel is-active" role="tabpanel" aria-labelledby="tab-announcements">
-							<!-- REPLACE inside #panel-announcements -->
-							<div class="carousel" data-key="announcements" aria-label="Announcements carousel">
-							  <div class="carousel-track">
-							    <!-- Slide 1 -->
-							    <article class="slide" tabindex="0">
-							      <h3>New carrier added</h3>
-							      <p>We’ve onboarded “Pioneer Life”. Appoint if you sell life products.</p>
-							    </article>
-							
-							    <!-- Slide 2 -->
-							    <article class="slide" tabindex="0">
-							      <h3>Portal maintenance</h3>
-							      <p>Agent portal updates this Friday 10–11pm CT. Expect brief downtime.</p>
-							    </article>
-							
-							    <!-- Slide 3 -->
-							    <article class="slide" tabindex="0">
-							      <h3>Training: Final Expense</h3>
-							      <p>Live webinar Tue 2pm. Seats limited—register in Training → Events.</p>
-							    </article>
-							  </div>
-							
-							  <button class="car-btn prev" aria-label="Previous">
-							    <i class="fa-solid fa-chevron-left"></i>
-							  </button>
-							  <button class="car-btn next" aria-label="Next">
-							    <i class="fa-solid fa-chevron-right"></i>
-							  </button>
-							
-							  <div class="car-dots" role="tablist" aria-label="Announcements slides"></div>
-							
-							  <div class="car-footer">
-							    <button class="see-all" data-overlay="announcements">See all</button>
-							  </div>
-							</div>
-						</section>
-						
-						<!-- Sales -->
-						<section id="panel-sales" class="panel" role="tabpanel" aria-labelledby="tab-sales">
-							<!-- REPLACE inside #panel-sales -->
-							<div class="carousel" data-key="sales" aria-label="Sales carousel">
-							  <div class="carousel-track">
-							    <article class="slide" tabindex="0">
-							      <h3>$3,200 AP • 5 policies</h3>
-							      <p>Breakdown: FE (3), Term (1), Whole (1). Keep pushing!</p>
-							    </article>
-							    <article class="slide" tabindex="0">
-							      <h3>$4,050 AP • 6 policies</h3>
-							      <p>Week-over-week +26%. Nice momentum.</p>
-							    </article>
-							  </div>
-							
-							  <button class="car-btn prev" aria-label="Previous"><i class="fa-solid fa-chevron-left"></i></button>
-							  <button class="car-btn next" aria-label="Next"><i class="fa-solid fa-chevron-right"></i></button>
-							
-							  <div class="car-dots" role="tablist" aria-label="Sales slides"></div>
-							
-							  <div class="car-footer">
-							    <button class="see-all" data-overlay="sales">See all</button>
-							  </div>
-							</div>
-						</section>
-						
-						<!-- Tasks/Reminders -->
-						<section id="panel-reminders" class="panel" role="tabpanel" aria-labelledby="tab-reminders">
-							<!-- REPLACE inside #panel-reminders -->
-							<div class="carousel" data-key="reminders" aria-label="Reminders carousel">
-							  <div class="carousel-track">
-							    <article class="slide" tabindex="0">
-							      <h3>Call back John Doe</h3>
-							      <p>Asked about FE quote. Prefers afternoons. (555) 555-0199</p>
-							    </article>
-							    <article class="slide" tabindex="0">
-							      <h3>Upload W-9</h3>
-							      <p>Accounting flagged missing doc. Go to Personal Info → Documents.</p>
-							    </article>
-							  </div>
-							
-							  <button class="car-btn prev" aria-label="Previous"><i class="fa-solid fa-chevron-left"></i></button>
-							  <button class="car-btn next" aria-label="Next"><i class="fa-solid fa-chevron-right"></i></button>
-							
-							  <div class="car-dots" role="tablist" aria-label="Reminders slides"></div>
-							
-							  <div class="car-footer">
-							    <button class="see-all" data-overlay="reminders">See all</button>
-							  </div>
-							</div>
-						</section>
-					</div>
-				</div>
-			</section>
+      <!-- Toolkit parent (acts like a toggle, not a link) -->
+      <button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
+        <i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
+        <i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
+      </button>
 
-			<!-- Lead Snapshot -->
-			<section class="dash-wrap">
-				<h1 class="dash-title">Lead Snapshot</h1>
-				<div class="folder-tabs">
-					<section id="panel-leads" class="panel is-active stay-white" role="tabpanel" aria-labelledby="tab-leads">
-							<section id="panel-leads" class="panel is-active stay-white" role="tabpanel" aria-labelledby="tab-leads">
-							  <div class="lead-toolbar">
-							    <div class="scope">
-							      <label><input type="radio" name="lead-scope" value="mine" checked> My leads</label>
-							      <label><input type="radio" name="lead-scope" value="team"> Team</label>
-							    </div>
-							    <div class="range">
-							      <label for="lead-range" class="sr-only">Date range</label>
-							      <select id="lead-range">
-							        <option value="7">Last 7 days</option>
-							        <option value="30" selected>Last 30 days</option>
-							        <option value="0">All time</option>
-							      </select>
-							    </div>
-							  </div>
-							
-							  <div class="lead-stats">
-							    <article class="stat" data-key="new">
-							      <div class="stat-top">
-							        <i class="fa-solid fa-sparkles"></i>
-							        <span>New</span>
-							      </div>
-							      <div class="num" id="stat-new">0</div>
-							    </article>
-							    <article class="stat" data-key="contacted">
-							      <div class="stat-top">
-							        <i class="fa-solid fa-phone"></i>
-							        <span>Contacted</span>
-							      </div>
-							      <div class="num" id="stat-contacted">0</div>
-							    </article>
-							    <article class="stat" data-key="quoted">
-							      <div class="stat-top">
-							        <i class="fa-solid fa-file-invoice-dollar"></i>
-							        <span>Quoted</span>
-							      </div>
-							      <div class="num" id="stat-quoted">0</div>
-							    </article>
-							    <article class="stat" data-key="closed">
-							      <div class="stat-top">
-							        <i class="fa-solid fa-check-circle"></i>
-							        <span>Closed</span>
-							      </div>
-							      <div class="num" id="stat-closed">0</div>
-							    </article>
-							  </div>
-							
-							  <div class="lead-mini">
-							    <h3>Recent new leads</h3>
-							    <table class="mini-table" aria-label="Recent new leads">
-							      <thead>
-							        <tr>
-							          <th>Name</th>
-							          <th>Product</th>
-							          <th>ZIP</th>
-							          <th>Created</th>
-							        </tr>
-							      </thead>
-							      <tbody id="mini-new-leads">
-							        <!-- filled by JS -->
-							      </tbody>
-							    </table>
-							  </div>
-							
-							  <div class="snapshot-actions">
-							    <a class="btn-link" href="leads.html">
-							      Open leads inbox <i class="fa-solid fa-arrow-right"></i>
-							    </a>
-							  </div>
-							</section>
-						</section>
-					</div>
-				</div>
-			</section>
-			
-			<!-- Commission Snapshot -->
-			<section class="card stay-white">
-				<div class="snapshot-head">
-					<h3>Commission Snapshot</h3>
-					<button class="see-all" data-overlay="sales">See all</button>
-				</div>
-			
-				<div class="snapshot-grid">
-					<article class="stat">
-						<div class="stat-top"><i class="fa-solid fa-receipt"></i><span>Issued (This Month)</span></div>
-						<div class="num" id="comm-issued-month">$0</div>
-					</article>
-					<article class="stat">
-						<div class="stat-top"><i class="fa-solid fa-sack-dollar"></i><span>YTD AP</span></div>
-						<div class="num" id="comm-ytd-ap">$0</div>
-					</article>
-					<article class="stat">
-						<div class="stat-top"><i class="fa-solid fa-hourglass-half"></i><span>Pending Apps</span></div>
-						<div class="num" id="comm-pending">0</div>
-					</article>
-					<article class="stat">
-						<div class="stat-top"><i class="fa-solid fa-rotate-left"></i><span>Chargebacks (30d)</span></div>
-						<div class="num bad" id="comm-chargebacks">-$0</div>
-					</article>
-				</div>
-			
-				<div class="mini">
-					<h4>Recent Policies</h4>
-					<table class="mini-table" aria-label="Recent policies">
-						<thead>
-							<tr>
-								<th>Carrier</th><th>Client</th><th>Status</th><th>AP</th><th>Date</th>
-							</tr>
-						</thead>
-						<tbody id="comm-recent-policies"></tbody>
-					</table>
-				</div>
-			</section>
-			
-			<!-- Recruiting Snapshot -->
-			<section class="card stay-white">
-				<div class="snapshot-head">
-					<h3>Recruiting Snapshot</h3>
-					<button class="see-all" data-overlay="reminders">See all</button>
-				</div>
-			
-				<div class="snapshot-grid">
-					<article class="stat">
-						<div class="stat-top"><i class="fa-solid fa-people-group"></i><span>Team Size</span></div>
-						<div class="num" id="rec-team">0</div>
-					</article>
-					<article class="stat">
-						<div class="stat-top"><i class="fa-solid fa-user-check"></i><span>Active Agents</span></div>
-						<div class="num" id="rec-active">0</div>
-					</article>
-					<article class="stat">
-						<div class="stat-top"><i class="fa-solid fa-seedling"></i><span>Pipeline</span></div>
-						<div class="num" id="rec-pipeline">0</div>
-					</article>
-					<article class="stat">
-						<div class="stat-top"><i class="fa-solid fa-calendar-check"></i><span>Interviews (7d)</span></div>
-						<div class="num" id="rec-interviews">0</div>
-					</article>
-				</div>
-			
-				<div class="mini">
-					<h4>Recent Recruiting Activity</h4>
-					<table class="mini-table" aria-label="Recent recruiting">
-						<thead>
-							<tr>
-								<th>Name</th><th>Stage</th><th>Owner</th><th>Date</th>
-							</tr>
-						</thead>
-						<tbody id="rec-recent-activity"></tbody>
-					</table>
-				</div>
-			</section>
-			
-			<!-- Personal Information -->
-			<section class="dash-wrap">
-				<h1 class="dash-title">Personal Information</h1>
-				<div class="folder-tabs">
-					<div class="tablist" role="tablist" aria-label="Personal Information">
-					  <button class="tab is-active" id="tab-compliance" data-tab="compliance" role="tab" aria-selected="true" aria-controls="panel-compliance" aria-label="Compliance">
-					    <i class="fa-solid fa-shield-halved icon" aria-hidden="true"></i>
-					    <span class="label">Compliance</span>
-					  </button>
-					  <button class="tab" id="tab-banking" data-tab="banking" role="tab" aria-selected="false" aria-controls="panel-banking" aria-label="Banking Info">
-					    <i class="fa-solid fa-piggy-bank icon" aria-hidden="true"></i>
-					    <span class="label">Banking Info</span>
-					  </button>
-					  <button class="tab" id="tab-docs" data-tab="documents" role="tab" aria-selected="false" aria-controls="panel-documents" aria-label="Documents">
-					    <i class="fa-solid fa-file-lines icon" aria-hidden="true"></i>
-					    <span class="label">Documents</span>
-					  </button>
-					  <button class="tab" id="tab-carriers" data-tab="carriers" role="tab" aria-selected="false" aria-controls="panel-carriers" aria-label="Carrier Credentials">
-					    <i class="fa-solid fa-id-badge icon" aria-hidden="true"></i>
-					    <span class="label">Carrier Credentials</span>
-					  </button>
-					</div>
-					
-					<div class="panels">
-						<!-- Compliance -->
-						<section id="panel-compliance" class="panel is-active" role="tabpanel" aria-labelledby="tab-compliance">
-							<div class="card-grid">
-								<article class="card">
-									<h3>License</h3>
-									<p>Individual NPN is 19866925<br>Agency NPN is --</p>
-									<a href="#" class="card-link">License (6)</a>
-								</article>
-								<article class="card">
-									<h3>Social Security Number</h3>
-									<p>SSN is ********5908</p>
-								</article>
-							</div>
-						</section>
-						
-						<!-- Banking -->
-						<section id="panel-banking" class="panel" role="tabpanel" aria-labelledby="tab-banking">
-							<div class="card-grid">
-								<article class="card">
-									<h3>Bank Account</h3>
-									<p>Add/update your payout info.</p>
-								</article>
-							</div>
-						</section>
-						
-						<!-- Documents -->
-						<section id="panel-documents" class="panel" role="tabpanel" aria-labelledby="tab-docs">
-							<div class="card-grid">
-								<article class="card">
-									<h3>Documents</h3>
-									<p>W-9, E&O, training certs, etc.</p>
-								</article>
-							</div>
-						</section>
-						
-						<!-- Carrier Credentials -->
-						<section id="panel-carriers" class="panel" role="tabpanel" aria-labelledby="tab-carriers">
-							<div class="card-grid">
-								<article class="card">
-									<h3>Carrier Logins</h3>
-									<p>View or request appointments.</p>
-								</article>
-							</div>
-						</section>
-					</div>
-				</div>
-			</section>
-		</main>
-		
-		<!-- OVERLAY: “See all” (ADD ONCE, before footer) -->
-		<div id="dash-overlay" class="overlay" aria-hidden="true">
-		  <div class="overlay-backdrop" data-close></div>
-		  <div class="overlay-panel" role="dialog" aria-modal="true" aria-labelledby="overlay-title">
-		    <div class="overlay-header">
-		      <h2 id="overlay-title">All Items</h2>
-		      <button class="overlay-close" aria-label="Close" data-close>&times;</button>
-		    </div>
-		    <div class="overlay-body">
-		      <div class="overlay-grid" id="overlay-grid"><!-- filled by JS --></div>
-		    </div>
-		  </div>
-		</div>
-		<!-- Footer -->
-		<footer class="index-grid-footer">
-			<img id="footerlogo" src="Pics/img17.png">
-			<hr class="footerhr">
-			<div id="footercontact">
-				<a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
-				<span class="fa fa-envelope"></span>
-				<span class="contactcontcontacts">info@familyvaluesgroup.com</span>
-			</a>
-			<p> | </p>
-			<a class="contactcontainer" href="tel:+16292437980">
-				<span class="fa fa-phone"></span>
-				<span class="contactcontcontacts">+1-629-243-7980</span>
-			</a>
-			</div>
-			<hr class="footerhr">
-			<div id="footersocial">
-				<a class="fab fa-facebook-f" href="#"></a>
-				<a class="fab fa-linkedin-in" href="#"></a>
-				<a class="fab fa-instagram" href="#"></a>
-				<a class="fab fa-youtube" href="#"></a>
-				<a class="fab fa-google" href="#"></a>
-			</div>
-			<!-- Footer links section (below social icons) -->
-			<div id="footerlinks">
-				<a href="faqs.html">FAQs</a>
-				<a href="terms.html">Terms</a>
-				<a href="accessibility.html">Accessibility</a>
-				<a href="privacy.html">Privacy</a>
-			</div>
-			<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
-		</footer>
-		<script type="module" src="scripts/general.js"></script>
-		<script type="module" src="scripts/dashboard.js"></script>
-	</body>
+      <!-- Submenu that expands between Toolkit and Commissions -->
+      <div id="toolkit-submenu" class="submenu" hidden>
+        <a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
+        <a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
+        <a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
+        <a href="calculator.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
+        <a href="marketing.html"><i class="fa-solid fa-handshake"></i><span>Calculator</span></a>
+      </div>
+      <a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
+      <a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
+      <a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
+      <a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
+      <a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
+    </div>
+
+    <!-- Main Page Content -->
+    <main>
+      <!-- Main Dashboard -->
+      <section class="dash-wrap">
+        <div class="dash-header-row">
+          <h1 class="dash-title">Main Dashboard</h1>
+          <div class="availability-toggle">
+            <label class="switch">
+              <input type="checkbox" id="availabilitySwitch" />
+              <span class="slider"></span>
+            </label>
+            <span id="availabilityStatus">Unavailable</span>
+          </div>
+        </div>
+
+        <div class="folder-tabs">
+          <div class="tablist" role="tablist" aria-label="Dashboard sections">
+            <button class="tab is-active" id="tab-announcements" data-tab="announcements" role="tab" aria-selected="true" aria-controls="panel-announcements" aria-label="Announcements">
+              <i class="fa-solid fa-bullhorn icon" aria-hidden="true"></i>
+              <span class="label">Announcements</span>
+            </button>
+
+            <button class="tab" id="tab-sales" data-tab="sales" role="tab" aria-selected="false" aria-controls="panel-sales" aria-label="My Sales This Month">
+              <i class="fa-solid fa-chart-line icon" aria-hidden="true"></i>
+              <span class="label">My Sales This Month</span>
+            </button>
+
+            <button class="tab" id="tab-reminders" data-tab="reminders" role="tab" aria-selected="false" aria-controls="panel-reminders" aria-label="Tasks and Reminders">
+              <i class="fa-solid fa-list-check icon" aria-hidden="true"></i>
+              <span class="label">Tasks/Reminders</span>
+            </button>
+          </div>
+
+          <div class="panels">
+            <!-- Announcements -->
+            <section id="panel-announcements" class="panel is-active" role="tabpanel" aria-labelledby="tab-announcements">
+              <div class="carousel" data-key="announcements" aria-label="Announcements carousel">
+                <div class="carousel-track">
+                  <!-- dynamically filled by JS -->
+                </div>
+                <button class="car-btn prev" aria-label="Previous"><i class="fa-solid fa-chevron-left"></i></button>
+                <button class="car-btn next" aria-label="Next"><i class="fa-solid fa-chevron-right"></i></button>
+                <div class="car-dots" role="tablist" aria-label="Announcements slides"></div>
+                <div class="car-footer">
+                  <button class="see-all" data-overlay="announcements">See all</button>
+                </div>
+              </div>
+            </section>
+
+            <!-- Sales -->
+            <section id="panel-sales" class="panel" role="tabpanel" aria-labelledby="tab-sales">
+              <div class="carousel" data-key="sales" aria-label="Sales carousel">
+                <div class="carousel-track">
+                  <article class="slide" tabindex="0">
+                    <h3>$3,200 AP • 5 policies</h3>
+                    <p>Breakdown: FE (3), Term (1), Whole (1). Keep pushing!</p>
+                  </article>
+                  <article class="slide" tabindex="0">
+                    <h3>$4,050 AP • 6 policies</h3>
+                    <p>Week-over-week +26%. Nice momentum.</p>
+                  </article>
+                </div>
+                <button class="car-btn prev" aria-label="Previous"><i class="fa-solid fa-chevron-left"></i></button>
+                <button class="car-btn next" aria-label="Next"><i class="fa-solid fa-chevron-right"></i></button>
+                <div class="car-dots" role="tablist" aria-label="Sales slides"></div>
+                <div class="car-footer">
+                  <button class="see-all" data-overlay="sales">See all</button>
+                </div>
+              </div>
+            </section>
+
+            <!-- Tasks/Reminders -->
+            <section id="panel-reminders" class="panel" role="tabpanel" aria-labelledby="tab-reminders">
+              <div class="carousel" data-key="reminders" aria-label="Reminders carousel">
+                <div class="carousel-track">
+                  <article class="slide" tabindex="0">
+                    <h3>Call back John Doe</h3>
+                    <p>Asked about FE quote. Prefers afternoons. (555) 555-0199</p>
+                  </article>
+                  <article class="slide" tabindex="0">
+                    <h3>Upload W-9</h3>
+                    <p>Accounting flagged missing doc. Go to Personal Info → Documents.</p>
+                  </article>
+                </div>
+                <button class="car-btn prev" aria-label="Previous"><i class="fa-solid fa-chevron-left"></i></button>
+                <button class="car-btn next" aria-label="Next"><i class="fa-solid fa-chevron-right"></i></button>
+                <div class="car-dots" role="tablist" aria-label="Reminders slides"></div>
+                <div class="car-footer">
+                  <button class="see-all" data-overlay="reminders">See all</button>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </section>
+
+      <!-- Lead Snapshot -->
+      <section class="dash-wrap">
+        <h1 class="dash-title">Lead Snapshot</h1>
+        <div class="folder-tabs">
+          <section id="panel-leads" class="panel is-active stay-white" role="tabpanel" aria-labelledby="tab-leads">
+            <section id="panel-leads" class="panel is-active stay-white" role="tabpanel" aria-labelledby="tab-leads">
+              <div class="lead-toolbar">
+                <div class="scope">
+                  <label><input type="radio" name="lead-scope" value="mine" checked> My leads</label>
+                  <label><input type="radio" name="lead-scope" value="team"> Team</label>
+                </div>
+                <div class="range">
+                  <label for="lead-range" class="sr-only">Date range</label>
+                  <select id="lead-range">
+                    <option value="7">Last 7 days</option>
+                    <option value="30" selected>Last 30 days</option>
+                    <option value="0">All time</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="lead-stats">
+                <article class="stat" data-key="new">
+                  <div class="stat-top"><i class="fa-solid fa-sparkles"></i><span>New</span></div>
+                  <div class="num" id="stat-new">0</div>
+                </article>
+                <article class="stat" data-key="contacted">
+                  <div class="stat-top"><i class="fa-solid fa-phone"></i><span>Contacted</span></div>
+                  <div class="num" id="stat-contacted">0</div>
+                </article>
+                <article class="stat" data-key="quoted">
+                  <div class="stat-top"><i class="fa-solid fa-file-invoice-dollar"></i><span>Quoted</span></div>
+                  <div class="num" id="stat-quoted">0</div>
+                </article>
+                <article class="stat" data-key="closed">
+                  <div class="stat-top"><i class="fa-solid fa-check-circle"></i><span>Closed</span></div>
+                  <div class="num" id="stat-closed">0</div>
+                </article>
+              </div>
+
+              <div class="lead-mini">
+                <h3>Recent new leads</h3>
+                <table class="mini-table" aria-label="Recent new leads">
+                  <thead>
+                    <tr><th>Name</th><th>Product</th><th>ZIP</th><th>Created</th></tr>
+                  </thead>
+                  <tbody id="mini-new-leads"></tbody>
+                </table>
+              </div>
+
+              <div class="snapshot-actions">
+                <a class="btn-link" href="leads.html">Open leads inbox <i class="fa-solid fa-arrow-right"></i></a>
+              </div>
+            </section>
+          </section>
+        </div>
+      </section>
+
+      <!-- Commission Snapshot -->
+      <section class="card stay-white">
+        <div class="snapshot-head">
+          <h3>Commission Snapshot</h3>
+          <button class="see-all" data-overlay="sales">See all</button>
+        </div>
+        <div class="snapshot-grid">
+          <article class="stat">
+            <div class="stat-top"><i class="fa-solid fa-receipt"></i><span>Issued (This Month)</span></div>
+            <div class="num" id="comm-issued-month">$0</div>
+          </article>
+          <article class="stat">
+            <div class="stat-top"><i class="fa-solid fa-sack-dollar"></i><span>YTD AP</span></div>
+            <div class="num" id="comm-ytd-ap">$0</div>
+          </article>
+          <article class="stat">
+            <div class="stat-top"><i class="fa-solid fa-hourglass-half"></i><span>Pending Apps</span></div>
+            <div class="num" id="comm-pending">0</div>
+          </article>
+          <article class="stat">
+            <div class="stat-top"><i class="fa-solid fa-rotate-left"></i><span>Chargebacks (30d)</span></div>
+            <div class="num bad" id="comm-chargebacks">-$0</div>
+          </article>
+        </div>
+
+        <div class="mini">
+          <h4>Recent Policies</h4>
+          <table class="mini-table" aria-label="Recent policies">
+            <thead><tr><th>Carrier</th><th>Client</th><th>Status</th><th>AP</th><th>Date</th></tr></thead>
+            <tbody id="comm-recent-policies"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- Recruiting Snapshot -->
+      <section class="card stay-white">
+        <div class="snapshot-head">
+          <h3>Recruiting Snapshot</h3>
+          <button class="see-all" data-overlay="reminders">See all</button>
+        </div>
+        <div class="snapshot-grid">
+          <article class="stat">
+            <div class="stat-top"><i class="fa-solid fa-people-group"></i><span>Team Size</span></div>
+            <div class="num" id="rec-team">0</div>
+          </article>
+          <article class="stat">
+            <div class="stat-top"><i class="fa-solid fa-user-check"></i><span>Active Agents</span></div>
+            <div class="num" id="rec-active">0</div>
+          </article>
+          <article class="stat">
+            <div class="stat-top"><i class="fa-solid fa-seedling"></i><span>Pipeline</span></div>
+            <div class="num" id="rec-pipeline">0</div>
+          </article>
+          <article class="stat">
+            <div class="stat-top"><i class="fa-solid fa-calendar-check"></i><span>Interviews (7d)</span></div>
+            <div class="num" id="rec-interviews">0</div>
+          </article>
+        </div>
+
+        <div class="mini">
+          <h4>Recent Recruiting Activity</h4>
+          <table class="mini-table" aria-label="Recent recruiting">
+            <thead><tr><th>Name</th><th>Stage</th><th>Owner</th><th>Date</th></tr></thead>
+            <tbody id="rec-recent-activity"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- OVERLAY: “See all” -->
+    <div id="dash-overlay" class="overlay" aria-hidden="true">
+      <div class="overlay-backdrop" data-close></div>
+      <div class="overlay-panel" role="dialog" aria-modal="true" aria-labelledby="overlay-title">
+        <div class="overlay-header">
+          <h2 id="overlay-title">All Items</h2>
+          <button class="overlay-close" aria-label="Close" data-close>&times;</button>
+        </div>
+        <div class="overlay-body">
+          <div class="overlay-grid" id="overlay-grid"><!-- filled by JS --></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OVERLAY: Announcement Detail (eye button) -->
+    <div id="annc-detail-overlay" class="overlay" aria-hidden="true">
+      <div class="overlay-backdrop" data-close></div>
+      <div class="overlay-panel annc-detail" role="dialog" aria-modal="true" aria-labelledby="annc-detail-title">
+        <div class="overlay-header">
+          <h2 id="annc-detail-title">Announcement</h2>
+          <button class="overlay-close" aria-label="Close" data-close>&times;</button>
+        </div>
+        <div class="overlay-body annc-detail-body">
+          <!-- filled by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="index-grid-footer">
+      <img id="footerlogo" src="Pics/img17.png">
+      <hr class="footerhr">
+      <div id="footercontact">
+        <a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
+          <span class="fa fa-envelope"></span>
+          <span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+        </a>
+        <p> | </p>
+        <a class="contactcontainer" href="tel:+16292437980">
+          <span class="fa fa-phone"></span>
+          <span class="contactcontcontacts">+1-629-243-7980</span>
+        </a>
+      </div>
+      <hr class="footerhr">
+      <div id="footersocial">
+        <a class="fab fa-facebook-f" href="#"></a>
+        <a class="fab fa-linkedin-in" href="#"></a>
+        <a class="fab fa-instagram" href="#"></a>
+        <a class="fab fa-youtube" href="#"></a>
+        <a class="fab fa-google" href="#"></a>
+      </div>
+      <div id="footerlinks">
+        <a href="faqs.html">FAQs</a>
+        <a href="terms.html">Terms</a>
+        <a href="accessibility.html">Accessibility</a>
+        <a href="privacy.html">Privacy</a>
+      </div>
+      <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+    </footer>
+
+    <script type="module" src="scripts/general.js"></script>
+    <script type="module" src="scripts/dashboard.js"></script>
+  </body>
 </html>
