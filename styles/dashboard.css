@@ -380,7 +380,7 @@ input:checked + .slider::before {
 .overlay-item.image-card::before {
   content: "";
   position: absolute; inset: 0;
-  background: linear-gradient(180deg, rgba(53,52,104,0) 0%, rgba(53,52,104,.58) 100%);
+  background: linear-gradient(180deg, rgba(53,52,104,0) 0%, rgba(53,52,104,1) 100%);
 }
 .overlay-item.image-card .card-content {
   position: relative;
