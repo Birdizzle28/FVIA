@@ -80,7 +80,42 @@ export async function handler(event) {
         .maybeSingle();
       session = asClient || null;
     }
-
+    // After you create the admin leg for inbound call, start a 25s timer (cheap way):
+    // Instead of timers, we can do an immediate 'ring admin' then if they hangup, use events.
+    // Simpler: if we see the inbound caller still not bridged and admin leg fails or hangs up, drop to VM.
+    
+    if (eventType === 'call.hangup' && isInboundToBusiness && !session) {
+      // Caller hung up before anything; nothing to do
+      return { statusCode: 200, body: 'OK' };
+    }
+    
+    // If admin leg failed or no one pressed 1 → trigger VM on the caller leg:
+    async function startVoicemailOn(callId) {
+      await act(callId, 'speak', { voice: VOICE, language: 'en-US', payload: 'Please leave a message after the tone.' });
+      await act(callId, 'record_start', {
+        format: 'mp3',
+        channels: 'single',
+        play_beep: true,
+        max_duration_secs: 120,
+        terminate_silence_secs: 6
+      });
+    }
+    
+    // When Telnyx posts a recording event, store it
+    if (payload?.data?.event_type === 'call.recording.saved') {
+      const rec = payload?.data?.payload;
+      const url = rec?.recording_urls?.[0]?.url || rec?.recording_url;
+      const call_id = rec?.call_control_id;
+      await createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY)
+        .from('voicemails')
+        .insert({
+          call_id,
+          from_number: toE164(rec?.from),
+          to_number: toE164(rec?.to),
+          recording_url: url
+        });
+      return { statusCode: 200, body: 'OK' };
+    }
     // === When the CLIENT answers, bridge agent -> client ===
     if (eventType === "call.answered") {
       // Fast path: find the row where this callId is the client leg
