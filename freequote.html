@@ -22,6 +22,18 @@
   </script>
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm";
+  
+    // Make a client that never uses a logged-in session
+    window.supabase = createClient(window.FVG_SUPABASE_URL, window.FVG_SUPABASE_ANON, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        storage: { getItem: () => null, setItem: () => {}, removeItem: () => {} }
+      }
+    });
+  </script>
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm";
     window.supabase = createClient(window.FVG_SUPABASE_URL, window.FVG_SUPABASE_ANON);
   </script>
 
