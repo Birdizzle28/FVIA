@@ -7,9 +7,9 @@ const headers = {
   Authorization: `Bearer ${process.env.TELNYX_API_KEY}`,
   "Content-Type": "application/json",
 };
-
 const VOICE = "Telnyx.KokoroTTS.af";
 
+// ---------- helpers ----------
 const toE164 = (v) => {
   if (!v) return null;
   const s = String(v).trim();
@@ -30,15 +30,13 @@ const act = async (id, action, body = {}) => {
   const txt = await r.text();
   let json = null;
   try { json = JSON.parse(txt); } catch {}
-  if (!r.ok) {
-    console.error("Telnyx action failed", { id, action, status: r.status, txt });
-  } else {
-    console.log("Telnyx action ok", { id, action, json: json ?? txt });
-  }
+  if (!r.ok) console.error("Telnyx action failed", { id, action, status: r.status, txt });
+  else console.log("Telnyx action ok", { id, action, json: json ?? txt });
   return { ok: r.ok, status: r.status, json: json ?? txt };
 };
 
 async function startVoicemailOn(callId) {
+  if (!callId) return;
   await act(callId, "speak", {
     voice: VOICE, language: "en-US",
     payload: "Please leave a message after the tone."
@@ -52,20 +50,17 @@ async function startVoicemailOn(callId) {
   });
 }
 
-// Small helpers for client_state on admin legs
-function encodeState(obj) {
-  return Buffer.from(JSON.stringify(obj)).toString("base64");
-}
-function decodeState(b64) {
+const encodeState = (obj) => Buffer.from(JSON.stringify(obj)).toString("base64");
+const decodeState = (b64) => {
   try { return JSON.parse(Buffer.from(String(b64 || ""), "base64").toString("utf8")); }
   catch { return {}; }
-}
+};
 
+// ---------- main handler ----------
 export async function handler(event) {
   try {
-    if (event.httpMethod !== "POST") {
+    if (event.httpMethod !== "POST")
       return { statusCode: 405, body: "Method Not Allowed" };
-    }
 
     const payload = JSON.parse(event.body || "{}");
     const eventType = payload?.data?.event_type;
@@ -73,124 +68,105 @@ export async function handler(event) {
     const callId = p?.call_control_id;
 
     const fromNum = toE164(p.from);
-    const toNum   = toE164(p.to);
+    const toNum = toE164(p.to);
     const businessNum = toE164(process.env.TELNYX_BUSINESS_NUMBER);
     const adminList = (process.env.ADMIN_NUMBERS || "")
-      .split(",")
-      .map(toE164)
-      .filter(Boolean);
-
+      .split(",").map(toE164).filter(Boolean);
     const clientState = decodeState(p?.client_state);
 
     console.log("TELNYX EVENT", { eventType, callId, fromNum, toNum, clientState });
-
     if (!callId) return { statusCode: 200, body: "OK" };
 
-    // Supabase (still used for your website lead flow + voicemail storage)
     const supabase = createClient(
       process.env.SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // --- figure out what kind of leg this event is for (your existing website lead flow uses call_sessions) ---
+    // ---------- detect context ----------
     let { data: sessionAgent } = await supabase
-      .from("call_sessions")
-      .select("*")
-      .eq("telnyx_call_id", callId)
-      .maybeSingle();
+      .from("call_sessions").select("*")
+      .eq("telnyx_call_id", callId).maybeSingle();
 
     let { data: sessionClient } = await supabase
-      .from("call_sessions")
-      .select("*")
-      .eq("client_call_id", callId)
-      .maybeSingle();
+      .from("call_sessions").select("*")
+      .eq("client_call_id", callId).maybeSingle();
 
-    const isAgentLeg  = !!sessionAgent;
+    const isAgentLeg = !!sessionAgent;
     const isClientLeg = !!sessionClient;
 
-    // ====== NEW: ADMIN FLOW DETECTION ======
-    // Inbound caller leg to business number (the customer who dialed your main line)
-    const isInboundToBiz = !!businessNum && toNum === businessNum && !isAgentLeg && !isClientLeg;
+    const isInboundToBiz =
+      !!businessNum && toNum === businessNum && !isAgentLeg && !isClientLeg;
 
-    // Outbound admin legs we originate: from TELNYX_FROM_NUMBER (or business) to one of ADMIN_NUMBERS
     const fromMatchesBizOrFrom =
-      [toE164(process.env.TELNYX_FROM_NUMBER), businessNum].filter(Boolean).includes(fromNum);
+      [toE164(process.env.TELNYX_FROM_NUMBER), businessNum]
+        .filter(Boolean).includes(fromNum);
     const isToAdmin = adminList.includes(toNum);
-    const isAdminLeg = fromMatchesBizOrFrom && isToAdmin && clientState?.kind === "admin_leg";
+    const isAdminLeg =
+      fromMatchesBizOrFrom && isToAdmin && clientState?.kind === "admin";
 
-    // ----- Recording saved → store voicemail -----
+    // ---------- voicemail recording ----------
     if (eventType === "call.recording.saved") {
       const rec = payload?.data?.payload;
       const url = rec?.recording_urls?.[0]?.url || rec?.recording_url;
-      const rcid = rec?.call_control_id;
-
       await supabase.from("voicemails").insert({
-        call_id: rcid,
+        call_id: rec?.call_control_id,
         from_number: toE164(rec?.from),
         to_number: toE164(rec?.to),
         recording_url: url
       });
-
       return { statusCode: 200, body: "OK" };
     }
 
-    // =============================
-    // 0) NEW: Inbound call to business number → answer + dial admins
-    // =============================
+    // ---------- inbound call to business ----------
     if (eventType === "call.initiated" && isInboundToBiz) {
-      // Answer the caller
       await act(callId, "answer", {});
-      // Short hold message
       await act(callId, "speak", {
         voice: VOICE, language: "en-US",
         payload: "Please hold while we connect an administrator."
       });
 
-      // Dial each admin simultaneously.
-      const fromForAdmins = toE164(process.env.TELNYX_FROM_NUMBER) || businessNum;
-      for (const adminNumber of adminList) {
-        const make = await fetch(`${TAPI}/calls`, {
+      const fromForAdmins =
+        toE164(process.env.TELNYX_FROM_NUMBER) || businessNum;
+
+      const exclude = fromNum; // don’t dial the caller if it’s an admin
+      for (const adminNumber of adminList.filter(n => n !== exclude)) {
+        const resp = await fetch(`${TAPI}/calls`, {
           method: "POST",
           headers,
           body: JSON.stringify({
             connection_id: process.env.TELNYX_CONNECTION_ID,
             to: adminNumber,
             from: fromForAdmins,
-            // carry the inbound call id so the admin leg knows who to bridge to
-            client_state: encodeState({ kind: "admin_leg", inbound_id: callId })
+            client_state: encodeState({ kind: "admin", inbound_id: callId })
           }),
         });
-        const j = await make.json();
-        console.log("ADMIN LEG CREATE", { adminNumber, status: make.status, json: j });
+        const j = await resp.json().catch(() => ({}));
+        console.log("ADMIN LEG CREATE", {
+          adminNumber, status: resp.status, id: j?.data?.id, err: j?.errors
+        });
       }
-
       return { statusCode: 200, body: "OK" };
     }
 
-    // =============================
-    // A) Website lead flow (unchanged)
-    // =============================
+    // ---------- website lead flow ----------
     if (eventType === "call.answered" && isClientLeg) {
       if (sessionClient?.telnyx_call_id) {
-        const r = await act(sessionClient.telnyx_call_id, "transfer_call", { to: callId });
-        if (!r.ok) console.error("Bridge failed", { status: r.status, json: r.json });
+        const r = await act(sessionClient.telnyx_call_id,
+          "transfer_call", { to: callId });
+        if (!r.ok)
+          console.error("Bridge failed", { status: r.status, json: r.json });
       }
       return { statusCode: 200, body: "OK" };
     }
 
     if (eventType === "call.answered" && isAgentLeg) {
-      let name = "Prospect";
-      let summary = "";
-
+      let name = "Prospect", summary = "";
       if (sessionAgent?.lead_id) {
         const { data: lead } = await supabase
-          .from("leads")
-          .select(
+          .from("leads").select(
             "first_name,last_name,product_type,contact_id,zip,contacts:contact_id(first_name,last_name)"
           )
-          .eq("id", sessionAgent.lead_id)
-          .maybeSingle();
-
+          .eq("id", sessionAgent.lead_id).maybeSingle();
         const lf = lead?.first_name || lead?.contacts?.first_name || "";
         const ll = lead?.last_name || lead?.contacts?.last_name || "";
         name = `${lf} ${ll}`.trim() || name;
@@ -199,43 +175,32 @@ export async function handler(event) {
       }
 
       await act(callId, "gather_using_speak", {
-        voice: VOICE,
-        language: "en-US",
-        minimum_digits: 1,
-        maximum_digits: 1,
-        valid_digits: "1",
+        voice: VOICE, language: "en-US",
+        minimum_digits: 1, maximum_digits: 1, valid_digits: "1",
         inter_digit_timeout_ms: 6000,
         payload: `New lead. ${name}. ${summary} Press 1 to connect now.`
       });
-
       return { statusCode: 200, body: "OK" };
     }
 
-    // =============================
-    // B) NEW: Admin leg answered → whisper + gather
-    // =============================
+    // ---------- admin leg answered ----------
     if (eventType === "call.answered" && isAdminLeg) {
       await act(callId, "gather_using_speak", {
-        voice: VOICE,
-        language: "en-US",
-        minimum_digits: 1,
-        maximum_digits: 1,
-        valid_digits: "1",
+        voice: VOICE, language: "en-US",
+        minimum_digits: 1, maximum_digits: 1, valid_digits: "1",
         inter_digit_timeout_ms: 6000,
         payload: "Administrative call. Press 1 to connect."
       });
       return { statusCode: 200, body: "OK" };
     }
 
-    // =============================
-    // C) DTMF/GATHER: branch per context
-    // =============================
+    // ---------- DTMF handler ----------
     if (eventType === "call.dtmf.received" || eventType === "call.gather.ended") {
       const pay = payload?.data?.payload || {};
-      const digit = eventType === "call.dtmf.received" ? pay.digit : (pay.digits || "")[0];
-      console.log("DTMF/GATHER", { eventType, digit, isAgentLeg, isAdminLeg });
+      const digit = eventType === "call.dtmf.received"
+        ? pay.digit : (pay.digits || "")[0];
 
-      // Website lead: agent pressed key
+      // website lead
       if (isAgentLeg) {
         if (digit === "1" && sessionAgent.prospect_number) {
           const make = await fetch(`${TAPI}/calls`, {
@@ -248,8 +213,6 @@ export async function handler(event) {
             }),
           });
           const j = await make.json();
-          console.log("CLIENT LEG CREATE RESP", { status: make.status, json: j });
-
           if (!make.ok) {
             await act(callId, "speak", {
               voice: VOICE, language: "en-US",
@@ -257,62 +220,58 @@ export async function handler(event) {
             });
             return { statusCode: make.status, body: JSON.stringify(j) };
           }
-
           const clientCallId = j?.data?.id;
-          const upd = await supabase
-            .from("call_sessions")
+          await supabase.from("call_sessions")
             .update({ client_call_id: clientCallId })
-            .eq("id", sessionAgent.id)
-            .select("id, client_call_id")
-            .maybeSingle();
-
-          console.log("CLIENT LEG STORED", { updated: upd.data, error: upd.error });
-
+            .eq("id", sessionAgent.id);
           await act(callId, "speak", {
             voice: VOICE, language: "en-US",
             payload: "Dialing the client now."
           });
-
           return { statusCode: 200, body: JSON.stringify({ ok: true }) };
         }
-
         await act(callId, "speak", {
-          voice: VOICE, language: "en-US",
-          payload: "Got it. Canceling."
+          voice: VOICE, language: "en-US", payload: "Got it. Canceling."
         });
         await act(callId, "hangup", {});
         return { statusCode: 200, body: "OK" };
       }
 
-      // Admin leg: pressed key to connect to inbound caller
+      // admin leg
       if (isAdminLeg) {
-        const inboundId = toE164(clientState?.inbound_id) ? null : clientState?.inbound_id; // not a number; it's a call id
+        const cs = clientState || {};
+        const inboundId = cs.inbound_id;
         if (!inboundId) {
           console.warn("Missing inbound_id in client_state for admin leg.");
-          await act(callId, "speak", { voice: VOICE, language: "en-US", payload: "Unable to connect." });
+          await act(callId, "speak", {
+            voice: VOICE, language: "en-US", payload: "Unable to connect."
+          });
           return { statusCode: 200, body: "OK" };
         }
 
         if (digit === "1") {
-          await act(callId, "speak", { voice: VOICE, language: "en-US", payload: "Connecting." });
-          // Transfer THIS admin leg into the original inbound caller leg
           const r = await act(callId, "transfer_call", { to: inboundId });
           if (!r.ok) {
             console.error("Admin transfer failed", { status: r.status, json: r.json });
-            await act(callId, "speak", { voice: VOICE, language: "en-US", payload: "Unable to connect." });
+            if (r.status === 422)
+              await act(callId, "speak", {
+                voice: VOICE, language: "en-US",
+                payload: "The caller has disconnected."
+              });
           }
           return { statusCode: 200, body: "OK" };
         }
 
-        // anything else → send inbound leg to voicemail
-        await startVoicemailOn(clientState?.inbound_id);
+        await act(callId, "speak", {
+          voice: VOICE, language: "en-US", payload: "Sending to voicemail."
+        });
+        await startVoicemailOn(inboundId);
+        await act(callId, "hangup", {});
         return { statusCode: 200, body: "OK" };
       }
     }
 
-    // =============================
-    // D) Hangup cleanup (optional)
-    // =============================
+    // ---------- cleanup ----------
     if (eventType === "call.hangup") {
       console.log("HANGUP", { callId, isInboundToBiz, isAdminLeg, isAgentLeg, isClientLeg });
       return { statusCode: 200, body: "OK" };
