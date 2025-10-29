@@ -10,7 +10,6 @@ const headers = {
 
 const VOICE = "Telnyx.KokoroTTS.af";
 
-// ------- utils -------
 const toE164 = (v) => {
   if (!v) return null;
   const s = String(v).trim();
@@ -39,7 +38,6 @@ const act = async (id, action, body = {}) => {
   return { ok: r.ok, status: r.status, json: json ?? txt };
 };
 
-// Voicemail helper (records on THIS leg)
 async function startVoicemailOn(callId) {
   await act(callId, "speak", {
     voice: VOICE, language: "en-US",
@@ -54,7 +52,15 @@ async function startVoicemailOn(callId) {
   });
 }
 
-// ------- handler -------
+// Small helpers for client_state on admin legs
+function encodeState(obj) {
+  return Buffer.from(JSON.stringify(obj)).toString("base64");
+}
+function decodeState(b64) {
+  try { return JSON.parse(Buffer.from(String(b64 || ""), "base64").toString("utf8")); }
+  catch { return {}; }
+}
+
 export async function handler(event) {
   try {
     if (event.httpMethod !== "POST") {
@@ -69,20 +75,24 @@ export async function handler(event) {
     const fromNum = toE164(p.from);
     const toNum   = toE164(p.to);
     const businessNum = toE164(process.env.TELNYX_BUSINESS_NUMBER);
+    const adminList = (process.env.ADMIN_NUMBERS || "")
+      .split(",")
+      .map(toE164)
+      .filter(Boolean);
 
-    console.log("TELNYX EVENT", { eventType, callId, fromNum, toNum });
+    const clientState = decodeState(p?.client_state);
+
+    console.log("TELNYX EVENT", { eventType, callId, fromNum, toNum, clientState });
 
     if (!callId) return { statusCode: 200, body: "OK" };
 
-    // Supabase (service key)
+    // Supabase (still used for your website lead flow + voicemail storage)
     const supabase = createClient(
       process.env.SUPABASE_URL,
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // Identify context
-    // If this callId matches an agent leg, there will be a call_sessions row with telnyx_call_id = callId
-    // If it's the client/prospect leg, it will match client_call_id = callId
+    // --- figure out what kind of leg this event is for (your existing website lead flow uses call_sessions) ---
     let { data: sessionAgent } = await supabase
       .from("call_sessions")
       .select("*")
@@ -98,17 +108,24 @@ export async function handler(event) {
     const isAgentLeg  = !!sessionAgent;
     const isClientLeg = !!sessionClient;
 
-    // Inbound admin call = no session found AND the called number is our business DID
-    const isInboundAdmin = !isAgentLeg && !isClientLeg && !!businessNum && toNum === businessNum;
+    // ====== NEW: ADMIN FLOW DETECTION ======
+    // Inbound caller leg to business number (the customer who dialed your main line)
+    const isInboundToBiz = !!businessNum && toNum === businessNum && !isAgentLeg && !isClientLeg;
+
+    // Outbound admin legs we originate: from TELNYX_FROM_NUMBER (or business) to one of ADMIN_NUMBERS
+    const fromMatchesBizOrFrom =
+      [toE164(process.env.TELNYX_FROM_NUMBER), businessNum].filter(Boolean).includes(fromNum);
+    const isToAdmin = adminList.includes(toNum);
+    const isAdminLeg = fromMatchesBizOrFrom && isToAdmin && clientState?.kind === "admin_leg";
 
     // ----- Recording saved → store voicemail -----
     if (eventType === "call.recording.saved") {
       const rec = payload?.data?.payload;
       const url = rec?.recording_urls?.[0]?.url || rec?.recording_url;
-      const call_id = rec?.call_control_id;
+      const rcid = rec?.call_control_id;
 
       await supabase.from("voicemails").insert({
-        call_id,
+        call_id: rcid,
         from_number: toE164(rec?.from),
         to_number: toE164(rec?.to),
         recording_url: url
@@ -118,10 +135,42 @@ export async function handler(event) {
     }
 
     // =============================
-    // 1) CLIENT LEG ANSWERED → bridge (website lead flow)
+    // 0) NEW: Inbound call to business number → answer + dial admins
+    // =============================
+    if (eventType === "call.initiated" && isInboundToBiz) {
+      // Answer the caller
+      await act(callId, "answer", {});
+      // Short hold message
+      await act(callId, "speak", {
+        voice: VOICE, language: "en-US",
+        payload: "Please hold while we connect an administrator."
+      });
+
+      // Dial each admin simultaneously.
+      const fromForAdmins = toE164(process.env.TELNYX_FROM_NUMBER) || businessNum;
+      for (const adminNumber of adminList) {
+        const make = await fetch(`${TAPI}/calls`, {
+          method: "POST",
+          headers,
+          body: JSON.stringify({
+            connection_id: process.env.TELNYX_CONNECTION_ID,
+            to: adminNumber,
+            from: fromForAdmins,
+            // carry the inbound call id so the admin leg knows who to bridge to
+            client_state: encodeState({ kind: "admin_leg", inbound_id: callId })
+          }),
+        });
+        const j = await make.json();
+        console.log("ADMIN LEG CREATE", { adminNumber, status: make.status, json: j });
+      }
+
+      return { statusCode: 200, body: "OK" };
+    }
+
+    // =============================
+    // A) Website lead flow (unchanged)
     // =============================
     if (eventType === "call.answered" && isClientLeg) {
-      // We have the client/prospect leg answered. Transfer the agent leg to this client leg.
       if (sessionClient?.telnyx_call_id) {
         const r = await act(sessionClient.telnyx_call_id, "transfer_call", { to: callId });
         if (!r.ok) console.error("Bridge failed", { status: r.status, json: r.json });
@@ -129,9 +178,6 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // =============================
-    // 2) AGENT LEG ANSWERED → whisper & gather '1' to call prospect (website lead flow)
-    // =============================
     if (eventType === "call.answered" && isAgentLeg) {
       let name = "Prospect";
       let summary = "";
@@ -166,9 +212,9 @@ export async function handler(event) {
     }
 
     // =============================
-    // 3) INBOUND ADMIN CALL ANSWERED → whisper & gather '1' to connect (administrative flow)
+    // B) NEW: Admin leg answered → whisper + gather
     // =============================
-    if (eventType === "call.answered" && isInboundAdmin) {
+    if (eventType === "call.answered" && isAdminLeg) {
       await act(callId, "gather_using_speak", {
         voice: VOICE,
         language: "en-US",
@@ -182,17 +228,16 @@ export async function handler(event) {
     }
 
     // =============================
-    // 4) DTMF/GATHER ENDED → branch per context
+    // C) DTMF/GATHER: branch per context
     // =============================
     if (eventType === "call.dtmf.received" || eventType === "call.gather.ended") {
       const pay = payload?.data?.payload || {};
       const digit = eventType === "call.dtmf.received" ? pay.digit : (pay.digits || "")[0];
-      console.log("DTMF/GATHER", { eventType, digit, isAgentLeg, isInboundAdmin });
+      console.log("DTMF/GATHER", { eventType, digit, isAgentLeg, isAdminLeg });
 
-      // (a) Website lead: Agent pressed key on agent leg
+      // Website lead: agent pressed key
       if (isAgentLeg) {
         if (digit === "1" && sessionAgent.prospect_number) {
-          // Place the client leg
           const make = await fetch(`${TAPI}/calls`, {
             method: "POST",
             headers,
@@ -228,11 +273,9 @@ export async function handler(event) {
             payload: "Dialing the client now."
           });
 
-          // We bridge when the client answers (handled earlier).
           return { statusCode: 200, body: JSON.stringify({ ok: true }) };
         }
 
-        // any other key → cancel
         await act(callId, "speak", {
           voice: VOICE, language: "en-US",
           payload: "Got it. Canceling."
@@ -241,30 +284,37 @@ export async function handler(event) {
         return { statusCode: 200, body: "OK" };
       }
 
-      // (b) Inbound admin call: pressed key on the inbound leg
-      if (isInboundAdmin) {
-        if (digit === "1") {
-          // “Connect” here just means keep the call live (no transfer target).
-          await act(callId, "speak", {
-            voice: VOICE, language: "en-US",
-            payload: "Connecting."
-          });
-          // Nothing else to do — you’re already on the call.
+      // Admin leg: pressed key to connect to inbound caller
+      if (isAdminLeg) {
+        const inboundId = toE164(clientState?.inbound_id) ? null : clientState?.inbound_id; // not a number; it's a call id
+        if (!inboundId) {
+          console.warn("Missing inbound_id in client_state for admin leg.");
+          await act(callId, "speak", { voice: VOICE, language: "en-US", payload: "Unable to connect." });
           return { statusCode: 200, body: "OK" };
         }
-        // No 1 → drop to voicemail
-        await startVoicemailOn(callId);
+
+        if (digit === "1") {
+          await act(callId, "speak", { voice: VOICE, language: "en-US", payload: "Connecting." });
+          // Transfer THIS admin leg into the original inbound caller leg
+          const r = await act(callId, "transfer_call", { to: inboundId });
+          if (!r.ok) {
+            console.error("Admin transfer failed", { status: r.status, json: r.json });
+            await act(callId, "speak", { voice: VOICE, language: "en-US", payload: "Unable to connect." });
+          }
+          return { statusCode: 200, body: "OK" };
+        }
+
+        // anything else → send inbound leg to voicemail
+        await startVoicemailOn(clientState?.inbound_id);
         return { statusCode: 200, body: "OK" };
       }
     }
 
     // =============================
-    // 5) Hangup cleanup
+    // D) Hangup cleanup (optional)
     // =============================
     if (eventType === "call.hangup") {
-      console.log("HANGUP", { callId, isInboundAdmin, isAgentLeg, isClientLeg });
-      // Optional: if desired, you can detect inbound admin hangups with no DTMF and start VM earlier,
-      // but once the caller hung up there's nobody left to record.
+      console.log("HANGUP", { callId, isInboundToBiz, isAdminLeg, isAgentLeg, isClientLeg });
       return { statusCode: 200, body: "OK" };
     }
 
