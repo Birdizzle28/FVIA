@@ -74,7 +74,7 @@ export async function handler(event) {
       .split(",").map(toE164).filter(Boolean);
     const clientState = decodeState(p?.client_state);
 
-    // IMPORTANT: match the inbound connection so transfer_call works
+    // IMPORTANT: match the inbound connection so any follow-on originates on same conn
     const inboundConnId = p?.connection_id || process.env.TELNYX_CONNECTION_ID;
 
     console.log("TELNYX EVENT", {
@@ -144,7 +144,7 @@ export async function handler(event) {
           method: "POST",
           headers,
           body: JSON.stringify({
-            connection_id: inboundConnId, // <-- match inbound leg
+            connection_id: inboundConnId,
             to: adminNumber,
             from: fromForAdmins,
             client_state: encodeState({ kind: "admin", inbound_id: callId })
@@ -259,15 +259,16 @@ export async function handler(event) {
         }
 
         if (digit === "1") {
-          const r = await act(callId, "transfer_call", { to: inboundId });
+          // CHANGED: use bridge to connect this admin leg to the live inbound caller leg
+          const r = await act(callId, "bridge", { call_control_id: inboundId });
           if (!r.ok) {
-            console.error("Admin transfer failed", { status: r.status, json: r.json });
-            if (r.status === 404) {
-              await act(callId, "speak", { voice: VOICE, language: "en-US",
-                payload: "Could not connect on this line." });
-            } else if (r.status === 422) {
+            console.error("Admin bridge failed", { status: r.status, json: r.json });
+            if (r.status === 422) {
               await act(callId, "speak", { voice: VOICE, language: "en-US",
                 payload: "The caller has disconnected." });
+            } else {
+              await act(callId, "speak", { voice: VOICE, language: "en-US",
+                payload: "Unable to connect." });
             }
           }
           return { statusCode: 200, body: "OK" };
