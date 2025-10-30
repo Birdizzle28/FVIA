@@ -74,7 +74,14 @@ export async function handler(event) {
       .split(",").map(toE164).filter(Boolean);
     const clientState = decodeState(p?.client_state);
 
-    console.log("TELNYX EVENT", { eventType, callId, fromNum, toNum, clientState });
+    // IMPORTANT: match the inbound connection so transfer_call works
+    const inboundConnId = p?.connection_id || process.env.TELNYX_CONNECTION_ID;
+
+    console.log("TELNYX EVENT", {
+      eventType, callId, fromNum, toNum, clientState,
+      inboundConnId, envConn: process.env.TELNYX_CONNECTION_ID
+    });
+
     if (!callId) return { statusCode: 200, body: "OK" };
 
     const supabase = createClient(
@@ -128,13 +135,16 @@ export async function handler(event) {
       const fromForAdmins =
         toE164(process.env.TELNYX_FROM_NUMBER) || businessNum;
 
-      const exclude = fromNum; // don’t dial the caller if it’s an admin
-      for (const adminNumber of adminList.filter(n => n !== exclude)) {
+      // If caller is an admin, try other admins first; if none left, still include the caller so *someone* is rung.
+      let targets = adminList.filter(n => n !== fromNum);
+      if (targets.length === 0) targets = adminList.slice();
+
+      for (const adminNumber of targets) {
         const resp = await fetch(`${TAPI}/calls`, {
           method: "POST",
           headers,
           body: JSON.stringify({
-            connection_id: process.env.TELNYX_CONNECTION_ID,
+            connection_id: inboundConnId, // <-- match inbound leg
             to: adminNumber,
             from: fromForAdmins,
             client_state: encodeState({ kind: "admin", inbound_id: callId })
@@ -239,8 +249,7 @@ export async function handler(event) {
 
       // admin leg
       if (isAdminLeg) {
-        const cs = clientState || {};
-        const inboundId = cs.inbound_id;
+        const inboundId = clientState?.inbound_id;
         if (!inboundId) {
           console.warn("Missing inbound_id in client_state for admin leg.");
           await act(callId, "speak", {
@@ -253,11 +262,13 @@ export async function handler(event) {
           const r = await act(callId, "transfer_call", { to: inboundId });
           if (!r.ok) {
             console.error("Admin transfer failed", { status: r.status, json: r.json });
-            if (r.status === 422)
-              await act(callId, "speak", {
-                voice: VOICE, language: "en-US",
-                payload: "The caller has disconnected."
-              });
+            if (r.status === 404) {
+              await act(callId, "speak", { voice: VOICE, language: "en-US",
+                payload: "Could not connect on this line." });
+            } else if (r.status === 422) {
+              await act(callId, "speak", { voice: VOICE, language: "en-US",
+                payload: "The caller has disconnected." });
+            }
           }
           return { statusCode: 200, body: "OK" };
         }
