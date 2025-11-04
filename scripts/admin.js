@@ -73,7 +73,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   userId = session.user.id;
 
   const { data: profile } = await supabase.from('agents').select('is_admin').eq('id', userId).single();
-  if (!profile || profile.is_admin !== true) { alert('Access denied.'); window.location.href = 'profile.html'; return; }
+  if (!profile || profile.is_admin !== true) {
+    location.replace('dashboard.html'); // no alert, no history entry
+    return;
+  }
   userRole = 'admin';
 
   flatpickr('#date-range', { mode:'range', dateFormat:'Y-m-d',
