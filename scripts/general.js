@@ -1,3 +1,32 @@
+// scripts/general.js (put this at the very top)
+(async () => {
+  // Skip if no admin link exists on this page
+  if (!document.querySelector('[data-admin-link], .admin-link')) return;
+
+  // Load supabase ESM quickly without waiting for the rest of your app
+  const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm');
+
+  // Reuse your public URL/key already in freequote.html (same project here)
+  const supabase = createClient(
+    'https://ddlbgkolnayqrxslzsxn.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
+  );
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) return; // still hidden
+
+  const { data: profile } = await supabase
+    .from('agents')
+    .select('is_admin')
+    .eq('id', session.user.id)
+    .maybeSingle();
+
+  if (profile?.is_admin === true) {
+    document.querySelectorAll('[data-admin-link], .admin-link')
+      .forEach(el => el.classList.remove('admin-hidden'));
+  }
+})();
+
 const menuToggle = document.getElementById('menu-toggle');
 const mobileMenu = document.getElementById('mobile-menu');
 
