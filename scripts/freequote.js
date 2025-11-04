@@ -333,6 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
           contact_id: contactId,
           submitted_by: window.FVG_WEBSITE_SUBMITTER_ID,
           submitted_by_name: window.FVG_WEBSITE_SUBMITTER_NAME || 'Website Lead',
+          notes: contactInfo.notes || null              // ← add this
         }])
         .select('id, product_type')
         .single();
