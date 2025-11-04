@@ -1,234 +1,58 @@
-<!doctype html>
-<html lang="en">
-<head>
-	<meta charset="utf-8">
-	<meta http-equiv="X-UA-Compatible" content="IE=edge">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link rel="stylesheet" href="styles/general.css">
-	<link rel="stylesheet" href="styles/login.css">
-	<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-	<title>Sign Up | Family Values Group</title>
-</head>
-<body id="indexbody">
-	<img class="family" src="Pics/img.jpeg" alt="">
-	<div class="index-body">
-		<header class="index-grid-header">
-			<a href="index.html"><img id="headerlogo" src="Pics/img6.png" alt=""></a>
-			<p><strong>Family Values Group</strong></p>
-			<button id="menu-toggle" aria-label="Toggle menu">
-		 		<i class="fas fa-bars"></i>
-		        </button>
-			<hr>
-			<nav class="header-flex-container">
-				<a href="about.html">About</a>
-				<a href="contact.html">Support</a>
-				<a href="index.html">Home</a>
-				<a href="careers.html">Careers</a>
-				<a href="login.html">Login</a>
-			</nav>
-			<hr>
-		</header>
-		<div id="mobile-menu">
-		    <a href="about.html">About</a>
-		    <a href="contact.html">Support</a>
-		    <a href="index.html">Home</a>
-		    <a href="careers.html">Careers</a>
-		    <a href="login.html">Login</a>
-		</div>
-	<div class="auth-container">
-		<h2>Agent Sign-Up</h2>
-		<form id="signup-form">
-		  <!-- First Name -->
-		  <div class="float-field">
-		    <input id="first-name" type="text" placeholder=" " required>
-		    <label for="first-name">First Name</label>
-		  </div>
-		
-		  <!-- Last Name -->
-		  <div class="float-field">
-		    <input id="last-name" type="text" placeholder=" " required>
-		    <label for="last-name">Last Name</label>
-		  </div>
-		
-		  <!-- Agent ID (NPN) -->
-		  <div class="float-field">
-		    <input id="agent-id" type="text" placeholder=" " required>
-		    <label for="agent-id">Agent ID (NPN)</label>
-		  </div>
-		
-		  <!-- Email -->
-		  <div class="float-field">
-		    <input id="email" type="email" placeholder=" " required>
-		    <label for="email">Email (used as username)</label>
-		  </div>
-		
-		  <!-- Password -->
-		  <div class="float-field pw-field">
-		    <input id="password" type="password" placeholder=" " required>
-		    <label for="password">Password</label>
-		    <button type="button" class="pw-toggle" aria-label="Show password">
-		      <i class="fa-regular fa-eye"></i>
-		    </button>
-		  </div>
-		
-		  <!-- Confirm Password -->
-		  <div class="float-field pw-field">
-		    <input id="confirm-password" type="password" placeholder=" " required>
-		    <label for="confirm-password">Confirm Password</label>
-		    <button type="button" class="pw-toggle" aria-label="Show password">
-		      <i class="fa-regular fa-eye"></i>
-		    </button>
-		  </div>
-		
-		  <button type="submit">Sign Up</button>
-		</form>
-		<p class="switch-auth">Already have an account? <a href="login.html">Sign in here</a>.</p>
-		<p id="status">Activating your account…</p>
-		<p id="message"></p>
-	</div>
-	<footer class="index-grid-footer">
-		<img id="footerlogo" src="Pics/img6.png">
-		<hr class="footerhr">
-		<div id="footercontact">
-			<a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
-				<span class="fa fa-envelope"></span>
-				<span class="contactcontcontacts">info@familyvaluesgroup.com</span>
-			</a>
-			<p> | </p>
-			<a class="contactcontainer" href="tel:+16292437980">
-				<span class="fa fa-phone"></span>
-				<span class="contactcontcontacts">+1-629-243-7980</span>
-			</a>
-		</div>
-		<hr class="footerhr">
-		<div id="footersocial">
-			<a class="fab fa-facebook-f" href="#"></a>
-			<a class="fab fa-linkedin-in" href="#"></a>
-			<a class="fab fa-instagram" href="#"></a>
-			<a class="fab fa-youtube" href="#"></a>
-			<a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
-		</div>
-		<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
-	</footer>
-	<script type="module" src="scripts/general.js"></script>
-	<script>
-	  // Toggle show/hide for password fields
-	  document.addEventListener('click', (e) => {
-	    const btn = e.target.closest('.pw-toggle');
-	    if (!btn) return;
-	    const input = btn.parentElement.querySelector('input');
-	    const icon  = btn.querySelector('i');
-	    const isText = input.type === 'text';
-	    input.type = isText ? 'password' : 'text';
-	    btn.setAttribute('aria-label', isText ? 'Show password' : 'Hide password');
-	    icon.classList.toggle('fa-eye');
-	    icon.classList.toggle('fa-eye-slash');
-	  });
-	</script>
-	<script type="module">
-		  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-		
-		  const supabase = createClient(
-		    'https://ddlbgkolnayqrxslzsxn.supabase.co',
-		    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
-		  );
-		
-		  const form = document.getElementById('signup-form');
-		  const status = document.getElementById('status');
-		  const message = document.getElementById('message');
-		
-		  form.addEventListener('submit', async (event) => {
-			  event.preventDefault();
-			  status.textContent = '⏳ Signing up...';
-			
-			  const agentId = document.getElementById('agent-id').value.trim();     // NPN (any format)
-			  const firstName = document.getElementById('first-name').value.trim();
-			  const lastName  = document.getElementById('last-name').value.trim();
-			  const email     = document.getElementById('email').value.trim();
-			  const password  = document.getElementById('password').value;
-			
-			  if (!agentId || !firstName || !lastName || !email || !password) {
-			    status.textContent = '⚠️ Fill out all fields.';
-			    return;
-			  }
-			
-			  // Check pre-approval & get recruiter_id
-			  const { data: approved, error: checkErr } = await supabase
-			    .from('approved_agents')
-			    .select('id, is_registered, recruiter_id')
-			    .eq('agent_id', agentId)
-			    .maybeSingle();
-			
-			  if (checkErr || !approved || approved.is_registered) {
-			    status.textContent = '❌ Invalid or already registered agent ID.';
-			    return;
-			  }
-			
-			  // Register auth user
-			  const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-			    email,
-			    password,
-			    options: {
-			      emailRedirectTo: 'https://familyvaluesgroup.com/confirmed.html',
-			      data: {
-			        agent_id: agentId,       // store NPN in user metadata as well (optional)
-			        first_name: firstName,
-			        last_name : lastName
-			      }
-			    }
-			  });
-			
-			  if (signUpError) {
-			    status.textContent = '❌ Signup failed: ' + signUpError.message;
-			    return;
-			  }
-			
-			  status.textContent = '✅ Sign-up successful. Creating your profile…';
-			
-			  const authUserId = signUpData?.user?.id || null;
-			  const fullName = `${firstName} ${lastName}`.trim();
-			
-			  // Create the row in agents using the auth user id as the primary key
-			  // (agents.id is UUID and can be supplied explicitly)
-			  if (authUserId) {
-			    const { error: insertAgentErr } = await supabase
-			      .from('agents')
-			      .insert({
-			        id: authUserId,           // tie auth user to agents row
-			        email,
-			        agent_id: agentId,        // <-- NPN goes here
-			        full_name: fullName,
-			        first_name: firstName,
-			        last_name: lastName,
-			        is_active: true,
-			        is_admin: false,
-			        recruiter_id: approved?.recruiter_id || null,
-			        product_types: null
-			      });
-			
-			    if (insertAgentErr) {
-			      message.textContent = '⚠️ Profile created later: ' + insertAgentErr.message;
-			    }
-			  }
-			
-			  // Mark the pre-approval as claimed
-			  const { error: updateErr } = await supabase
-			    .from('approved_agents')
-			    .update({
-			      is_registered: true,
-			      first_name: firstName,
-			      last_name: lastName,
-			      email
-			    })
-			    .eq('agent_id', agentId);
-			
-			  if (updateErr) {
-			    message.textContent = '⚠️ Warning: couldn’t update approval record.';
-			  }
-			
-			  status.textContent = '✅ All set. Check your email to confirm your account.';
-			});
-		</script>
-</body>
-</html>
+<script type="module">
+  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
+  const supabase = createClient(
+    'https://ddlbgkolnayqrxslzsxn.supabase.co',
+    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
+  );
+
+  const form = document.getElementById('signup-form');
+  const status = document.getElementById('status');
+  const message = document.getElementById('message');
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    status.textContent = '⏳ Signing up...';
+    message.textContent = '';
+
+    const agentId   = document.getElementById('agent-id').value.trim();
+    const firstName = document.getElementById('first-name').value.trim();
+    const lastName  = document.getElementById('last-name').value.trim();
+    const email     = document.getElementById('email').value.trim();
+    const password  = document.getElementById('password').value;
+    const confirmPw = document.getElementById('confirm-password').value;
+
+    if (!agentId || !firstName || !lastName || !email || !password) {
+      status.textContent = '⚠️ Fill out all fields.'; return;
+    }
+    if (password !== confirmPw) {
+      status.textContent = '⚠️ Passwords do not match.'; return;
+    }
+
+    // Check pre-approval (public/anon SELECT allowed by your policies)
+    const { data: approved, error: checkErr } = await supabase
+      .from('approved_agents')
+      .select('id, is_registered')
+      .eq('agent_id', agentId)
+      .maybeSingle();
+
+    if (checkErr || !approved || approved.is_registered) {
+      status.textContent = '❌ Invalid or already registered agent ID.'; return;
+    }
+
+    // Create auth user; trigger will create agents row & flip approved_agents
+    const { error: signUpError } = await supabase.auth.signUp({
+      email, password,
+      options: {
+        emailRedirectTo: 'https://familyvaluesgroup.com/confirmed.html',
+        data: { agent_id: agentId, first_name: firstName, last_name: lastName }
+      }
+    });
+
+    if (signUpError) {
+      status.textContent = '❌ Signup failed: ' + signUpError.message; return;
+    }
+
+    status.textContent = '✅ All set. Check your email to confirm your account.';
+  });
+</script>
