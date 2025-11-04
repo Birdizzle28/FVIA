@@ -2,6 +2,10 @@
 * {
   font-family: Bellota Text ;
 }
+/* Hide admin links by default until proven admin */
+.admin-hidden {
+	display: none !important;
+}
 /* Loading screen overlay */
 #loading-screen {
   position: fixed !important;
