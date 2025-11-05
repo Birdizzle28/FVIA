@@ -435,7 +435,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ['My Business','Casualty Insurance'],
         ['My Identity','ID Shield'],
         ['Legal Protection Plan','Legal Shield'],
-        ['Me','Life Insurance'],
+        ['Myself','Life Insurance'],
         ['Someone Else','Life Insurance'],
         ['My Health','Health Insurance'],
       ]);
