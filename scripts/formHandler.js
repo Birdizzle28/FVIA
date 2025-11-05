@@ -1,14 +1,15 @@
 document.addEventListener("DOMContentLoaded", () => {
   const form = document.getElementById("contactForm");
+  if (!form) return;
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
 
     const formData = {
-      name: form.name.value,
-      email: form.email.value,
-      phone: form.phone.value,
-      message: form.message.value
+      name: form.name.value.trim(),
+      email: form.email.value.trim(),
+      phone: form.phone.value.trim(),
+      message: form.message.value.trim()
     };
 
     try {
@@ -18,17 +19,19 @@ document.addEventListener("DOMContentLoaded", () => {
         body: JSON.stringify(formData)
       });
 
-      const result = await response.json();
+      // Try to parse JSON once
+      let result = null;
+      try { result = await response.json(); } catch(_) {}
 
       if (response.ok) {
         alert("Thanks! Your message was submitted.");
         form.reset();
       } else {
-        alert("Oops. Something went wrong: " + result.error);
+        const msg = (result && result.error) ? result.error : `HTTP ${response.status}`;
+        alert("Oops. Something went wrong: " + msg);
       }
     } catch (err) {
-      alert("Error: " + err.message);
-      alert("Details: " + JSON.stringify(err));
+      alert("Network error: " + (err?.message || err));
     }
   });
 });
