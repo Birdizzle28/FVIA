@@ -147,11 +147,13 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   coverMenu.style.display = 'none';
   updateCoverDisplayAndCsv(); updateCoverFloat();
+
   coverSelect.addEventListener('click', () => toggleMenu());
   coverSelect.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleMenu(); }
     if (e.key === 'Escape') { toggleMenu(false); }
   });
+
   (function initChips(){
     coverMenu.querySelectorAll('.ms-option').forEach(lbl => {
       const cb = lbl.querySelector('input[type="checkbox"]');
@@ -171,7 +173,37 @@ document.addEventListener('DOMContentLoaded', () => {
       lbl.tabIndex = 0;
       lbl.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); lbl.click(); }});
     });
+
+    // --- preselect from ?coverage_type=... ---
+    (function preselectFromQuery(){
+      const params = new URLSearchParams(location.search);
+      const ct = (params.get('coverage_type') || '').toLowerCase();
+      const map = {
+        identity: 'My Identity',
+        life:     'Myself',
+        health:   'My Health',              // safe if absent (commented out)
+        home:     'My Home',
+        business: 'My Business',
+        legal:    'Legal Protection Plan',
+        auto:     'My Car'
+      };
+      const wanted = map[ct];
+      if (!wanted) return;
+
+      const lbl = Array.from(coverMenu.querySelectorAll('.ms-option'))
+        .find(el => (el.dataset.value || el.textContent.trim()) === wanted);
+
+      if (lbl) {
+        lbl.classList.add('selected');
+        const cb = lbl.querySelector('input[type="checkbox"]');
+        if (cb) cb.checked = true;
+        updateCoverDisplayAndCsv();
+        updateCoverFloat();
+      }
+    })();
+    // --- end preselect ---
   })();
+
   document.addEventListener('click', (e) => {
     if (!coverSelect.contains(e.target) && !coverMenu.contains(e.target)) toggleMenu(false);
   });
@@ -510,7 +542,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
       }
 
-      // Thank-you screen (works in both online/offline assignment cases)
+      // Thank-you screen
       const resTitle = document.getElementById('result-title');
       const resBody  = document.getElementById('result-body');
       const resActions = document.getElementById('result-actions');
