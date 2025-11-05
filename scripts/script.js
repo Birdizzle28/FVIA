@@ -194,11 +194,16 @@ window.addEventListener("load", () => {
     return;
   }
 
-  container.innerHTML = agents.map(agent => `
-    <div class="agent-card">
-      <img src="${agent.profile_picture_url}" alt="${agent.full_name}" class="agent-photo" />
-      <h3>${agent.full_name}</h3>
-      <p>${agent.bio || 'No bio provided.'}</p>
-    </div>
-  `).join('');
+  container.innerHTML = agents.map(agent => {
+    const img = agent.profile_picture_url || '/Pics/placeholder-user.png';
+    const name = agent.full_name || 'Team member';
+    const bio  = agent.bio || 'No bio provided.';
+    return `
+      <div class="agent-card">
+        <img src="${img}" alt="${name}" class="agent-photo" />
+        <h3>${name}</h3>
+        <p>${bio}</p>
+      </div>
+    `;
+  }).join('');
 });
