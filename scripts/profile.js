@@ -1,4 +1,3 @@
-// scripts/profile.js
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 const supabase = createClient(
   'https://ddlbgkolnayqrxslzsxn.supabase.co',
@@ -10,112 +9,78 @@ document.addEventListener('DOMContentLoaded', async () => {
   if (!session) { window.location.href = 'login.html'; return; }
   const user = session.user;
 
-  // Load profile from AGENTS (not "profiles")
   const { data: profile, error: profErr } = await supabase
-    .from('agents')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+    .from('agents').select('*').eq('id', user.id).single();
 
-  if (profErr) {
+  if (profErr || !profile) {
     console.error('Load profile error:', profErr);
-    alert('Could not load profile.');
+    // optionally redirect to onboarding
     return;
   }
 
-  // Unhide admin links if admin
-  if (profile?.is_admin) {
-    document.querySelectorAll('[data-admin-link]').forEach(el => el.classList.remove('admin-hidden'));
-  } else {
-    document.querySelectorAll('[data-admin-link]').forEach(el => el.classList.add('admin-hidden'));
-  }
+  // Admin link visibility
+  const adminEls = document.querySelectorAll('[data-admin-link]');
+  adminEls.forEach(el => el.classList.toggle('admin-hidden', !profile.is_admin));
 
   // Populate fields
-  document.getElementById('first-name').value = profile.first_name || '';
-  document.getElementById('last-name').value  = profile.last_name  || '';
-  document.getElementById('profile-email').value = user.email || '';
-  document.getElementById('profile-agent-id').value = profile.agent_id || '';
-  document.getElementById('profile-bio').value = profile.bio || '';
-  // prefer a boolean column like is_public; fall back to false
-  const isPublic = (profile.is_public === true);
+  document.getElementById('first-name').value = profile.first_name ?? '';
+  document.getElementById('last-name').value  = profile.last_name  ?? '';
+  document.getElementById('profile-email').value = user.email ?? '';
+  document.getElementById('profile-agent-id').value = profile.agent_id ?? '';
+  document.getElementById('profile-bio').value = profile.bio ?? '';
+  const hasIsPublic = Object.prototype.hasOwnProperty.call(profile, 'is_public');
+  const isPublic = hasIsPublic ? profile.is_public === true : (profile.public === true);
   document.getElementById('profile-public-status').value = isPublic ? 'true' : 'false';
 
   const photoEl = document.getElementById('profile-photo');
   if (profile.profile_picture_url) {
     photoEl.src = profile.profile_picture_url;
-    const uploadText = document.querySelector('.upload-text');
-    if (uploadText) uploadText.style.display = 'none';
+    document.querySelector('.upload-text')?.style && (document.querySelector('.upload-text').style.display = 'none');
   }
 
-  // Save profile changes (write to AGENTS)
+  // Save
   document.getElementById('profile-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const msg = document.getElementById('edit-profile-message');
 
-    const is_public = document.getElementById('profile-public-status').value === 'true';
-
+    const wantPublic = document.getElementById('profile-public-status').value === 'true';
     const updates = {
       first_name: document.getElementById('first-name').value.trim(),
       last_name:  document.getElementById('last-name').value.trim(),
       bio:        document.getElementById('profile-bio').value.trim(),
-      is_public   // boolean
     };
+    if (hasIsPublic) updates.is_public = wantPublic; else updates.public = wantPublic;
 
-    const { error: upErr } = await supabase
-      .from('agents')
-      .update(updates)
-      .eq('id', user.id);
-
-    if (upErr) {
-      console.error('Update profile error:', upErr);
-      msg.textContent = 'Failed to update profile.';
-    } else {
-      msg.textContent = 'Profile updated!';
-    }
+    const { error: upErr } = await supabase.from('agents').update(updates).eq('id', user.id);
+    msg.textContent = upErr ? 'Failed to update profile.' : 'Profile updated!';
+    if (upErr) console.error('Update profile error:', upErr);
   });
 
-  // Upload profile picture
+  // Upload photo
   document.getElementById('profile-photo-input').addEventListener('change', async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
+    const file = e.target.files?.[0]; if (!file) return;
     const fileExt = (file.name.split('.').pop() || 'jpg').toLowerCase();
     const filePath = `avatars/${user.id}.${fileExt}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('avatars')
-      .upload(filePath, file, { upsert: true });
-
+    const { error: uploadError } = await supabase.storage.from('avatars').upload(filePath, file, { upsert: true });
     if (uploadError) { alert('Upload failed!'); return; }
 
     const { data: publicUrl } = supabase.storage.from('avatars').getPublicUrl(filePath);
     const avatarUrl = publicUrl.publicUrl;
 
-    const { error: updateError } = await supabase
-      .from('agents')
-      .update({ profile_picture_url: avatarUrl })
-      .eq('id', user.id);
-
+    const { error: updateError } = await supabase.from('agents').update({ profile_picture_url: avatarUrl }).eq('id', user.id);
     if (updateError) { alert('Could not update profile picture.'); return; }
 
     document.getElementById('profile-photo').src = avatarUrl;
-    const uploadText = document.querySelector('.upload-text');
-    if (uploadText) uploadText.style.display = 'none';
+    document.querySelector('.upload-text')?.style && (document.querySelector('.upload-text').style.display = 'none');
   });
 
-  // Active page highlight
-  const navProfileLink = document.querySelector('a#profile-tab'); // target the NAV link specifically
-  if (window.location.pathname.includes('profile')) {
-    navProfileLink?.classList.add('active-page');
-  } else {
-    navProfileLink?.classList.remove('active-page');
-  }
+  // Active page highlight (nav link only)
+  const navProfileLink = document.querySelector('a#profile-tab');
+  if (window.location.pathname.includes('profile')) navProfileLink?.classList.add('active-page');
 });
-
-// Logout
 document.getElementById('logout-btn')?.addEventListener('click', async (e) => {
   e.preventDefault();
   const { error } = await supabase.auth.signOut();
-  if (error) { alert('Logout failed!'); console.error(error); }
-  else { window.location.href = '../index.html'; }
+  window.location.href = '../index.html';
 });
