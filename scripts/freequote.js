@@ -333,7 +333,7 @@ document.addEventListener('DOMContentLoaded', () => {
           contact_id: contactId,
           submitted_by: window.FVG_WEBSITE_SUBMITTER_ID,
           submitted_by_name: window.FVG_WEBSITE_SUBMITTER_NAME || 'Website Lead',
-          notes: contactInfo.notes || null              // ← add this
+          notes: contactInfo.notes || null
         }])
         .select('id, product_type')
         .single();
@@ -351,51 +351,50 @@ document.addEventListener('DOMContentLoaded', () => {
     return null; // null → skip state filtering
   }
 
-  // ===== Helper: choose ONE eligible, online agent (covers ALL types if possible; else ANY) =====
-  async function chooseOneAgentForAll(requiredTypes, state2) {
+  // ===== Agent picker honoring your rules =====
+  async function pickAgentForAll(typesNeeded, state2) {
     const { data: agents, error } = await supabase
       .from('agents')
       .select('id, full_name, product_types, phone, is_active, licensed_states, last_assigned_at')
       .eq('is_active', true);
     if (error) throw new Error(error.message);
 
-    const toLower = (x) => (x||'').toLowerCase();
-    const need = requiredTypes.map(toLower);
-
+    const need = new Set((typesNeeded || []).map(t => (t||'').toLowerCase()));
     const coversAll = (a) => {
-      const set = new Set((a.product_types || []).map(toLower));
+      const set = new Set((a.product_types || []).map(t => (t||'').toLowerCase()));
       const stateOK = !state2 || (Array.isArray(a.licensed_states) && a.licensed_states.includes(state2));
-      return stateOK && need.every(t => set.has(t));
-    };
-    const coversAny = (a) => {
-      const set = new Set((a.product_types || []).map(toLower));
-      const stateOK = !state2 || (Array.isArray(a.licensed_states) && a.licensed_states.includes(state2));
-      return stateOK && need.some(t => set.has(t));
+      return stateOK && Array.from(need).every(t => set.has(t));
     };
 
-    let pool = (agents || []).filter(coversAll);
-    if (!pool.length) pool = (agents || []).filter(coversAny);
-    if (!pool.length) throw new Error('No eligible agents are active.');
+    const eligible = (agents || []).filter(coversAll);
 
-    const ids = pool.map(a => a.id);
+    // Rule #2: nobody fits ⇒ treat as not covered region
+    if (!eligible.length) return { reason: 'none_fit', agent: null, shouldCall: false };
+
+    // availability among eligible
+    const eligibleIds = eligible.map(a => a.id);
     const { data: availRows, error: eAvail } = await supabase
       .from('agent_availability')
       .select('agent_id, available')
-      .in('agent_id', ids)
+      .in('agent_id', eligibleIds)
       .eq('available', true);
     if (eAvail) throw new Error(eAvail.message);
 
     const onlineSet = new Set((availRows || []).map(r => r.agent_id));
-    const online = pool.filter(a => onlineSet.has(a.id));
-    if (!online.length) throw new Error('No agents are online right now.');
+    const online = eligible.filter(a => onlineSet.has(a.id));
 
-    // Oldest last_assigned_at gets next lead (simple round-robin)
-    online.sort((a,b) => {
-      const ax = a.last_assigned_at ? new Date(a.last_assigned_at).getTime() : 0;
-      const bx = b.last_assigned_at ? new Date(b.last_assigned_at).getTime() : 0;
-      return ax - bx;
-    });
-    return online[0];
+    const byOldest = (arr) =>
+      arr.slice().sort((a,b) => {
+        const ax = a.last_assigned_at ? new Date(a.last_assigned_at).getTime() : 0;
+        const bx = b.last_assigned_at ? new Date(b.last_assigned_at).getTime() : 0;
+        return ax - bx;
+      });
+
+    if (online.length) {
+      return { reason: 'online', agent: byOldest(online)[0], shouldCall: true };
+    }
+    // Rule #1: eligible but none available ⇒ assign to next unavailable, no call
+    return { reason: 'offline_only', agent: byOldest(eligible)[0], shouldCall: false };
   }
 
   // === Submit handler ===
@@ -429,6 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSubmit.textContent = 'Submitting…';
 
     try {
+      // Map form selections to product types
       const map = new Map([
         ['My Car','Casualty Insurance'],
         ['My Home','Property Insurance'],
@@ -442,6 +442,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const pickedTypes = Array.from(new Set(selections.map(v => map.get(v)).filter(Boolean)));
       if (pickedTypes.length === 0) pickedTypes.push('Life Insurance');
 
+      // Infer state and choose agent BEFORE any inserts
+      const state2 = inferStateFromZip(zip.value);
+      const choice = await pickAgentForAll(pickedTypes.map(t => (t||'').toLowerCase()), state2);
+
+      // Rule #2: not covered region ⇒ stop now (no contact/lead/call)
+      if (choice.reason === 'none_fit') {
+        alert('We’re sorry — we don’t currently cover your region.');
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = prev;
+        return;
+      }
+
+      // Proceed with inserts
       const contactInfo = {
         first_name: firstName.value.trim(),
         last_name:  lastName.value.trim(),
@@ -453,60 +466,51 @@ document.addEventListener('DOMContentLoaded', () => {
       const { contactId, leads } = await insertContactAndLeads(contactInfo, pickedTypes);
       const insertedIds = leads.map(l => ({ id: l.id, type: l.product_type }));
 
-      // ===== One-agent assignment + one call =====
-      // Build the set of required product types from this submission
-      const typesNeeded = Array.from(new Set(insertedIds.map(l => (l.type || '').toLowerCase())));
-
-      // Infer state from the ZIP (placeholder; expand later)
-      const state2 = inferStateFromZip(zip.value);
-
-      // 1) Choose ONE eligible + online agent
-      const chosen = await chooseOneAgentForAll(typesNeeded, state2);
-
-      // 2) Assign ALL leads to that agent + set contact owner + bump last_assigned_at
+      // Assign to chosen agent, set ownership, bump last_assigned_at
       const nowIso = new Date().toISOString();
 
       await supabase.from('leads')
-        .update({ assigned_to: chosen.id, assigned_at: nowIso })
+        .update({ assigned_to: choice.agent.id, assigned_at: nowIso })
         .in('id', insertedIds.map(x => x.id));
 
       await supabase.from('contacts')
-        .update({ owning_agent_id: chosen.id })
+        .update({ owning_agent_id: choice.agent.id })
         .eq('id', contactId);
 
       await supabase.from('agents')
         .update({ last_assigned_at: nowIso })
-        .eq('id', chosen.id);
+        .eq('id', choice.agent.id);
 
-      // 3) Mark contacted_at (optional) and dial ONCE (use the first lead id)
+      // Mark contacted_at (optional)
       await supabase.from('leads')
         .update({ contacted_at: new Date().toISOString() })
         .in('id', insertedIds.map(x => x.id));
 
-      const rawAgentNumber = Array.isArray(chosen.phone) ? chosen.phone[0] : chosen.phone;
-      const agentNumber    = toE164(rawAgentNumber);
-      if (!agentNumber || !e164Prospect) throw new Error('Missing agent or prospect number');
-
-      const leadIdForCall = insertedIds[0].id;
-
-      const resp = await fetch('/.netlify/functions/makeCall', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agentId: chosen.id,
-          agentNumber,
-          prospectNumber: e164Prospect,
-          leadId: leadIdForCall
-        })
-      });
-
-      const rawText = await resp.text();
-      console.log('makeCall status:', resp.status, 'body:', rawText);
-      if (!resp.ok) {
-        alert(`We couldn’t start the call automatically (code ${resp.status}). We’ll follow up ASAP.`);
+      // Only auto-dial if the chosen agent was online
+      if (choice.shouldCall) {
+        const rawAgentNumber = Array.isArray(choice.agent.phone) ? choice.agent.phone[0] : choice.agent.phone;
+        const agentNumber    = toE164(rawAgentNumber);
+        if (agentNumber && e164Prospect) {
+          const leadIdForCall = insertedIds[0].id;
+          const resp = await fetch('/.netlify/functions/makeCall', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              agentId: choice.agent.id,
+              agentNumber,
+              prospectNumber: e164Prospect,
+              leadId: leadIdForCall
+            })
+          });
+          const rawText = await resp.text();
+          console.log('makeCall status:', resp.status, 'body:', rawText);
+          if (!resp.ok) {
+            alert(`We couldn’t start the call automatically (code ${resp.status}). We’ll follow up ASAP.`);
+          }
+        }
       }
 
-      // --- Thank-you screen ---
+      // Thank-you screen (works in both online/offline assignment cases)
       const resTitle = document.getElementById('result-title');
       const resBody  = document.getElementById('result-body');
       const resActions = document.getElementById('result-actions');
