@@ -209,3 +209,31 @@ body {
 }
 .agent-slider:focus-within .agent-arrow,
 .agent-slider:hover .agent-arrow { filter: brightness(0.9); }
+/* --- Arrows overlay the image --- */
+.agent-slider {
+  position: relative;
+  overflow: hidden;
+}
+
+.agent-arrow {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 5;                   /* ensures arrow sits above image */
+  width: 44px;
+  height: 44px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.45);
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.agent-arrow:hover {
+  background: rgba(0,0,0,0.6);
+}
+
+.agent-arrow.prev { left: 15px; }
+.agent-arrow.next { right: 15px; }
