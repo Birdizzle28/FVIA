@@ -75,31 +75,58 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('profile-photo-input').addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-
-    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
-    const path = `avatars/${user.id}.${ext}`;
-
-    const { error: uploadError } = await supabase
+  
+    // Basic client-side guardrails
+    const MAX_MB = 10;
+    if (file.size > MAX_MB * 1024 * 1024) {
+      alert(`File too large. Max ${MAX_MB} MB.`);
+      return;
+    }
+  
+    // Normalize extension/content type (iPhones sometimes give HEIC)
+    const origExt = (file.name.split('.').pop() || '').toLowerCase();
+    const safeExt = ['jpg','jpeg','png','webp','gif','heic','heif'].includes(origExt) ? origExt : 'jpg';
+    const contentType = file.type || (safeExt === 'png' ? 'image/png' : 'image/jpeg');
+  
+    // User-scoped unique path: avatars/<uid>/<timestamp>.<ext>
+    const path = `avatars/${user.id}/${Date.now()}.${safeExt}`;
+  
+    // Upload
+    const { data: upData, error: uploadError } = await supabase
       .storage.from('avatars')
-      .upload(path, file, { upsert: true });
-
-    if (uploadError) { alert('Upload failed!'); return; }
-
+      .upload(path, file, {
+        upsert: true,
+        cacheControl: '3600',
+        contentType
+      });
+  
+    if (uploadError) {
+      console.error('Upload failed:', uploadError);
+      alert(`Upload failed: ${uploadError.message || 'Unknown error'}`);
+      return;
+    }
+  
+    // If bucket is PUBLIC:
     const { data: publicUrl } = supabase.storage.from('avatars').getPublicUrl(path);
     const avatarUrl = publicUrl.publicUrl;
-
+  
+    // Save URL to profile
     const { error: updateError } = await supabase
       .from('agents')
       .update({ profile_picture_url: avatarUrl })
       .eq('id', user.id);
-
-    if (updateError) { alert('Could not update profile picture.'); return; }
-
+  
+    if (updateError) {
+      console.error('Could not update profile picture URL:', updateError);
+      alert(`Could not update profile picture: ${updateError.message || 'Unknown error'}`);
+      return;
+    }
+  
+    // Update UI
     document.getElementById('profile-photo').src = avatarUrl;
     const t = document.querySelector('.upload-text');
     if (t) t.style.display = 'none';
   });
-
   // Active page highlight (nav link only)
   const navProfileLink = document.querySelector('a#profile-tab');
   if (window.location.pathname.includes('profile')) navProfileLink?.classList.add('active-page');
