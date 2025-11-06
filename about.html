@@ -380,6 +380,16 @@
       console.error(e);
       mount.innerHTML = "<p>Unable to load team members.</p>";
     }
+    // fade-in arrows on touch/click then fade back
+    let touchTimeout;
+    function showArrowsTemporarily(){
+      mount.classList.add("touched");
+      clearTimeout(touchTimeout);
+      touchTimeout = setTimeout(() => mount.classList.remove("touched"), 2500);
+    }
+    vp.addEventListener("touchstart", showArrowsTemporarily, { passive: true });
+    prev.addEventListener("click", showArrowsTemporarily);
+    next.addEventListener("click", showArrowsTemporarily);
   })();
 </script>
 </body>
