@@ -176,14 +176,29 @@ body {
 .agent-arrow.prev{ left:8px; }
 .agent-arrow.next{ right:8px; }
 
+/* Horizontal, one-row, scrollable thumbnail strip */
 .agent-thumbs{
-  display:flex; gap:8px; justify-content:center;
-  padding:10px; border-top:1px solid #eef0f6; background:#fafbff;
-  flex-wrap:wrap;
+  display:flex;
+  gap:8px;
+  padding:10px;
+  border-top:1px solid #eef0f6;
+  background:#fafbff;
+
+  overflow-x:auto;          /* scroll horizontally */
+  overflow-y:hidden;
+  flex-wrap:nowrap;         /* single row, no wrap */
+  scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling: touch; /* smooth iOS scroll */
 }
+
 .agent-thumb{
-  border:1px solid transparent; background:#fff; padding:0; cursor:pointer;
-  width:44px; height:44px; display:grid; place-items:center;
+  flex:0 0 auto;            /* stay compact; don't stretch */
+  scroll-snap-align:center;
+}
+
+.agent-thumbs::-webkit-scrollbar{ height:6px; }
+.agent-thumbs::-webkit-scrollbar-thumb{
+  background:#cfd3de; border-radius:3px;
 }
 .agent-thumb img{ width:40px; height:40px; object-fit:cover; }
 .agent-thumb.is-active{ border-color:#cfd9ff; box-shadow:0 0 0 2px #eaf0ff inset; }
