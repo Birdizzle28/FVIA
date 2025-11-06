@@ -199,7 +199,7 @@
   <!-- Team loader: uses window.supabase if present, otherwise creates a client (no visual change) -->
 <script type="module">
   (async () => {
-    // --- Supabase bootstrap (reuses window.supabase if already present) ---
+    // --- Supabase bootstrap ---
     const URL  = window.FVG_SUPABASE_URL  || "https://ddlbgkolnayqrxslzsxn.supabase.co";
     const KEY  = window.FVG_SUPABASE_ANON || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho";
     let supabase = window.supabase;
@@ -243,7 +243,6 @@
       const track  = mount.querySelector(".agent-track");
       const thumbs = mount.querySelector(".agent-thumbs");
 
-      // Slides + thumbs
       agents.forEach((a, i) => {
         const img = a.profile_picture_url || "Pics/placeholder-user.png";
         const name = a.full_name || "Team member";
@@ -268,39 +267,46 @@
         th.setAttribute("role", "tab");
         th.setAttribute("aria-label", `Go to ${name}`);
         th.innerHTML = `<img src="${img}" alt="">`;
-        th.addEventListener("click", () => go(i));
+        th.addEventListener("click", () => go(i, true));
         thumbs.appendChild(th);
       });
 
-      // --- Slider logic (arrows, drag/swipe, thumbs, resize) ---
+      // --- Slider logic (arrows, drag/swipe, thumbs, resize, autoplay) ---
       const prev = mount.querySelector(".agent-arrow.prev");
       const next = mount.querySelector(".agent-arrow.next");
-      let i = 0, w = 0, dragging = false, startX = 0, curX = 0, raf;
+      const vp   = mount.querySelector(".agent-viewport");
 
-      const slides = Array.from(track.children);
+      const slides    = Array.from(track.children);
       const thumbBtns = Array.from(thumbs.children);
 
-      function measure(){ w = mount.querySelector(".agent-viewport").clientWidth; }
-      function translate(x){ track.style.transform = `translateX(${x}px)`; }
+      let i = 0, w = 0, dragging = false, startX = 0, curX = 0;
+      let timer = null;
+      const AUTOPLAY_MS = 5000; // ← change speed if you want
 
-      function go(idx){
-        i = ((idx % slides.length) + slides.length) % slides.length;
-        translate(-i * w);
+      function measure(){ w = vp.clientWidth; }
+      function translate(x){ track.style.transform = `translateX(${x}px)`; }
+      function markActive(){
         thumbBtns.forEach((b,j)=> b.classList.toggle("is-active", j === i));
       }
 
-      function nextSlide(){ go(i + 1); }
-      function prevSlide(){ go(i - 1); }
+      function go(idx, userInitiated = false){
+        i = ((idx % slides.length) + slides.length) % slides.length;
+        translate(-i * w);
+        markActive();
+        if (userInitiated) restartAutoplay(); // keep it feeling “live”
+      }
 
-      prev.addEventListener("click", prevSlide);
-      next.addEventListener("click", nextSlide);
+      function nextSlide(user = false){ go(i + 1, user); }
+      function prevSlide(user = false){ go(i - 1, user); }
+
+      prev.addEventListener("click", () => prevSlide(true));
+      next.addEventListener("click", () => nextSlide(true));
 
       // Drag / swipe
-      const vp = mount.querySelector(".agent-viewport");
       function onDown(x){
         dragging = true; startX = curX = x;
         track.style.transition = "none";
-        cancelAnimationFrame(raf);
+        pauseAutoplay();
       }
       function onMove(x){
         if (!dragging) return;
@@ -312,9 +318,10 @@
         if (!dragging) return;
         const delta = curX - startX;
         track.style.transition = "";
-        if (Math.abs(delta) > w * 0.15) (delta < 0 ? nextSlide() : prevSlide());
+        if (Math.abs(delta) > w * 0.15) (delta < 0 ? nextSlide(true) : prevSlide(true));
         else go(i);
         dragging = false;
+        resumeAutoplaySoon();
       }
 
       vp.addEventListener("mousedown", e => onDown(e.clientX));
@@ -327,13 +334,41 @@
 
       // Keyboard (when focus is within slider)
       mount.addEventListener("keydown", (e) => {
-        if (e.key === "ArrowLeft")  { e.preventDefault(); prevSlide(); }
-        if (e.key === "ArrowRight") { e.preventDefault(); nextSlide(); }
+        if (e.key === "ArrowLeft")  { e.preventDefault(); prevSlide(true); }
+        if (e.key === "ArrowRight") { e.preventDefault(); nextSlide(true); }
+      });
+
+      // --- Autoplay + pause on hover/focus/visibility ---
+      function startAutoplay(){
+        stopAutoplay();
+        timer = setInterval(() => nextSlide(false), AUTOPLAY_MS);
+      }
+      function stopAutoplay(){
+        if (timer) { clearInterval(timer); timer = null; }
+      }
+      function pauseAutoplay(){ stopAutoplay(); }
+      function resumeAutoplay(){ startAutoplay(); }
+      function restartAutoplay(){ startAutoplay(); }
+      function resumeAutoplaySoon(){ setTimeout(startAutoplay, 600); }
+
+      // Pause when user hovers or focuses the slider
+      mount.addEventListener("pointerenter", pauseAutoplay);
+      mount.addEventListener("pointerleave", resumeAutoplay);
+      mount.addEventListener("focusin",      pauseAutoplay);
+      mount.addEventListener("focusout",     resumeAutoplay);
+
+      // Pause when tab is hidden; resume when visible
+      document.addEventListener("visibilitychange", () => {
+        if (document.hidden) pauseAutoplay();
+        else resumeAutoplay();
       });
 
       // Init + resize
       measure(); go(0);
       window.addEventListener("resize", () => { measure(); go(i); });
+
+      // Kick off autoplay
+      startAutoplay();
     } catch (e) {
       console.error(e);
       mount.innerHTML = "<p>Unable to load team members.</p>";
