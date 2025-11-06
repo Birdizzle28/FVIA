@@ -8,16 +8,25 @@
 /* Screen-reader utilities (no visual changes) */
 .sr-only {
   position: absolute !important;
-  width: 1px; height: 1px;
-  padding: 0; margin: -1px;
-  overflow: hidden; clip: rect(0 0 0 0);
-  white-space: nowrap; border: 0;
+  width: 1px; 
+  height: 1px;
+  padding: 0; 
+  margin: -1px;
+  overflow: hidden; 
+  clip: rect(0 0 0 0);
+  white-space: nowrap; 
+  border: 0;
 }
 .sr-only-focusable:focus {
   position: static !important;
-  width: auto; height: auto;
-  margin: 0; clip: auto; white-space: normal;
-  background: #000; color: #fff; padding: .5rem;
+  width: auto; 
+  height: auto;
+  margin: 0; 
+  clip: auto; 
+  white-space: normal;
+  background: #000; 
+  color: #fff; 
+  padding: .5rem;
   z-index: 1000;
 }
 
@@ -35,7 +44,7 @@
 }
 
 #about-main p {
-  font-size: 1.4vw;
+  font-size: 1.5vw;
   max-width: 70vw;
   margin: 1vw auto;
   text-align: center;
@@ -48,7 +57,11 @@
   margin: 1.5vw auto;
   max-width: 60rem;
 }
-.promise-list li { margin: .6rem 0; }
+.promise-list li { 
+  margin: .6rem 0; 
+  text-align: center;
+  font-size: 1.5vw;
+}
 
 /* CTA row – unobtrusive buttons */
 .cta-row {
