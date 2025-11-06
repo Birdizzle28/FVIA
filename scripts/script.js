@@ -128,82 +128,146 @@ window.addEventListener("load", () => {
   });
 });
 
-  document.addEventListener('DOMContentLoaded', async () => {
+  <script type="module">
+  (async () => {
+    // --- Supabase bootstrap (reuses window.supabase if already present) ---
+    const URL  = window.FVG_SUPABASE_URL  || "https://ddlbgkolnayqrxslzsxn.supabase.co";
+    const KEY  = window.FVG_SUPABASE_ANON || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho";
+    let supabase = window.supabase;
+    if (!supabase && URL && KEY) {
+      const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm");
+      supabase = createClient(URL, KEY, { auth: { persistSession: false }});
+      window.supabase = supabase;
+    }
 
-  if (window.innerWidth <= 768) {
-  const cards = document.querySelectorAll('.mfcont, .mfcont2, .mfcont3, .testcontainer');
-  let lastScrollTop = window.scrollY;
+    const mount = document.getElementById("agent-cards-container");
+    if (!mount) return;
+    mount.innerHTML = "Loading team…";
 
-  function checkHighlight() {
-    const scrollTop = window.scrollY;
-    const goingDown = scrollTop > lastScrollTop;
-    const screenCenter = window.innerHeight / 2;
+    try {
+      const { data: agents, error } = await supabase
+        .from("agents")
+        .select("full_name, bio, profile_picture_url")
+        .eq("show_on_about", true)
+        .eq("is_active", true)
+        .order("full_name", { ascending: true })
+        .limit(24);
 
-    let activeCard = null;
-
-    cards.forEach((card) => {
-      const rect = card.getBoundingClientRect();
-      const top = rect.top;
-      const bottom = rect.bottom;
-
-      if (goingDown) {
-        if (top <= screenCenter && bottom >= screenCenter) {
-          activeCard = card;
-        }
-      } else {
-        if (bottom >= screenCenter && top <= screenCenter) {
-          activeCard = card;
-        }
+      if (error) throw error;
+      if (!agents || agents.length === 0) {
+        mount.innerHTML = "<p>No team members to show yet.</p>";
+        return;
       }
-    });
 
-    cards.forEach((c) => c.classList.remove('active'));
-    if (activeCard) activeCard.classList.add('active');
+      // --- Build slider shell ---
+      mount.innerHTML = `
+        <section class="agent-slider" aria-roledescription="carousel" aria-label="Team carousel">
+          <button class="agent-arrow prev" aria-label="Previous">&#10094;</button>
+          <div class="agent-viewport">
+            <div class="agent-track" role="list"></div>
+          </div>
+          <button class="agent-arrow next" aria-label="Next">&#10095;</button>
+          <div class="agent-thumbs" role="tablist" aria-label="Team thumbnails"></div>
+        </section>
+      `;
 
-    lastScrollTop = scrollTop;
-  }
+      const track  = mount.querySelector(".agent-track");
+      const thumbs = mount.querySelector(".agent-thumbs");
 
-  // Trigger once on load to highlight the first card
-  window.addEventListener('load', () => {
-    if (cards.length > 0) cards[0].classList.add('active');
-  });
+      // Slides + thumbs
+      agents.forEach((a, i) => {
+        const img = a.profile_picture_url || "Pics/placeholder-user.png";
+        const name = a.full_name || "Team member";
+        const bio  = a.bio || "No bio provided.";
 
-  window.addEventListener('scroll', checkHighlight);
-}
-  const container = document.getElementById("agent-cards-container");
-  if (!container) {
-    return;
-  }
+        const slide = document.createElement("article");
+        slide.className = "agent-slide";
+        slide.setAttribute("role", "group");
+        slide.setAttribute("aria-roledescription", "slide");
+        slide.setAttribute("aria-label", `${i + 1} of ${agents.length}`);
+        slide.innerHTML = `
+          <img class="agent-photo" src="${img}" alt="${name}">
+          <div class="agent-copy">
+            <h3>${name}</h3>
+            <p class="agent-bio">${bio}</p>
+          </div>
+        `;
+        track.appendChild(slide);
 
-  container.innerHTML = "Loading team...";
+        const th = document.createElement("button");
+        th.className = "agent-thumb";
+        th.setAttribute("role", "tab");
+        th.setAttribute("aria-label", `Go to ${name}`);
+        th.innerHTML = `<img src="${img}" alt="">`;
+        th.addEventListener("click", () => go(i));
+        thumbs.appendChild(th);
+      });
 
-  const { data: agents, error } = await supabase
-    .from('agents')
-    .select('full_name, bio, profile_picture_url')
-    .eq('show_on_about', true)
-    .eq('is_active', true);
+      // --- Slider logic (arrows, drag/swipe, thumbs, resize) ---
+      const prev = mount.querySelector(".agent-arrow.prev");
+      const next = mount.querySelector(".agent-arrow.next");
+      let i = 0, w = 0, dragging = false, startX = 0, curX = 0, raf;
 
-  if (error || !agents) {
-    container.innerHTML = "<p>Unable to load team members.</p>";
-    console.error("Error loading agents:", error);
-    return;
-  }
+      const slides = Array.from(track.children);
+      const thumbBtns = Array.from(thumbs.children);
 
-  if (agents.length === 0) {
-    container.innerHTML = "<p>No team members to show yet.</p>";
-    return;
-  }
+      function measure(){ w = mount.querySelector(".agent-viewport").clientWidth; }
+      function translate(x){ track.style.transform = `translateX(${x}px)`; }
 
-  container.innerHTML = agents.map(agent => {
-    const img = agent.profile_picture_url || '/Pics/placeholder-user.png';
-    const name = agent.full_name || 'Team member';
-    const bio  = agent.bio || 'No bio provided.';
-    return `
-      <div class="agent-card">
-        <img src="${img}" alt="${name}" class="agent-photo" />
-        <h3>${name}</h3>
-        <p id="agent-card-bio">${bio}</p>
-      </div>
-    `;
-  }).join('');
-});
+      function go(idx){
+        i = ((idx % slides.length) + slides.length) % slides.length;
+        translate(-i * w);
+        thumbBtns.forEach((b,j)=> b.classList.toggle("is-active", j === i));
+      }
+
+      function nextSlide(){ go(i + 1); }
+      function prevSlide(){ go(i - 1); }
+
+      prev.addEventListener("click", prevSlide);
+      next.addEventListener("click", nextSlide);
+
+      // Drag / swipe
+      const vp = mount.querySelector(".agent-viewport");
+      function onDown(x){
+        dragging = true; startX = curX = x;
+        track.style.transition = "none";
+        cancelAnimationFrame(raf);
+      }
+      function onMove(x){
+        if (!dragging) return;
+        curX = x;
+        const delta = curX - startX;
+        translate(-i * w + delta);
+      }
+      function onUp(){
+        if (!dragging) return;
+        const delta = curX - startX;
+        track.style.transition = "";
+        if (Math.abs(delta) > w * 0.15) (delta < 0 ? nextSlide() : prevSlide());
+        else go(i);
+        dragging = false;
+      }
+
+      vp.addEventListener("mousedown", e => onDown(e.clientX));
+      window.addEventListener("mousemove", e => onMove(e.clientX));
+      window.addEventListener("mouseup", onUp);
+
+      vp.addEventListener("touchstart", e => onDown(e.touches[0].clientX), { passive: true });
+      vp.addEventListener("touchmove",  e => onMove(e.touches[0].clientX), { passive: true });
+      vp.addEventListener("touchend", onUp);
+
+      // Keyboard (when focus is within slider)
+      mount.addEventListener("keydown", (e) => {
+        if (e.key === "ArrowLeft")  { e.preventDefault(); prevSlide(); }
+        if (e.key === "ArrowRight") { e.preventDefault(); nextSlide(); }
+      });
+
+      // Init + resize
+      measure(); go(0);
+      window.addEventListener("resize", () => { measure(); go(i); });
+    } catch (e) {
+      console.error(e);
+      mount.innerHTML = "<p>Unable to load team members.</p>";
+    }
+  })();
+</script>
