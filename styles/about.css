@@ -33,8 +33,9 @@ body {
 }
 
 #about-main h1, #about-main h2 {
-  color: #545454;
   text-align: left;
+  color: #000;
+  margin: 0 0 10px 0;
 }
 
 #team-title {
@@ -130,13 +131,6 @@ body {
 #about-main section + section {
   border-top: 1px solid #dcd9e8; /* subtle divider between sections */
   margin-top: 28px;              /* space between sections (outside) */
-}
-
-/* ---- Headings: make titles black ---- */
-#about-main h1,
-#about-main h2 {
-  color: #000;                   /* override earlier #545454 */
-  margin: 0 0 10px 0;            /* tighten headline-to-text spacing */
 }
 
 /* Optional: a touch more breathing room for lists */
