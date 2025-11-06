@@ -45,7 +45,9 @@
   margin: .6rem 0;
   text-align: left;
 }
-
+#agent-card-bio {
+  text-align: center !important;
+}
 /* Promises list – visually consistent/simple */
 .promise-list {
   list-style: none;
