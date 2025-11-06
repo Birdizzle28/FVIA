@@ -3,11 +3,18 @@
 <head>
 	<meta charset="UTF-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 	<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="manifest" href="/site.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+
+  <!-- Canonical + SEO -->
+  <link rel="canonical" href="https://familyvaluesgroup.com/careers.html">
+  <meta name="description" content="Careers at Family Values Group (Tennessee). We’re family-owned and built on mentorship, fast support, and real community. Hiring paused right now; roles include Licensed Life Insurance Agent (1099) and Appointment Setter (W-2). Leads, CRM, and scripts provided.">
+
 	<title>Careers | Family Values Group</title>
+
 	<link rel="stylesheet" href="styles/general.css">
 	<link rel="stylesheet" href="styles/careers.css">
 	<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet">
@@ -15,74 +22,154 @@
 	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body id="indexbody">
+	<!-- HEADER (unchanged) -->
 	<header class="index-grid-header">
-			<a href="index.html"><img href="index.html" id="headerlogo" src="Pics/img6.png" alt=""></a>
-			<p><strong>Family Values Group</strong></p>
-			<button id="menu-toggle" aria-label="Toggle menu">
-		 		<i class="fas fa-bars"></i>
-		        </button>
-			<hr>
-			<nav class="header-flex-container">
-				<a href="about.html">About</a>
-				<a href="contact.html">Support</a>
-				<a href="index.html">Home</a>
-				<a href="careers.html" id="active-nav">Careers</a>
-				<a href="login.html">Login</a>
-			</nav>
-			<hr>
-		</header>
-		<div id="mobile-menu">
-		    <a href="about.html">About</a>
-		    <a href="contact.html">Support</a>
-		    <a href="index.html">Home</a>
-		    <a href="careers.html" id="active-nav">Careers</a>
-		    <a href="login.html">Login</a>
-		</div>
-    <main class="careers-container">
-    <section class="careers-intro">
-      <h2>Join Our Family</h2>
-      <p>
-        At Family Values Group, we're committed to helping families protect what matters most — with compassion, consistency, and heart. We're proud to be family-owned, and we treat our agents like family, too.
-      </p>
-      <p>
-        We’re currently hiring for two roles: <strong>Licensed Life Insurance Agents</strong> and <strong>Appointment Setters</strong>.
+		<a href="index.html"><img href="index.html" id="headerlogo" src="Pics/img6.png" alt=""></a>
+		<p><strong>Family Values Group</strong></p>
+		<button id="menu-toggle" aria-label="Toggle menu">
+	 		<i class="fas fa-bars"></i>
+	  </button>
+		<hr>
+		<nav class="header-flex-container" aria-label="Primary">
+			<a href="about.html">About</a>
+			<a href="contact.html">Support</a>
+			<a href="index.html">Home</a>
+			<a href="careers.html" id="active-nav" aria-current="page">Careers</a>
+			<a href="login.html">Login</a>
+		</nav>
+		<hr>
+	</header>
+	<div id="mobile-menu">
+		<a href="about.html">About</a>
+		<a href="contact.html">Support</a>
+		<a href="index.html">Home</a>
+		<a href="careers.html" id="active-nav" aria-current="page">Careers</a>
+		<a href="login.html">Login</a>
+	</div>
+
+  <!-- MAIN -->
+  <main class="careers-container" role="main">
+    <!-- Hiring paused notice -->
+    <section class="notice" role="status" aria-live="polite">
+      <h1 class="visually-hidden">Careers at Family Values Group</h1>
+      <p class="notice-title"><strong>We’re not hiring right now</strong></p>
+      <p class="notice-body">
+        Hiring is temporarily paused. You can still review our roles below to see if we’re a fit when hiring resumes.
+        All positions currently serve <strong>Tennessee</strong> only.
       </p>
     </section>
 
-    <section class="job-openings">
-      <h3>Open Roles</h3>
+    <section class="careers-intro" aria-labelledby="join-heading">
+      <h2 id="join-heading">Join Our Family (Tennessee)</h2>
+      <p>
+        We’re family-owned and built on <strong>mentorship</strong>, <strong>fast support</strong>, and a real <strong>community</strong>.
+        When hiring is open, we provide <strong>leads</strong>, our internal <strong>CRM</strong>, and proven <strong>scripts</strong> so you can focus on helping families.
+      </p>
+      <p class="sr-region">Service area: Tennessee.</p>
+    </section>
 
-      <div class="job-listing">
-        <h4>Licensed Life Insurance Agent</h4>
-        <p><strong>Location:</strong> Remote or Local</p>
-        <p><strong>Type:</strong> Commission-based</p>
+    <section class="job-openings" aria-labelledby="open-roles-heading">
+      <h3 id="open-roles-heading">Open Roles (Hiring Paused)</h3>
+
+      <div class="job-listing" aria-labelledby="agent-role">
+        <h4 id="agent-role">Licensed Life Insurance Agent</h4>
+        <p><strong>Location:</strong> Remote within Tennessee or local (Jackson, TN)</p>
+        <p><strong>Type:</strong> 1099 contractor</p>
         <p>
-          Looking for motivated, licensed agents who care about clients — not just closing deals. You’ll get mentorship, support, and the ability to work from anywhere. Perfect for self-starters who value flexibility and integrity.
+          When applications open, we’ll be looking for motivated agents who care about clients—not just closing deals.
+          You’ll get mentorship, support, and flexibility. (Leads, CRM, and scripts provided.)
         </p>
-        <button onclick="location.href='apply.html?role=agent'">Apply Now</button>
+
+        <!-- Disabled apply button for now -->
+        <button
+          type="button"
+          class="apply apply-disabled"
+          aria-disabled="true"
+          disabled
+          data-href="apply.html?role=agent"
+          title="Hiring paused—applications will open here later"
+        >
+          Apply Now (Paused)
+        </button>
       </div>
 
-      <div class="job-listing">
-        <h4>Appointment Setter</h4>
-        <p><strong>Location:</strong> Remote</p>
-        <p><strong>Type:</strong> Part-time or Full-time</p>
+      <div class="job-listing" aria-labelledby="setter-role">
+        <h4 id="setter-role">Appointment Setter</h4>
+        <p><strong>Location:</strong> Remote (Tennessee)</p>
+        <p><strong>Type:</strong> W-2</p>
         <p>
-          Help us connect with more families by scheduling appointments for our agents. No license required — just strong communication skills, a dependable schedule, and a warm personality.
+          Help us connect with more families by scheduling appointments for our agents.
+          No license required. Paid <strong>per appointment</strong>. Must be able to work at least <strong>2 days/week</strong>.
+          (Leads, CRM, and scripts provided.)
         </p>
-       <button onclick="location.href='apply.html?role=setter'">Apply Now</button>
+
+        <!-- Disabled apply button for now -->
+        <button
+          type="button"
+          class="apply apply-disabled"
+          aria-disabled="true"
+          disabled
+          data-href="apply.html?role=setter"
+          title="Hiring paused—applications will open here later"
+        >
+          Apply Now (Paused)
+        </button>
       </div>
     </section>
 
-    <section class="careers-cta">
-      <h3>Think You’re a Fit?</h3>
+    <section class="careers-cta" aria-labelledby="keep-in-touch">
+      <h3 id="keep-in-touch">Want to keep in touch?</h3>
       <p>
-        We’re always excited to meet kind, driven people. Send us your resume, tell us about yourself, and let’s talk.
+        While hiring is paused, you can email your resume so we have it when roles reopen.
       </p>
       <a class="apply-button" href="mailto:careers@familyvaluesinsurance.com">Send Your Resume</a>
     </section>
+
+    <!-- EEO / Inclusion -->
+    <section class="eeo" aria-labelledby="eeo-heading">
+      <h3 id="eeo-heading">Equal Opportunity</h3>
+      <p>
+        Family Values Group is an equal opportunity employer. We celebrate diversity and are committed to an inclusive,
+        accessible experience for every candidate. If you need a reasonable accommodation during the process,
+        contact <a href="mailto:careers@familyvaluesinsurance.com">careers@familyvaluesinsurance.com</a>.
+      </p>
+    </section>
+
+    <!-- Mini FAQ -->
+    <section class="faq" aria-labelledby="faq-heading">
+      <h3 id="faq-heading">Careers FAQ</h3>
+
+      <details>
+        <summary>Do I need prior insurance experience?</summary>
+        <p>No. When hiring is open, we focus on coachability and caring for families. We provide mentorship and scripts.</p>
+      </details>
+
+      <details>
+        <summary>Do I need to be in Tennessee?</summary>
+        <p>Yes, we currently serve Tennessee only.</p>
+      </details>
+
+      <details>
+        <summary>Do I need a license to be a Life Insurance Agent?</summary>
+        <p>
+          When roles reopen, licensing requirements will be listed in the job posting. We can provide exam prep resources.
+        </p>
+      </details>
+
+      <details>
+        <summary>What’s the schedule like?</summary>
+        <p>Remote and flexible, but you must be able to work at least 2 days per week (generally within 8am–8pm CT).</p>
+      </details>
+
+      <details>
+        <summary>How are roles compensated?</summary>
+        <p>Agents: 1099 contractor. Appointment Setters: W-2 and paid per appointment.</p>
+      </details>
+    </section>
   </main>
 
-<footer class="index-grid-footer">
+  <!-- FOOTER (unchanged) -->
+	<footer class="index-grid-footer">
 		<img id="footerlogo" src="Pics/img6.png">
 		<hr class="footerhr">
 		<div id="footercontact">
@@ -114,7 +201,6 @@
 
 		<!-- 
 		<button id="chat-bubble"><i class="fas fa-comment-dots"></i></button>
-		
 		<div id="chat-window">
 		  <div id="chat-header">Chat with us</div>
 		  <div id="chat-body">
@@ -126,5 +212,24 @@
 		  </div>
 		</div> -->
 	</footer>
+
+  <!-- Tiny helper: when you’re ready to hire, set HIRING_OPEN=true or just remove `disabled` on buttons -->
+  <script>
+    const HIRING_OPEN = false; // flip to true later
+    if (HIRING_OPEN) {
+      document.querySelectorAll('.apply.apply-disabled').forEach(btn => {
+        btn.removeAttribute('disabled');
+        btn.setAttribute('aria-disabled','false');
+        btn.classList.remove('apply-disabled');
+        btn.textContent = btn.textContent.replace(' (Paused)','');
+        const href = btn.dataset.href;
+        if (href) btn.addEventListener('click', () => { location.href = href; });
+        btn.title = 'Apply now';
+      });
+      // Optional: hide the paused notice
+      const n = document.querySelector('.notice');
+      if (n) n.style.display = 'none';
+    }
+  </script>
 </body>
 </html>
