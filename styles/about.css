@@ -35,6 +35,10 @@
   text-align: left;
 }
 
+#team-title {
+  text-align: center !important;
+}
+
 #about-main p {
   font-size: 2vw;
   max-width: 70vw;
