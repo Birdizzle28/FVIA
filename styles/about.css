@@ -192,3 +192,5 @@ body {
   .agent-slide{ grid-template-columns: 1fr; text-align:center; }
   .agent-photo{ margin:0 auto; }
 }
+.agent-slider:focus-within .agent-arrow,
+.agent-slider:hover .agent-arrow { filter: brightness(0.9); }
