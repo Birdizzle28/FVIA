@@ -76,53 +76,33 @@ document.addEventListener('DOMContentLoaded', async () => {
     const file = e.target.files?.[0];
     if (!file) return;
   
-    // Basic client-side guardrails
-    const MAX_MB = 10;
-    if (file.size > MAX_MB * 1024 * 1024) {
-      alert(`File too large. Max ${MAX_MB} MB.`);
-      return;
-    }
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase();
+    const path = `profile-pictures/${user.id}.${ext}`;
   
-    // Normalize extension/content type (iPhones sometimes give HEIC)
-    const origExt = (file.name.split('.').pop() || '').toLowerCase();
-    const safeExt = ['jpg','jpeg','png','webp','gif','heic','heif'].includes(origExt) ? origExt : 'jpg';
-    const contentType = file.type || (safeExt === 'png' ? 'image/png' : 'image/jpeg');
+    const { error: uploadError } = await supabase
+      .storage.from('profile-pictures')
+      .upload(path, file, { upsert: true });
   
-    // User-scoped unique path: avatars/<uid>/<timestamp>.<ext>
-    const path = `avatars/${user.id}/${Date.now()}.${safeExt}`;
-  
-    // Upload
-    const { data: upData, error: uploadError } = await supabase
-      .storage.from('avatars')
-      .upload(path, file, {
-        upsert: true,
-        cacheControl: '3600',
-        contentType
-      });
-  
-    if (uploadError) {
+    if (uploadError) { 
       console.error('Upload failed:', uploadError);
-      alert(`Upload failed: ${uploadError.message || 'Unknown error'}`);
+      alert('Upload failed!');
       return;
     }
   
-    // If bucket is PUBLIC:
-    const { data: publicUrl } = supabase.storage.from('avatars').getPublicUrl(path);
+    const { data: publicUrl } = supabase.storage.from('profile-pictures').getPublicUrl(path);
     const avatarUrl = publicUrl.publicUrl;
   
-    // Save URL to profile
     const { error: updateError } = await supabase
       .from('agents')
       .update({ profile_picture_url: avatarUrl })
       .eq('id', user.id);
   
-    if (updateError) {
+    if (updateError) { 
       console.error('Could not update profile picture URL:', updateError);
-      alert(`Could not update profile picture: ${updateError.message || 'Unknown error'}`);
+      alert('Could not update profile picture.');
       return;
     }
   
-    // Update UI
     document.getElementById('profile-photo').src = avatarUrl;
     const t = document.querySelector('.upload-text');
     if (t) t.style.display = 'none';
