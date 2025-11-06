@@ -7,7 +7,6 @@ html, #indexbody {
 }
 #indexbody {
 	font-family: Bellota Text;
-	background-color: #e9e7ed;
 	margin: 0;
 	background-image: radial-gradient(#ed9ea5, #7fabbf);
 	z-index: -5;
