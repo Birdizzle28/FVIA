@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+  <link rel="manifest" href="/site.webmanifest" />
+
+  <link rel="canonical" href="https://familyvaluesgroup.com/apply.html" />
+  <meta name="description" content="Apply for roles at Family Values Group (Tennessee). Choose Licensed Life Insurance Agent (1099) or Appointment Setter (W-2). Hiring may be paused—check status on page. Text-first application." />
+
+  <title>Apply | Family Values Group</title>
+
+  <link rel="stylesheet" href="styles/general.css" />
+  <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <style>
+    /* Scoped, gentle form spacing — won’t alter your existing cards/layout */
+    .apply-wrap { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
+    .apply-header { margin-bottom: 1rem; }
+    .apply-note { background:#f4f4f7; border:1px solid #e0e0e6; padding: .75rem 1rem; margin-bottom: 1rem; }
+    .apply-form fieldset { border: 1px solid #e8e8ee; padding: 1rem; margin: 0 0 1rem 0; }
+    .apply-form .row { display: grid; gap: 12px; grid-template-columns: 1fr 1fr; }
+    .apply-form .row-1 { display:block; }
+    .apply-form label { display:block; font-weight:600; margin:.25rem 0; }
+    .apply-form input[type="text"],
+    .apply-form input[type="tel"],
+    .apply-form input[type="email"],
+    .apply-form select,
+    .apply-form textarea {
+      width: 100%; padding:.6rem .7rem; border:1px solid #ccc; border-radius:0; font: inherit;
+    }
+    .apply-actions { display:flex; gap:.75rem; align-items:center; margin-top: .5rem; }
+    .btn-primary { background:#0077cc; color:#fff; border:none; padding:.65rem 1.1rem; cursor:pointer; border-radius:0; }
+    .btn-primary[disabled] { background:#bdbdbd; cursor:not-allowed; }
+    .muted { color:#555; font-size:.95rem; }
+    .sr-only { position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap;border:0;padding:0;margin:-1px; }
+    @media (max-width: 720px) { .apply-form .row { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body id="indexbody">
+  <!-- HEADER (unchanged layout) -->
+  <header class="index-grid-header">
+    <a href="index.html"><img href="index.html" id="headerlogo" src="Pics/img6.png" alt=""></a>
+    <p><strong>Family Values Group</strong></p>
+    <button id="menu-toggle" aria-label="Toggle menu">
+      <i class="fas fa-bars"></i>
+    </button>
+    <hr>
+    <nav class="header-flex-container" aria-label="Primary">
+      <a href="about.html">About</a>
+      <a href="contact.html">Support</a>
+      <a href="index.html">Home</a>
+      <a href="careers.html" id="active-nav">Careers</a>
+      <a href="login.html">Login</a>
+    </nav>
+    <hr>
+  </header>
+  <div id="mobile-menu">
+    <a href="about.html">About</a>
+    <a href="contact.html">Support</a>
+    <a href="index.html">Home</a>
+    <a href="careers.html" id="active-nav" aria-current="page">Careers</a>
+    <a href="login.html">Login</a>
+  </div>
+
+  <main class="apply-wrap" role="main">
+    <div class="apply-header">
+      <h1 id="apply-title">Apply</h1>
+      <p id="apply-subtitle" class="muted"></p>
+    </div>
+
+    <!-- Hiring status -->
+    <div id="apply-status" class="apply-note" role="status" aria-live="polite"></div>
+
+    <!-- If role missing/invalid -->
+    <div id="role-picker" class="apply-note" hidden>
+      <p><strong>Select a role to continue:</strong></p>
+      <div class="apply-actions">
+        <a class="btn-primary" href="apply.html?role=agent">Licensed Life Insurance Agent</a>
+        <a class="btn-primary" href="apply.html?role=setter">Appointment Setter</a>
+      </div>
+      <p class="muted">We currently serve Tennessee only.</p>
+    </div>
+
+    <!-- FORM -->
+    <form id="apply-form" class="apply-form" novalidate hidden>
+      <fieldset aria-labelledby="fs-basic">
+        <legend id="fs-basic">Basic Info</legend>
+        <div class="row">
+          <div>
+            <label for="first_name">First Name</label>
+            <input id="first_name" name="first_name" type="text" autocomplete="given-name" required />
+          </div>
+          <div>
+            <label for="last_name">Last Name</label>
+            <input id="last_name" name="last_name" type="text" autocomplete="family-name" required />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="email">Email</label>
+            <input id="email" name="email" type="email" autocomplete="email" inputmode="email" required />
+          </div>
+          <div>
+            <label for="phone">Phone</label>
+            <input id="phone" name="phone" type="tel" inputmode="tel" placeholder="(###) ###-####" required />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label for="city">City</label>
+            <input id="city" name="city" type="text" autocomplete="address-level2" required />
+          </div>
+          <div>
+            <label for="state">State</label>
+            <select id="state" name="state" required>
+              <option value="" selected disabled>Select</option>
+              <option value="TN">Tennessee (TN)</option>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+
+      <!-- Role-specific -->
+      <fieldset aria-labelledby="fs-role">
+        <legend id="fs-role">Role Details</legend>
+
+        <!-- Agent-only block -->
+        <div id="agent-fields" class="row-1" hidden>
+          <p class="muted"><strong>Type:</strong> 1099 contractor • <strong>Territory:</strong> Tennessee • Leads, CRM & scripts provided.</p>
+          <div class="row">
+            <div>
+              <label for="licensed">Do you currently hold a TN life license?</label>
+              <select id="licensed" name="licensed" required>
+                <option value="" selected disabled>Select</option>
+                <option>Yes</option>
+                <option>No</option>
+              </select>
+            </div>
+            <div>
+              <label for="exam_prep">If not licensed, do you want exam prep resources?</label>
+              <select id="exam_prep" name="exam_prep" required>
+                <option value="" selected disabled>Select</option>
+                <option>Yes</option>
+                <option>No</option>
+              </select>
+            </div>
+          </div>
+          <label for="experience_agent">Briefly share your experience or why you’re a fit</label>
+          <textarea id="experience_agent" name="experience_agent" rows="4" placeholder="Text-only — no file upload needed."></textarea>
+        </div>
+
+        <!-- Setter-only block -->
+        <div id="setter-fields" class="row-1" hidden>
+          <p class="muted"><strong>Type:</strong> W-2 • <strong>Comp:</strong> Per appointment • <strong>Schedule:</strong> Must be able to work at least 2 days/week.</p>
+          <div class="row">
+            <div>
+              <label for="days">How many days/week can you work?</label>
+              <select id="days" name="days" required>
+                <option value="" selected disabled>Select</option>
+                <option>2</option>
+                <option>3</option>
+                <option>4</option>
+                <option>5+</option>
+              </select>
+            </div>
+            <div>
+              <label for="availability">Your typical availability window</label>
+              <select id="availability" name="availability" required>
+                <option value="" selected disabled>Select</option>
+                <option>8am–12pm</option>
+                <option>12pm–4pm</option>
+                <option>4pm–8pm</option>
+                <option>Varies</option>
+              </select>
+            </div>
+          </div>
+          <label for="experience_setter">Tell us about your communication or scheduling experience</label>
+          <textarea id="experience_setter" name="experience_setter" rows="4" placeholder="Text-only — no file upload needed."></textarea>
+        </div>
+      </fieldset>
+
+      <fieldset aria-labelledby="fs-consent">
+        <legend id="fs-consent">Consent</legend>
+        <label>
+          <input id="consent" name="consent" type="checkbox" required />
+          I agree to be contacted by Family Values Group about this application (email, phone, or text).
+        </label>
+      </fieldset>
+
+      <div class="apply-actions">
+        <button id="submitBtn" type="submit" class="btn-primary">Submit Application</button>
+        <span id="helper" class="muted"></span>
+      </div>
+
+      <div id="form-msg" class="sr-only" aria-live="assertive"></div>
+    </form>
+  </main>
+
+  <!-- FOOTER (unchanged layout) -->
+  <footer class="index-grid-footer">
+    <img id="footerlogo" src="Pics/img6.png">
+    <hr class="footerhr">
+    <div id="footercontact">
+      <a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
+        <span class="fa fa-envelope"></span>
+        <span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+      </a>
+      <p> | </p>
+      <a class="contactcontainer" href="tel:+16292437980">
+        <span class="fa fa-phone"></span>
+        <span class="contactcontcontacts">+1-629-243-7980</span>
+      </a>
+    </div>
+    <hr class="footerhr">
+    <div id="footersocial">
+      <a class="fab fa-facebook-f" href="https://www.facebook.com/familyvaluesgroup"></a>
+      <a class="fab fa-linkedin-in" href="https://www.linkedin.com/in/demisi-johnson-026227391?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"></a>
+      <a class="fab fa-instagram" href="https://www.instagram.com/family.values.group?igsh=OHl3dGdnd3RwMTV0&utm_source=qr"></a>
+      <a class="fab fa-youtube" href="https://youtube.com/@familyvaluesgroup?si=mauqWp5nxyczgCJd"></a>
+      <a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
+    </div>
+    <div id="footerlinks">
+      <!--<a href="faqs.html">FAQs</a>-->
+      <a href="terms.html">Terms</a>
+      <a href="accessibility.html">Accessibility</a>
+      <a href="privacy.html">Privacy</a>
+    </div>
+    <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+  </footer>
+
+  <script>
+    // ——— hiring gate ———
+    const HIRING_OPEN = false; // flip to true when you’re ready
+
+    // ——— role routing ———
+    const params = new URLSearchParams(location.search);
+    const role = (params.get('role') || '').toLowerCase(); // 'agent' | 'setter'
+    const title = document.getElementById('apply-title');
+    const subtitle = document.getElementById('apply-subtitle');
+    const statusBox = document.getElementById('apply-status');
+    const rolePicker = document.getElementById('role-picker');
+    const form = document.getElementById('apply-form');
+
+    const agentFields  = document.getElementById('agent-fields');
+    const setterFields = document.getElementById('setter-fields');
+    const submitBtn    = document.getElementById('submitBtn');
+    const helper       = document.getElementById('helper');
+    const msg          = document.getElementById('form-msg');
+
+    function enforceTN() {
+      // State is a select with only TN; message for clarity
+      subtitle.textContent = 'We currently hire in Tennessee only.';
+    }
+
+    function configureForRole(r) {
+      if (r === 'agent') {
+        title.textContent = 'Apply — Licensed Life Insurance Agent';
+        agentFields.hidden = false;
+        setterFields.hidden = true;
+      } else if (r === 'setter') {
+        title.textContent = 'Apply — Appointment Setter';
+        agentFields.hidden = true;
+        setterFields.hidden = false;
+      }
+    }
+
+    function hiringStatus() {
+      if (HIRING_OPEN) {
+        statusBox.textContent = 'Hiring is currently open. Submit your application below.';
+      } else {
+        statusBox.innerHTML = '<strong>Hiring is paused.</strong> You can still preview the form, but submissions are disabled.';
+        submitBtn.setAttribute('disabled','disabled');
+        submitBtn.setAttribute('aria-disabled','true');
+        helper.textContent = 'Check back soon or email your resume to careers@familyvaluesinsurance.com';
+      }
+    }
+
+    function maskPhone(el) {
+      el.addEventListener('input', () => {
+        const d = el.value.replace(/\D/g,'').slice(0,10);
+        let out = '';
+        if (d.length > 0) out = '(' + d.slice(0,3);
+        if (d.length >= 4) out += ') ' + d.slice(3,6);
+        if (d.length >= 7) out += '-' + d.slice(6);
+        el.value = out;
+      });
+    }
+
+    // Init
+    (function init(){
+      enforceTN();
+      if (!['agent','setter'].includes(role)) {
+        rolePicker.hidden = false;
+        form.hidden = true;
+        return;
+      }
+      configureForRole(role);
+      form.hidden = false;
+      hiringStatus();
+      maskPhone(document.getElementById('phone'));
+      document.getElementById('first_name').focus();
+    })();
+
+    // Basic validate
+    function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v || ''); }
+
+    // Submit → mailto (text-first, no backend required)
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      if (!HIRING_OPEN) {
+        msg.classList.remove('sr-only'); msg.textContent = 'Hiring is paused — submission disabled.';
+        return;
+      }
+      const data = new FormData(form);
+      // build role-specific body
+      let lines = [
+        `Role: ${role}`,
+        `Name: ${data.get('first_name')} ${data.get('last_name')}`,
+        `Email: ${data.get('email')}`,
+        `Phone: ${data.get('phone')}`,
+        `City: ${data.get('city')}`,
+        `State: ${data.get('state')}`,
+        `Consent: ${document.getElementById('consent').checked ? 'Yes' : 'No'}`
+      ];
+
+      if (role === 'agent') {
+        lines.push(
+          `Licensed (TN life): ${data.get('licensed') || ''}`,
+          `Exam prep resources: ${data.get('exam_prep') || ''}`,
+          `About me: ${data.get('experience_agent') || ''}`
+        );
+      } else {
+        lines.push(
+          `Days/week: ${data.get('days') || ''}`,
+          `Availability: ${data.get('availability') || ''}`,
+          `About me: ${data.get('experience_setter') || ''}`
+        );
+      }
+
+      // Quick client-side checks
+      if (!data.get('first_name') || !data.get('last_name')) { alert('Please enter your name.'); return; }
+      if (!validEmail(data.get('email'))) { alert('Please enter a valid email.'); return; }
+      if (!data.get('phone')) { alert('Please enter your phone.'); return; }
+      if (data.get('state') !== 'TN') { alert('We currently hire in Tennessee only.'); return; }
+      if (!document.getElementById('consent').checked) { alert('Please agree to be contacted.'); return; }
+
+      const body = encodeURIComponent(lines.join('\n'));
+      const subject = encodeURIComponent(`Application — ${role === 'agent' ? 'Life Agent' : 'Appointment Setter'}`);
+      // You can change the recipient if you want all hiring emails to go elsewhere
+      location.href = `mailto:careers@familyvaluesinsurance.com?subject=${subject}&body=${body}`;
+    });
+  </script>
+</body>
+</html>
