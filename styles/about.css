@@ -1,3 +1,6 @@
+body {
+  background: linear-gradient(#ed9ea5, #7fabbf);
+}
 .sr-only {
   position: absolute !important;
   width: 1px; 
