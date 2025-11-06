@@ -32,14 +32,14 @@
 
 #about-main h1, #about-main h2 {
   color: #545454;
-  text-align: center;
+  text-align: left;
 }
 
 #about-main p {
-  font-size: 1.5vw;
+  font-size: 2vw;
   max-width: 70vw;
   margin: 1vw auto;
-  text-align: center;
+  text-align: left;
 }
 
 /* Promises list – visually consistent/simple */
@@ -51,40 +51,65 @@
 }
 .promise-list li { 
   margin: .6rem 0; 
-  text-align: center;
-  font-size: 1.5vw;
+  text-align: left;
+  font-size: 2vw;
 }
 
 /* CTA row – unobtrusive buttons */
 .cta-row {
-  display: flex; gap: 1rem; justify-content: center; margin: 1.5rem 0;
+  display: flex; 
+  gap: 1rem; 
+  justify-content: center; 
+  margin: 1.5rem 0;
 }
 .btn-primary, .btn-secondary {
-  display: inline-block; text-decoration: none; font-weight: 700;
-  padding: .6rem 1rem; border: 1px solid #545454;
+  display: inline-block; 
+  text-decoration: none; 
+  font-weight: 700;
+  padding: .6rem 1rem; 
+  border: 1px solid #545454;
 }
-.btn-primary { background: #000; color: #e9e7ed; }
-.btn-secondary { background: #fff; color: #000; }
+.btn-primary { 
+  background: #000; 
+  color: #e9e7ed; 
+}
+.btn-secondary { 
+  background: #fff; 
+  color: #000; 
+}
 
 /* Hours line */
-.hours { font-size: 1.1rem; }
+.hours {
+  font-size: 2vw; 
+}
 
 /* Team cards (keep your existing styles and enhance slightly) */
 #agent-cards-container {
-  display: flex; flex-wrap: wrap; justify-content: center;
-  gap: 20px; margin-top: 20px;
+  display: flex; 
+  flex-wrap: wrap; 
+  justify-content: center;
+  gap: 20px; 
+  margin-top: 20px;
 }
 .agent-card {
-  width: 260px; padding: 15px; background-color: white;
-  border-radius: 0px; text-align: center;
+  width: 260px; 
+  padding: 15px; 
+  background-color: white;
+  border-radius: 0px; 
+  text-align: left;
   box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 .agent-photo {
-  width: 100px; height: 100px; border-radius: 50%;
-  object-fit: cover; margin-bottom: 10px;
+  width: 100px; 
+  height: 100px; 
+  border-radius: 50%;
+  object-fit: cover; 
+  margin-bottom: 10px;
 }
 
 /* Mobile tweaks */
 @media (max-width: 768px) {
-  #about-main p { font-size: 1rem; max-width: 90vw; }
+  #about-main p { 
+    font-size: 1.5vw; 
+    max-width: 90vw; }
 }
