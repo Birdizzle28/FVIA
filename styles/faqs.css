@@ -1,0 +1,143 @@
+/* Container + intro */
+.faqs-container {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1rem 4rem;
+  color: black;
+}
+.faqs-container h1 {
+  text-align: center;
+  margin-bottom: 0.5rem;
+}
+.faqs-intro {
+  text-align: center;
+  margin: 0 auto 1.5rem;
+  max-width: 60ch;
+}
+
+/* Search */
+.faq-search {
+  display: flex;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+.faq-search input[type="search"] {
+  width: min(720px, 100%);
+  border: 1px solid #dcd9e8;
+  border-radius: 6px;
+  padding: 0.75rem 0.9rem;
+  font-size: 1rem;
+  background: #fff;
+}
+.faq-count {
+  margin-left: 0.75rem;
+  display: flex;
+  align-items: center;
+  font-size: 0.95rem;
+  color: #5f5a84;
+}
+
+/* List + items */
+.faq-list {
+  list-style: none;
+  margin: 1rem 0 0;
+  padding: 0;
+}
+.faq-item {
+  background: #ffffff;
+  border: 1px solid #dcd9e8;
+  border-radius: 0; /* match brand's squared look */
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  margin: 0 0 0.8rem 0;
+  overflow: hidden;
+}
+
+/* Question button */
+.faq-button {
+  appearance: none;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  padding: 1rem 3rem 1rem 1rem;
+  font: inherit;
+  font-weight: 700;
+  line-height: 1.35;
+  cursor: pointer;
+  position: relative;
+}
+.faq-button:focus-visible {
+  outline: 3px solid #353468; /* strong visible focus */
+  outline-offset: 2px;
+}
+.faq-button::after {
+  content: "\f078"; /* Font Awesome chevron-down */
+  font: var(--fa-font-solid);
+  position: absolute;
+  right: 0.9rem;
+  top: 50%;
+  transform: translateY(-50%) rotate(0deg);
+  transition: transform .2s ease;
+}
+[aria-expanded="true"].faq-button::after {
+  transform: translateY(-50%) rotate(180deg);
+}
+
+/* Answer panel */
+.faq-panel {
+  display: none;
+  padding: 0 1rem 1rem 1rem;
+  position: relative;
+}
+.faq-panel[data-open="true"] {
+  display: block;
+}
+
+/* Curved arrow left of answer:
+   Drawn with an inline SVG placed inside .curve,
+   positioned to the left of the first line of the answer.
+*/
+.faq-panel .curve {
+  width: 56px;
+  height: 42px;
+  position: absolute;
+  left: -10px;
+  top: 0.6rem;
+  pointer-events: none;
+  background: none;
+}
+.faq-panel .curve::before {
+  /* Down then right curve using borders (fallback if SVG fails) */
+  content: "";
+  position: absolute;
+  left: 24px; top: 0;
+  width: 24px; height: 24px;
+  border-left: 2px solid #5f5a84;
+  border-bottom: 2px solid #5f5a84;
+  border-bottom-left-radius: 24px;
+}
+.faq-panel .curve::after {
+  content: "";
+  position: absolute;
+  left: 24px; top: 22px;
+  width: 26px; height: 2px;
+  background: #5f5a84;
+}
+
+/* Panel text */
+.faq-panel p, .faq-panel ul, .faq-panel ol {
+  margin: 0.25rem 0 0 0;
+  color: black;
+}
+
+/* Small utilities */
+.sr-only {
+  position:absolute; width:1px; height:1px; padding:0; margin:-1px;
+  overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0;
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .faq-button { padding-right: 2.5rem; }
+  .faq-panel .curve { left: -8px; }
+}
