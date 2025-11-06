@@ -218,7 +218,6 @@
         .from("agents")
         .select("full_name, bio, profile_picture_url")
         .eq("show_on_about", true)
-        .eq("is_active", true)
         .order("full_name", { ascending: true })
         .limit(24);
 
