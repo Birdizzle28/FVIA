@@ -295,9 +295,6 @@
         thumbBtns.forEach((b,j)=> b.classList.toggle("is-active", j === i));
         ensureThumbVisible(i);
       }
-      function markActive(){
-        thumbBtns.forEach((b,j)=> b.classList.toggle("is-active", j === i));
-      }
 
       function go(idx, userInitiated = false){
         i = ((idx % slides.length) + slides.length) % slides.length;
