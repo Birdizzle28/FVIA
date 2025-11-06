@@ -257,3 +257,23 @@ body {
   content: "";
   flex: 0 0 10px;
 }
+/* === Arrow fade behavior === */
+
+/* Default faint look */
+.agent-arrow {
+  opacity: 0.4;
+  transition: opacity 0.3s ease;
+}
+
+/* On hover/focus (desktop) */
+.agent-slider:hover .agent-arrow,
+.agent-arrow:focus {
+  opacity: 1;
+}
+
+/* Mobile fade-in when touched */
+@media (hover: none) and (pointer: coarse) {
+  .agent-slider.touched .agent-arrow {
+    opacity: 1;
+  }
+}
