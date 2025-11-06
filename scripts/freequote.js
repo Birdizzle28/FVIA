@@ -547,9 +547,9 @@ document.addEventListener('DOMContentLoaded', () => {
       const resBody  = document.getElementById('result-body');
       const resActions = document.getElementById('result-actions');
 
-      resTitle.textContent = 'Thanks! Your request was submitted.';
+      resTitle.textContent = 'Thanks! Your request was submitted. An agent will be in touch very soon!';
       resBody.innerHTML = insertedIds.map(
-        (r, i) => `Lead #${i+1}: <strong>${r.type}</strong> – <span style="cursor:pointer" title="Click to copy" data-id="${r.id}">${r.id}</span>`
+        (r, i) => `Request #${i+1}: <strong>${r.type}</strong> – <span style="cursor:pointer" title="Click to copy" data-id="${r.id}">${r.id}</span>`
       ).join('<br>');
 
       resActions.innerHTML = '';
