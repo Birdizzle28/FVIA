@@ -28,7 +28,6 @@ body {
 /* Page container (keep your existing look) */
 #about-page, #about-main {
   padding: 4vw;
-  background-color: #e9e7ed;
   color: black;
   font-family: sans-serif;
 }
