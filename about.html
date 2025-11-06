@@ -284,6 +284,17 @@
 
       function measure(){ w = vp.clientWidth; }
       function translate(x){ track.style.transform = `translateX(${x}px)`; }
+      function ensureThumbVisible(index){
+        const el = thumbBtns[index];
+        if (!el) return;
+        // Smoothly center the active thumb in view
+        el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+      }
+      
+      function markActive(){
+        thumbBtns.forEach((b,j)=> b.classList.toggle("is-active", j === i));
+        ensureThumbVisible(i);
+      }
       function markActive(){
         thumbBtns.forEach((b,j)=> b.classList.toggle("is-active", j === i));
       }
