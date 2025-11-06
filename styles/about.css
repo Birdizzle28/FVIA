@@ -38,7 +38,7 @@
 #about-main p {
   font-size: 2vw;
   max-width: 70vw;
-  margin: 1vw auto;
+  margin: .6rem 0;
   text-align: left;
 }
 
@@ -96,7 +96,7 @@
   padding: 15px; 
   background-color: white;
   border-radius: 0px; 
-  text-align: left;
+  text-align: center;
   box-shadow: 0 0 10px rgba(0,0,0,0.1);
 }
 .agent-photo {
