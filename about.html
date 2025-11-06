@@ -1,107 +1,249 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-	<meta charset="UTF-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1.0">
-	<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-    <link rel="manifest" href="/site.webmanifest">
-	<title>About Us | Family Values Group</title>
-	<link rel="stylesheet" href="styles/general.css">
-	<link rel="stylesheet" href="styles/about.css">
-	<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet">
-	<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <!-- Icons / PWA -->
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+  <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+  <link rel="manifest" href="/site.webmanifest">
+
+  <!-- Canonical -->
+  <link rel="canonical" href="https://familyvaluesgroup.com/about.html">
+
+  <title>About Us | Family Values Group — Tennessee Insurance Agency</title>
+  <meta name="description" content="Family Values Group is a family-owned Tennessee insurance agency from Jackson, TN. Founded by Chancellor and Demisi Johnson, we serve families across Tennessee with life, home, auto, business, legal protection, and identity protection—open 8am–8pm daily.">
+  <meta name="keywords" content="Tennessee insurance agency, Jackson TN insurance, life insurance Tennessee, home insurance Tennessee, auto insurance Tennessee, business insurance Tennessee, legal protection plan TN, identity theft protection Tennessee, Family Values Group">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="About Family Values Group — Tennessee Insurance Agency">
+  <meta property="og:description" content="Born and raised in Jackson, TN. We’re a family-owned agency serving all of Tennessee with care you can feel.">
+  <meta property="og:url" content="https://familyvaluesgroup.com/about.html">
+  <meta property="og:type" content="website">
+  <meta property="og:image" content="https://familyvaluesgroup.com/Pics/img6.png">
+
+  <!-- CSS (unchanged includes) -->
+  <link rel="stylesheet" href="styles/general.css">
+  <link rel="stylesheet" href="styles/about.css">
+  <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body id="indexbody">
-	<header class="index-grid-header">
-			<a href="index.html"><img href="index.html" id="headerlogo" src="Pics/img6.png" alt=""></a>
-			<p><strong>Family Values Group</strong></p>
-			<button id="menu-toggle" aria-label="Toggle menu">
-		 		<i class="fas fa-bars"></i>
-		        </button>
-			<hr>
-			<nav class="header-flex-container">
-				<a href="about.html" id="active-nav">About</a>
-				<a href="contact.html">Support</a>
-				<a href="index.html">Home</a>
-				<a href="careers.html">Careers</a>
-				<a href="login.html">Login</a>
-			</nav>
-			<hr>
-		</header>
-		<div id="mobile-menu">
-		    <a href="about.html" id="active-nav">About</a>
-		    <a href="contact.html">Support</a>
-		    <a href="index.html">Home</a>
-		    <a href="careers.html">Careers</a>
-		    <a href="login.html">Login</a>
-		</div>
-	<main id="about-page">
-		<section id="about-intro">
-			<h1>About Family Values Group</h1>
-			<p>Founded in 2021, Family Values Group is a family-owned business rooted in compassion and dedication. What truly sets us apart is that we’re not just about policies—we’re about people.</p>
-		</section>
+  <!-- Skip link (no visual change; styled as sr-only in CSS) -->
+  <a href="#about-main" class="sr-only sr-only-focusable">Skip to main content</a>
 
-		<section id="about-values">
-			<h2>Our Story</h2>
-			<p>We were built on the belief that everyone deserves peace of mind, no matter their situation. One of our founders, a blind agent, continues to serve clients with incredible care and expertise. That kind of resilience is woven into the fabric of who we are.</p>
-		</section>
+  <!-- ======== DO NOT TOUCH (Header as-is) ======== -->
+  <header class="index-grid-header">
+    <a href="index.html"><img href="index.html" id="headerlogo" src="Pics/img6.png" alt=""></a>
+    <p><strong>Family Values Group</strong></p>
+    <button id="menu-toggle" aria-label="Toggle menu">
+      <i class="fas fa-bars"></i>
+    </button>
+    <hr>
+    <nav class="header-flex-container" aria-label="Primary">
+      <a href="about.html" id="active-nav">About</a>
+      <a href="contact.html">Support</a>
+      <a href="index.html">Home</a>
+      <a href="careers.html">Careers</a>
+      <a href="login.html">Login</a>
+    </nav>
+    <hr>
+  </header>
+  <div id="mobile-menu" aria-label="Mobile menu">
+    <a href="about.html" id="active-nav">About</a>
+    <a href="contact.html">Support</a>
+    <a href="index.html">Home</a>
+    <a href="careers.html">Careers</a>
+    <a href="login.html">Login</a>
+  </div>
 
-		<section id="about-care">
-			<h2>We Actually Care</h2>
-			<p>Unlike many other agencies, we don’t vanish after a policy is sold. We check in, we answer questions, and we’re there when it matters most. When you choose us, you’re choosing family.</p>
-		</section>
-		<section id="about-team">
-		  <h2>Meet Our Team</h2>
-		  <div id="agent-cards-container"></div>
-		</section>
-	</main>
+  <!-- ======== Main ======== -->
+  <main id="about-main" role="main" aria-labelledby="page-title">
+    <section id="about-intro" aria-labelledby="page-title">
+      <h1 id="page-title">About Family Values Group</h1>
 
-	<footer class="index-grid-footer">
-		<img id="footerlogo" src="Pics/img6.png">
-		<hr class="footerhr">
-		<div id="footercontact">
-			<a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
-				<span class="fa fa-envelope"></span>
-				<span class="contactcontcontacts">info@familyvaluesgroup.com</span>
-			</a>
-			<p> | </p>
-			<a class="contactcontainer" href="tel:+16292437980">
-				<span class="fa fa-phone"></span>
-				<span class="contactcontcontacts">+1-629-243-7980</span>
-			</a>
-		</div>
-		<hr class="footerhr">
-		<div id="footersocial">
-			<a class="fab fa-facebook-f" href="https://www.facebook.com/familyvaluesgroup"></a>
-			<a class="fab fa-linkedin-in" href="https://www.linkedin.com/in/demisi-johnson-026227391?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"></a>
-			<a class="fab fa-instagram" href="https://www.instagram.com/family.values.group?igsh=OHl3dGdnd3RwMTV0&utm_source=qr"></a>
-			<a class="fab fa-youtube" href="https://youtube.com/@familyvaluesgroup?si=mauqWp5nxyczgCJd"></a>
-			<a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
-		</div>
-		<div id="footerlinks">
-			<!--<a href="faqs.html">FAQs</a>-->
-			<a href="terms.html">Terms</a>
-			<a href="accessibility.html">Accessibility</a>
-			<a href="privacy.html">Privacy</a>
-		</div>
-		<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
-		<!--
-	<button id="chat-bubble"><i class="fas fa-comment-dots"></i></button>
-	
-	<div id="chat-window">
-	  <div id="chat-header">Chat with us</div>
-	  <div id="chat-body">
-	    <div class="chat-bubble bot"><strong>Kuma:</strong> Hello! How can I help you today?</div>
-	  </div>
-	  <div id="chat-input">
-	    <input type="text" placeholder="Type a message..." />
-	    <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
-	  </div>
-	</div> -->
-	</footer>
-	<script type="module" src="scripts/script.js"></script>
-	<script type="module" src="scripts/general.js"></script>
+      <!-- Screen-reader intro: concise plain-language summary -->
+      <p class="sr-only">
+        We are a family-owned Tennessee insurance agency based in Jackson, founded in 2021 by Chancellor Johnson and his mom, Demisi Johnson.
+        We help families across Tennessee with life, home, auto, business, legal protection, and identity protection. Open daily from 8am to 8pm.
+      </p>
+
+      <p>
+        Founded in 2021 by <strong>Chancellor Johnson</strong> and <strong>Demisi Johnson</strong>, Family Values Group is a family-owned Tennessee agency rooted in compassion, service, and perseverance.
+        Born and raised in <strong>Jackson, Tennessee</strong>, we’re committed to protecting families across our state with respect and follow-through.
+      </p>
+    </section>
+
+    <section id="about-story" aria-labelledby="story-title">
+      <h2 id="story-title">Our Story</h2>
+      <p>
+        We began with <strong>life insurance</strong> in 2021, where both of us quickly rose to the top of our respective agencies for the number of families we helped.
+        Demisi’s gift has always been <strong>building relationships</strong>, while Chancellor’s passion is <strong>learning and teaching</strong>.
+      </p>
+      <p>
+        In 2022, we saw two big gaps: how hard it is for new agents to start, and how hard it is for families to find agents who truly care. We set out to solve both.
+        In 2023, Demisi lost her vision. It was a turning point—but we persisted together, and by 2025 we’re proud of the impact we’ve made across Tennessee.
+      </p>
+      <p>
+        Along the way, we’ve <strong>received awards</strong> for the families we’ve served and have <strong>spoken at churches and local events</strong> to educate and uplift our community.
+      </p>
+    </section>
+
+    <section id="about-difference" aria-labelledby="difference-title">
+      <h2 id="difference-title">What Makes Us Different</h2>
+      <ul class="promise-list" role="list">
+        <li><strong>People over policies:</strong> we explain options in plain English and check in after you’re covered.</li>
+        <li><strong>Proactive support:</strong> annual reviews, claims guidance, and real human follow-up.</li>
+        <li><strong>Local & reachable:</strong> based in Jackson and serving all of Tennessee, 8am–8pm daily.</li>
+        <li><strong>Growing the next generation:</strong> we mentor new agents to better serve families.</li>
+      </ul>
+      <div class="cta-row" role="group" aria-label="Get help">
+        <a href="freequote.html" class="btn-primary" aria-label="Get a free quote today">Get a free quote</a>
+        <a href="contact.html" class="btn-secondary" aria-label="Contact Support">Contact Support</a>
+      </div>
+    </section>
+
+    <section id="about-tn" aria-labelledby="tn-title">
+      <h2 id="tn-title">Proudly Serving Tennessee</h2>
+      <p>
+        Based in <strong>Jackson, TN</strong>, we help families and small businesses across the state—including
+        Nashville, Memphis, Knoxville, Chattanooga, Clarksville, Murfreesboro, Franklin, Johnson City, and beyond.
+      </p>
+      <p class="hours"><strong>Hours:</strong> Sunday–Saturday, <time datetime="08:00">8:00 AM</time>–<time datetime="20:00">8:00 PM</time> (CT)</p>
+    </section>
+
+    <section id="about-team" aria-labelledby="team-title">
+      <h2 id="team-title">Meet Our Team</h2>
+      <!-- Cards are populated from Supabase when available -->
+      <div id="agent-cards-container" aria-live="polite"></div>
+    </section>
+  </main>
+
+  <!-- ======== DO NOT TOUCH (Footer as-is) ======== -->
+  <footer class="index-grid-footer">
+    <img id="footerlogo" src="Pics/img6.png">
+    <hr class="footerhr">
+    <div id="footercontact">
+      <a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
+        <span class="fa fa-envelope"></span>
+        <span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+      </a>
+      <p> | </p>
+      <a class="contactcontainer" href="tel:+16292437980">
+        <span class="fa fa-phone"></span>
+        <span class="contactcontcontacts">+1-629-243-7980</span>
+      </a>
+    </div>
+    <hr class="footerhr">
+    <div id="footersocial">
+      <a class="fab fa-facebook-f" href="https://www.facebook.com/familyvaluesgroup"></a>
+      <a class="fab fa-linkedin-in" href="https://www.linkedin.com/in/demisi-johnson-026227391?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"></a>
+      <a class="fab fa-instagram" href="https://www.instagram.com/family.values.group?igsh=OHl3dGdnd3RwMTV0&utm_source=qr"></a>
+      <a class="fab fa-youtube" href="https://youtube.com/@familyvaluesgroup?si=mauqWp5nxyczgCJd"></a>
+      <a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
+    </div>
+    <div id="footerlinks">
+      <!--<a href="faqs.html">FAQs</a>-->
+      <a href="terms.html">Terms</a>
+      <a href="accessibility.html">Accessibility</a>
+      <a href="privacy.html">Privacy</a>
+    </div>
+    <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+    <!--
+    <button id="chat-bubble"><i class="fas fa-comment-dots"></i></button>
+    <div id="chat-window">
+      <div id="chat-header">Chat with us</div>
+      <div id="chat-body">
+        <div class="chat-bubble bot"><strong>Kuma:</strong> Hello! How can I help you today?</div>
+      </div>
+      <div id="chat-input">
+        <input type="text" placeholder="Type a message..." />
+        <button id="send-btn"><i class="fas fa-paper-plane"></i></button>
+      </div>
+    </div> -->
+  </footer>
+
+  <!-- Existing scripts (unchanged) -->
+  <script type="module" src="scripts/script.js"></script>
+  <script type="module" src="scripts/general.js"></script>
+
+  <!-- Structured data (Organization + LocalBusiness focus for TN) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": ["Organization","LocalBusiness"],
+    "name": "Family Values Group",
+    "alternateName": "Family Values Insurance Agency",
+    "url": "https://familyvaluesgroup.com",
+    "logo": "https://familyvaluesgroup.com/Pics/img6.png",
+    "areaServed": "TN",
+    "address": {
+      "@type": "PostalAddress",
+      "addressLocality": "Jackson",
+      "addressRegion": "TN",
+      "addressCountry": "US"
+    },
+    "openingHours": "Su-Sa 08:00-20:00",
+    "sameAs": [
+      "https://www.facebook.com/familyvaluesgroup",
+      "https://www.linkedin.com/company/familyvaluesgroup",
+      "https://www.instagram.com/family.values.group",
+      "https://youtube.com/@familyvaluesgroup"
+    ]
+  }
+  </script>
+
+  <!-- Team loader: uses window.supabase if present, otherwise creates a client (no visual change) -->
+  <script type="module">
+    const URL  = window.FVG_SUPABASE_URL  || "https://ddlbgkolnayqrxslzsxn.supabase.co";
+    const KEY  = window.FVG_SUPABASE_ANON || "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho";
+
+    let supabase = window.supabase;
+    if (!supabase && URL && KEY) {
+      const { createClient } = await import("https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm");
+      supabase = createClient(URL, KEY, { auth: { persistSession: false }});
+      window.supabase = supabase;
+    }
+
+    const container = document.getElementById("agent-cards-container");
+    if (!container) return;
+
+    container.innerHTML = "Loading team…";
+
+    try {
+      if (!supabase) throw new Error("Supabase unavailable");
+      const { data: agents, error } = await supabase
+        .from("agents")
+        .select("full_name, bio, profile_picture_url")
+        .eq("show_on_about", true)
+        .eq("is_active", true)
+        .limit(24);
+
+      if (error) throw error;
+      if (!agents || agents.length === 0) {
+        container.innerHTML = "<p>No team members to show yet.</p>";
+        return;
+      }
+
+      container.innerHTML = agents.map(a => {
+        const img = a.profile_picture_url || "Pics/placeholder-user.png";
+        const name = a.full_name || "Team member";
+        const bio  = a.bio || "No bio provided.";
+        return `
+          <article class="agent-card" role="group" aria-label="${name}">
+            <img src="${img}" alt="${name}" class="agent-photo" />
+            <h3>${name}</h3>
+            <p>${bio}</p>
+          </article>
+        `;
+      }).join("");
+    } catch (e) {
+      console.error(e);
+      container.innerHTML = "<p>Unable to load team members.</p>";
+    }
+  </script>
 </body>
 </html>
