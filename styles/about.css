@@ -121,3 +121,28 @@ body {
     font-size: 1.5vw; 
     max-width: 90vw; }
 }
+/* ---- Section spacing + dividers ---- */
+#about-main section {
+  margin: 0 auto;               /* center contained sections if you add max-widths later */
+  padding-block: 28px;          /* space inside each section (top & bottom) */
+}
+
+#about-main section + section {
+  border-top: 1px solid #dcd9e8; /* subtle divider between sections */
+  margin-top: 28px;              /* space between sections (outside) */
+}
+
+/* ---- Headings: make titles black ---- */
+#about-main h1,
+#about-main h2 {
+  color: #000;                   /* override earlier #545454 */
+  margin: 0 0 10px 0;            /* tighten headline-to-text spacing */
+}
+
+/* Optional: a touch more breathing room for lists */
+#about-main .promise-list {
+  margin-block: 20px 8px;
+}
+#about-main .promise-list li {
+  margin: 8px 0;
+}
