@@ -202,7 +202,7 @@ window.addEventListener("load", () => {
       <div class="agent-card">
         <img src="${img}" alt="${name}" class="agent-photo" />
         <h3>${name}</h3>
-        <p>${bio}</p>
+        <p id="agent-card-bio">${bio}</p>
       </div>
     `;
   }).join('');
