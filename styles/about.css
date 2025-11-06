@@ -237,3 +237,23 @@ body {
 
 .agent-arrow.prev { left: 15px; }
 .agent-arrow.next { right: 15px; }
+/* --- Center thumbnails --- */
+.agent-thumbs {
+  display: flex;
+  gap: 8px;
+  justify-content: center;    /* centers row contents */
+  align-items: center;
+  overflow-x: auto;
+  overflow-y: hidden;
+  flex-wrap: nowrap;
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+  padding: 10px;
+  border-top: 1px solid #eef0f6;
+  background: #fafbff;
+}
+.agent-thumbs::before,
+.agent-thumbs::after {
+  content: "";
+  flex: 0 0 10px;
+}
