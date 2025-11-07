@@ -549,4 +549,163 @@ document.addEventListener('DOMContentLoaded', () => {
     $ov.onclick = (e) => { if (e.target === $ov) close(); };
     document.onkeydown = (e) => { if (e.key === 'Escape') close(); };
   }
+  // ===== Saved Quotes Drawer =====
+  $('#open-saved')?.addEventListener('click', async () => {
+    await loadSavedQuotes();
+    $('#saved-drawer').setAttribute('aria-hidden','false');
+  });
+  $('#saved-close')?.addEventListener('click', () => {
+    $('#saved-drawer').setAttribute('aria-hidden','true');
+  });
+  
+  async function loadSavedQuotes(){
+    const list = $('#saved-list');
+    list.innerHTML = '<div class="sd-empty">Loading…</div>';
+  
+    // Require auth user (matches your RLS); if not logged in, show note
+    const { data: ures } = await supabase.auth.getUser();
+    const user_id = ures?.user?.id || null;
+    if (!user_id){
+      list.innerHTML = '<div class="sd-empty">Please sign in to view saved quotes.</div>';
+      return;
+    }
+  
+    const { data, error } = await supabase
+      .from('quotes')
+      .select('id, created_at, product_id, carrier_product_id, carrier_name, premium, answers_json, metadata')
+      .order('created_at', { ascending: false })
+      .limit(100);
+  
+    if (error) {
+      console.error('loadSavedQuotes error:', error);
+      list.innerHTML = '<div class="sd-empty">Could not load quotes.</div>';
+      return;
+    }
+  
+    if (!data || !data.length){
+      list.innerHTML = '<div class="sd-empty">No saved quotes yet.</div>';
+      return;
+    }
+  
+    list.innerHTML = '';
+    data.forEach(row => {
+      const div = document.createElement('div');
+      div.className = 'sd-item';
+  
+      const when = new Date(row.created_at).toLocaleString();
+      const line = row?.metadata?.line || '';
+      const title = `${row.carrier_name} • ${money(row.premium)}`;
+  
+      div.innerHTML = `
+        <div>
+          <h4>${title}</h4>
+          <div class="sd-meta">${line || '—'} • ${when}</div>
+        </div>
+        <div class="sd-actions">
+          <button class="btn open">Open</button>
+          <button class="btn del">Delete</button>
+        </div>
+      `;
+  
+      div.querySelector('.open').addEventListener('click', () => openSavedQuote(row));
+      div.querySelector('.del').addEventListener('click', () => deleteSavedQuote(row.id, div));
+  
+      list.appendChild(div);
+    });
+  }
+  async function openSavedQuote(row){
+    // If different product, navigate there first
+    if (row.product_id !== chosenProductId) {
+      // Try to detect line from metadata; fall back to keeping current line
+      const targetLine = row?.metadata?.line || chosenLine;
+      if (targetLine && targetLine !== chosenLine) {
+        chosenLine = targetLine;
+        $('#line-next').disabled = false;
+        $('#chosen-line').textContent = `${chosenLine}: Select a product`;
+        await loadProductsForLine(chosenLine);
+        slide('product');
+      }
+  
+      // Select the right product tile and proceed
+      const tile = $(`#product-tiles .tile[data-product-id="${row.product_id}"]`);
+      if (!tile){
+        alert('This quote is for a product not currently available on this page.');
+        return;
+      }
+      $$('#product-tiles .tile').forEach(t => t.classList.remove('active'));
+      tile.classList.add('active');
+      chosenProductId = row.product_id;
+      $('#product-next').disabled = false;
+  
+      await hydrateProduct(chosenProductId);
+      slide('questions');
+    }
+  
+    // Repopulate answers
+    answers = {};
+    (row.answers_json || []).forEach(a => {
+      // find the question by its label or q_number
+      const q = questions.find(q => q.q_number === a.q_number) || questions.find(q => q.label === a.label);
+      if (q) answers[q.q_number] = a.value;
+    });
+  
+    // Push values into the inputs
+    $$('#q-body .q-row').forEach((wrap, idx) => {
+      const q = questions[idx];
+      const inputEl = wrap.querySelector('input, select');
+      if (!q || !inputEl) return;
+      const val = answers[q.q_number];
+      if (val !== undefined && val !== null) inputEl.value = String(val);
+    });
+  
+    updateChipColors();
+    recomputeQuotes();
+  
+    // Open overlay with the saved premium (recomputed may differ—so show both)
+    const recomputed = (() => {
+      const cModel = carriers.find(c => c.carrier_product_id === row.carrier_product_id);
+      if (!cModel) return null;
+      return evalEquation(cModel.equation, cModel.inputs, cModel.equation?.metadata);
+    })();
+  
+    const cModelForOverlay = carriers.find(c => c.carrier_product_id === row.carrier_product_id);
+    if (cModelForOverlay) {
+      // augment price line to display both (saved vs now) if they differ
+      const priceToShow = recomputed == null ? row.premium : recomputed;
+      openPlanOverlay(
+        cModelForOverlay,
+        priceToShow
+      );
+  
+      // append note about saved premium vs current
+      const node = document.createElement('div');
+      node.className = 'muted small';
+      node.style.marginTop = '6px';
+      if (recomputed != null && Number(recomputed) !== Number(row.premium)) {
+        node.textContent = `Saved premium was ${money(row.premium)}; current inputs compute ${money(recomputed)}.`;
+      } else {
+        node.textContent = `This matches your saved premium.`;
+      }
+      $('#po-price')?.appendChild(node);
+    }
+  
+    // close the drawer
+    $('#saved-drawer').setAttribute('aria-hidden','true');
+  }
+  async function deleteSavedQuote(id, node){
+    const { data: ures } = await supabase.auth.getUser();
+    const user_id = ures?.user?.id || null;
+    if (!user_id){
+      alert('Please sign in first.');
+      return;
+    }
+  
+    const { error } = await supabase.from('quotes').delete().eq('id', id);
+    if (error){
+      console.error('delete quote error:', error);
+      alert('Could not delete quote.');
+      return;
+    }
+    node.remove();
+  }
 });
