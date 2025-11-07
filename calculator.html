@@ -122,6 +122,38 @@
         <p class="muted center small">Quotes will appear here when a carrier is ready.</p>
       </div>
     </section>
+	<!-- Top bar helpers -->
+	<div id="calc-tools" class="calc-tools">
+	  <label class="toggle">
+	    <input type="checkbox" id="only-ready"> Show only ready carriers
+	  </label>
+	</div>
+	
+	<!-- Plan Detail Overlay -->
+	<div id="plan-overlay" class="plan-overlay" aria-hidden="true">
+	  <div class="panel">
+	    <button class="close" id="plan-close" aria-label="Close">&times;</button>
+	    <div class="head">
+	      <img id="po-logo" alt="" />
+	      <div>
+	        <h3 id="po-name"></h3>
+	        <a id="po-link" href="#" target="_blank" rel="noopener">Open carrier site</a>
+	      </div>
+	    </div>
+	    <div class="price" id="po-price"></div>
+	    <div class="grid">
+	      <div>
+	        <h4>Inputs</h4>
+	        <ul id="po-inputs"></ul>
+	      </div>
+	      <div>
+	        <h4>Pros / Cons</h4>
+	        <ul id="po-pros"></ul>
+	        <ul id="po-cons" class="cons"></ul>
+	      </div>
+	    </div>
+	  </div>
+	</div>
   </main>
 
   <!-- ===== Footer (copied for a perfect match) ===== -->
