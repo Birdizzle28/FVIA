@@ -457,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="c-price">${premium===null ? '—' : money(premium)}</div>
       `;
       card.addEventListener('click', () => {
-        openPlanOverlay(c.carrier, premium);
+        openPlanOverlay(c, premium);  // pass full model (c)
       });
       box.appendChild(card);
     });
@@ -482,10 +482,11 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===== Utility UI =====
   function clearSList(){ $('#s-list').innerHTML = '<p class="muted small">Carriers appear here after product selection.</p>'; }
   function clearCList(){ $('#c-list').innerHTML = '<p class="muted center small">Quotes will appear here when a carrier is ready.</p>'; }
-  function openPlanOverlay(carrier, premium){
+  async function openPlanOverlay(cModel, premium){
     const $ov = $('#plan-overlay');
     $ov.setAttribute('aria-hidden','false');
   
+    const carrier = cModel.carrier || {};
     // basics
     $('#po-name').textContent = carrier.carrier_name || '';
     $('#po-link').href = carrier.carrier_url || '#';
@@ -497,19 +498,50 @@ document.addEventListener('DOMContentLoaded', () => {
   
     // inputs shown
     const ulInputs = $('#po-inputs'); ulInputs.innerHTML = '';
-    questions.forEach(q => {
-      if (answers[q.q_number] === undefined || answers[q.q_number] === null || answers[q.q_number] === '') return;
+    const answeredList = questions
+      .filter(q => answers[q.q_number] !== undefined && answers[q.q_number] !== null && answers[q.q_number] !== '')
+      .map(q => ({ q_number: q.q_number, label: q.label, value: answers[q.q_number] }));
+    answeredList.forEach(row => {
       const li = document.createElement('li');
-      li.textContent = `${q.label}: ${answers[q.q_number]}`;
+      li.textContent = `${row.label}: ${row.value}`;
       ulInputs.appendChild(li);
     });
   
     // pros/cons
-    const c = carriers.find(k => k.carrier?.carrier_name === carrier.carrier_name);
     const prosUl = $('#po-pros'); prosUl.innerHTML = '';
     const consUl = $('#po-cons'); consUl.innerHTML = '';
-    (c?.pros || []).forEach(p => { const li=document.createElement('li'); li.textContent=p; prosUl.appendChild(li); });
-    (c?.cons || []).forEach(p => { const li=document.createElement('li'); li.textContent=p; consUl.appendChild(li); });
+    (cModel?.pros || []).forEach(p => { const li=document.createElement('li'); li.textContent=p; prosUl.appendChild(li); });
+    (cModel?.cons || []).forEach(p => { const li=document.createElement('li'); li.textContent=p; consUl.appendChild(li); });
+  
+    // save button
+    $('#po-save').onclick = async () => {
+      // attach user if logged in
+      const { data: ures } = await supabase.auth.getUser();
+      const user_id = ures?.user?.id || null;
+  
+      const payload = {
+        user_id,
+        product_id: chosenProductId,
+        carrier_product_id: cModel.carrier_product_id,
+        carrier_name: carrier.carrier_name || 'Unknown Carrier',
+        premium: premium == null ? 0 : Number(premium),
+        answers_json: answeredList,
+        metadata: {
+          line: chosenLine,
+          url: carrier.carrier_url || null,
+          equation_version: cModel?.equation?.equation_version || 1
+        }
+      };
+  
+      const { error } = await supabase.from('quotes').insert(payload);
+      if (error) {
+        console.error('save quote error:', error);
+        alert('Could not save quote. If you are not logged in, please sign in first.');
+        return;
+      }
+      alert('Quote saved!');
+      $ov.setAttribute('aria-hidden','true');
+    };
   
     // esc & click-out
     const close = () => $ov.setAttribute('aria-hidden','true');
