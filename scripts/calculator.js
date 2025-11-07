@@ -94,15 +94,17 @@ document.addEventListener('DOMContentLoaded', () => {
     renderQChips();
     renderQForm();
 
-    // 2) carriers (carrier_products joined)
+    // 2) carriers (carrier_products joined correctly with nested equation_inputs)
     const { data: cpData, error } = await supabase
       .from('carrier_products')
       .select(`
         id, product_id, carrier_id,
-        carriers:carrier_id ( id, carrier_name, carrier_logo, carrier_url ),
+        carriers:carrier_id!carrier_products_carrier_id_fkey ( id, carrier_name, carrier_logo, carrier_url ),
         pros_cons ( pros, cons ),
-        equations ( id, equation_dsl, metadata, equation_version ),
-        equation_inputs ( var_name, question_id ),
+        equations (
+          id, equation_dsl, metadata, equation_version,
+          equation_inputs ( var_name, question_id )
+        ),
         carrier_requirements ( question_id, required_expr, applicable_expr )
       `)
       .eq('product_id', productId)
@@ -111,14 +113,14 @@ document.addEventListener('DOMContentLoaded', () => {
     if (error) {
       console.error('carrier_products error:', error);
     }
-
+    
     carriers = (cpData || []).map(row => ({
       carrier_product_id: row.id,
       carrier: row.carriers || {},
       pros: row.pros_cons?.[0]?.pros || [],
       cons: row.pros_cons?.[0]?.cons || [],
       equation: row.equations?.[0] || null,
-      inputs: row.equation_inputs || [],
+      inputs: row.equations?.[0]?.equation_inputs || [], // <-- nested under equations
       requirements: row.carrier_requirements || []
     }));
 
