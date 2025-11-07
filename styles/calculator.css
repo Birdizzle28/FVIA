@@ -139,3 +139,4 @@
 .sd-actions .del{ background:#f3e7e7; color:#b22424; }
 
 .sd-empty{ color:#5f5a84; font-size:14px; text-align:center; padding:18px 6px; }
+.s-card.hidden { display: none !important; }
