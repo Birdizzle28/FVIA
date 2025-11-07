@@ -59,6 +59,11 @@ document.addEventListener('DOMContentLoaded', () => {
     slide('questions');
   });
 
+  $('#only-ready')?.addEventListener('change', () => {
+    renderSList();        // re-render cards so we can hide non-ready
+    recomputeQuotes();    // C-List will auto-update
+  });
+
   // ===== Fetch: products for line =====
   async function loadProductsForLine(line){
     const box = $('#product-tiles');
@@ -170,6 +175,19 @@ document.addEventListener('DOMContentLoaded', () => {
     recomputeQuotes();
   }
 
+  function carriersRequiring(qnum){
+    return carriers
+      .filter(c => {
+        const reqByQ = indexRequirements(c.requirements);
+        const r = reqByQ[qnum];
+        const applicable = evaluateExpr(r?.applicable_expr, answers, true);
+        const required = evaluateExpr(r?.required_expr, answers, false);
+        return applicable && required;
+      })
+      .map(c => c.carrier?.carrier_name)
+      .filter(Boolean);
+  }
+
   // ===== Q-Chips + Form =====
   function renderQChips(){
     const bar = $('#q-chips'); bar.innerHTML = '';
@@ -177,7 +195,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const b = document.createElement('button');
       b.className = 'q-chip';
       b.textContent = q.q_number;
-      b.title = q.label;
+      b.title = q.label; // initial
+      b.addEventListener('mouseenter', () => {
+        const who = carriersRequiring(q.q_number);
+        if (who.length) b.title = `${q.label}\nRequired by: ${who.join(', ')}`;
+        else b.title = `${q.label}\n(Optional or N/A)`;
+      });
       b.addEventListener('click', () => scrollToQuestion(q.q_number));
       bar.appendChild(b);
     });
@@ -223,10 +246,23 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function normalizeValue(q, raw){
-    if (q.type === 'number') return raw === '' ? null : Number(raw);
-    if (q.type === 'money')  return raw === '' ? null : Number(raw);
-    if (q.type === 'bool')   return raw === '' ? null : (raw === 'true');
-    return raw || null;
+    if (raw === '') return null;
+  
+    if (q.type === 'number' || q.type === 'money') {
+      return Number(raw);
+    }
+  
+    if (q.type === 'bool') {
+      return raw === 'true';
+    }
+  
+    // If it's a select, try to coerce numeric-looking values to numbers.
+    if (q.type === 'select') {
+      const n = Number(raw);
+      return Number.isNaN(n) ? raw : n;
+    }
+  
+    return raw;
   }
 
   function scrollToQuestion(num){
@@ -242,9 +278,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const box = $('#s-list'); box.innerHTML = '';
     if (!carriers.length){ box.innerHTML = '<p class="muted small">No carriers for this product yet.</p>'; return; }
     const N = questions.length;
-
+    const onlyReady = $('#only-ready')?.checked;
+  
     carriers.forEach(c => {
-      const card = document.createElement('div'); card.className = 's-card';
+      const ready = carrierReady(c);
+      const card = document.createElement('div');
+      card.className = 's-card' + (onlyReady && !ready ? ' hidden' : '');
       card.innerHTML = `
         <img class="logo" src="${c.carrier.carrier_logo || ''}" alt="${c.carrier.carrier_name}">
         <div class="s-overlay-top">
@@ -255,19 +294,28 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="s-overlay-bottom"></div>
       `;
+      const img = card.querySelector('img.logo');
+      img?.addEventListener('error', () => {
+        img.remove();
+        const ph = document.createElement('div');
+        ph.className = 'logo-fallback';
+        const initials = (c.carrier.carrier_name || '')
+          .split(/\s+/).map(s => s[0]).join('').slice(0,3).toUpperCase();
+        ph.textContent = initials || '—';
+        card.prepend(ph);
+      });
+  
       const chipBar = card.querySelector('.s-overlay-bottom');
       for (let i=1; i<=N; i++){
         const ch = document.createElement('span');
         ch.className = 's-chip'; ch.textContent = i;
         chipBar.appendChild(ch);
       }
-
-      // Tooltip on hover with pros/cons
       card.title = tooltipText(c);
       box.appendChild(card);
     });
-
-    updateChipColors(); // color after render
+  
+    updateChipColors();
   }
 
   function tooltipText(c){
@@ -409,7 +457,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="c-price">${premium===null ? '—' : money(premium)}</div>
       `;
       card.addEventListener('click', () => {
-        alert(`${c.carrier.carrier_name}\nPremium: ${premium===null?'—':money(premium)}\n(Detail overlay coming next step)`);
+        openPlanOverlay(c.carrier, premium);
       });
       box.appendChild(card);
     });
@@ -434,4 +482,39 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===== Utility UI =====
   function clearSList(){ $('#s-list').innerHTML = '<p class="muted small">Carriers appear here after product selection.</p>'; }
   function clearCList(){ $('#c-list').innerHTML = '<p class="muted center small">Quotes will appear here when a carrier is ready.</p>'; }
+  function openPlanOverlay(carrier, premium){
+    const $ov = $('#plan-overlay');
+    $ov.setAttribute('aria-hidden','false');
+  
+    // basics
+    $('#po-name').textContent = carrier.carrier_name || '';
+    $('#po-link').href = carrier.carrier_url || '#';
+    $('#po-price').textContent = premium == null ? '—' : money(premium);
+  
+    const logo = $('#po-logo');
+    logo.src = carrier.carrier_logo || '';
+    logo.alt = carrier.carrier_name || '';
+  
+    // inputs shown
+    const ulInputs = $('#po-inputs'); ulInputs.innerHTML = '';
+    questions.forEach(q => {
+      if (answers[q.q_number] === undefined || answers[q.q_number] === null || answers[q.q_number] === '') return;
+      const li = document.createElement('li');
+      li.textContent = `${q.label}: ${answers[q.q_number]}`;
+      ulInputs.appendChild(li);
+    });
+  
+    // pros/cons
+    const c = carriers.find(k => k.carrier?.carrier_name === carrier.carrier_name);
+    const prosUl = $('#po-pros'); prosUl.innerHTML = '';
+    const consUl = $('#po-cons'); consUl.innerHTML = '';
+    (c?.pros || []).forEach(p => { const li=document.createElement('li'); li.textContent=p; prosUl.appendChild(li); });
+    (c?.cons || []).forEach(p => { const li=document.createElement('li'); li.textContent=p; consUl.appendChild(li); });
+  
+    // esc & click-out
+    const close = () => $ov.setAttribute('aria-hidden','true');
+    $('#plan-close').onclick = close;
+    $ov.onclick = (e) => { if (e.target === $ov) close(); };
+    document.onkeydown = (e) => { if (e.key === 'Escape') close(); };
+  }
 });
