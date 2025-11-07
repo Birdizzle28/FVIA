@@ -119,7 +119,7 @@ body {
 /* Mobile tweaks */
 @media (max-width: 768px) {
   #about-main p { 
-    font-size: 2vw; 
+    font-size: 3.5vw; 
     max-width: 90vw; }
 }
 /* ---- Section spacing + dividers ---- */
