@@ -287,21 +287,37 @@
       function ensureThumbVisible(index){
         const el = thumbBtns[index];
         if (!el) return;
-        // Smoothly center the active thumb in view
-        el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+        const parent = thumbs; // the thumbnails scroller
+      
+        const elLeft   = el.offsetLeft;
+        const elRight  = elLeft + el.offsetWidth;
+        const viewLeft = parent.scrollLeft;
+        const viewRight= viewLeft + parent.clientWidth;
+      
+        // Only move the inner scroller, not the page
+        if (elLeft < viewLeft) {
+          parent.scrollTo({ left: elLeft - 16 /* padding fudge */ });
+        } else if (elRight > viewRight) {
+          parent.scrollTo({ left: elRight - parent.clientWidth + 16 });
+        }
       }
       
-      function markActive(){
+      function markActive(suppressScroll = false){
         thumbBtns.forEach((b,j)=> b.classList.toggle("is-active", j === i));
-        ensureThumbVisible(i);
+        if (!suppressScroll) ensureThumbVisible(i);
       }
-
-      function go(idx, userInitiated = false){
+      
+      function go(idx, userInitiated = false, suppressScroll = false){
         i = ((idx % slides.length) + slides.length) % slides.length;
         translate(-i * w);
-        markActive();
-        if (userInitiated) restartAutoplay(); // keep it feeling “live”
+        markActive(suppressScroll);
+        if (userInitiated) restartAutoplay();
       }
+      
+      // Init + resize
+      measure();
+      go(0, /*userInitiated=*/false, /*suppressScroll=*/true);
+      window.addEventListener("resize", () => { measure(); go(i, false, true); });
 
       function nextSlide(user = false){ go(i + 1, user); }
       function prevSlide(user = false){ go(i - 1, user); }
