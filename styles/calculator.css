@@ -1,136 +1,72 @@
-/* ===== Theme tokens aligned with Admin look ===== */
 :root{
-  --ink:#353468;              /* dark ink */
-  --muted:#6b7280;            /* secondary text */
-  --panel:#ffffff;            /* cards */
-  --panel-line:#d6d9e2;       /* borders */
-  --page:#f6f7fb;             /* page bg */
-  --brand:#ed9ea5;            /* agency pink */
-  --brand-ink:#482039;        /* deep plum for hovers/press */
-  --accent:#444387;           /* indigo-ish from header text */
-  --shadow:0 14px 30px rgba(0,0,0,.06);
+  --ink:#353468; --muted:#6b7280; --line:#e8e8f1; --soft:#f7f8fc;
+  --brand:#353468; --brand-ink:#242247; --chip-green:#1f9d69; --chip-red:#b22424; --chip-grey:#c4c7d1;
+  --radius:12px; --shadow:0 10px 30px rgba(0,0,0,.08);
 }
+.calc-shell{ max-width:1200px; margin:24px auto; padding:0 16px; display:grid; grid-template-columns: 340px 1fr; gap:16px; }
+@media (max-width:1000px){ .calc-shell{ grid-template-columns:1fr; } }
 
-/* Page area similar to dashboard panels */
-main{ background:var(--page); width:100%; }
-.card-ish{
-  max-width: 1100px;
-  margin: 24px auto;
-  padding: 16px;
-  background: var(--panel);
-  border: 1px solid var(--panel-line);
-  border-radius: 0;           /* square */
-  box-shadow: var(--shadow);
+/* S-List */
+#s-list{ position:relative; background:#fff; border:1px solid var(--line); border-radius:var(--radius); padding:12px; box-shadow:var(--shadow); min-height:320px; overflow:auto; }
+.s-card{
+  position:relative; border-radius:10px; overflow:hidden; border:1px solid var(--line); background:#fff; margin-bottom:12px;
 }
-
-/* Headings */
-.dash-title{
-  margin: 6px 0 16px;
-  font-size: clamp(22px,2.4vw,32px);
-  color: var(--ink);
-  font-weight: 800;
+.s-card .logo{ width:100%; height:90px; object-fit:cover; filter:saturate(1.05); }
+.s-overlay-top, .s-overlay-bottom{
+  position:absolute; left:0; right:0; padding:6px 8px; display:flex; justify-content:space-between; align-items:center;
+  background:linear-gradient(to bottom, rgba(40,40,55,.72), rgba(40,40,55,.45));
+  color:#fff; font-weight:700;
 }
+.s-overlay-top{ top:0; }
+.s-overlay-top a{ color:#fff; opacity:.9; }
+.s-overlay-bottom{ bottom:0; gap:6px; flex-wrap:wrap; }
+.s-chip{ font-size:12px; padding:2px 6px; border-radius:6px; background:rgba(255,255,255,.85); color:#222; }
+.s-chip.red{ background:#fbe4e4; color:#7a1c1c; }
+.s-chip.green{ background:#e5fbf2; color:#166a4d; }
+.s-chip.grey{ background:#eceef4; color:#555; }
 
-/* ===== Floating label form ===== */
-.fl-form{
-  display:flex;
-  flex-direction:column;
-  gap:14px;
-  margin-bottom: 18px;
+/* Center column */
+.center-col{ display:grid; gap:14px; }
+
+/* Q-List slides */
+.q-list{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px; min-height:300px; }
+.q-slide{ display:none; }
+.q-slide.is-active{ display:block; animation:fadeIn .18s ease; }
+@keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+.tiles{ display:grid; grid-template-columns:repeat(auto-fit, minmax(140px,1fr)); gap:10px; margin-top:8px; }
+.tile{
+  border:1px solid var(--line); background:#fff; border-radius:10px; padding:16px; text-align:center; cursor:pointer;
+  transition:transform .12s ease, box-shadow .12s ease, border-color .12s ease;
 }
+.tile:hover{ transform:translateY(-2px); border-color:#d9dcf6; box-shadow:0 8px 22px rgba(0,0,0,.06); }
+.tile i{ font-size:22px; color:var(--brand); }
+.tile span{ display:block; margin-top:4px; font-weight:800; color:var(--ink); }
 
-/* Row helper (matches your style) */
-.row{ display:flex; gap:12px; flex-wrap:wrap; }
-.grow{ flex:1 1 220px; }
-
-/* Floating field container */
-.fl-field{
-  position: relative;
-  display: block;
+.q-head{ display:flex; align-items:center; gap:10px; }
+.q-chips{ display:flex; gap:6px; flex-wrap:wrap; }
+.q-chip{
+  border:1px solid var(--line); border-radius:8px; padding:4px 8px; font-weight:700; background:#fff; color:var(--ink);
 }
+.q-chip.green{ background:#e7fbf2; border-color:#c9f3e2; color:#167b56; }
+.q-chip.red{ background:#fdecec; border-color:#f8c9c9; color:#8b2323; }
+.q-chip.grey{ background:#eff1f7; color:#666; }
 
-/* Inputs (square, match admin theme) */
-.fl-field input{
-  width: 100%;
-  background: #fff;
-  border: 1px solid var(--panel-line);
-  border-radius: 0;
-  padding: 14px 12px;
-  font: inherit;
-  color: var(--ink);
-  outline: none;
-  transition: border-color .15s ease, box-shadow .15s ease;
+.q-body{ margin-top:10px; min-height:120px; border:1px dashed var(--line); border-radius:10px; padding:12px; background:var(--soft); }
+
+.nav-cta{ margin-top:10px; display:flex; justify-content:flex-end; gap:8px; }
+.btn-primary{ border:1px solid var(--brand); background:var(--brand); color:#fff; border-radius:10px; padding:8px 14px; font-weight:800; }
+.btn-ghost{ border:1px solid var(--line); background:#fff; color:var(--ink); border-radius:10px; padding:8px 14px; font-weight:800; }
+
+.muted{ color:var(--muted); } .small{ font-size:12px; }
+.center{ text-align:center; }
+
+/* C-List */
+.c-list{ background:#fff; border:1px solid var(--line); border-radius:var(--radius); box-shadow:var(--shadow); padding:12px; min-height:120px; }
+.c-card{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px solid var(--line);
+  border-radius:10px; padding:8px 10px; margin-bottom:8px; background:#fff;
 }
-
-/* Label sits over input */
-.fl-field label{
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: transparent;
-  padding: 0 6px;
-  color: var(--muted);
-  pointer-events: none;
-  transition: all .12s ease;
-}
-
-/* Focus / has-value states */
-.fl-field.is-focused input,
-.fl-field.has-value input{
-  border-color: var(--brand);
-  box-shadow: 0 0 0 2px rgba(237,158,165,.2);
-}
-.fl-field.is-focused label,
-.fl-field.has-value label{
-  top: 0;
-  transform: translateY(-60%);
-  background: #fff;
-  color: var(--accent);
-  font-size: 12px;
-}
-
-/* Invalid helper (if you add .is-invalid on the input or wrapper) */
-.fl-field.is-invalid input{ border-color:#d12c2c; box-shadow:0 0 0 2px rgba(209,44,44,.12); }
-.fl-field.is-invalid label{ color:#d12c2c; }
-
-/* Button aligned to theme */
-.btn-primary{
-  align-self: flex-start;
-  background: var(--brand);
-  color: #fff;
-  border: 1px solid var(--brand);
-  border-radius: 0;
-  padding: 10px 16px;
-  font-weight: 700;
-  cursor: pointer;
-}
-.btn-primary:hover{ background: var(--brand-ink); border-color: var(--brand-ink); }
-
-/* Calendar container card */
-.calendar-card{
-  width:100%;
-  min-height:600px;
-  margin-top: 10px;
-  border: 1px solid var(--panel-line);
-  border-radius: 0;
-}
-
-/* ===== FullCalendar theming (v6+) ===== */
-.fc{ font-family: Bellota Text, sans-serif; }
-:root{
-  --fc-button-bg-color: var(--brand);
-  --fc-button-border-color: var(--brand);
-  --fc-button-text-color: #ffffff;
-  --fc-button-hover-bg-color: var(--brand-ink);
-  --fc-button-active-bg-color: var(--brand-ink);
-  --fc-today-bg-color: rgba(237,158,165,0.18);
-  --fc-highlight-color: rgba(68,67,135,0.12);
-  --fc-event-bg-color: var(--brand);
-  --fc-event-border-color: var(--brand);
-  --fc-event-text-color: #fff;
-}
-.fc .fc-daygrid-day-number{ font-size:.9em; }
-
-/* Small tweak so floating label over date/time doesn’t clip */
-#datetime{ background:#fff; }
+.c-card .meta{ display:flex; gap:10px; align-items:center; }
+.c-card img{ width:40px; height:40px; border-radius:6px; object-fit:cover; }
+.c-price{ font-weight:900; font-size:18px; color:var(--ink); }
