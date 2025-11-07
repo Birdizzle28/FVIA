@@ -107,3 +107,8 @@
 .plan-overlay .cons li{ color:#b22424; }
 
 .s-card.hidden{ display:none; }  /* used by “only ready” toggle */
+.btn.primary{
+  background:#353468; color:#fff; border:0; border-radius:8px;
+  padding:10px 14px; font-weight:600; cursor:pointer;
+}
+.btn.primary:hover{ background:#242247; }
