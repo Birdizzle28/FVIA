@@ -467,6 +467,34 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  function validateValue(val, base = {}, override = {}) {
+    const v = val;
+    const rules = { ...base, ...override }; // per-carrier overrides win
+    if (rules.required && (v === null || v === undefined || v === '')) return 'required';
+    if (typeof v === 'number') {
+      if (typeof rules.min === 'number' && v < rules.min) return `min:${rules.min}`;
+      if (typeof rules.max === 'number' && v > rules.max) return `max:${rules.max}`;
+      if (typeof rules.step === 'number' && v % rules.step !== 0) return `step:${rules.step}`;
+    }
+    return null;
+  }
+  
+  function violationsForCarrier(c){
+    const reqByQ = indexRequirements(c.requirements);
+    const issues = []; // [{qnum,label,code}]
+    questions.forEach(q => {
+      const r = reqByQ[q.q_number];
+      const applicable = evaluateExpr(r?.applicable_expr, answers, true);
+      if (!applicable) return;
+      const baseVal = q.validations_json || {};
+      const overVal = r?.validation_overrides_json || {};
+      const val = answers[q.q_number];
+      const code = validateValue(val, baseVal, overVal);
+      if (code) issues.push({ qnum: q.q_number, label: q.label, code });
+    });
+    return issues;
+  }
+  
   function carrierReady(c){
     // All required_expr true AND answered
     const reqByQ = indexRequirements(c.requirements);
