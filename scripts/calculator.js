@@ -95,15 +95,17 @@ document.addEventListener('DOMContentLoaded', () => {
     renderQForm();
 
     // 2) carriers (carrier_products joined)
-    const { data: cpData } = await supabase
+    const { data: cpData, error } = await supabase
       .from('carrier_products')
       .select(`
         id,
-        carriers:carrier_id ( carrier_name, carrier_logo, carrier_url ),
-        proscons:pros_cons ( pros, cons ),
+        carrier_id,
+        product_id,
+        carriers ( carrier_name, carrier_logo, carrier_url ),
+        pros_cons ( pros, cons ),
         equations ( id, equation_dsl, metadata, equation_version ),
         equation_inputs ( var_name, question_id ),
-        reqs:carrier_requirements ( question_id, required_expr, applicable_expr )
+        carrier_requirements ( question_id, required_expr, applicable_expr )
       `)
       .eq('product_id', productId)
       .eq('is_active', true);
@@ -111,11 +113,11 @@ document.addEventListener('DOMContentLoaded', () => {
     carriers = (cpData || []).map(row => ({
       carrier_product_id: row.id,
       carrier: row.carriers || {},
-      pros: row.proscons?.[0]?.pros || [],
-      cons: row.proscons?.[0]?.cons || [],
+      pros: (row.pros_cons && row.pros_cons[0]?.pros) || [],
+      cons: (row.pros_cons && row.pros_cons[0]?.cons) || [],
       equation: row.equations?.[0] || null,
       inputs: row.equation_inputs || [],
-      requirements: row.reqs || []
+      requirements: row.carrier_requirements || []
     }));
 
     renderSList();
