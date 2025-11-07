@@ -34,19 +34,16 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnStep2  = document.getElementById('btn-step2');
   const btnSubmit = document.getElementById('btn-submit');
 
-  // runtime state
-  let DETECTED_STATE = null; // set on Step 1 via server-side geocode
+  // runtime state (set on Step 1)
+  let DETECTED_GEO = { state: null, city: null, lat: null, lng: null };
 
   // --- helpers ---
   const norm = (s) => (s || '').toString().trim().toLowerCase();
   const digits10 = (s) => (s || '').toString().replace(/\D/g,'').slice(-10);
-
-  const hasPhoneOverlap = (arr1 = [], arr2 = []) => {
-    const set1 = new Set(arr1.map(digits10).filter(Boolean));
-    for (const p of arr2.map(digits10).filter(Boolean)) if (set1.has(p)) return true;
-    return false;
-  };
-
+  const wrapOf = (el) => el.closest('.fl-field') || el.parentElement;
+  function markInvalid(el) { el.classList.add('is-invalid'); wrapOf(el)?.classList.add('is-invalid'); }
+  function clearInvalid(el) { el.classList.remove('is-invalid'); wrapOf(el)?.classList.remove('is-invalid'); }
+  const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || '');
   const toE164 = (v) => {
     if (!v) return null;
     const s = String(v).trim();
@@ -89,13 +86,20 @@ document.addEventListener('DOMContentLoaded', () => {
       const candEmails            = Array.isArray(c.contacts?.emails) ? c.contacts.emails : [];
       const candZip               = c.zip || c.contacts?.zip || null;
 
-      const phoneMatch = hasPhoneOverlap(ourPhones, [...candPhonesFromLead, ...candPhonesFromContact]);
+      const phoneMatch = (() => {
+        const set1 = new Set((ourPhones || []).map(digits10).filter(Boolean));
+        for (const p of [...candPhonesFromLead, ...candPhonesFromContact].map(digits10).filter(Boolean)) {
+          if (set1.has(p)) return true;
+        }
+        return false;
+      })();
+
       const emailMatch = emailsArr.length ? candEmails.map(norm).some(e => emailsArr.includes(e)) : false;
       const zipMatch   = zip && candZip ? String(zip).trim() === String(candZip).trim() : false;
 
-      const oneOtherMatches = phoneMatch || emailMatch || zipMatch;
-      if (oneOtherMatches) {
-        if (!product_type || !c.product_type || norm(product_type) === norm(c.product_type)) return c;
+      if ((phoneMatch || emailMatch || zipMatch) &&
+          (!product_type || !c.product_type || norm(product_type) === norm(c.product_type))) {
+        return c;
       }
     }
     return null;
@@ -104,16 +108,10 @@ document.addEventListener('DOMContentLoaded', () => {
   function hideAllModals() {
     document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
   }
-
   function show(panel) {
     [step1, step2, step3, resultScr].forEach(p => p.style.display = (p === panel) ? 'block' : 'none');
   }
   show(step1);
-
-  const wrapOf = (el) => el.closest('.fl-field') || el.parentElement;
-  function markInvalid(el) { el.classList.add('is-invalid'); wrapOf(el)?.classList.add('is-invalid'); }
-  function clearInvalid(el) { el.classList.remove('is-invalid'); wrapOf(el)?.classList.remove('is-invalid'); }
-  const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || '');
 
   // floating labels
   document.querySelectorAll('.fl-field input, .fl-field select').forEach(el => {
@@ -127,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!el) return; el.addEventListener('input', () => clearInvalid(el)); el.addEventListener('change', () => clearInvalid(el));
   });
 
-  // multi-select
+  // multi-select UI
   function getSelections() {
     return Array.from(coverMenu.querySelectorAll('.ms-option.selected'))
       .map(lbl => (lbl.dataset.value ?? lbl.textContent).trim());
@@ -136,12 +134,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const sel = getSelections();
     coverDisplay.textContent = sel.join(', ');
     coverCsv.value = sel.join(',');
-    updateCoverFloat();
+    coverWrap?.classList.toggle('has-value', sel.length > 0);
     if (sel.length > 0) clearInvalid(coverSelect);
-  }
-  function updateCoverFloat() {
-    const has = getSelections().length > 0;
-    coverWrap?.classList.toggle('has-value', has);
   }
   function toggleMenu(forceOpen) {
     const open = (forceOpen !== undefined) ? forceOpen : (coverMenu.style.display !== 'block');
@@ -150,7 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
     coverWrap?.classList.toggle('is-open', !!open);
   }
   coverMenu.style.display = 'none';
-  updateCoverDisplayAndCsv(); updateCoverFloat();
+  updateCoverDisplayAndCsv();
 
   coverSelect.addEventListener('click', () => toggleMenu());
   coverSelect.addEventListener('keydown', (e) => {
@@ -172,7 +166,7 @@ document.addEventListener('DOMContentLoaded', () => {
         e.preventDefault();
         lbl.classList.toggle('selected');
         if (cb) cb.checked = lbl.classList.contains('selected');
-        updateCoverDisplayAndCsv(); updateCoverFloat();
+        updateCoverDisplayAndCsv();
       });
       lbl.tabIndex = 0;
       lbl.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); lbl.click(); }});
@@ -200,7 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const cb = lbl.querySelector('input[type="checkbox"]');
         if (cb) cb.checked = true;
         updateCoverDisplayAndCsv();
-        updateCoverFloat();
       }
     })();
   })();
@@ -219,14 +212,19 @@ document.addEventListener('DOMContentLoaded', () => {
     phone.value = out;
   });
 
-  // --- ZIP → State (server-side) ---
-  async function getStateFromZip(zip5) {
+  // --- ZIP → GEO (server-side) ---
+  async function getGeoFromZip(zip5) {
     try {
-      const resp = await fetch(`/.netlify/functions/zip-to-state?zip=${encodeURIComponent(zip5)}`);
+      const resp = await fetch(`/.netlify/functions/zip-geo?zip=${encodeURIComponent(zip5)}`);
       const json = await resp.json();
-      return json?.state || null;
+      return {
+        state: json?.state || null,
+        city:  json?.city  || null,
+        lat:   (json?.lat ?? null),
+        lng:   (json?.lng ?? null),
+      };
     } catch {
-      return null;
+      return { state: null, city: null, lat: null, lng: null };
     }
   }
 
@@ -250,20 +248,76 @@ document.addEventListener('DOMContentLoaded', () => {
         case 'My Identity':
           out.add('idshield'); break;
         case 'My Business':
-          // Business requires BOTH Property & Casualty
+          // requires BOTH Property & Casualty
           out.add('property'); out.add('casualty'); break;
         default:
           break;
       }
     }
-    // default to life if somehow empty
     if (out.size === 0) out.add('life');
     return Array.from(out);
   }
 
-  // --- Agent picker (per-line, per-state) using agents.is_available ---
+  // --- Map normalized lines to your product_type strings ---
+  const lineToProductType = {
+    life: 'Life Insurance',
+    health: 'Health Insurance',
+    property: 'Property Insurance',
+    casualty: 'Casualty Insurance',
+    legalshield: 'Legal Shield',
+    idshield: 'ID Shield'
+  };
+
+  // --- Create per-product notes honoring the Business+Home rule ---
+  function buildNotesByProductType(selections, baseNotes) {
+    const set = new Set(selections);
+    const wantsHome = set.has('My Home');
+    const wantsBiz  = set.has('My Business');
+
+    // helper to join a notes array cleanly
+    const join = (arr) => arr.filter(Boolean).join(' || ');
+
+    // base “cover=…” stays the same for all
+    const notesCommon = baseNotes.filter(n => n && !n.startsWith('biz_') && !n.startsWith('home_'));
+
+    // flags we’ll add (not visible to users, but readable by admins & webhook)
+    const homeTag = wantsHome ? 'home_selected=true' : null;
+    const bizTag  = wantsBiz  ? 'business_selected=true' : null;
+
+    const bizDetails = [
+      wantsBiz ? `biz_employees=${employeeCount.value||''}` : null,
+      wantsBiz ? `biz_name=${(businessName.value||'').trim()}` : null
+    ].filter(Boolean);
+
+    const byType = new Map();
+
+    // Property:
+    // - If Home + Business: include BOTH home + business context
+    // - If only Home: include home only
+    const propNotes = [];
+    propNotes.push(...notesCommon);
+    if (wantsHome) propNotes.push(homeTag);
+    if (wantsBiz)  propNotes.push(bizTag, ...bizDetails);
+    byType.set('Property Insurance', join(propNotes));
+
+    // Casualty:
+    // - If Business chosen: include business details only
+    // - If only “My Car”: it’ll still have the common cover line
+    const casNotes = [];
+    casNotes.push(...notesCommon);
+    if (wantsBiz) casNotes.push(bizTag, ...bizDetails);
+    byType.set('Casualty Insurance', join(casNotes));
+
+    // Others (Life, Health, LegalShield, IDShield): keep common only
+    const otherNotes = join(notesCommon);
+    ['Life Insurance','Health Insurance','Legal Shield','ID Shield']
+      .forEach(t => byType.set(t, otherNotes));
+
+    return byType;
+  }
+
+  // --- Use agents table; require ALL requested lines to include detected state; prefer is_available ---
   async function pickAgentForAll(requiredLines, state2) {
-    // state2 must exist; otherwise ineligible by policy
     if (!state2 || !/^[A-Z]{2}$/.test(state2)) {
       return { reason: 'none_fit', agent: null, shouldCall: false };
     }
@@ -277,7 +331,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const eligible = (agents || []).filter(a => {
       const lic = a.licensed_states_by_line || {};
-      // every required line must include the state
       return requiredLines.every(lineKey => {
         const arr = Array.isArray(lic[lineKey]) ? lic[lineKey] : [];
         return arr.includes(state2);
@@ -294,9 +347,7 @@ document.addEventListener('DOMContentLoaded', () => {
       });
 
     const online = eligible.filter(a => !!a.is_available);
-    if (online.length) {
-      return { reason: 'online', agent: byOldest(online)[0], shouldCall: true };
-    }
+    if (online.length) return { reason: 'online', agent: byOldest(online)[0], shouldCall: true };
     return { reason: 'offline_only', agent: byOldest(eligible)[0], shouldCall: false };
   }
 
@@ -315,9 +366,9 @@ document.addEventListener('DOMContentLoaded', () => {
       firstBad.scrollIntoView({ behavior:'smooth', block:'center' }); firstBad.focus?.(); return;
     }
 
-    // Resolve state now (server-side)
-    DETECTED_STATE = await getStateFromZip(zip.value.trim());
-    if (!DETECTED_STATE) {
+    // Resolve full geo now (server-side)
+    DETECTED_GEO = await getGeoFromZip(zip.value.trim());
+    if (!DETECTED_GEO?.state) {
       alert('Sorry—couldn’t determine your state from ZIP. Please check the ZIP or try again.');
       markInvalid(zip);
       return;
@@ -355,18 +406,16 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // ---- SUBMIT ----
-  const digitsOnly = (s) => (s||'').replace(/\D/g,'');
-
   function utmBundle() {
+    // Keep clean UTM; REMOVE referrer entirely per your request
     const p = new URLSearchParams(location.search);
     const keys = ['utm_source','utm_medium','utm_campaign','utm_content','utm_term'];
     const pairs = [];
     keys.forEach(k => { if (p.get(k)) pairs.push(`${k.replace('utm_','') }=${p.get(k)}`); });
-    const ref = document.referrer ? `referrer=${document.referrer}` : '';
-    return (pairs.length || ref) ? `utm:${pairs.join('|')}${pairs.length && ref ? ' || ' : ''}${ref}` : '';
+    return (pairs.length) ? `utm:${pairs.join('|')}` : '';
   }
 
-  async function insertContactAndLeads(contactInfo, productTypes) {
+  async function insertContactAndLeads(contactInfo, perTypeNotes, productTypes) {
     const client = window.supabase;
     if (!client) throw new Error('Supabase not loaded');
 
@@ -376,17 +425,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const emailArr = emailClean ? [emailClean] : [];
     if (!e164 && !tenFromE164 && emailArr.length === 0) throw new Error('Provide at least one phone or email.');
 
+    // Upsert contact (merge phones/emails) WITH geo fields
     let existing = null;
     if (e164) {
-      const r1 = await client.from('contacts').select('id, phones, emails, zip, notes').contains('phones', [e164]).maybeSingle();
+      const r1 = await client.from('contacts').select('id, phones, emails, zip, city, state, lat, lng, notes').contains('phones', [e164]).maybeSingle();
       if (r1.data) existing = r1.data;
     }
     if (!existing && tenFromE164) {
-      const r2 = await client.from('contacts').select('id, phones, emails, zip, notes').contains('phones', [tenFromE164]).maybeSingle();
+      const r2 = await client.from('contacts').select('id, phones, emails, zip, city, state, lat, lng, notes').contains('phones', [tenFromE164]).maybeSingle();
       if (r2.data) existing = r2.data;
     }
     if (!existing && emailArr.length) {
-      const r3 = await client.from('contacts').select('id, phones, emails, zip, notes').contains('emails', [emailArr[0]]).maybeSingle();
+      const r3 = await client.from('contacts').select('id, phones, emails, zip, city, state, lat, lng, notes').contains('emails', [emailArr[0]]).maybeSingle();
       if (r3.data) existing = r3.data;
     }
 
@@ -403,6 +453,10 @@ document.addEventListener('DOMContentLoaded', () => {
         phones: mergedPhones,
         emails: mergedEmails,
         zip: newZip,
+        city: contactInfo.city ?? existing.city ?? null,
+        state: contactInfo.state ?? existing.state ?? null,
+        lat: contactInfo.lat ?? existing.lat ?? null,
+        lng: contactInfo.lng ?? existing.lng ?? null,
         tcpaconsent: true,
         consent_source: 'website',
         consent_at: new Date().toISOString(),
@@ -423,6 +477,10 @@ document.addEventListener('DOMContentLoaded', () => {
           phones: phonesArr,
           emails: emailArr,
           zip: contactInfo.zip || null,
+          city: contactInfo.city || null,
+          state: contactInfo.state || null,
+          lat: contactInfo.lat ?? null,
+          lng: contactInfo.lng ?? null,
           contact_status: 'new',
           tcpaconsent: true,
           consent_source: 'website',
@@ -435,6 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
       contactId = inserted.id;
     }
 
+    // Insert leads (unique product types), WITH geo + age
     const leadPhone = e164 ? [e164] : (tenFromE164 ? [tenFromE164] : []);
     const insertedOrExisting = [];
     const candidateEmail = contactInfo.email?.trim() ? contactInfo.email.trim() : null;
@@ -451,22 +510,26 @@ document.addEventListener('DOMContentLoaded', () => {
       });
       if (dup) { insertedOrExisting.push({ id: dup.id, product_type: dup.product_type, duplicate: true }); continue; }
 
-      const { data: one, error: insErr } = await client
-        .from('leads')
-        .insert([{
-          first_name: contactInfo.first_name,
-          last_name:  contactInfo.last_name,
-          zip:        contactInfo.zip || null,
-          phone:      leadPhone,
-          lead_type:  'Web',
-          product_type: pt,
-          contact_id: contactId,
-          submitted_by: window.FVG_WEBSITE_SUBMITTER_ID,
-          submitted_by_name: window.FVG_WEBSITE_SUBMITTER_NAME || 'Website Lead',
-          notes: contactInfo.notes || null
-        }])
-        .select('id, product_type')
-        .single();
+      const payload = {
+        first_name: contactInfo.first_name,
+        last_name:  contactInfo.last_name,
+        zip:        contactInfo.zip || null,
+        city:       contactInfo.city || null,
+        state:      contactInfo.state || null,
+        lat:        contactInfo.lat ?? null,
+        lng:        contactInfo.lng ?? null,
+        age:        contactInfo.age ?? null,
+        phone:      leadPhone,
+        email:      candidateEmail ? [candidateEmail] : [],
+        lead_type:  'Web',
+        product_type: pt,
+        contact_id: contactId,
+        submitted_by: window.FVG_WEBSITE_SUBMITTER_ID,
+        submitted_by_name: window.FVG_WEBSITE_SUBMITTER_NAME || 'Website Lead',
+        notes: perTypeNotes.get(pt) || contactInfo.notes || null
+      };
+
+      const { data: one, error: insErr } = await client.from('leads').insert([payload]).select('id, product_type').single();
       if (insErr) throw new Error(insErr.message);
       insertedOrExisting.push({ id: one.id, product_type: one.product_type, duplicate: false });
     }
@@ -493,13 +556,17 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const selections = getSelections();
-    const requiredLines = linesForSelections(selections); // normalized keys
-    const notesParts = [
+    const requiredLines = linesForSelections(selections); // normalized keys (unique)
+    const productTypes = Array.from(new Set(requiredLines.map(l => lineToProductType[l]).filter(Boolean))); // unique per submission
+
+    // Base notes (no referrer)
+    const baseNotes = [
       `cover=${selections.join(',')}`,
-      selections.includes('My Business') ? `biz_employees=${employeeCount.value||''}` : null,
-      selections.includes('My Business') ? `biz_name=${(businessName.value||'').trim()}` : null,
       utmBundle() || null
     ].filter(Boolean);
+
+    // Build per-product notes with your Business/Home rule
+    const perTypeNotes = buildNotesByProductType(selections, baseNotes);
 
     const prev = btnSubmit.textContent;
     btnSubmit.disabled = true;
@@ -507,15 +574,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
     try {
       // Hard stop if state was not resolved in Step 1
-      if (!DETECTED_STATE) {
+      if (!DETECTED_GEO?.state) {
         alert('We couldn’t determine your state. Please go back and confirm your ZIP.');
         btnSubmit.disabled = false;
         btnSubmit.textContent = prev;
         return;
       }
 
-      // Choose eligible agent BEFORE any inserts
-      const choice = await pickAgentForAll(requiredLines, DETECTED_STATE);
+      // Choose eligible agent BEFORE any inserts (compliance-safe)
+      const choice = await pickAgentForAll(requiredLines, DETECTED_GEO.state);
       if (choice.reason === 'none_fit') {
         alert('We’re sorry — we don’t currently have a licensed agent for your selection in your state.');
         btnSubmit.disabled = false;
@@ -523,35 +590,37 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Map normalized lines to your existing product_type labels for leads
-      const lineToProductType = {
-        life: 'Life Insurance',
-        health: 'Health Insurance',
-        property: 'Property Insurance',
-        casualty: 'Casualty Insurance',
-        legalshield: 'Legal Shield',
-        idshield: 'ID Shield'
-      };
-      const pickedTypes = Array.from(new Set(requiredLines.map(l => lineToProductType[l]).filter(Boolean)));
-
-      // Proceed with inserts
+      // Prepare contact payload including GEO + age
       const contactInfo = {
         first_name: firstName.value.trim(),
         last_name:  lastName.value.trim(),
         zip:        zip.value.trim(),
+        city:       DETECTED_GEO.city,
+        state:      DETECTED_GEO.state,
+        lat:        DETECTED_GEO.lat,
+        lng:        DETECTED_GEO.lng,
+        age:        Number(age.value) || null,
         phone:      e164Prospect,
         email:      email.value.trim(),
-        notes:      notesParts.join(' || ')
+        notes:      baseNotes.join(' || ')
       };
-      const { contactId, leads } = await insertContactAndLeads(contactInfo, pickedTypes);
-      const insertedIds = leads.map(l => ({ id: l.id, type: l.product_type }));
+
+      // Insert/update contact + insert leads
+      const { contactId, leads } = await insertContactAndLeads(contactInfo, perTypeNotes, productTypes);
+
+      // pick the “best” lead for whisper: prefer Property if both Property & Casualty exist
+      const pickLeadIdForCall = (() => {
+        const prop = leads.find(l => l.product_type === 'Property Insurance');
+        if (prop) return prop.id;
+        return leads[0]?.id || null;
+      })();
 
       // Assign to chosen agent, set ownership, bump last_assigned_at
       const nowIso = new Date().toISOString();
 
       await supabase.from('leads')
         .update({ assigned_to: choice.agent.id, assigned_at: nowIso })
-        .in('id', insertedIds.map(x => x.id));
+        .in('id', leads.map(x => x.id));
 
       await supabase.from('contacts')
         .update({ owning_agent_id: choice.agent.id })
@@ -564,14 +633,30 @@ document.addEventListener('DOMContentLoaded', () => {
       // Optional: mark contacted_at immediately
       await supabase.from('leads')
         .update({ contacted_at: new Date().toISOString() })
-        .in('id', insertedIds.map(x => x.id));
+        .in('id', leads.map(x => x.id));
 
       // Only auto-dial if the chosen agent is available
-      if (choice.shouldCall) {
+      if (choice.shouldCall && pickLeadIdForCall) {
         const rawAgentNumber = Array.isArray(choice.agent.phone) ? choice.agent.phone[0] : choice.agent.phone;
         const agentNumber    = toE164(rawAgentNumber);
+
         if (agentNumber && e164Prospect) {
-          const leadIdForCall = insertedIds[0].id;
+          // Build a human whisper (Telnyx will speak this). We’ll parse on the webhook too,
+          // but passing it makes the intent explicit.
+          const wants = selections
+            .map(s => {
+              if (s === 'Myself') return 'their life';
+              if (s === 'Someone Else') return 'a loved one';
+              if (s === 'My Car') return 'their car';
+              if (s === 'My Home') return 'their home';
+              if (s === 'My Business') return 'their business';
+              if (s === 'My Health') return 'their health';
+              if (s === 'Legal Protection Plan') return 'legal protection';
+              if (s === 'My Identity') return 'identity protection';
+              return s.toLowerCase();
+            })
+            .join(' and ');
+
           const resp = await fetch('/.netlify/functions/makeCall', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -579,7 +664,8 @@ document.addEventListener('DOMContentLoaded', () => {
               agentId: choice.agent.id,
               agentNumber,
               prospectNumber: e164Prospect,
-              leadId: leadIdForCall
+              leadId: pickLeadIdForCall,
+              whisper: `New lead: ${firstName.value.trim()} ${lastName.value.trim()}, wants to cover ${wants}, press 1 to connect`
             })
           });
           const rawText = await resp.text();
@@ -596,8 +682,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const resActions = document.getElementById('result-actions');
 
       resTitle.textContent = 'Thanks! Your request was submitted. An agent will be in touch immediately!';
-      resBody.innerHTML = insertedIds.map(
-        (r, i) => `Request #${i+1}: <strong>${r.type}</strong> – <span style="cursor:pointer" title="Click to copy" data-id="${r.id}">${r.id}</span>`
+      resBody.innerHTML = leads.map(
+        (r, i) => `Request #${i+1}: <strong>${r.product_type}</strong> – <span style="cursor:pointer" title="Click to copy" data-id="${r.id}">${r.id}</span>`
       ).join('<br>');
 
       resActions.innerHTML = '';
