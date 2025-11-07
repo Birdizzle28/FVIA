@@ -128,7 +128,19 @@
 	    <input type="checkbox" id="only-ready"> Show only ready carriers
 	  </label>
 	</div>
+	<!-- Open saved quotes -->
+	<button id="open-saved" class="btn primary" style="margin:8px 0">My Saved Quotes</button>
 	
+	<!-- Saved Quotes Drawer -->
+	<aside id="saved-drawer" class="saved-drawer" aria-hidden="true">
+	  <div class="sd-head">
+	    <strong>My Saved Quotes</strong>
+	    <button id="saved-close" class="sd-x" aria-label="Close">&times;</button>
+	  </div>
+	  <div id="saved-list" class="sd-list">
+	    <!-- rows injected here -->
+	  </div>
+	</aside>
 	<!-- Plan Detail Overlay -->
 	<div id="plan-overlay" class="plan-overlay" aria-hidden="true">
 	  <div class="panel">
