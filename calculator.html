@@ -66,205 +66,62 @@
 		  </a>
 		</div>
 
-  <!-- ===== Main ===== -->
-  <main class="auth-container">
-    <!-- Hero / vibe -->
-    <section class="calc-hero">
-      <div class="hero-text">
-        <h1>Quick Quotes, Clean Vibes</h1>
-        <p>Pick a product, enter the basics, and get an instant estimate. You can wire in your formulas next.</p>
+  <!-- ===== MAIN LAYOUT: S-List | Q-List (top) + C-List (bottom) ===== -->
+  <main class="calc-shell">
+    <!-- Left: S-List -->
+    <aside id="s-list" aria-label="Carriers (S-List)"></aside>
+
+    <!-- Center: Q-List (slides) + C-List -->
+    <section class="center-col">
+      <!-- Q-List -->
+      <div id="q-list" class="q-list">
+        <!-- Slide 1: choose line -->
+        <section class="q-slide is-active" data-slide="line">
+          <h2>What do you want to quote?</h2>
+          <div class="tiles">
+            <button class="tile" data-line="Life"><i class="fa-solid fa-heart-pulse"></i><span>Life</span></button>
+            <button class="tile" data-line="Health"><i class="fa-solid fa-briefcase-medical"></i><span>Health</span></button>
+            <button class="tile" data-line="Property"><i class="fa-solid fa-house"></i><span>Property</span></button>
+            <button class="tile" data-line="Casualty"><i class="fa-solid fa-car"></i><span>Casualty</span></button>
+            <button class="tile" data-line="LegalShield"><i class="fa-solid fa-scale-balanced"></i><span>Legal Shield</span></button>
+            <button class="tile" data-line="IDShield"><i class="fa-solid fa-shield-halved"></i><span>ID Shield</span></button>
+          </div>
+          <div class="nav-cta">
+            <button id="line-next" class="btn-primary" disabled>Next</button>
+          </div>
+        </section>
+
+        <!-- Slide 2: choose product (placeholder, will be fed from Supabase) -->
+        <section class="q-slide" data-slide="product">
+          <div class="q-head">
+            <button class="btn-ghost" data-back="line"><i class="fa-solid fa-chevron-left"></i> Back</button>
+            <h2 id="chosen-line">Select a product</h2>
+          </div>
+          <p class="muted small">This list will load from Supabase once your approved product list is in. (We won’t assume anything.)</p>
+          <div id="product-tiles" class="tiles empty">
+            <!-- stays empty until you add products in Supabase; we’ll hydrate later -->
+          </div>
+          <div class="nav-cta">
+            <button id="product-next" class="btn-primary" disabled>Next</button>
+          </div>
+        </section>
+
+        <!-- Slide 3+: questions will load dynamically later -->
+        <section class="q-slide" data-slide="questions">
+          <div class="q-head">
+            <button class="btn-ghost" data-back="product"><i class="fa-solid fa-chevron-left"></i> Back</button>
+            <div id="q-chips" class="q-chips"><!-- 1..N chips appear here --></div>
+          </div>
+          <div id="q-body" class="q-body"><!-- question card loads here --></div>
+        </section>
       </div>
-      <div class="hero-badges">
-        <span class="chip">Final Expense</span>
-        <span class="chip">Term Life</span>
-        <span class="chip">Auto</span>
-        <span class="chip">Home</span>
-        <span class="chip">E&O</span>
-      </div>
-    </section>
 
-    <!-- Product selector -->
-    <section class="calc-panel">
-      <div class="product-tabs" role="tablist" aria-label="Calculator products">
-        <button class="tab is-active" data-tab="life-fe" aria-selected="true">Final Expense</button>
-        <button class="tab" data-tab="life-term">Term Life</button>
-        <button class="tab" data-tab="auto">Auto</button>
-        <button class="tab" data-tab="home">Home</button>
-        <button class="tab" data-tab="pro-liab">E&O / Pro Liability</button>
-      </div>
-
-      <!-- Panels -->
-      <div class="panels">
-        <!-- Final Expense -->
-        <div id="panel-life-fe" class="panel is-active">
-          <form class="calc-form" id="fe-form">
-            <div class="field">
-              <label>Age</label>
-              <input type="number" min="18" max="90" id="fe-age" placeholder="65" required>
-            </div>
-            <div class="field">
-              <label>Sex</label>
-              <select id="fe-sex">
-                <option value="M">Male</option>
-                <option value="F">Female</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Smoker</label>
-              <select id="fe-smoker">
-                <option value="no">No</option>
-                <option value="yes">Yes</option>
-              </select>
-            </div>
-            <div class="field">
-              <label>Coverage Amount</label>
-              <div class="with-prefix">
-                <span>$</span><input type="number" step="1000" min="1000" id="fe-face" placeholder="15000">
-              </div>
-            </div>
-            <div class="actions">
-              <button type="button" class="btn-primary" id="fe-calc">Calculate</button>
-              <button type="reset" class="btn-ghost">Reset</button>
-            </div>
-          </form>
-          <div class="result-card" id="fe-result" hidden>
-            <h3>Estimated Monthly</h3>
-            <div class="price" id="fe-price">$—</div>
-            <p class="muted" id="fe-breakdown">Enter details to see a quick estimate.</p>
-          </div>
-        </div>
-
-        <!-- Term Life -->
-        <div id="panel-life-term" class="panel">
-          <form class="calc-form" id="term-form">
-            <div class="field"><label>Age</label><input type="number" id="term-age" placeholder="37"></div>
-            <div class="field"><label>Sex</label>
-              <select id="term-sex"><option value="M">Male</option><option value="F">Female</option></select>
-            </div>
-            <div class="field"><label>Smoker</label>
-              <select id="term-smoker"><option value="no">No</option><option value="yes">Yes</option></select>
-            </div>
-            <div class="field"><label>Face Amount</label>
-              <div class="with-prefix"><span>$</span><input type="number" id="term-face" placeholder="250000"></div>
-            </div>
-            <div class="field"><label>Term Length</label>
-              <select id="term-length"><option>10</option><option>20</option><option>30</option></select>
-            </div>
-            <div class="field"><label>Risk Class</label>
-              <select id="term-class"><option>Preferred</option><option>Standard</option></select>
-            </div>
-            <div class="actions">
-              <button type="button" class="btn-primary" id="term-calc">Calculate</button>
-              <button type="reset" class="btn-ghost">Reset</button>
-            </div>
-          </form>
-          <div class="result-card" id="term-result" hidden>
-            <h3>Estimated Monthly</h3>
-            <div class="price" id="term-price">$—</div>
-            <p class="muted" id="term-breakdown">Enter details to see a quick estimate.</p>
-          </div>
-        </div>
-
-        <!-- Auto -->
-        <div id="panel-auto" class="panel">
-          <form class="calc-form" id="auto-form">
-            <div class="field"><label>State</label><input id="auto-state" placeholder="TN" maxlength="2"></div>
-            <div class="field"><label>Driver Age</label><input type="number" id="auto-age" placeholder="32"></div>
-            <div class="field"><label>At-fault Accidents (3 yrs)</label><input type="number" id="auto-acc" min="0" value="0"></div>
-            <div class="field"><label>Violations (count)</label><input type="number" id="auto-viol" min="0" value="0"></div>
-            <div class="field"><label>Vehicle Symbol</label><input type="number" id="auto-sym" min="1" max="27" value="10"></div>
-            <div class="field"><label>Coverage</label>
-              <select id="auto-cov"><option value="liability">Liability Only</option><option value="full">Full Coverage</option></select>
-            </div>
-            <div class="actions">
-              <button type="button" class="btn-primary" id="auto-calc">Calculate</button>
-              <button type="reset" class="btn-ghost">Reset</button>
-            </div>
-          </form>
-          <div class="result-card" id="auto-result" hidden>
-            <h3>Estimated Monthly</h3>
-            <div class="price" id="auto-price">$—</div>
-            <p class="muted" id="auto-breakdown">Enter details to see a quick estimate.</p>
-          </div>
-        </div>
-
-        <!-- Home -->
-        <div id="panel-home" class="panel">
-          <form class="calc-form" id="home-form">
-            <div class="field"><label>State</label><input id="home-state" placeholder="TN" maxlength="2"></div>
-            <div class="field"><label>Coverage A (Dwelling)</label>
-              <div class="with-prefix"><span>$</span><input type="number" id="home-a" placeholder="250000"></div>
-            </div>
-            <div class="field"><label>Deductible</label>
-              <select id="home-ded"><option value="1000">$1,000</option><option value="2500">$2,500</option><option value="5000">$5,000</option></select>
-            </div>
-            <div class="field"><label>Protection Class (1–10)</label><input type="number" id="home-pc" min="1" max="10" value="5"></div>
-            <div class="field"><label>New Roof?</label><select id="home-roof"><option value="no">No</option><option value="yes">Yes</option></select></div>
-            <div class="field"><label>Masonry?</label><select id="home-masonry"><option value="no">No</option><option value="yes">Yes</option></select></div>
-            <div class="actions">
-              <button type="button" class="btn-primary" id="home-calc">Calculate</button>
-              <button type="reset" class="btn-ghost">Reset</button>
-            </div>
-          </form>
-          <div class="result-card" id="home-result" hidden>
-            <h3>Estimated Monthly</h3>
-            <div class="price" id="home-price">$—</div>
-            <p class="muted" id="home-breakdown">Enter details to see a quick estimate.</p>
-          </div>
-        </div>
-
-        <!-- Pro Liability / E&O (placeholder UI) -->
-        <div id="panel-pro-liab" class="panel">
-          <form class="calc-form" id="pro-form">
-            <div class="grid-two">
-              <div class="field"><label>State</label><input id="pro-state" placeholder="TN" maxlength="2"></div>
-              <div class="field"><label>Profession</label>
-                <select id="pro-line">
-                  <option value="misc">Misc Professional</option>
-                  <option value="acct">Accountants</option>
-                  <option value="ae">Architects & Engineers</option>
-                  <option value="re">Real Estate</option>
-                  <option value="ia-lh">Insurance Agent – L&H</option>
-                  <option value="ia-pc">Insurance Agent – P&C</option>
-                  <option value="law">Lawyers</option>
-                </select>
-              </div>
-            </div>
-            <div class="grid-two">
-              <div class="field"><label>Annual Revenue</label>
-                <div class="with-prefix"><span>$</span><input type="number" id="pro-rev" placeholder="180000"></div>
-              </div>
-              <div class="field"><label>Per-Claim / Aggregate</label>
-                <select id="pro-limit">
-                  <option value="1x2">$1M / $2M</option>
-                  <option value="1x1">$1M / $1M</option>
-                  <option value="500x1">\$500k / \$1M</option>
-                </select>
-              </div>
-            </div>
-            <div class="field"><label>Deductible</label>
-              <select id="pro-ded">
-                <option value="0">$0</option>
-                <option value="1000">$1,000</option>
-                <option value="2500">$2,500</option>
-                <option value="5000">$5,000</option>
-              </select>
-            </div>
-            <div class="actions">
-              <button type="button" class="btn-primary" id="pro-calc">Calculate</button>
-              <button type="reset" class="btn-ghost">Reset</button>
-            </div>
-          </form>
-          <div class="result-card" id="pro-result" hidden>
-            <h3>Estimated Monthly</h3>
-            <div class="price" id="pro-price">$—</div>
-            <p class="muted" id="pro-breakdown">Enter details to see a quick estimate.</p>
-          </div>
-        </div>
+      <!-- C-List -->
+      <div id="c-list" class="c-list" aria-label="Ready quotes (C-List)">
+        <!-- Shows carriers whose required questions are satisfied (computed later) -->
+        <p class="muted center small">Quotes will appear here when a carrier is ready.</p>
       </div>
     </section>
-
-    <p class="disclaimer">Estimates for illustration only. Final premiums depend on underwriting, carrier filings, fees, and state rules.</p>
   </main>
 
   <!-- ===== Footer (copied for a perfect match) ===== -->
