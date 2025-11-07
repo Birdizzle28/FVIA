@@ -81,49 +81,91 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
 
-  // ===== Hydrate: questions + carriers for product =====
+  // ===== Hydrate: questions + carriers for product (NO EMBEDS) =====
   async function hydrateProduct(productId){
     clearSList(); clearCList();
+  
     // 1) questions
-    const { data: qData } = await supabase
+    const { data: qData, error: qErr } = await supabase
       .from('questions')
       .select('id, q_number, label, type, options_json, validations_json')
       .eq('product_id', productId)
       .order('q_number', { ascending: true });
+    if (qErr) console.error('questions error:', qErr);
     questions = qData || [];
     renderQChips();
     renderQForm();
-
-    // 2) carriers (carrier_products joined correctly with nested equation_inputs)
-    const { data: cpData, error } = await supabase
+  
+    // 2) carrier_products (ids only)
+    const { data: cps, error: e1 } = await supabase
       .from('carrier_products')
-      .select(`
-        id, product_id, carrier_id,
-        carriers:carrier_id!carrier_products_carrier_id_fkey ( id, carrier_name, carrier_logo, carrier_url ),
-        pros_cons ( pros, cons ),
-        equations (
-          id, equation_dsl, metadata, equation_version,
-          equation_inputs ( var_name, question_id )
-        ),
-        carrier_requirements ( question_id, required_expr, applicable_expr )
-      `)
+      .select('id, product_id, carrier_id, is_active')
       .eq('product_id', productId)
       .eq('is_active', true);
-    
-    if (error) {
-      console.error('carrier_products error:', error);
+    if (e1) { console.error('carrier_products list error:', e1); carriers = []; renderSList(); recomputeQuotes(); return; }
+    if (!cps || !cps.length) { carriers = []; renderSList(); recomputeQuotes(); return; }
+  
+    const cpIds = cps.map(r => r.id);
+    const carrierIds = cps.map(r => r.carrier_id);
+  
+    // 3) fetch pieces in parallel (no joins)
+    const [
+      { data: carrierRows,  error: e2 },
+      { data: prosRows,     error: e3 },
+      { data: reqRows,      error: e4 },
+      { data: eqRows,       error: e5 }
+    ] = await Promise.all([
+      supabase.from('carriers').select('id, carrier_name, carrier_logo, carrier_url').in('id', carrierIds),
+      supabase.from('pros_cons').select('carrier_product_id, pros, cons').in('carrier_product_id', cpIds),
+      supabase.from('carrier_requirements').select('carrier_product_id, question_id, required_expr, applicable_expr').in('carrier_product_id', cpIds),
+      supabase.from('equations').select('id, carrier_product_id, equation_dsl, metadata, equation_version, is_active').in('carrier_product_id', cpIds)
+    ]);
+    if (e2 || e3 || e4 || e5) console.error('fetch pieces error:', { e2, e3, e4, e5 });
+  
+    // 4) get equation_inputs for only the equations we have
+    const eqIds = (eqRows || []).filter(r => r.is_active !== false).map(r => r.id);
+    let inputsRows = [];
+    if (eqIds.length){
+      const { data: _inputs, error: e6 } = await supabase
+        .from('equation_inputs')
+        .select('equation_id, var_name, question_id')
+        .in('equation_id', eqIds);
+      if (e6) console.error('equation_inputs error:', e6);
+      inputsRows = _inputs || [];
     }
-    
-    carriers = (cpData || []).map(row => ({
-      carrier_product_id: row.id,
-      carrier: row.carriers || {},
-      pros: row.pros_cons?.[0]?.pros || [],
-      cons: row.pros_cons?.[0]?.cons || [],
-      equation: row.equations?.[0] || null,
-      inputs: row.equations?.[0]?.equation_inputs || [], // <-- nested under equations
-      requirements: row.carrier_requirements || []
-    }));
-
+  
+    // ---- index helpers
+    const carrierById = new Map((carrierRows || []).map(r => [r.id, r]));
+    const prosByCP    = new Map((prosRows || []).map(r => [r.carrier_product_id, r]));
+    const reqsByCP    = cpIds.reduce((m, id) => (m[id] = [], m), {});
+    (reqRows || []).forEach(r => reqsByCP[r.carrier_product_id]?.push(r));
+  
+    const eqByCP      = new Map();
+    (eqRows || []).forEach(r => { if (r.is_active !== false && !eqByCP.has(r.carrier_product_id)) eqByCP.set(r.carrier_product_id, r); });
+  
+    const inputsByEq  = new Map();
+    (inputsRows || []).forEach(r => {
+      if (!inputsByEq.has(r.equation_id)) inputsByEq.set(r.equation_id, []);
+      inputsByEq.get(r.equation_id).push({ var_name: r.var_name, question_id: r.question_id });
+    });
+  
+    // ---- assemble carriers model for UI
+    carriers = cps.map(cp => {
+      const carrier = carrierById.get(cp.carrier_id) || {};
+      const prosRec = prosByCP.get(cp.id) || {};
+      const eq      = eqByCP.get(cp.id) || null;
+      const inputs  = eq ? (inputsByEq.get(eq.id) || []) : [];
+      return {
+        carrier_product_id: cp.id,
+        carrier,
+        pros: prosRec.pros || [],
+        cons: prosRec.cons || [],
+        equation: eq,
+        inputs,
+        requirements: reqsByCP[cp.id] || []
+      };
+    });
+  
     renderSList();
     recomputeQuotes();
   }
