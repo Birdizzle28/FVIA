@@ -9,7 +9,6 @@ const headers = {
 };
 const VOICE = "Telnyx.KokoroTTS.af";
 
-// ---------- helpers ----------
 const toE164 = (v) => {
   if (!v) return null;
   const s = String(v).trim();
@@ -56,6 +55,27 @@ const decodeState = (b64) => {
   catch { return {}; }
 };
 
+// ---- helper: turn "cover=My Home,My Business" into human text
+function humanizeCoverFromNotes(notes = "") {
+  const m = String(notes).match(/cover=([^\s|]+)/i) || String(notes).match(/cover=([^|]+)/i);
+  if (!m) return null;
+  const raw = m[1].trim();
+  const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
+
+  const toPhrase = (s) => {
+    if (s === 'Myself') return 'their life';
+    if (s === 'Someone Else') return 'a loved one';
+    if (s === 'My Car') return 'their car';
+    if (s === 'My Home') return 'their home';
+    if (s === 'My Business') return 'their business';
+    if (s === 'My Health') return 'their health';
+    if (s === 'Legal Protection Plan') return 'legal protection';
+    if (s === 'My Identity') return 'identity protection';
+    return s.toLowerCase();
+  };
+  return parts.map(toPhrase).join(' and ');
+}
+
 // ---------- main handler ----------
 export async function handler(event) {
   try {
@@ -74,7 +94,6 @@ export async function handler(event) {
       .split(",").map(toE164).filter(Boolean);
     const clientState = decodeState(p?.client_state);
 
-    // IMPORTANT: match the inbound connection so any follow-on originates on same conn
     const inboundConnId = p?.connection_id || process.env.TELNYX_CONNECTION_ID;
 
     console.log("TELNYX EVENT", {
@@ -89,7 +108,7 @@ export async function handler(event) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // ---------- detect context ----------
+    // look up the call_session for either leg
     let { data: sessionAgent } = await supabase
       .from("call_sessions").select("*")
       .eq("telnyx_call_id", callId).maybeSingle();
@@ -111,7 +130,7 @@ export async function handler(event) {
     const isAdminLeg =
       fromMatchesBizOrFrom && isToAdmin && clientState?.kind === "admin";
 
-    // ---------- voicemail recording ----------
+    // recordings saved
     if (eventType === "call.recording.saved") {
       const rec = payload?.data?.payload;
       const url = rec?.recording_urls?.[0]?.url || rec?.recording_url;
@@ -124,7 +143,7 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // ---------- inbound call to business ----------
+    // inbound to business — unchanged
     if (eventType === "call.initiated" && isInboundToBiz) {
       await act(callId, "answer", {});
       await act(callId, "speak", {
@@ -135,7 +154,6 @@ export async function handler(event) {
       const fromForAdmins =
         toE164(process.env.TELNYX_FROM_NUMBER) || businessNum;
 
-      // If caller is an admin, try other admins first; if none left, still include the caller so *someone* is rung.
       let targets = adminList.filter(n => n !== fromNum);
       if (targets.length === 0) targets = adminList.slice();
 
@@ -158,7 +176,7 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // ---------- website lead flow ----------
+    // bridge client leg — unchanged
     if (eventType === "call.answered" && isClientLeg) {
       if (sessionClient?.telnyx_call_id) {
         const r = await act(sessionClient.telnyx_call_id,
@@ -169,31 +187,44 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
+    // ====== agent answered → WHISPER UPGRADE ======
     if (eventType === "call.answered" && isAgentLeg) {
       let name = "Prospect", summary = "";
+      let whisper = sessionAgent?.whisper || ""; // if makeCall saved it
+      let wantsPhrase = null;
+
       if (sessionAgent?.lead_id) {
         const { data: lead } = await supabase
           .from("leads").select(
-            "first_name,last_name,product_type,contact_id,zip,contacts:contact_id(first_name,last_name)"
+            "first_name,last_name,product_type,contact_id,zip,notes,contacts:contact_id(first_name,last_name)"
           )
           .eq("id", sessionAgent.lead_id).maybeSingle();
+
         const lf = lead?.first_name || lead?.contacts?.first_name || "";
         const ll = lead?.last_name || lead?.contacts?.last_name || "";
         name = `${lf} ${ll}`.trim() || name;
+
+        // parse “cover=…” from notes if no explicit whisper was provided
+        wantsPhrase = humanizeCoverFromNotes(lead?.notes || "") || wantsPhrase;
+
         if (lead?.product_type) summary += `Product: ${lead.product_type}. `;
         if (lead?.zip) summary += `ZIP ${lead.zip}. `;
       }
+
+      const payload = whisper
+        ? whisper
+        : `New lead: ${name}${wantsPhrase ? `, wants to cover ${wantsPhrase}` : ""}. ${summary}Press 1 to connect now.`;
 
       await act(callId, "gather_using_speak", {
         voice: VOICE, language: "en-US",
         minimum_digits: 1, maximum_digits: 1, valid_digits: "1",
         inter_digit_timeout_ms: 6000,
-        payload: `New lead. ${name}. ${summary} Press 1 to connect now.`
+        payload
       });
       return { statusCode: 200, body: "OK" };
     }
 
-    // ---------- admin leg answered ----------
+    // admin answered — unchanged
     if (eventType === "call.answered" && isAdminLeg) {
       await act(callId, "gather_using_speak", {
         voice: VOICE, language: "en-US",
@@ -204,13 +235,12 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // ---------- DTMF handler ----------
+    // DTMF — unchanged (bridging, voicemail, etc.)
     if (eventType === "call.dtmf.received" || eventType === "call.gather.ended") {
       const pay = payload?.data?.payload || {};
       const digit = eventType === "call.dtmf.received"
         ? pay.digit : (pay.digits || "")[0];
 
-      // website lead
       if (isAgentLeg) {
         if (digit === "1" && sessionAgent.prospect_number) {
           const make = await fetch(`${TAPI}/calls`, {
@@ -247,7 +277,6 @@ export async function handler(event) {
         return { statusCode: 200, body: "OK" };
       }
 
-      // admin leg
       if (isAdminLeg) {
         const inboundId = clientState?.inbound_id;
         if (!inboundId) {
@@ -259,7 +288,6 @@ export async function handler(event) {
         }
 
         if (digit === "1") {
-          // CHANGED: use bridge to connect this admin leg to the live inbound caller leg
           const r = await act(callId, "bridge", { call_control_id: inboundId });
           if (!r.ok) {
             console.error("Admin bridge failed", { status: r.status, json: r.json });
@@ -283,7 +311,6 @@ export async function handler(event) {
       }
     }
 
-    // ---------- cleanup ----------
     if (eventType === "call.hangup") {
       console.log("HANGUP", { callId, isInboundToBiz, isAdminLeg, isAgentLeg, isClientLeg });
       return { statusCode: 200, body: "OK" };
