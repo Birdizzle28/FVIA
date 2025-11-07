@@ -122,7 +122,7 @@ document.addEventListener('DOMContentLoaded', () => {
     ] = await Promise.all([
       supabase.from('carriers').select('id, carrier_name, carrier_logo, carrier_url').in('id', carrierIds),
       supabase.from('pros_cons').select('carrier_product_id, pros, cons').in('carrier_product_id', cpIds),
-      supabase.from('carrier_requirements').select('carrier_product_id, question_id, required_expr, applicable_expr').in('carrier_product_id', cpIds),
+      supabase.from('carrier_requirements').select('carrier_product_id, question_id, required_expr, applicable_expr, validation_overrides_json').in('carrier_product_id', cpIds),
       supabase.from('equations').select('id, carrier_product_id, equation_dsl, metadata, equation_version, is_active').in('carrier_product_id', cpIds)
     ]);
     if (e2 || e3 || e4 || e5) console.error('fetch pieces error:', { e2, e3, e4, e5 });
@@ -312,6 +312,11 @@ document.addEventListener('DOMContentLoaded', () => {
         chipBar.appendChild(ch);
       }
       card.title = tooltipText(c);
+      const issues = violationsForCarrier(c);
+      if (issues.length){
+        const msgs = issues.map(it => `${it.label}: ${it.code}`);
+        card.title += (card.title ? ' • ' : '') + `Ineligible — ${msgs.join(', ')}`;
+      }
       box.appendChild(card);
     });
   
@@ -352,6 +357,18 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (required && !answered) chip.classList.add('red');
         else if (answered) chip.classList.add('green');
         else chip.classList.add('grey'); // not required & unanswered
+
+        const over = req?.validation_overrides_json || {};
+        const base = (questions.find(q => q.q_number === i)?.validations_json) || {};
+        const val  = answers[i];
+        const vcode = validateValue(val, base, over);
+        
+        chip.classList.remove('red','green','grey');
+        if (!applicable) chip.classList.add('grey');
+        else if (vcode) chip.classList.add('red');        // violates min/max/etc.
+        else if (required && !answered) chip.classList.add('red');
+        else if (answered) chip.classList.add('green');
+        else chip.classList.add('grey');
       }
     });
   }
@@ -390,7 +407,22 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     return defaultVal;
   }
-
+  async function computeDerivedInputs(productId, answers){
+    // TODO: call external services here (RCE, VIN, ISO PPC, geocoding, etc.)
+    // For now, return an empty object or mocked values while we wire vendors.
+    // Example mocked logic:
+    const out = {};
+  
+    // Home RCE stub (if you have address fields, e.g., q: Street, City, State, Zip)
+    // out.home_rcv = await callYourRCE(answers);
+  
+    // Auto VIN stub
+    // if (answers.vin && String(answers.vin).length >= 11) {
+    //   out.vehicle_symbol = await lookupSymbol(answers.vin);
+    // }
+  
+    return out;
+  }
   function evalEquation(equation, inputsMap, metadata){
     if (!equation?.equation_dsl) return null;
     const ctx = {}; // build variable context from answers
@@ -399,7 +431,10 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!q) return;
       ctx[m.var_name] = answers[q.q_number];
     });
-
+    // merge derived inputs (async wrapper above recomputeQuotes will pass them)
+    if (evalEquation._derived) {
+      Object.assign(ctx, evalEquation._derived);
+    }
     const node = equation.equation_dsl;
     return evalNode(node);
 
@@ -435,16 +470,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   // ===== Quotes (C-List) =====
-  function recomputeQuotes(){
+  async function recomputeQuotes(){
     const box = $('#c-list'); box.innerHTML = '';
     if (!carriers.length) { box.innerHTML = '<p class="muted center small">No carriers yet.</p>'; return; }
-
+  
+    // 1) compute derived inputs once (shared for all carriers/equations)
+    const derived = await computeDerivedInputs(chosenProductId, answers);
+    evalEquation._derived = derived; // pass via function property
+  
     carriers.forEach(c => {
       const ready = carrierReady(c);
       if (!ready) return;
-
+  
       const premium = evalEquation(c.equation, c.inputs, c.equation?.metadata) ?? null;
-
+  
       const card = document.createElement('div'); card.className = 'c-card';
       card.innerHTML = `
         <div class="meta">
@@ -456,12 +495,10 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
         <div class="c-price">${premium===null ? '—' : money(premium)}</div>
       `;
-      card.addEventListener('click', () => {
-        openPlanOverlay(c, premium);  // pass full model (c)
-      });
+      card.addEventListener('click', () => openPlanOverlay(c, premium));
       box.appendChild(card);
     });
-
+  
     if (!box.children.length){
       box.innerHTML = '<p class="muted center small">Keep answering—quotes will pop in as carriers become ready.</p>';
     }
@@ -496,15 +533,20 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   function carrierReady(c){
-    // All required_expr true AND answered
+    // must meet required/applicable AND pass per-carrier validations
     const reqByQ = indexRequirements(c.requirements);
-    return questions.every(q => {
+    const basicOk = questions.every(q => {
       const r = reqByQ[q.q_number];
       const applicable = evaluateExpr(r?.applicable_expr, answers, true);
       const required = evaluateExpr(r?.required_expr, answers, false);
       const answered = answers[q.q_number] !== undefined && answers[q.q_number] !== null && answers[q.q_number] !== '';
       return !applicable ? true : (!required || answered);
     });
+    if (!basicOk) return false;
+  
+    // now check validation overrides (e.g., max age)
+    const issues = violationsForCarrier(c);
+    return issues.length === 0;
   }
 
   // ===== Utility UI =====
