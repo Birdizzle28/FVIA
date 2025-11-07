@@ -148,7 +148,7 @@ export async function handler(event) {
       await act(callId, "answer", {});
       await act(callId, "speak", {
         voice: VOICE, language: "en-US",
-        payload: "Please hold while we connect an administrator."
+        payload: "Please hold while we connect you to a representative."
       });
 
       const fromForAdmins =
