@@ -34,6 +34,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnStep2  = document.getElementById('btn-step2');
   const btnSubmit = document.getElementById('btn-submit');
 
+  // runtime state
+  let DETECTED_STATE = null; // set on Step 1 via server-side geocode
+
   // --- helpers ---
   const norm = (s) => (s || '').toString().trim().toLowerCase();
   const digits10 = (s) => (s || '').toString().replace(/\D/g,'').slice(-10);
@@ -55,6 +58,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return `+${d}`;
   };
 
+  // --- duplicate finder (unchanged) ---
   async function findDuplicateLeadByNamePlusOne({
     first_name, last_name, phoneArr, email, zip, product_type, windowDays = 90
   }) {
@@ -174,14 +178,14 @@ document.addEventListener('DOMContentLoaded', () => {
       lbl.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); lbl.click(); }});
     });
 
-    // --- preselect from ?coverage_type=... ---
+    // preselect from ?coverage_type=...
     (function preselectFromQuery(){
       const params = new URLSearchParams(location.search);
       const ct = (params.get('coverage_type') || '').toLowerCase();
       const map = {
         identity: 'My Identity',
         life:     'Myself',
-        health:   'My Health',              // safe if absent (commented out)
+        health:   'My Health',
         home:     'My Home',
         business: 'My Business',
         legal:    'Legal Protection Plan',
@@ -189,10 +193,8 @@ document.addEventListener('DOMContentLoaded', () => {
       };
       const wanted = map[ct];
       if (!wanted) return;
-
       const lbl = Array.from(coverMenu.querySelectorAll('.ms-option'))
         .find(el => (el.dataset.value || el.textContent.trim()) === wanted);
-
       if (lbl) {
         lbl.classList.add('selected');
         const cb = lbl.querySelector('input[type="checkbox"]');
@@ -201,7 +203,6 @@ document.addEventListener('DOMContentLoaded', () => {
         updateCoverFloat();
       }
     })();
-    // --- end preselect ---
   })();
 
   document.addEventListener('click', (e) => {
@@ -218,8 +219,89 @@ document.addEventListener('DOMContentLoaded', () => {
     phone.value = out;
   });
 
-  // step nav
-  btnStep1.addEventListener('click', () => {
+  // --- ZIP → State (server-side) ---
+  async function getStateFromZip(zip5) {
+    try {
+      const resp = await fetch(`/.netlify/functions/zip-to-state?zip=${encodeURIComponent(zip5)}`);
+      const json = await resp.json();
+      return json?.state || null;
+    } catch {
+      return null;
+    }
+  }
+
+  // --- Product selection → required lines (normalized keys) ---
+  // normalized keys: 'life','health','property','casualty','legalshield','idshield'
+  function linesForSelections(labels) {
+    const out = new Set();
+    for (const v of labels) {
+      switch (v) {
+        case 'Myself':
+        case 'Someone Else':
+          out.add('life'); break;
+        case 'My Health':
+          out.add('health'); break;
+        case 'My Car':
+          out.add('casualty'); break;
+        case 'My Home':
+          out.add('property'); break;
+        case 'Legal Protection Plan':
+          out.add('legalshield'); break;
+        case 'My Identity':
+          out.add('idshield'); break;
+        case 'My Business':
+          // Business requires BOTH Property & Casualty
+          out.add('property'); out.add('casualty'); break;
+        default:
+          break;
+      }
+    }
+    // default to life if somehow empty
+    if (out.size === 0) out.add('life');
+    return Array.from(out);
+  }
+
+  // --- Agent picker (per-line, per-state) using agents.is_available ---
+  async function pickAgentForAll(requiredLines, state2) {
+    // state2 must exist; otherwise ineligible by policy
+    if (!state2 || !/^[A-Z]{2}$/.test(state2)) {
+      return { reason: 'none_fit', agent: null, shouldCall: false };
+    }
+
+    const { data: agents, error } = await supabase
+      .from('agents')
+      .select('id, full_name, phone, is_active, is_available, licensed_states_by_line, last_assigned_at')
+      .eq('is_active', true);
+
+    if (error) throw new Error(error.message);
+
+    const eligible = (agents || []).filter(a => {
+      const lic = a.licensed_states_by_line || {};
+      // every required line must include the state
+      return requiredLines.every(lineKey => {
+        const arr = Array.isArray(lic[lineKey]) ? lic[lineKey] : [];
+        return arr.includes(state2);
+      });
+    });
+
+    if (!eligible.length) return { reason: 'none_fit', agent: null, shouldCall: false };
+
+    const byOldest = (arr) =>
+      arr.slice().sort((a,b) => {
+        const ax = a.last_assigned_at ? new Date(a.last_assigned_at).getTime() : 0;
+        const bx = b.last_assigned_at ? new Date(b.last_assigned_at).getTime() : 0;
+        return ax - bx;
+      });
+
+    const online = eligible.filter(a => !!a.is_available);
+    if (online.length) {
+      return { reason: 'online', agent: byOldest(online)[0], shouldCall: true };
+    }
+    return { reason: 'offline_only', agent: byOldest(eligible)[0], shouldCall: false };
+  }
+
+  // ----- STEP NAV -----
+  btnStep1.addEventListener('click', async () => {
     const zipOk  = /^\d{5}$/.test((zip.value||'').trim());
     const ageOk  = String(age.value||'').trim() !== '' && Number(age.value) >= 0;
     const picks  = getSelections();
@@ -232,8 +314,23 @@ document.addEventListener('DOMContentLoaded', () => {
       const firstBad = (!zipOk ? zip : !ageOk ? age : coverSelect);
       firstBad.scrollIntoView({ behavior:'smooth', block:'center' }); firstBad.focus?.(); return;
     }
-    if (picks.includes('My Business')) { show(step2); employeeCount.focus(); } else { show(step3); firstName.focus(); }
+
+    // Resolve state now (server-side)
+    DETECTED_STATE = await getStateFromZip(zip.value.trim());
+    if (!DETECTED_STATE) {
+      alert('Sorry—couldn’t determine your state from ZIP. Please check the ZIP or try again.');
+      markInvalid(zip);
+      return;
+    }
+
+    // Proceed to business step if chosen
+    if (picks.includes('My Business')) {
+      show(step2); employeeCount.focus();
+    } else {
+      show(step3); firstName.focus();
+    }
   });
+
   btnStep2?.addEventListener('click', () => {
     clearInvalid(employeeCount); clearInvalid(businessName);
     let bad = false;
@@ -245,6 +342,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
     show(step3); firstName.focus();
   });
+
   document.querySelectorAll('[data-back]').forEach(btn => {
     btn.addEventListener('click', () => {
       const to = btn.getAttribute('data-back');
@@ -256,7 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   });
 
-  // submit
+  // ---- SUBMIT ----
   const digitsOnly = (s) => (s||'').replace(/\D/g,'');
 
   function utmBundle() {
@@ -376,59 +474,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return { contactId, leads: insertedOrExisting };
   }
 
-  // ===== Helper: infer state from zip (placeholder) =====
-  function inferStateFromZip(z) {
-    const s = String(z || '').trim();
-    if (/^(37|38)/.test(s)) return 'TN'; // example: Tennessee
-    return null; // null → skip state filtering
-  }
-
-  // ===== Agent picker honoring your rules =====
-  async function pickAgentForAll(typesNeeded, state2) {
-    const { data: agents, error } = await supabase
-      .from('agents')
-      .select('id, full_name, product_types, phone, is_active, licensed_states, last_assigned_at')
-      .eq('is_active', true);
-    if (error) throw new Error(error.message);
-
-    const need = new Set((typesNeeded || []).map(t => (t||'').toLowerCase()));
-    const coversAll = (a) => {
-      const set = new Set((a.product_types || []).map(t => (t||'').toLowerCase()));
-      const stateOK = !state2 || (Array.isArray(a.licensed_states) && a.licensed_states.includes(state2));
-      return stateOK && Array.from(need).every(t => set.has(t));
-    };
-
-    const eligible = (agents || []).filter(coversAll);
-
-    // Rule #2: nobody fits ⇒ treat as not covered region
-    if (!eligible.length) return { reason: 'none_fit', agent: null, shouldCall: false };
-
-    // availability among eligible
-    const eligibleIds = eligible.map(a => a.id);
-    const { data: availRows, error: eAvail } = await supabase
-      .from('agent_availability')
-      .select('agent_id, available')
-      .in('agent_id', eligibleIds)
-      .eq('available', true);
-    if (eAvail) throw new Error(eAvail.message);
-
-    const onlineSet = new Set((availRows || []).map(r => r.agent_id));
-    const online = eligible.filter(a => onlineSet.has(a.id));
-
-    const byOldest = (arr) =>
-      arr.slice().sort((a,b) => {
-        const ax = a.last_assigned_at ? new Date(a.last_assigned_at).getTime() : 0;
-        const bx = b.last_assigned_at ? new Date(b.last_assigned_at).getTime() : 0;
-        return ax - bx;
-      });
-
-    if (online.length) {
-      return { reason: 'online', agent: byOldest(online)[0], shouldCall: true };
-    }
-    // Rule #1: eligible but none available ⇒ assign to next unavailable, no call
-    return { reason: 'offline_only', agent: byOldest(eligible)[0], shouldCall: false };
-  }
-
   // === Submit handler ===
   btnSubmit.addEventListener('click', async () => {
     [firstName, lastName, phone, email].forEach(clearInvalid);
@@ -437,7 +482,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (!firstName.value.trim()) { markInvalid(firstName); bad = true; }
     if (!lastName.value.trim())  { markInvalid(lastName);  bad = true; }
 
-    const ten = digitsOnly(phone.value);
+    const ten = digits10(phone.value);
     const e164Prospect = toE164(ten);
     if (ten.length !== 10)     { markInvalid(phone); bad = true; }
     if (!isEmail(email.value)) { markInvalid(email); bad = true; }
@@ -448,6 +493,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const selections = getSelections();
+    const requiredLines = linesForSelections(selections); // normalized keys
     const notesParts = [
       `cover=${selections.join(',')}`,
       selections.includes('My Business') ? `biz_employees=${employeeCount.value||''}` : null,
@@ -460,31 +506,33 @@ document.addEventListener('DOMContentLoaded', () => {
     btnSubmit.textContent = 'Submitting…';
 
     try {
-      // Map form selections to product types
-      const map = new Map([
-        ['My Car','Casualty Insurance'],
-        ['My Home','Property Insurance'],
-        ['My Business','Casualty Insurance'],
-        ['My Identity','ID Shield'],
-        ['Legal Protection Plan','Legal Shield'],
-        ['Myself','Life Insurance'],
-        ['Someone Else','Life Insurance'],
-        ['My Health','Health Insurance'],
-      ]);
-      const pickedTypes = Array.from(new Set(selections.map(v => map.get(v)).filter(Boolean)));
-      if (pickedTypes.length === 0) pickedTypes.push('Life Insurance');
-
-      // Infer state and choose agent BEFORE any inserts
-      const state2 = inferStateFromZip(zip.value);
-      const choice = await pickAgentForAll(pickedTypes.map(t => (t||'').toLowerCase()), state2);
-
-      // Rule #2: not covered region ⇒ stop now (no contact/lead/call)
-      if (choice.reason === 'none_fit') {
-        alert('We’re sorry — we don’t currently cover your region.');
+      // Hard stop if state was not resolved in Step 1
+      if (!DETECTED_STATE) {
+        alert('We couldn’t determine your state. Please go back and confirm your ZIP.');
         btnSubmit.disabled = false;
         btnSubmit.textContent = prev;
         return;
       }
+
+      // Choose eligible agent BEFORE any inserts
+      const choice = await pickAgentForAll(requiredLines, DETECTED_STATE);
+      if (choice.reason === 'none_fit') {
+        alert('We’re sorry — we don’t currently have a licensed agent for your selection in your state.');
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = prev;
+        return;
+      }
+
+      // Map normalized lines to your existing product_type labels for leads
+      const lineToProductType = {
+        life: 'Life Insurance',
+        health: 'Health Insurance',
+        property: 'Property Insurance',
+        casualty: 'Casualty Insurance',
+        legalshield: 'Legal Shield',
+        idshield: 'ID Shield'
+      };
+      const pickedTypes = Array.from(new Set(requiredLines.map(l => lineToProductType[l]).filter(Boolean)));
 
       // Proceed with inserts
       const contactInfo = {
@@ -513,12 +561,12 @@ document.addEventListener('DOMContentLoaded', () => {
         .update({ last_assigned_at: nowIso })
         .eq('id', choice.agent.id);
 
-      // Mark contacted_at (optional)
+      // Optional: mark contacted_at immediately
       await supabase.from('leads')
         .update({ contacted_at: new Date().toISOString() })
         .in('id', insertedIds.map(x => x.id));
 
-      // Only auto-dial if the chosen agent was online
+      // Only auto-dial if the chosen agent is available
       if (choice.shouldCall) {
         const rawAgentNumber = Array.isArray(choice.agent.phone) ? choice.agent.phone[0] : choice.agent.phone;
         const agentNumber    = toE164(rawAgentNumber);
