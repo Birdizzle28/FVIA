@@ -530,6 +530,46 @@ document.addEventListener('DOMContentLoaded', () => {
             const row = (metadata?.state_factor_table||[]).find(r => r[0] === st);
             return row ? row[1] : 1.00;
           }
+          // inside evalEquation -> switch(op) { case 'call': ... }
+          if (n.name === 'per1k_by_age') {
+            // args: tier(string), age(number), sex('M'|'F'|'U'), smoker(bool)
+            const [tierIn, ageIn, sexIn, smokerIn] = args;
+            const tier   = String(tierIn || 'Level');
+            const age    = Number(ageIn || 0);
+            let   sex    = String(sexIn || 'U').toUpperCase();
+            const smoker = Boolean(smokerIn);
+          
+            // metadata schema:
+            // metadata.age_rates = {
+            //   Level: { M: { "NS": { "47": 2.58, ... }, "S": {...} },
+            //            F: { "NS": {...}, "S": {...} },
+            //            U: { "NS": {...}, "S": {...} } },
+            //   Modified: {...}
+            // }
+            const table = (metadata?.age_rates?.[tier]) || {};
+            const sexBlock = table[sex] || table['U'] || {};
+            const band = smoker ? (sexBlock['S'] || {}) : (sexBlock['NS'] || {});
+          
+            // Exact age first, else fall back to the nearest lower age, else nearest lower of any sex/unisex
+            if (band[String(age)] != null) return band[String(age)];
+          
+            // nearest lower age in this smoker/sex band
+            const ages = Object.keys(band).map(Number).filter(n => !Number.isNaN(n)).sort((a,b)=>a-b);
+            let best = null;
+            for (const a of ages) if (a <= age) best = a;
+            if (best != null) return band[String(best)];
+          
+            // last resort: unisex band if present
+            if (sex !== 'U' && (table['U']?.[smoker ? 'S' : 'NS'])) {
+              const uBand = table['U'][smoker ? 'S' : 'NS'];
+              if (uBand[String(age)] != null) return uBand[String(age)];
+              const uAges = Object.keys(uBand).map(Number).filter(n => !Number.isNaN(n)).sort((a,b)=>a-b);
+              let uBest = null;
+              for (const a of uAges) if (a <= age) uBest = a;
+              if (uBest != null) return uBand[String(uBest)];
+            }
+            return null;
+          }
           return 1;
         }
         default: return null;
