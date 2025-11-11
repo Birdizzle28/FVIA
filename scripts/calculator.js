@@ -450,13 +450,25 @@ document.addEventListener('DOMContentLoaded', () => {
         case 'div':   return (+args[0]||0) / (+args[1]||1);
         case 'round': return Math.round((+args[0]||0) * (10**(+args[1]||0))) / (10**(+args[1]||0));
         case 'call':
-          if (n.name === 'per1k_rate'){
-            // metadata.per1k_table rows: [max_age, smoker(bool), sex, term, per1k]
-            const [age, sex, term, smoker] = args;
-            const row = (metadata?.per1k_table||[]).find(r =>
-              age <= r[0] && smoker === r[1] && sex === r[2] && term === r[3]
-            );
-            return row ? row[4] : 1.00;
+          // inside evalEquation -> switch(op) case 'call':
+          if (n.name === 'per1k_rate') {
+            // args: age, sex, smoker, state, plan
+            const [age, sexIn, smoker, stateIn, planIn] = args;
+            // normalize inputs
+            const state = String(stateIn || '').toUpperCase();
+            const plan  = String(planIn || 'level').toLowerCase();
+            let sex = String(sexIn || '').toUpperCase(); // 'M' | 'F' | 'U'
+            // Montana (example) may be unisex in filings
+            const key = (state === 'MT') ? 'MT_UNISEX' : state;
+          
+            const tables = (metadata?.rates?.[key]?.[plan]) || [];
+            // if unisex, collapse sex to 'U' for lookup
+            const hasUnisex = tables.some(r => r[1] === 'U');
+            if (hasUnisex) sex = 'U';
+          
+            // rows: [max_age, sex, smoker_bool, per1k]
+            const row = tables.find(r => (age <= r[0]) && (sex === r[1]) && (Boolean(smoker) === Boolean(r[2])));
+            return row ? row[3] : null;
           }
           if (n.name === 'state_factor'){
             const [st] = args;
