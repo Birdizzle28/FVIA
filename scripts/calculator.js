@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let questions = [];            // [{id,q_number,label,type,...}]
   let carriers = [];             // [{carrier_product_id, carrier:{...}, pros_cons, requirements:[...] , equation, inputs }]
   let answers = {};              // { [q_number]: value }
+  let derivedCtx = {};           // computed fields available to rules/equations (e.g., uw_tier)
 
   // ========= Helpers =========
   const $ = (sel) => document.querySelector(sel);
@@ -39,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   $('[data-slide="product"] [data-back="line"]')?.addEventListener('click', () => {
-    chosenLine = null; chosenProductId = null; answers = {};
+    chosenLine = null; chosenProductId = null; answers = {}; derivedCtx = {};
     $('#line-next').disabled = true; clearSList(); clearCList(); slide('line');
   });
 
@@ -54,7 +55,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   $('#product-next')?.addEventListener('click', async () => {
     if (!chosenProductId) return;
-    answers = {};
+    answers = {}; derivedCtx = {};
     await hydrateProduct(chosenProductId);
     slide('questions');
   });
@@ -247,21 +248,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   function normalizeValue(q, raw){
     if (raw === '') return null;
-  
-    if (q.type === 'number' || q.type === 'money') {
-      return Number(raw);
-    }
-  
-    if (q.type === 'bool') {
-      return raw === 'true';
-    }
-  
-    // If it's a select, try to coerce numeric-looking values to numbers.
+    if (q.type === 'number' || q.type === 'money') return Number(raw);
+    if (q.type === 'bool') return raw === 'true';
     if (q.type === 'select') {
       const n = Number(raw);
       return Number.isNaN(n) ? raw : n;
     }
-  
     return raw;
   }
 
@@ -356,7 +348,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!applicable) chip.classList.add('grey');
         else if (required && !answered) chip.classList.add('red');
         else if (answered) chip.classList.add('green');
-        else chip.classList.add('grey'); // not required & unanswered
+        else chip.classList.add('grey');
 
         const over = req?.validation_overrides_json || {};
         const base = (questions.find(q => q.q_number === i)?.validations_json) || {};
@@ -365,7 +357,7 @@ document.addEventListener('DOMContentLoaded', () => {
         
         chip.classList.remove('red','green','grey');
         if (!applicable) chip.classList.add('grey');
-        else if (vcode) chip.classList.add('red');        // violates min/max/etc.
+        else if (vcode) chip.classList.add('red');
         else if (required && !answered) chip.classList.add('red');
         else if (answered) chip.classList.add('green');
         else chip.classList.add('grey');
@@ -382,47 +374,49 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ===== JSON-logic mini evaluator for required/applicable + equation DSL =====
   function evaluateExpr(expr, ctx, defaultVal){
+    // merged context so expressions can see derived fields (e.g., uw_tier)
+    const ctxAll = { ...(ctx || {}), ...(derivedCtx || {}) };
     if (expr === null || expr === undefined) return defaultVal;
     if (typeof expr === 'boolean') return expr;
     if (typeof expr === 'string') {
-      // accept 'true'/'false'
       if (expr === 'true') return true; if (expr === 'false') return false;
     }
     if (typeof expr === 'object' && !Array.isArray(expr)){
-      // minimal ops: {"op":"and","args":[...]} etc. or legacy JSON-logic like {"and":[...]}
       const op = expr.op || Object.keys(expr)[0];
       const args = expr.args || expr[op] || [];
+      const val = x => evaluateExpr(x, ctxAll, null);
       switch(op){
-        case 'var': return ctx?.[args.name] ?? null;
-        case 'and': return args.every(a => evaluateExpr(a, ctx, true));
-        case 'or':  return args.some(a => evaluateExpr(a, ctx, false));
-        case '==':  return evaluateExpr(args[0], ctx, null) == evaluateExpr(args[1], ctx, null);
-        case '!=':  return evaluateExpr(args[0], ctx, null) != evaluateExpr(args[1], ctx, null);
-        case '>':   return evaluateExpr(args[0], ctx, null) >  evaluateExpr(args[1], ctx, null);
-        case '>=':  return evaluateExpr(args[0], ctx, null) >= evaluateExpr(args[1], ctx, null);
-        case '<':   return evaluateExpr(args[0], ctx, null) <  evaluateExpr(args[1], ctx, null);
-        case '<=':  return evaluateExpr(args[0], ctx, null) <= evaluateExpr(args[1], ctx, null);
+        case 'var': return ctxAll?.[args.name] ?? null;
+        case 'and': return args.every(a => evaluateExpr(a, ctxAll, true));
+        case 'or':  return args.some(a => evaluateExpr(a, ctxAll, false));
+        case '==':  return val(args[0]) == val(args[1]);
+        case '!=':  return val(args[0]) != val(args[1]);
+        case '>':   return val(args[0]) >  val(args[1]);
+        case '>=':  return val(args[0]) >= val(args[1]);
+        case '<':   return val(args[0]) <  val(args[1]);
+        case '<=':  return val(args[0]) <= val(args[1]);
         default:    return defaultVal;
       }
     }
     return defaultVal;
   }
+
+  // ===== Derived inputs (generic underwriting tier from health questions) =====
   async function computeDerivedInputs(productId, answers){
-    // TODO: call external services here (RCE, VIN, ISO PPC, geocoding, etc.)
-    // For now, return an empty object or mocked values while we wire vendors.
-    // Example mocked logic:
     const out = {};
-  
-    // Home RCE stub (if you have address fields, e.g., q: Street, City, State, Zip)
-    // out.home_rcv = await callYourRCE(answers);
-  
-    // Auto VIN stub
-    // if (answers.vin && String(answers.vin).length >= 11) {
-    //   out.vehicle_symbol = await lookupSymbol(answers.vin);
-    // }
-  
+    // Adjust these q_numbers to match your DB:
+    const SECTION_A = [201,202,203,204]; // any "Yes" => Decline
+    const SECTION_B = [211,212,213];     // any "Yes" => Modified (if not Decline)
+
+    const yes = (qnum) => answers[qnum] === true || answers[qnum] === 'true';
+
+    const A = SECTION_A.some(yes);
+    const B = SECTION_B.some(yes);
+
+    out.uw_tier = A ? 'Decline' : (B ? 'Modified' : 'Level');
     return out;
   }
+
   function evalEquation(equation, inputsMap, metadata){
     if (!equation?.equation_dsl) return null;
     const ctx = {}; // build variable context from answers
@@ -431,10 +425,9 @@ document.addEventListener('DOMContentLoaded', () => {
       if (!q) return;
       ctx[m.var_name] = answers[q.q_number];
     });
-    // merge derived inputs (async wrapper above recomputeQuotes will pass them)
-    if (evalEquation._derived) {
-      Object.assign(ctx, evalEquation._derived);
-    }
+    // merge derived inputs
+    if (evalEquation._derived) Object.assign(ctx, evalEquation._derived);
+
     const node = equation.equation_dsl;
     return evalNode(node);
 
@@ -449,25 +442,28 @@ document.addEventListener('DOMContentLoaded', () => {
         case 'mul':   return args.reduce((a,b)=>a*(+b||1),1);
         case 'div':   return (+args[0]||0) / (+args[1]||1);
         case 'round': return Math.round((+args[0]||0) * (10**(+args[1]||0))) / (10**(+args[1]||0));
-        case 'call':
-          // inside evalEquation -> switch(op) case 'call':
+        case 'call': {
+          // legacy handler (kept for compatibility)
           if (n.name === 'per1k_rate') {
-            // args: age, sex, smoker, state, plan
             const [age, sexIn, smoker, stateIn, planIn] = args;
-            // normalize inputs
             const state = String(stateIn || '').toUpperCase();
             const plan  = String(planIn || 'level').toLowerCase();
-            let sex = String(sexIn || '').toUpperCase(); // 'M' | 'F' | 'U'
-            // Montana (example) may be unisex in filings
+            let sex = String(sexIn || '').toUpperCase();
             const key = (state === 'MT') ? 'MT_UNISEX' : state;
-          
             const tables = (metadata?.rates?.[key]?.[plan]) || [];
-            // if unisex, collapse sex to 'U' for lookup
             const hasUnisex = tables.some(r => r[1] === 'U');
             if (hasUnisex) sex = 'U';
-          
-            // rows: [max_age, sex, smoker_bool, per1k]
             const row = tables.find(r => (age <= r[0]) && (sex === r[1]) && (Boolean(smoker) === Boolean(r[2])));
+            return row ? row[3] : null;
+          }
+          // new handler: choose table by derived uw_tier
+          if (n.name === 'per1k_by_tier') {
+            const [tier, age, sex, smoker] = args;
+            const table = (tier === 'Modified') ? (metadata?.modified_table || [])
+                        : (tier === 'Level')    ? (metadata?.level_table    || [])
+                        : [];
+            // rows: [max_age, sex, smoker_bool, per1k]
+            const row = table.find(r => (age <= r[0]) && (sex === r[1]) && (Boolean(smoker) === Boolean(r[2])));
             return row ? row[3] : null;
           }
           if (n.name === 'state_factor'){
@@ -476,6 +472,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return row ? row[1] : 1.00;
           }
           return 1;
+        }
         default: return null;
       }
     }
@@ -486,16 +483,25 @@ document.addEventListener('DOMContentLoaded', () => {
     const box = $('#c-list'); box.innerHTML = '';
     if (!carriers.length) { box.innerHTML = '<p class="muted center small">No carriers yet.</p>'; return; }
   
-    // 1) compute derived inputs once (shared for all carriers/equations)
+    // 1) compute derived inputs once (shared)
     const derived = await computeDerivedInputs(chosenProductId, answers);
-    evalEquation._derived = derived; // pass via function property
+    derivedCtx = derived;              // ⬅️ expose to expressions
+    evalEquation._derived = derived;   // ⬅️ expose to equations
+
+    const levelWrap = document.createElement('div');
+    const modWrap   = document.createElement('div');
+    let levelCount=0, modCount=0;
+
+    // optional section headers
+    levelWrap.innerHTML = '<h4 class="muted">Level</h4>';
+    modWrap.innerHTML   = '<h4 class="muted">Modified / Graded</h4>';
   
     carriers.forEach(c => {
       const ready = carrierReady(c);
       if (!ready) return;
-  
+
       const premium = evalEquation(c.equation, c.inputs, c.equation?.metadata) ?? null;
-  
+
       const card = document.createElement('div'); card.className = 'c-card';
       card.innerHTML = `
         <div class="meta">
@@ -508,9 +514,15 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="c-price">${premium===null ? '—' : money(premium)}</div>
       `;
       card.addEventListener('click', () => openPlanOverlay(c, premium));
-      box.appendChild(card);
+
+      if (derivedCtx.uw_tier === 'Modified') { modWrap.appendChild(card); modCount++; }
+      else if (derivedCtx.uw_tier === 'Level') { levelWrap.appendChild(card); levelCount++; }
+      // Decline => nothing appended
     });
-  
+
+    if (levelCount) box.appendChild(levelWrap);
+    if (modCount)   box.appendChild(modWrap);
+
     if (!box.children.length){
       box.innerHTML = '<p class="muted center small">Keep answering—quotes will pop in as carriers become ready.</p>';
     }
@@ -555,10 +567,12 @@ document.addEventListener('DOMContentLoaded', () => {
       return !applicable ? true : (!required || answered);
     });
     if (!basicOk) return false;
-  
-    // now check validation overrides (e.g., max age)
     const issues = violationsForCarrier(c);
-    return issues.length === 0;
+    if (issues.length) return false;
+
+    // Declines don’t render a quote
+    if (derivedCtx.uw_tier === 'Decline') return false;
+    return true;
   }
 
   // ===== Utility UI =====
@@ -597,10 +611,8 @@ document.addEventListener('DOMContentLoaded', () => {
   
     // save button
     $('#po-save').onclick = async () => {
-      // attach user if logged in
       const { data: ures } = await supabase.auth.getUser();
       const user_id = ures?.user?.id || null;
-  
       const payload = {
         user_id,
         product_id: chosenProductId,
@@ -611,10 +623,10 @@ document.addEventListener('DOMContentLoaded', () => {
         metadata: {
           line: chosenLine,
           url: carrier.carrier_url || null,
-          equation_version: cModel?.equation?.equation_version || 1
+          equation_version: cModel?.equation?.equation_version || 1,
+          uw_tier: derivedCtx.uw_tier || null
         }
       };
-  
       const { error } = await supabase.from('quotes').insert(payload);
       if (error) {
         console.error('save quote error:', error);
@@ -625,12 +637,12 @@ document.addEventListener('DOMContentLoaded', () => {
       $ov.setAttribute('aria-hidden','true');
     };
   
-    // esc & click-out
     const close = () => $ov.setAttribute('aria-hidden','true');
     $('#plan-close').onclick = close;
     $ov.onclick = (e) => { if (e.target === $ov) close(); };
     document.onkeydown = (e) => { if (e.key === 'Escape') close(); };
   }
+
   // ===== Saved Quotes Drawer =====
   $('#open-saved')?.addEventListener('click', async () => {
     await loadSavedQuotes();
@@ -644,7 +656,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const list = $('#saved-list');
     list.innerHTML = '<div class="sd-empty">Loading…</div>';
   
-    // Require auth user (matches your RLS); if not logged in, show note
     const { data: ures } = await supabase.auth.getUser();
     const user_id = ures?.user?.id || null;
     if (!user_id){
@@ -673,11 +684,9 @@ document.addEventListener('DOMContentLoaded', () => {
     data.forEach(row => {
       const div = document.createElement('div');
       div.className = 'sd-item';
-  
       const when = new Date(row.created_at).toLocaleString();
       const line = row?.metadata?.line || '';
       const title = `${row.carrier_name} • ${money(row.premium)}`;
-  
       div.innerHTML = `
         <div>
           <h4>${title}</h4>
@@ -688,17 +697,14 @@ document.addEventListener('DOMContentLoaded', () => {
           <button class="btn del">Delete</button>
         </div>
       `;
-  
       div.querySelector('.open').addEventListener('click', () => openSavedQuote(row));
       div.querySelector('.del').addEventListener('click', () => deleteSavedQuote(row.id, div));
-  
       list.appendChild(div);
     });
   }
+
   async function openSavedQuote(row){
-    // If different product, navigate there first
     if (row.product_id !== chosenProductId) {
-      // Try to detect line from metadata; fall back to keeping current line
       const targetLine = row?.metadata?.line || chosenLine;
       if (targetLine && targetLine !== chosenLine) {
         chosenLine = targetLine;
@@ -707,8 +713,6 @@ document.addEventListener('DOMContentLoaded', () => {
         await loadProductsForLine(chosenLine);
         slide('product');
       }
-  
-      // Select the right product tile and proceed
       const tile = $(`#product-tiles .tile[data-product-id="${row.product_id}"]`);
       if (!tile){
         alert('This quote is for a product not currently available on this page.');
@@ -718,20 +722,14 @@ document.addEventListener('DOMContentLoaded', () => {
       tile.classList.add('active');
       chosenProductId = row.product_id;
       $('#product-next').disabled = false;
-  
       await hydrateProduct(chosenProductId);
       slide('questions');
     }
-  
-    // Repopulate answers
     answers = {};
     (row.answers_json || []).forEach(a => {
-      // find the question by its label or q_number
       const q = questions.find(q => q.q_number === a.q_number) || questions.find(q => q.label === a.label);
       if (q) answers[q.q_number] = a.value;
     });
-  
-    // Push values into the inputs
     $$('#q-body .q-row').forEach((wrap, idx) => {
       const q = questions[idx];
       const inputEl = wrap.querySelector('input, select');
@@ -739,41 +737,10 @@ document.addEventListener('DOMContentLoaded', () => {
       const val = answers[q.q_number];
       if (val !== undefined && val !== null) inputEl.value = String(val);
     });
-  
     updateChipColors();
     recomputeQuotes();
-  
-    // Open overlay with the saved premium (recomputed may differ—so show both)
-    const recomputed = (() => {
-      const cModel = carriers.find(c => c.carrier_product_id === row.carrier_product_id);
-      if (!cModel) return null;
-      return evalEquation(cModel.equation, cModel.inputs, cModel.equation?.metadata);
-    })();
-  
-    const cModelForOverlay = carriers.find(c => c.carrier_product_id === row.carrier_product_id);
-    if (cModelForOverlay) {
-      // augment price line to display both (saved vs now) if they differ
-      const priceToShow = recomputed == null ? row.premium : recomputed;
-      openPlanOverlay(
-        cModelForOverlay,
-        priceToShow
-      );
-  
-      // append note about saved premium vs current
-      const node = document.createElement('div');
-      node.className = 'muted small';
-      node.style.marginTop = '6px';
-      if (recomputed != null && Number(recomputed) !== Number(row.premium)) {
-        node.textContent = `Saved premium was ${money(row.premium)}; current inputs compute ${money(recomputed)}.`;
-      } else {
-        node.textContent = `This matches your saved premium.`;
-      }
-      $('#po-price')?.appendChild(node);
-    }
-  
-    // close the drawer
-    $('#saved-drawer').setAttribute('aria-hidden','true');
   }
+
   async function deleteSavedQuote(id, node){
     const { data: ures } = await supabase.auth.getUser();
     const user_id = ures?.user?.id || null;
@@ -781,7 +748,6 @@ document.addEventListener('DOMContentLoaded', () => {
       alert('Please sign in first.');
       return;
     }
-  
     const { error } = await supabase.from('quotes').delete().eq('id', id);
     if (error){
       console.error('delete quote error:', error);
