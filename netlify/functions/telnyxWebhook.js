@@ -178,11 +178,10 @@ export async function handler(event) {
 
     // bridge client leg — unchanged
     if (eventType === "call.answered" && isClientLeg) {
+      // fix: actually bridge the two existing call legs
       if (sessionClient?.telnyx_call_id) {
-        const r = await act(sessionClient.telnyx_call_id,
-          "transfer_call", { to: callId });
-        if (!r.ok)
-          console.error("Bridge failed", { status: r.status, json: r.json });
+        const r = await act(sessionClient.telnyx_call_id, "bridge", { call_control_id: callId });
+        if (!r.ok) console.error("Bridge failed", { status: r.status, json: r.json });
       }
       return { statusCode: 200, body: "OK" };
     }
