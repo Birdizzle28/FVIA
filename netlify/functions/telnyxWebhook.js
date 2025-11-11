@@ -49,6 +49,13 @@ async function startVoicemailOn(callId) {
   });
 }
 
+// stop any active TTS/gather before bridging
+const safeStop = async (id) => {
+  if (!id) return;
+  await act(id, "stop_speaking", {});
+  await act(id, "stop_gather", {});
+};
+
 const encodeState = (obj) => Buffer.from(JSON.stringify(obj)).toString("base64");
 const decodeState = (b64) => {
   try { return JSON.parse(Buffer.from(String(b64 || ""), "base64").toString("utf8")); }
@@ -143,7 +150,7 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // inbound to business — unchanged
+    // inbound to business — dial admins
     if (eventType === "call.initiated" && isInboundToBiz) {
       await act(callId, "answer", {});
       await act(callId, "speak", {
@@ -176,20 +183,25 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // bridge client leg — unchanged
+    // website flow: client leg answered → stop audio on both legs, then bridge
     if (eventType === "call.answered" && isClientLeg) {
-      // fix: actually bridge the two existing call legs
-      if (sessionClient?.telnyx_call_id) {
-        const r = await act(sessionClient.telnyx_call_id, "bridge", { call_control_id: callId });
-        if (!r.ok) console.error("Bridge failed", { status: r.status, json: r.json });
-      }
+      const agentLegId  = sessionClient?.telnyx_call_id;
+      const clientLegId = callId;
+
+      console.log("BRIDGE PRECHECK (website)", { agentLegId, clientLegId });
+
+      await safeStop(agentLegId);
+      await safeStop(clientLegId);
+
+      const r = await act(agentLegId, "bridge", { call_control_id: clientLegId });
+      if (!r.ok) console.error("Bridge failed", { status: r.status, json: r.json });
       return { statusCode: 200, body: "OK" };
     }
 
-    // ====== agent answered → WHISPER UPGRADE ======
+    // agent answered → whisper + gather
     if (eventType === "call.answered" && isAgentLeg) {
       let name = "Prospect", summary = "";
-      let whisper = sessionAgent?.whisper || ""; // if makeCall saved it
+      let whisper = sessionAgent?.whisper || "";
       let wantsPhrase = null;
 
       if (sessionAgent?.lead_id) {
@@ -202,8 +214,6 @@ export async function handler(event) {
         const lf = lead?.first_name || lead?.contacts?.first_name || "";
         const ll = lead?.last_name || lead?.contacts?.last_name || "";
         name = `${lf} ${ll}`.trim() || name;
-
-        // parse “cover=…” from notes if no explicit whisper was provided
         wantsPhrase = humanizeCoverFromNotes(lead?.notes || "") || wantsPhrase;
 
         if (lead?.product_type) summary += `Product: ${lead.product_type}. `;
@@ -223,7 +233,7 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // admin answered — unchanged
+    // admin answered → whisper + gather
     if (eventType === "call.answered" && isAdminLeg) {
       await act(callId, "gather_using_speak", {
         voice: VOICE, language: "en-US",
@@ -234,12 +244,13 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // DTMF — unchanged (bridging, voicemail, etc.)
+    // DTMF
     if (eventType === "call.dtmf.received" || eventType === "call.gather.ended") {
       const pay = payload?.data?.payload || {};
       const digit = eventType === "call.dtmf.received"
         ? pay.digit : (pay.digits || "")[0];
 
+      // agent pressed key (website flow)
       if (isAgentLeg) {
         if (digit === "1" && sessionAgent.prospect_number) {
           const make = await fetch(`${TAPI}/calls`, {
@@ -260,9 +271,11 @@ export async function handler(event) {
             return { statusCode: make.status, body: JSON.stringify(j) };
           }
           const clientCallId = j?.data?.id;
+
           await supabase.from("call_sessions")
             .update({ client_call_id: clientCallId })
             .eq("id", sessionAgent.id);
+
           await act(callId, "speak", {
             voice: VOICE, language: "en-US",
             payload: "Dialing the client now."
@@ -276,6 +289,7 @@ export async function handler(event) {
         return { statusCode: 200, body: "OK" };
       }
 
+      // admin pressed key (inbound line)
       if (isAdminLeg) {
         const inboundId = clientState?.inbound_id;
         if (!inboundId) {
@@ -287,6 +301,10 @@ export async function handler(event) {
         }
 
         if (digit === "1") {
+          // stop audio on both legs, then bridge
+          await safeStop(callId);
+          await safeStop(inboundId);
+
           const r = await act(callId, "bridge", { call_control_id: inboundId });
           if (!r.ok) {
             console.error("Admin bridge failed", { status: r.status, json: r.json });
