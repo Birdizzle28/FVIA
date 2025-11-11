@@ -496,7 +496,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const op = n.op;
       const args = (n.args || []).map(a => evalNode(a));
       switch(op){
-        case 'var':   return ctx[n.name];
+        case 'var': {
+          // allow constants from metadata (e.g., policy_fee_annual, modal_factor_monthly)
+          if (ctx[n.name] !== undefined) return ctx[n.name];
+          if (metadata && Object.prototype.hasOwnProperty.call(metadata, n.name)) return metadata[n.name];
+          return undefined;
+        }
         case 'add':   return args.reduce((a,b)=>a+(+b||0),0);
         case 'mul':   return args.reduce((a,b)=>a*(+b||1),1);
         case 'div':   return (+args[0]||0) / (+args[1]||1);
