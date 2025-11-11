@@ -208,44 +208,81 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function renderQForm(){
-    const body = $('#q-body'); body.innerHTML = '';
+    const body = $('#q-body'); 
+    body.innerHTML = '';
+  
     questions.forEach(q => {
       const wrap = document.createElement('div');
       wrap.className = 'q-row';
-      wrap.innerHTML = `<label><strong>${q.q_number}. ${q.label}</strong></label>`;
+  
+      // label + id wiring for a11y
+      const inputId = `q_${q.q_number}`;
+      wrap.innerHTML = `<label for="${inputId}"><strong>${q.q_number}. ${q.label}</strong></label>`;
+  
       let inputEl;
-
+  
       if (q.type === 'select'){
         inputEl = document.createElement('select');
+        // blank option first so nothing is preselected
+        const blank = document.createElement('option');
+        blank.value = ''; blank.textContent = '— Select —';
+        inputEl.appendChild(blank);
+  
         (q.options_json || []).forEach(opt => {
-          const o = document.createElement('option'); o.value = opt.value; o.textContent = opt.label; inputEl.appendChild(o);
+          const o = document.createElement('option');
+          o.value = opt.value;
+          o.textContent = opt.label;
+          inputEl.appendChild(o);
         });
+  
       } else if (q.type === 'bool'){
         inputEl = document.createElement('select');
+        const blank = document.createElement('option');
+        blank.value = ''; blank.textContent = '— Select —';
+        inputEl.appendChild(blank);
+  
         [{value:true,label:'Yes'},{value:false,label:'No'}].forEach(opt => {
-          const o = document.createElement('option'); o.value = String(opt.value); o.textContent = opt.label; inputEl.appendChild(o);
+          const o = document.createElement('option');
+          o.value = String(opt.value);
+          o.textContent = opt.label;
+          inputEl.appendChild(o);
         });
+  
       } else {
         inputEl = document.createElement('input');
         inputEl.type = (q.type === 'number' || q.type === 'money') ? 'number' : 'text';
-        if (q.type === 'money') inputEl.step = '1000';
+  
+        // honor validations (min/max/step) if present
+        const v = q.validations_json || {};
+        if (typeof v.min === 'number')  inputEl.min = String(v.min);
+        if (typeof v.max === 'number')  inputEl.max = String(v.max);
+        if (typeof v.step === 'number') inputEl.step = String(v.step);
+        else if (q.type === 'money')    inputEl.step = '1'; // safer than 1000 for odd face amounts
       }
-
+  
+      inputEl.id = inputId;
       inputEl.dataset.qNumber = q.q_number;
-      inputEl.addEventListener('input', () => {
+  
+      // prefill from existing answers
+      if (answers[q.q_number] !== undefined && answers[q.q_number] !== null){
+        inputEl.value = String(answers[q.q_number]);
+      }
+  
+      const onField = () => {
         const v = normalizeValue(q, inputEl.value);
         answers[q.q_number] = v;
         updateChipColors();
         recomputeQuotes();
-      });
-
+      };
+      inputEl.addEventListener('input', onField);
+      inputEl.addEventListener('change', onField); // important for mobile/selects
+  
       wrap.appendChild(inputEl);
       body.appendChild(wrap);
     });
-
+  
     updateChipColors();
   }
-
   function normalizeValue(q, raw){
     if (raw === '') return null;
     if (q.type === 'number' || q.type === 'money') return Number(raw);
@@ -403,18 +440,40 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // ===== Derived inputs (generic underwriting tier from health questions) =====
   async function computeDerivedInputs(productId, answers){
-    const out = {};
-    // Adjust these q_numbers to match your DB:
-    const SECTION_A = [201,202,203,204]; // any "Yes" => Decline
-    const SECTION_B = [211,212,213];     // any "Yes" => Modified (if not Decline)
-
-    const yes = (qnum) => answers[qnum] === true || answers[qnum] === 'true';
-
-    const A = SECTION_A.some(yes);
-    const B = SECTION_B.some(yes);
-
-    out.uw_tier = A ? 'Decline' : (B ? 'Modified' : 'Level');
-    return out;
+    // Match by label so we don't care what q_numbers are.
+    // Tweak the phrases to whatever you actually stored in `questions.label`.
+    const sectionAKeys = [
+      'you are not eligible',                // gate question wording
+      'confined', 'hospice', 'advised to receive home health care',
+      'oxygen', 'wheelchair', 'dialysis', 'alzheim', 'dementia',
+      'hiv', 'aids',
+      'terminal', 'organ transplant', 'sclerosis (amyotrophic)', // etc...
+      'more than one cancer'                 // you can expand this list
+    ];
+    const sectionBKeys = [
+      'within the past 2 years',
+      'diagnosed with, received or been advised to receive',
+      'diabetes with complications',         // examples; keep expanding
+      'circulatory', 'coronary', 'stroke',   // etc…
+    ];
+  
+    // helpers
+    const hasAny = (label, keys) => {
+      const L = (label || '').toLowerCase();
+      return keys.some(k => L.includes(k.toLowerCase()));
+    };
+    const yes = (q) => answers[q.q_number] === true || answers[q.q_number] === 'true';
+  
+    // Find the questions that belong to each section by label keywords
+    const sectionAQs = questions.filter(q => hasAny(q.label, sectionAKeys));
+    const sectionBQs = questions.filter(q => hasAny(q.label, sectionBKeys));
+  
+    const A = sectionAQs.some(yes);
+    const B = sectionBQs.some(yes);
+  
+    return {
+      uw_tier: A ? 'Decline' : (B ? 'Modified' : 'Level')
+    };
   }
 
   function evalEquation(equation, inputsMap, metadata){
