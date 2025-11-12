@@ -9,6 +9,7 @@ const headers = {
 };
 const VOICE = "Telnyx.KokoroTTS.af";
 
+// ---- utils
 const toE164 = (v) => {
   if (!v) return null;
   const s = String(v).trim();
@@ -34,8 +35,16 @@ const act = async (id, action, body = {}) => {
   return { ok: r.ok, status: r.status, json: json ?? txt };
 };
 
+// stop any IVR state on a leg (important before bridging)
+const safeStop = async (id) => {
+  if (!id) return;
+  await act(id, "stop_gather", {});
+  await act(id, "stop_speaking", {});
+};
+
 async function startVoicemailOn(callId) {
   if (!callId) return;
+  await safeStop(callId);
   await act(callId, "speak", {
     voice: VOICE, language: "en-US",
     payload: "Please leave a message after the tone."
@@ -49,38 +58,28 @@ async function startVoicemailOn(callId) {
   });
 }
 
-// stop any active TTS/gather before bridging
-const safeStop = async (id) => {
-  if (!id) return;
-  await act(id, "stop_speaking", {});
-  await act(id, "stop_gather", {});
-};
-
 const encodeState = (obj) => Buffer.from(JSON.stringify(obj)).toString("base64");
 const decodeState = (b64) => {
   try { return JSON.parse(Buffer.from(String(b64 || ""), "base64").toString("utf8")); }
   catch { return {}; }
 };
 
-// ---- helper: turn "cover=My Home,My Business" into human text
+// optional: parse cover=... for nicer whispers
 function humanizeCoverFromNotes(notes = "") {
   const m = String(notes).match(/cover=([^\s|]+)/i) || String(notes).match(/cover=([^|]+)/i);
   if (!m) return null;
-  const raw = m[1].trim();
-  const parts = raw.split(',').map(s => s.trim()).filter(Boolean);
-
-  const toPhrase = (s) => {
-    if (s === 'Myself') return 'their life';
-    if (s === 'Someone Else') return 'a loved one';
-    if (s === 'My Car') return 'their car';
-    if (s === 'My Home') return 'their home';
-    if (s === 'My Business') return 'their business';
-    if (s === 'My Health') return 'their health';
-    if (s === 'Legal Protection Plan') return 'legal protection';
-    if (s === 'My Identity') return 'identity protection';
-    return s.toLowerCase();
-  };
-  return parts.map(toPhrase).join(' and ');
+  const parts = m[1].trim().split(',').map(s => s.trim()).filter(Boolean);
+  const toPhrase = (s) => ({
+    "Myself":"their life",
+    "Someone Else":"a loved one",
+    "My Car":"their car",
+    "My Home":"their home",
+    "My Business":"their business",
+    "My Health":"their health",
+    "Legal Protection Plan":"legal protection",
+    "My Identity":"identity protection"
+  }[s] || s.toLowerCase());
+  return parts.map(toPhrase).join(" and ");
 }
 
 // ---------- main handler ----------
@@ -100,7 +99,6 @@ export async function handler(event) {
     const adminList = (process.env.ADMIN_NUMBERS || "")
       .split(",").map(toE164).filter(Boolean);
     const clientState = decodeState(p?.client_state);
-
     const inboundConnId = p?.connection_id || process.env.TELNYX_CONNECTION_ID;
 
     console.log("TELNYX EVENT", {
@@ -150,7 +148,7 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // inbound to business — dial admins
+    // ===== inbound biz DID → ring admins (unchanged) =====
     if (eventType === "call.initiated" && isInboundToBiz) {
       await act(callId, "answer", {});
       await act(callId, "speak", {
@@ -158,9 +156,7 @@ export async function handler(event) {
         payload: "Please hold while we connect you to a representative."
       });
 
-      const fromForAdmins =
-        toE164(process.env.TELNYX_FROM_NUMBER) || businessNum;
-
+      const fromForAdmins = toE164(process.env.TELNYX_FROM_NUMBER) || businessNum;
       let targets = adminList.filter(n => n !== fromNum);
       if (targets.length === 0) targets = adminList.slice();
 
@@ -183,22 +179,19 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // website flow: client leg answered → stop audio on both legs, then bridge
+    // ===== client leg ANSWERED (after agent pressed 1) → STOP IVR + BRIDGE =====
     if (eventType === "call.answered" && isClientLeg) {
-      const agentLegId  = sessionClient?.telnyx_call_id;
-      const clientLegId = callId;
-
-      console.log("BRIDGE PRECHECK (website)", { agentLegId, clientLegId });
-
-      await safeStop(agentLegId);
-      await safeStop(clientLegId);
-
-      const r = await act(agentLegId, "bridge", { call_control_id: clientLegId });
-      if (!r.ok) console.error("Bridge failed", { status: r.status, json: r.json });
+      if (sessionClient?.telnyx_call_id) {
+        // stop any gather/speak on both legs before bridging
+        await safeStop(sessionClient.telnyx_call_id);
+        await safeStop(callId);
+        const r = await act(sessionClient.telnyx_call_id, "bridge", { call_control_id: callId });
+        if (!r.ok) console.error("Bridge failed", { status: r.status, json: r.json });
+      }
       return { statusCode: 200, body: "OK" };
     }
 
-    // agent answered → whisper + gather
+    // ===== agent leg ANSWERED → whisper + gather =====
     if (eventType === "call.answered" && isAgentLeg) {
       let name = "Prospect", summary = "";
       let whisper = sessionAgent?.whisper || "";
@@ -214,13 +207,14 @@ export async function handler(event) {
         const lf = lead?.first_name || lead?.contacts?.first_name || "";
         const ll = lead?.last_name || lead?.contacts?.last_name || "";
         name = `${lf} ${ll}`.trim() || name;
+
         wantsPhrase = humanizeCoverFromNotes(lead?.notes || "") || wantsPhrase;
 
         if (lead?.product_type) summary += `Product: ${lead.product_type}. `;
         if (lead?.zip) summary += `ZIP ${lead.zip}. `;
       }
 
-      const payload = whisper
+      const sp = whisper
         ? whisper
         : `New lead: ${name}${wantsPhrase ? `, wants to cover ${wantsPhrase}` : ""}. ${summary}Press 1 to connect now.`;
 
@@ -228,12 +222,12 @@ export async function handler(event) {
         voice: VOICE, language: "en-US",
         minimum_digits: 1, maximum_digits: 1, valid_digits: "1",
         inter_digit_timeout_ms: 6000,
-        payload
+        payload: sp
       });
       return { statusCode: 200, body: "OK" };
     }
 
-    // admin answered → whisper + gather
+    // ===== admin leg ANSWERED → whisper + gather (unchanged) =====
     if (eventType === "call.answered" && isAdminLeg) {
       await act(callId, "gather_using_speak", {
         voice: VOICE, language: "en-US",
@@ -244,15 +238,19 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // DTMF
+    // ===== DTMF =====
     if (eventType === "call.dtmf.received" || eventType === "call.gather.ended") {
       const pay = payload?.data?.payload || {};
       const digit = eventType === "call.dtmf.received"
         ? pay.digit : (pay.digits || "")[0];
 
-      // agent pressed key (website flow)
+      // website lead → agent pressed key
       if (isAgentLeg) {
+        // IMPORTANT: exit IVR before we place/bridge the other leg
+        await safeStop(callId);
+
         if (digit === "1" && sessionAgent.prospect_number) {
+          // place the client/prospect leg
           const make = await fetch(`${TAPI}/calls`, {
             method: "POST",
             headers,
@@ -270,18 +268,20 @@ export async function handler(event) {
             });
             return { statusCode: make.status, body: JSON.stringify(j) };
           }
-          const clientCallId = j?.data?.id;
 
+          const clientCallId = j?.data?.id;
           await supabase.from("call_sessions")
             .update({ client_call_id: clientCallId })
             .eq("id", sessionAgent.id);
 
+          // gentle prompt; actual bridge happens on client leg 'answered'
           await act(callId, "speak", {
             voice: VOICE, language: "en-US",
             payload: "Dialing the client now."
           });
           return { statusCode: 200, body: JSON.stringify({ ok: true }) };
         }
+
         await act(callId, "speak", {
           voice: VOICE, language: "en-US", payload: "Got it. Canceling."
         });
@@ -289,39 +289,28 @@ export async function handler(event) {
         return { statusCode: 200, body: "OK" };
       }
 
-      // admin pressed key (inbound line)
+      // admin leg → connect or voicemail
       if (isAdminLeg) {
         const inboundId = clientState?.inbound_id;
         if (!inboundId) {
           console.warn("Missing inbound_id in client_state for admin leg.");
-          await act(callId, "speak", {
-            voice: VOICE, language: "en-US", payload: "Unable to connect."
-          });
+          await act(callId, "speak", { voice: VOICE, language: "en-US", payload: "Unable to connect." });
           return { statusCode: 200, body: "OK" };
         }
 
         if (digit === "1") {
-          // stop audio on both legs, then bridge
           await safeStop(callId);
           await safeStop(inboundId);
-
           const r = await act(callId, "bridge", { call_control_id: inboundId });
           if (!r.ok) {
             console.error("Admin bridge failed", { status: r.status, json: r.json });
-            if (r.status === 422) {
-              await act(callId, "speak", { voice: VOICE, language: "en-US",
-                payload: "The caller has disconnected." });
-            } else {
-              await act(callId, "speak", { voice: VOICE, language: "en-US",
-                payload: "Unable to connect." });
-            }
+            await act(callId, "speak", { voice: VOICE, language: "en-US",
+              payload: r.status === 422 ? "The caller has disconnected." : "Unable to connect." });
           }
           return { statusCode: 200, body: "OK" };
         }
 
-        await act(callId, "speak", {
-          voice: VOICE, language: "en-US", payload: "Sending to voicemail."
-        });
+        await act(callId, "speak", { voice: VOICE, language: "en-US", payload: "Sending to voicemail." });
         await startVoicemailOn(inboundId);
         await act(callId, "hangup", {});
         return { statusCode: 200, body: "OK" };
