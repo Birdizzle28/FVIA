@@ -57,6 +57,7 @@ async function startVoicemailOn(callId) {
     payload: "Please leave a message after the tone."
   });
   await act(callId, "record_start", {
+    // voicemail: single channel is fine
     format: "mp3",
     channels: "single",
     play_beep: true,
@@ -151,16 +152,22 @@ export async function handler(event) {
     const isAdminLeg =
       fromMatchesBizOrFrom && isToAdmin && clientState?.kind === "admin";
 
-    // recordings saved
+    // ====== recording saved (voicemail or call) ======
     if (eventType === "call.recording.saved") {
       const rec = payload?.data?.payload;
       const url = rec?.recording_urls?.[0]?.url || rec?.recording_url;
-      await supabase.from("voicemails").insert({
+      const row = {
         call_id: rec?.call_control_id,
         from_number: toE164(rec?.from),
         to_number: toE164(rec?.to),
         recording_url: url
-      });
+      };
+
+      // Try a generic call recordings table first; ignore if not present
+      try { await supabase.from("call_recordings").insert(row); } catch {}
+      // Keep your existing voicemail insert path too
+      try { await supabase.from("voicemails").insert(row); } catch {}
+
       return { statusCode: 200, body: "OK" };
     }
 
@@ -198,21 +205,28 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // ===== client leg ANSWERED → STOP IVR + BRIDGE =====
+    // ===== client leg ANSWERED → disclosure, then bridge (after speak.ended) =====
     if (eventType === "call.answered" && looksLikeClientLeg) {
-      // find the agent leg id: from DB record if present, otherwise from tag
-      const agentLegId = sessionAny?.telnyx_call_id || clientState?.agent_id;
-      if (agentLegId) {
-        await safeStop(agentLegId);
-        await safeStop(callId);
-        const r = await act(agentLegId, "bridge", { call_control_id: callId });
-        if (!r.ok) console.error("Bridge failed", { status: r.status, json: r.json });
-      }
+      // disclosure to client before they get connected
+      await safeStop(callId);
+      await act(callId, "speak", {
+        voice: VOICE, language: "en-US",
+        payload: "Hi! This call may be recorded for quality assurance and training purposes. Please hold while I connect you."
+      });
+      // Do NOT bridge here; wait for call.speak.ended (see handler below)
       return { statusCode: 200, body: "OK" };
     }
 
-    // ===== agent leg ANSWERED → whisper + gather =====
+    // ===== agent leg ANSWERED → start recording immediately + whisper + gather =====
     if (eventType === "call.answered" && isAgentLeg) {
+      // start recording during the whisper (dual-channel, no beep, long max)
+      await act(callId, "record_start", {
+        format: "mp3",
+        channels: "dual",
+        play_beep: false,
+        max_duration_secs: 4 * 60 * 60 // 4 hours safety ceiling
+      });
+
       let name = "Prospect", summary = "";
       let whisper = sessionAny?.whisper || "";
       let wantsPhrase = null;
@@ -282,7 +296,7 @@ export async function handler(event) {
         await safeStop(callId);
 
         if (digit === "1" && sessionAny?.prospect_number) {
-          // place the client/prospect leg (TAG it so we can detect even if DB update lags)
+          // place the client/prospect leg and tag it; recording already running on agent leg
           const r = await fetch(`${TAPI}/calls`, {
             method: "POST",
             headers: {
@@ -354,6 +368,18 @@ export async function handler(event) {
         await act(callId, "hangup", {});
         return { statusCode: 200, body: "OK" };
       }
+    }
+
+    // ===== client disclosure finished → now bridge =====
+    if (eventType === "call.speak.ended" && looksLikeClientLeg) {
+      const agentLegId = sessionAny?.telnyx_call_id || clientState?.agent_id;
+      if (agentLegId) {
+        await safeStop(agentLegId);
+        await safeStop(callId);
+        const r = await act(agentLegId, "bridge", { call_control_id: callId });
+        if (!r.ok) console.error("Bridge after disclosure failed", { status: r.status, json: r.json });
+      }
+      return { statusCode: 200, body: "OK" };
     }
 
     if (eventType === "call.hangup") {
