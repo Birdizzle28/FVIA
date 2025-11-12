@@ -3,10 +3,6 @@ import fetch from "node-fetch";
 import { createClient } from "@supabase/supabase-js";
 
 const TAPI = "https://api.telnyx.com/v2";
-const headers = {
-  Authorization: `Bearer ${process.env.TELNYX_API_KEY}`,
-  "Content-Type": "application/json",
-};
 const VOICE = "Telnyx.KokoroTTS.af";
 
 // ---- utils
@@ -21,7 +17,12 @@ const toE164 = (v) => {
   return `+${d}`;
 };
 
-const act = async (id, action, body = {}) => {
+// core Telnyx action helper (with optional quiet404 to avoid noisy logs)
+const act = async (id, action, body = {}, opts = {}) => {
+  const headers = {
+    Authorization: `Bearer ${process.env.TELNYX_API_KEY}`,
+    "Content-Type": "application/json",
+  };
   const r = await fetch(`${TAPI}/calls/${id}/actions/${action}`, {
     method: "POST",
     headers,
@@ -30,16 +31,22 @@ const act = async (id, action, body = {}) => {
   const txt = await r.text();
   let json = null;
   try { json = JSON.parse(txt); } catch {}
-  if (!r.ok) console.error("Telnyx action failed", { id, action, status: r.status, txt });
-  else console.log("Telnyx action ok", { id, action, json: json ?? txt });
+  const payload = { id, action, status: r.status, json: json ?? txt };
+
+  if (!r.ok) {
+    const isQuiet404 = opts.quiet404 && r.status === 404;
+    if (!isQuiet404) console.error("Telnyx action failed", payload);
+  } else {
+    console.log("Telnyx action ok", { id, action, json: json ?? txt });
+  }
   return { ok: r.ok, status: r.status, json: json ?? txt };
 };
 
 // stop any IVR state on a leg (important before bridging)
 const safeStop = async (id) => {
   if (!id) return;
-  await act(id, "stop_gather", {});
-  await act(id, "stop_speaking", {});
+  await act(id, "stop_gather", {}, { quiet404: true });
+  await act(id, "stop_speaking", {}, { quiet404: true });
 };
 
 async function startVoicemailOn(callId) {
@@ -139,8 +146,7 @@ export async function handler(event) {
       !!businessNum && toNum === businessNum && !isAgentLeg && !looksLikeClientLeg;
 
     const fromMatchesBizOrFrom =
-      [toE164(process.env.TELNYX_FROM_NUMBER), businessNum]
-        .filter(Boolean).includes(fromNum);
+      [toE164(process.env.TELNYX_FROM_NUMBER), businessNum].filter(Boolean).includes(fromNum);
     const isToAdmin = adminList.includes(toNum);
     const isAdminLeg =
       fromMatchesBizOrFrom && isToAdmin && clientState?.kind === "admin";
@@ -171,9 +177,12 @@ export async function handler(event) {
       if (targets.length === 0) targets = adminList.slice();
 
       for (const adminNumber of targets) {
-        const resp = await fetch(`${TAPI}/calls`, {
+        const r = await fetch(`${TAPI}/calls`, {
           method: "POST",
-          headers,
+          headers: {
+            Authorization: `Bearer ${process.env.TELNYX_API_KEY}`,
+            "Content-Type": "application/json",
+          },
           body: JSON.stringify({
             connection_id: inboundConnId,
             to: adminNumber,
@@ -181,9 +190,9 @@ export async function handler(event) {
             client_state: encodeState({ kind: "admin", inbound_id: callId })
           }),
         });
-        const j = await resp.json().catch(() => ({}));
+        const j = await r.json().catch(() => ({}));
         console.log("ADMIN LEG CREATE", {
-          adminNumber, status: resp.status, id: j?.data?.id, err: j?.errors
+          adminNumber, status: r.status, id: j?.data?.id, err: j?.errors
         });
       }
       return { statusCode: 200, body: "OK" };
@@ -249,6 +258,20 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
+    // ===== Agent timeout (gather ended with no digit) =====
+    if (eventType === "call.gather.ended" && isAgentLeg) {
+      const pay = payload?.data?.payload || {};
+      const digits = (pay.digits || "").toString();
+      if (!digits) {
+        await act(callId, "speak", {
+          voice: VOICE, language: "en-US",
+          payload: "No input received. Ending this call."
+        });
+        await act(callId, "hangup", {});
+        return { statusCode: 200, body: "OK" };
+      }
+    }
+
     // ===== DTMF (only process dtmf.received to avoid duplicates) =====
     if (eventType === "call.dtmf.received") {
       const pay = payload?.data?.payload || {};
@@ -260,9 +283,12 @@ export async function handler(event) {
 
         if (digit === "1" && sessionAny?.prospect_number) {
           // place the client/prospect leg (TAG it so we can detect even if DB update lags)
-          const make = await fetch(`${TAPI}/calls`, {
+          const r = await fetch(`${TAPI}/calls`, {
             method: "POST",
-            headers,
+            headers: {
+              Authorization: `Bearer ${process.env.TELNYX_API_KEY}`,
+              "Content-Type": "application/json",
+            },
             body: JSON.stringify({
               connection_id: process.env.TELNYX_CONNECTION_ID,
               to: sessionAny.prospect_number,
@@ -274,13 +300,13 @@ export async function handler(event) {
               })
             }),
           });
-          const j = await make.json().catch(() => ({}));
-          if (!make.ok) {
+          const j = await r.json().catch(() => ({}));
+          if (!r.ok) {
             await act(callId, "speak", {
               voice: VOICE, language: "en-US",
               payload: "Unable to reach the client."
             });
-            return { statusCode: make.status, body: JSON.stringify(j) };
+            return { statusCode: r.status, body: JSON.stringify(j) };
           }
 
           const clientCallId = j?.data?.id;
