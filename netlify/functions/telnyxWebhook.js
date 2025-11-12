@@ -82,7 +82,6 @@ function humanizeCoverFromNotes(notes = "") {
   return parts.map(toPhrase).join(" and ");
 }
 
-// ---------- main handler ----------
 export async function handler(event) {
   try {
     if (event.httpMethod !== "POST")
@@ -113,20 +112,31 @@ export async function handler(event) {
       process.env.SUPABASE_SERVICE_ROLE_KEY
     );
 
-    // look up the call_session for either leg
-    let { data: sessionAgent } = await supabase
-      .from("call_sessions").select("*")
-      .eq("telnyx_call_id", callId).maybeSingle();
+    // ---- unified session lookup (either leg id)
+    async function findSessionByAnyLeg(id) {
+      const { data: rows, error } = await supabase
+        .from("call_sessions")
+        .select("*")
+        .or(`telnyx_call_id.eq.${id},client_call_id.eq.${id}`)
+        .limit(1);
+      if (error) throw error;
+      const s = rows?.[0];
+      if (!s) return { s: null, isAgent: false, isClient: false };
+      return {
+        s,
+        isAgent: s.telnyx_call_id === id,
+        isClient: s.client_call_id === id
+      };
+    }
 
-    let { data: sessionClient } = await supabase
-      .from("call_sessions").select("*")
-      .eq("client_call_id", callId).maybeSingle();
+    const { s: sessionAny, isAgent: isAgentLeg, isClient: isClientLeg } =
+      await findSessionByAnyLeg(callId);
 
-    const isAgentLeg = !!sessionAgent;
-    const isClientLeg = !!sessionClient;
+    // Treat as client leg by tag even if DB hasn't updated yet
+    const looksLikeClientLeg = isClientLeg || clientState?.kind === "client";
 
     const isInboundToBiz =
-      !!businessNum && toNum === businessNum && !isAgentLeg && !isClientLeg;
+      !!businessNum && toNum === businessNum && !isAgentLeg && !looksLikeClientLeg;
 
     const fromMatchesBizOrFrom =
       [toE164(process.env.TELNYX_FROM_NUMBER), businessNum]
@@ -148,7 +158,7 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // ===== inbound biz DID → ring admins (unchanged) =====
+    // ===== inbound biz DID → ring admins =====
     if (eventType === "call.initiated" && isInboundToBiz) {
       await act(callId, "answer", {});
       await act(callId, "speak", {
@@ -179,13 +189,14 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // ===== client leg ANSWERED (after agent pressed 1) → STOP IVR + BRIDGE =====
-    if (eventType === "call.answered" && isClientLeg) {
-      if (sessionClient?.telnyx_call_id) {
-        // stop any gather/speak on both legs before bridging
-        await safeStop(sessionClient.telnyx_call_id);
+    // ===== client leg ANSWERED → STOP IVR + BRIDGE =====
+    if (eventType === "call.answered" && looksLikeClientLeg) {
+      // find the agent leg id: from DB record if present, otherwise from tag
+      const agentLegId = sessionAny?.telnyx_call_id || clientState?.agent_id;
+      if (agentLegId) {
+        await safeStop(agentLegId);
         await safeStop(callId);
-        const r = await act(sessionClient.telnyx_call_id, "bridge", { call_control_id: callId });
+        const r = await act(agentLegId, "bridge", { call_control_id: callId });
         if (!r.ok) console.error("Bridge failed", { status: r.status, json: r.json });
       }
       return { statusCode: 200, body: "OK" };
@@ -194,15 +205,15 @@ export async function handler(event) {
     // ===== agent leg ANSWERED → whisper + gather =====
     if (eventType === "call.answered" && isAgentLeg) {
       let name = "Prospect", summary = "";
-      let whisper = sessionAgent?.whisper || "";
+      let whisper = sessionAny?.whisper || "";
       let wantsPhrase = null;
 
-      if (sessionAgent?.lead_id) {
+      if (sessionAny?.lead_id) {
         const { data: lead } = await supabase
           .from("leads").select(
             "first_name,last_name,product_type,contact_id,zip,notes,contacts:contact_id(first_name,last_name)"
           )
-          .eq("id", sessionAgent.lead_id).maybeSingle();
+          .eq("id", sessionAny.lead_id).maybeSingle();
 
         const lf = lead?.first_name || lead?.contacts?.first_name || "";
         const ll = lead?.last_name || lead?.contacts?.last_name || "";
@@ -227,7 +238,7 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // ===== admin leg ANSWERED → whisper + gather (unchanged) =====
+    // ===== admin leg ANSWERED → whisper + gather =====
     if (eventType === "call.answered" && isAdminLeg) {
       await act(callId, "gather_using_speak", {
         voice: VOICE, language: "en-US",
@@ -238,29 +249,32 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // ===== DTMF =====
-    if (eventType === "call.dtmf.received" || eventType === "call.gather.ended") {
+    // ===== DTMF (only process dtmf.received to avoid duplicates) =====
+    if (eventType === "call.dtmf.received") {
       const pay = payload?.data?.payload || {};
-      const digit = eventType === "call.dtmf.received"
-        ? pay.digit : (pay.digits || "")[0];
+      const digit = (pay.digit || "").toString();
 
       // website lead → agent pressed key
       if (isAgentLeg) {
-        // IMPORTANT: exit IVR before we place/bridge the other leg
         await safeStop(callId);
 
-        if (digit === "1" && sessionAgent.prospect_number) {
-          // place the client/prospect leg
+        if (digit === "1" && sessionAny?.prospect_number) {
+          // place the client/prospect leg (TAG it so we can detect even if DB update lags)
           const make = await fetch(`${TAPI}/calls`, {
             method: "POST",
             headers,
             body: JSON.stringify({
               connection_id: process.env.TELNYX_CONNECTION_ID,
-              to: sessionAgent.prospect_number,
+              to: sessionAny.prospect_number,
               from: process.env.TELNYX_FROM_NUMBER,
+              client_state: encodeState({
+                kind: "client",
+                session_id: sessionAny.id,
+                agent_id: sessionAny.telnyx_call_id
+              })
             }),
           });
-          const j = await make.json();
+          const j = await make.json().catch(() => ({}));
           if (!make.ok) {
             await act(callId, "speak", {
               voice: VOICE, language: "en-US",
@@ -272,9 +286,8 @@ export async function handler(event) {
           const clientCallId = j?.data?.id;
           await supabase.from("call_sessions")
             .update({ client_call_id: clientCallId })
-            .eq("id", sessionAgent.id);
+            .eq("id", sessionAny.id);
 
-          // gentle prompt; actual bridge happens on client leg 'answered'
           await act(callId, "speak", {
             voice: VOICE, language: "en-US",
             payload: "Dialing the client now."
@@ -318,7 +331,13 @@ export async function handler(event) {
     }
 
     if (eventType === "call.hangup") {
-      console.log("HANGUP", { callId, isInboundToBiz, isAdminLeg, isAgentLeg, isClientLeg });
+      console.log("HANGUP", {
+        callId,
+        isInboundToBiz,
+        isAdminLeg,
+        isAgentLeg,
+        isClientLeg: looksLikeClientLeg
+      });
       return { statusCode: 200, body: "OK" };
     }
 
