@@ -5,7 +5,7 @@ import { createClient } from "@supabase/supabase-js";
 const TAPI = "https://api.telnyx.com/v2";
 const VOICE = "Telnyx.KokoroTTS.af";
 
-// ---- utils
+// ---- helpers
 const toE164 = (v) => {
   if (!v) return null;
   const s = String(v).trim();
@@ -17,8 +17,7 @@ const toE164 = (v) => {
   return `+${d}`;
 };
 
-// core Telnyx action helper (with optional quiet404 to avoid noisy logs)
-const act = async (id, action, body = {}, opts = {}) => {
+const act = async (id, action, body = {}, { quiet404 = false } = {}) => {
   const headers = {
     Authorization: `Bearer ${process.env.TELNYX_API_KEY}`,
     "Content-Type": "application/json",
@@ -31,18 +30,14 @@ const act = async (id, action, body = {}, opts = {}) => {
   const txt = await r.text();
   let json = null;
   try { json = JSON.parse(txt); } catch {}
-  const payload = { id, action, status: r.status, json: json ?? txt };
-
-  if (!r.ok) {
-    const isQuiet404 = opts.quiet404 && r.status === 404;
-    if (!isQuiet404) console.error("Telnyx action failed", payload);
+  if (!r.ok && !(quiet404 && r.status === 404)) {
+    console.error("Telnyx action failed", { id, action, status: r.status, txt });
   } else {
     console.log("Telnyx action ok", { id, action, json: json ?? txt });
   }
   return { ok: r.ok, status: r.status, json: json ?? txt };
 };
 
-// stop any IVR state on a leg (important before bridging)
 const safeStop = async (id) => {
   if (!id) return;
   await act(id, "stop_gather", {}, { quiet404: true });
@@ -57,7 +52,6 @@ async function startVoicemailOn(callId) {
     payload: "Please leave a message after the tone."
   });
   await act(callId, "record_start", {
-    // voicemail: single channel is fine
     format: "mp3",
     channels: "single",
     play_beep: true,
@@ -72,12 +66,11 @@ const decodeState = (b64) => {
   catch { return {}; }
 };
 
-// optional: parse cover=... for nicer whispers
 function humanizeCoverFromNotes(notes = "") {
   const m = String(notes).match(/cover=([^\s|]+)/i) || String(notes).match(/cover=([^|]+)/i);
   if (!m) return null;
   const parts = m[1].trim().split(',').map(s => s.trim()).filter(Boolean);
-  const toPhrase = (s) => ({
+  const map = {
     "Myself":"their life",
     "Someone Else":"a loved one",
     "My Car":"their car",
@@ -86,14 +79,14 @@ function humanizeCoverFromNotes(notes = "") {
     "My Health":"their health",
     "Legal Protection Plan":"legal protection",
     "My Identity":"identity protection"
-  }[s] || s.toLowerCase());
-  return parts.map(toPhrase).join(" and ");
+  };
+  return parts.map(s => map[s] || s.toLowerCase()).join(" and ");
 }
 
+// ---- webhook
 export async function handler(event) {
   try {
-    if (event.httpMethod !== "POST")
-      return { statusCode: 405, body: "Method Not Allowed" };
+    if (event.httpMethod !== "POST") return { statusCode: 405, body: "Method Not Allowed" };
 
     const payload = JSON.parse(event.body || "{}");
     const eventType = payload?.data?.event_type;
@@ -103,8 +96,7 @@ export async function handler(event) {
     const fromNum = toE164(p.from);
     const toNum = toE164(p.to);
     const businessNum = toE164(process.env.TELNYX_BUSINESS_NUMBER);
-    const adminList = (process.env.ADMIN_NUMBERS || "")
-      .split(",").map(toE164).filter(Boolean);
+    const adminList = (process.env.ADMIN_NUMBERS || "").split(",").map(toE164).filter(Boolean);
     const clientState = decodeState(p?.client_state);
     const inboundConnId = p?.connection_id || process.env.TELNYX_CONNECTION_ID;
 
@@ -115,16 +107,12 @@ export async function handler(event) {
 
     if (!callId) return { statusCode: 200, body: "OK" };
 
-    const supabase = createClient(
-      process.env.SUPABASE_URL,
-      process.env.SUPABASE_SERVICE_ROLE_KEY
-    );
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 
-    // ---- unified session lookup (either leg id)
     async function findSessionByAnyLeg(id) {
       const { data: rows, error } = await supabase
         .from("call_sessions")
-        .select("*")
+        .select("*, agents:agent_id(phone)")
         .or(`telnyx_call_id.eq.${id},client_call_id.eq.${id}`)
         .limit(1);
       if (error) throw error;
@@ -140,33 +128,36 @@ export async function handler(event) {
     const { s: sessionAny, isAgent: isAgentLeg, isClient: isClientLeg } =
       await findSessionByAnyLeg(callId);
 
-    // Treat as client leg by tag even if DB hasn't updated yet
     const looksLikeClientLeg = isClientLeg || clientState?.kind === "client";
-
-    const isInboundToBiz =
-      !!businessNum && toNum === businessNum && !isAgentLeg && !looksLikeClientLeg;
+    const isInboundToBiz = !!businessNum && toNum === businessNum && !isAgentLeg && !looksLikeClientLeg;
 
     const fromMatchesBizOrFrom =
       [toE164(process.env.TELNYX_FROM_NUMBER), businessNum].filter(Boolean).includes(fromNum);
     const isToAdmin = adminList.includes(toNum);
-    const isAdminLeg =
-      fromMatchesBizOrFrom && isToAdmin && clientState?.kind === "admin";
+    const isAdminLeg = fromMatchesBizOrFrom && isToAdmin && clientState?.kind === "admin";
 
-    // ====== recording saved (voicemail or call) ======
+    // ===== recording saved → store robustly =====
     if (eventType === "call.recording.saved") {
-      const rec = payload?.data?.payload;
-      const url = rec?.recording_urls?.[0]?.url || rec?.recording_url;
-      const row = {
-        call_id: rec?.call_control_id,
-        from_number: toE164(rec?.from),
-        to_number: toE164(rec?.to),
-        recording_url: url
-      };
+      const rec = payload?.data?.payload || {};
+      // robust URL extraction
+      const urls = rec?.recording_urls || {};
+      const url = urls?.mp3 || urls?.wav || urls?.ogg ||
+                  (Array.isArray(urls) ? urls[0]?.url : null) ||
+                  rec?.recording_url || null;
 
-      // Try a generic call recordings table first; ignore if not present
-      try { await supabase.from("call_recordings").insert(row); } catch {}
-      // Keep your existing voicemail insert path too
-      try { await supabase.from("voicemails").insert(row); } catch {}
+      // try to enrich from/to via session+agents
+      const legId = rec?.call_control_id || callId;
+      const { s: sess } = await findSessionByAnyLeg(legId);
+      const fallbackFrom = toE164(sess?.agents?.phone) || toE164(process.env.TELNYX_FROM_NUMBER);
+      const fallbackTo = toE164(sess?.prospect_number);
+
+      await supabase.from("voicemails").insert({
+        call_id: legId || null,
+        from_number: toE164(rec?.from) || fallbackFrom || null,
+        to_number: toE164(rec?.to) || fallbackTo || null,
+        recording_url: url,
+        // leave transcription null for now; add later if you wire up ASR
+      });
 
       return { statusCode: 200, body: "OK" };
     }
@@ -198,33 +189,34 @@ export async function handler(event) {
           }),
         });
         const j = await r.json().catch(() => ({}));
-        console.log("ADMIN LEG CREATE", {
-          adminNumber, status: r.status, id: j?.data?.id, err: j?.errors
-        });
+        console.log("ADMIN LEG CREATE", { adminNumber, status: r.status, id: j?.data?.id, err: j?.errors });
       }
       return { statusCode: 200, body: "OK" };
     }
 
-    // ===== client leg ANSWERED → disclosure, then bridge (after speak.ended) =====
+    // ===== client ANSWERED → disclaimer to client, bridge after speak =====
     if (eventType === "call.answered" && looksLikeClientLeg) {
-      // disclosure to client before they get connected
-      await safeStop(callId);
+      const agentLegId = sessionAny?.telnyx_call_id || clientState?.agent_id;
+      // tag this leg so speak-ended knows to bridge
+      const tag = encodeState({ ...(clientState || {}), kind: "client", agent_id: agentLegId, stage: "disclaimer" });
       await act(callId, "speak", {
-        voice: VOICE, language: "en-US",
-        payload: "Hi! This call may be recorded for quality assurance and training purposes. Please hold while I connect you."
+        voice: VOICE,
+        language: "en-US",
+        // two-party notice (safe if either party may be in a two-party state)
+        payload: "Hi! Before we begin: This call may be recorded for quality assurance and training, and by continuing you consent to being recorded."
       });
-      // Do NOT bridge here; wait for call.speak.ended (see handler below)
+      // persist the tag by updating client_state (best-effort: some accounts require on create only; we’ll rely on the original tag too)
+      await act(callId, "update", { client_state: tag }, { quiet404: true });
       return { statusCode: 200, body: "OK" };
     }
 
-    // ===== agent leg ANSWERED → start recording immediately + whisper + gather =====
+    // ===== agent ANSWERED → start recording + whisper + gather =====
     if (eventType === "call.answered" && isAgentLeg) {
-      // start recording during the whisper (dual-channel, no beep, long max)
+      // start recording during whisper (one-party consent states are covered; we’ll also disclose to client)
       await act(callId, "record_start", {
         format: "mp3",
-        channels: "dual",
-        play_beep: false,
-        max_duration_secs: 4 * 60 * 60 // 4 hours safety ceiling
+        channels: "single",
+        play_beep: true
       });
 
       let name = "Prospect", summary = "";
@@ -248,9 +240,9 @@ export async function handler(event) {
         if (lead?.zip) summary += `ZIP ${lead.zip}. `;
       }
 
-      const sp = whisper
-        ? whisper
-        : `New lead: ${name}${wantsPhrase ? `, wants to cover ${wantsPhrase}` : ""}. ${summary}Press 1 to connect now.`;
+      const sp = (whisper ? `${whisper} ` : "") +
+        "Heads up: this call is recorded for quality and training. " +
+        `New lead: ${name}${wantsPhrase ? `, wants to cover ${wantsPhrase}` : ""}. ${summary}Press 1 to connect now.`;
 
       await act(callId, "gather_using_speak", {
         voice: VOICE, language: "en-US",
@@ -261,7 +253,7 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // ===== admin leg ANSWERED → whisper + gather =====
+    // ===== admin ANSWERED → whisper + gather =====
     if (eventType === "call.answered" && isAdminLeg) {
       await act(callId, "gather_using_speak", {
         voice: VOICE, language: "en-US",
@@ -272,31 +264,41 @@ export async function handler(event) {
       return { statusCode: 200, body: "OK" };
     }
 
-    // ===== Agent timeout (gather ended with no digit) =====
+    // ===== agent gather timeout =====
     if (eventType === "call.gather.ended" && isAgentLeg) {
       const pay = payload?.data?.payload || {};
       const digits = (pay.digits || "").toString();
       if (!digits) {
-        await act(callId, "speak", {
-          voice: VOICE, language: "en-US",
-          payload: "No input received. Ending this call."
-        });
+        await act(callId, "speak", { voice: VOICE, language: "en-US", payload: "No input received. Ending this call." });
         await act(callId, "hangup", {});
         return { statusCode: 200, body: "OK" };
       }
     }
 
-    // ===== DTMF (only process dtmf.received to avoid duplicates) =====
+    // ===== after client disclaimer speak → bridge =====
+    if (eventType === "call.speak.ended" && looksLikeClientLeg) {
+      if (clientState?.stage === "disclaimer") {
+        const agentLegId = clientState?.agent_id || sessionAny?.telnyx_call_id;
+        if (agentLegId) {
+          await safeStop(agentLegId);
+          await safeStop(callId);
+          await act(agentLegId, "bridge", { call_control_id: callId });
+        }
+      }
+      return { statusCode: 200, body: "OK" };
+    }
+
+    // ===== DTMF (agent/admin only) =====
     if (eventType === "call.dtmf.received") {
       const pay = payload?.data?.payload || {};
       const digit = (pay.digit || "").toString();
 
-      // website lead → agent pressed key
+      // Agent pressed a key
       if (isAgentLeg) {
         await safeStop(callId);
 
         if (digit === "1" && sessionAny?.prospect_number) {
-          // place the client/prospect leg and tag it; recording already running on agent leg
+          // place client leg with a tag so we know it’s the client, and so we know agent_id
           const r = await fetch(`${TAPI}/calls`, {
             method: "POST",
             headers: {
@@ -310,16 +312,14 @@ export async function handler(event) {
               client_state: encodeState({
                 kind: "client",
                 session_id: sessionAny.id,
-                agent_id: sessionAny.telnyx_call_id
+                agent_id: sessionAny.telnyx_call_id,
+                stage: "disclaimer"
               })
             }),
           });
           const j = await r.json().catch(() => ({}));
           if (!r.ok) {
-            await act(callId, "speak", {
-              voice: VOICE, language: "en-US",
-              payload: "Unable to reach the client."
-            });
+            await act(callId, "speak", { voice: VOICE, language: "en-US", payload: "Unable to reach the client." });
             return { statusCode: r.status, body: JSON.stringify(j) };
           }
 
@@ -328,21 +328,16 @@ export async function handler(event) {
             .update({ client_call_id: clientCallId })
             .eq("id", sessionAny.id);
 
-          await act(callId, "speak", {
-            voice: VOICE, language: "en-US",
-            payload: "Dialing the client now."
-          });
+          await act(callId, "speak", { voice: VOICE, language: "en-US", payload: "Dialing the client now." });
           return { statusCode: 200, body: JSON.stringify({ ok: true }) };
         }
 
-        await act(callId, "speak", {
-          voice: VOICE, language: "en-US", payload: "Got it. Canceling."
-        });
+        await act(callId, "speak", { voice: VOICE, language: "en-US", payload: "Got it. Canceling." });
         await act(callId, "hangup", {});
         return { statusCode: 200, body: "OK" };
       }
 
-      // admin leg → connect or voicemail
+      // Admin pressed a key
       if (isAdminLeg) {
         const inboundId = clientState?.inbound_id;
         if (!inboundId) {
@@ -356,9 +351,10 @@ export async function handler(event) {
           await safeStop(inboundId);
           const r = await act(callId, "bridge", { call_control_id: inboundId });
           if (!r.ok) {
-            console.error("Admin bridge failed", { status: r.status, json: r.json });
-            await act(callId, "speak", { voice: VOICE, language: "en-US",
-              payload: r.status === 422 ? "The caller has disconnected." : "Unable to connect." });
+            await act(callId, "speak", {
+              voice: VOICE, language: "en-US",
+              payload: r.status === 422 ? "The caller has disconnected." : "Unable to connect."
+            });
           }
           return { statusCode: 200, body: "OK" };
         }
@@ -368,18 +364,6 @@ export async function handler(event) {
         await act(callId, "hangup", {});
         return { statusCode: 200, body: "OK" };
       }
-    }
-
-    // ===== client disclosure finished → now bridge =====
-    if (eventType === "call.speak.ended" && looksLikeClientLeg) {
-      const agentLegId = sessionAny?.telnyx_call_id || clientState?.agent_id;
-      if (agentLegId) {
-        await safeStop(agentLegId);
-        await safeStop(callId);
-        const r = await act(agentLegId, "bridge", { call_control_id: callId });
-        if (!r.ok) console.error("Bridge after disclosure failed", { status: r.status, json: r.json });
-      }
-      return { statusCode: 200, body: "OK" };
     }
 
     if (eventType === "call.hangup") {
