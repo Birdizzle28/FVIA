@@ -155,9 +155,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!agentId) { allowedProductsFilter = null; return; }
     const agent = allAgents.find(a => a.id === agentId);
     if (agent && agent.product_types) {
-      allowedProductsFilter = Array.isArray(agent.product_types) ? agent.product_types.slice()
-        : String(agent.product_types).split(',').map(s=>s.trim()).filter(Boolean);
-    } else allowedProductsFilter = null;
+      if (Array.isArray(agent.product_types)) {
+        allowedProductsFilter = agent.product_types.slice();
+      } else {
+        allowedProductsFilter = String(agent.product_types).split(',').map(s=>s.trim()).filter(Boolean);
+      }
+    } else {
+      allowedProductsFilter = null;
+    }
   });
 
   document.getElementById('bulk-assign-btn').addEventListener('click', async () => {
@@ -304,9 +309,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     stats: document.getElementById('admin-stats-section'),
     content: document.getElementById('admin-content-section'),
   };
-  function hideAllAdminSections(){ Object.values(sections).forEach(sec => sec.style.display='none'); Object.values(navButtons).forEach(btn => btn.classList.remove('active')); }
+  function hideAllAdminSections(){
+    Object.values(sections).forEach(sec => sec.style.display='none');
+    Object.values(navButtons).forEach(btn => btn.classList.remove('active'));
+  }
   function showAdminSection(name){
-    hideAllAdminSections(); sections[name].style.display='block'; navButtons[name].classList.add('active');
+    hideAllAdminSections();
+    sections[name].style.display='block';
+    navButtons[name].classList.add('active');
     if (name === 'history') loadAssignmentHistory();
     if (name === 'stats') loadAgentStats();
     if (name === 'content') loadAnnouncements(); // refresh when switching back
@@ -323,13 +333,29 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('open-train-modal')?.addEventListener('click', () => openOverlay('train-modal'));
   document.getElementById('open-mkt-modal')?.addEventListener('click', () => openOverlay('mkt-modal'));
   document.getElementById('open-agent-modal')?.addEventListener('click', () => openOverlay('agent-modal'));
-  function openOverlay(id){ const el = document.getElementById(id); if (!el) return; el.classList.add('open'); el.setAttribute('aria-hidden','false'); document.body.style.overflow='hidden'; }
-  function closeOverlay(el){ el.classList.remove('open'); el.setAttribute('aria-hidden','true'); document.body.style.overflow=''; }
+  function openOverlay(id){
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.add('open');
+    el.setAttribute('aria-hidden','false');
+    document.body.style.overflow='hidden';
+  }
+  function closeOverlay(el){
+    el.classList.remove('open');
+    el.setAttribute('aria-hidden','true');
+    document.body.style.overflow='';
+  }
   document.querySelectorAll('.overlay [data-close], .overlay .overlay-backdrop').forEach(btn=>{
-    btn.addEventListener('click', (e)=> { const wrap = e.target.closest('.overlay'); if (wrap) closeOverlay(wrap); });
+    btn.addEventListener('click', (e)=> {
+      const wrap = e.target.closest('.overlay');
+      if (wrap) closeOverlay(wrap);
+    });
   });
 
-  try { flatpickr('#annc-publish', { enableTime:true, dateFormat:'Y-m-d H:i' }); flatpickr('#annc-expires', { enableTime:true, dateFormat:'Y-m-d H:i' }); } catch(_) {}
+  try {
+    flatpickr('#annc-publish', { enableTime:true, dateFormat:'Y-m-d H:i' });
+    flatpickr('#annc-expires', { enableTime:true, dateFormat:'Y-m-d H:i' });
+  } catch(_) {}
 
   const scopeSel = document.getElementById('annc-scope');
   const wrapProducts = document.getElementById('annc-products-wrap');
@@ -396,35 +422,99 @@ document.addEventListener('DOMContentLoaded', async () => {
   const prevBtn = document.getElementById('prev-page');
   nextBtn?.addEventListener('click', async () => { currentPage++; await loadLeadsWithFilters(); });
   prevBtn?.addEventListener('click', async () => { if (currentPage > 1) { currentPage--; await loadLeadsWithFilters(); } });
- 
+
+  // === Add Agent form (NPN + recruiter + NIPR sync) ===
   document.getElementById('agent-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-    const msg = document.getElementById('agent-msg'); msg.textContent = '';
-  
-    const npn = document.getElementById('agent-id').value.trim();
+    const msg = document.getElementById('agent-msg');
+    msg.textContent = '';
+
+    const npn = document.getElementById('agent-id').value.trim(); // NPN = agent_id
     const recruiterId = document.getElementById('agent-recruiter').value;
-  
-    if (!npn || !recruiterId) { msg.textContent = '⚠️ Enter NPN and choose recruiter.'; return; }
-  
-    // Upsert into approved_agents carrying recruiter_id forward
+
+    if (!npn || !recruiterId) {
+      msg.textContent = '⚠️ Enter NPN and choose recruiter.';
+      return;
+    }
+
+    // 1) Pre-approve in approved_agents
     const { data: existing, error: existErr } = await supabase
       .from('approved_agents')
-      .select('id,is_registered')
+      .select('id, is_registered')
       .eq('agent_id', npn)
       .maybeSingle();
-  
-    if (existErr) { msg.textContent = '❌ Error checking approval: ' + existErr.message; return; }
-    if (existing?.is_registered) { msg.textContent = '❌ That agent ID is already registered.'; return; }
-  
-    const payload = { agent_id: npn, recruiter_id: recruiterId, is_registered: false };
+
+    if (existErr) {
+      msg.textContent = '❌ Error checking approval: ' + existErr.message;
+      return;
+    }
+
+    if (existing?.is_registered) {
+      msg.textContent = '❌ That agent ID is already registered.';
+      return;
+    }
+
+    const payload = {
+      agent_id: npn,
+      recruiter_id: recruiterId,
+      is_registered: false
+    };
+
     const { error: upErr } = existing
       ? await supabase.from('approved_agents').update(payload).eq('id', existing.id)
       : await supabase.from('approved_agents').insert(payload);
-  
-    if (upErr) { msg.textContent = '❌ Could not save pre-approval: ' + upErr.message; return; }
-  
-    msg.textContent = '✅ Pre-approved. Share the signup link.';
-    setTimeout(()=> document.querySelector('#agent-modal [data-close]')?.click(), 700);
+
+    if (upErr) {
+      msg.textContent = '❌ Could not save pre-approval: ' + upErr.message;
+      return;
+    }
+
+    // 2) NIPR sync + parse
+    try {
+      msg.textContent = '✅ Pre-approved. Syncing NIPR data…';
+
+      const syncRes = await fetch('/.netlify/functions/nipr-sync-agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent_id: npn })
+      });
+
+      if (!syncRes.ok) {
+        const txt = await syncRes.text();
+        console.error('NIPR sync error:', txt);
+        msg.textContent = '⚠️ Pre-approved, but NIPR sync failed. Check logs.';
+        return;
+      }
+
+      const syncJson = await syncRes.json();
+      console.log('NIPR sync result:', syncJson);
+
+      const parseRes = await fetch('/.netlify/functions/nipr-parse-agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent_id: npn })
+      });
+
+      if (!parseRes.ok) {
+        const txt = await parseRes.text();
+        console.error('NIPR parse error:', txt);
+        msg.textContent = '⚠️ Pre-approved & synced, but parse failed. Check logs.';
+        return;
+      }
+
+      const parseJson = await parseRes.json();
+      console.log('NIPR parse result:', parseJson);
+
+      msg.textContent = '✅ Pre-approved and NIPR data synced (profile, licenses, appointments, snapshot).';
+    } catch (err) {
+      console.error('Error calling NIPR functions:', err);
+      msg.textContent = '⚠️ Pre-approved, but there was an error syncing NIPR data.';
+      return;
+    }
+
+    setTimeout(() => {
+      document.querySelector('#agent-modal [data-close]')?.click();
+    }, 900);
   });
 }); // end DOMContentLoaded
 
@@ -455,6 +545,7 @@ async function loadAgentsForAdmin() {
   new Choices(agentFilterEl, { shouldSort:false, searchEnabled:true, placeholder:true, itemSelectText:'' });
   new Choices(bulkAssignEl, { shouldSort:false, searchEnabled:true, placeholder:true, itemSelectText:'' });
 }
+
 function populateRecruiterSelect() {
   const sel = document.getElementById('agent-recruiter');
   if (!sel) return;
@@ -500,7 +591,11 @@ async function loadLeadsWithFilters() {
   const from = (currentPage - 1) * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
   const { data: leads, error, count } = await query.order(sortBy, { ascending: orderDir === 'asc' }).range(from, to);
-  if (error) { console.error('Error loading leads:', error); tbody.innerHTML = '<tr><td colspan="14">Error loading leads.</td></tr>'; return; }
+  if (error) {
+    console.error('Error loading leads:', error);
+    tbody.innerHTML = '<tr><td colspan="14">Error loading leads.</td></tr>';
+    return;
+  }
 
   const totalCount = count || 0;
   const totalPages = Math.ceil(totalCount / PAGE_SIZE) || 1;
@@ -516,7 +611,8 @@ async function loadLeadsWithFilters() {
     checkbox.addEventListener('change', e => {
       const id = String(lead.id);
       if (e.target.checked) selectedLeads.add(id); else selectedLeads.delete(id);
-      document.getElementById('selected-count').textContent = selectedLeads.size; toggleExportVisibility();
+      document.getElementById('selected-count').textContent = selectedLeads.size;
+      toggleExportVisibility();
     });
     checkboxTd.appendChild(checkbox); tr.appendChild(checkboxTd);
     if (prevSelection.has(String(lead.id))) { checkbox.checked = true; selectedLeads.add(String(lead.id)); }
@@ -536,7 +632,12 @@ async function loadLeadsWithFilters() {
       'lead-notes': lead.notes || '',
       'lead-product': lead.product_type || ''
     };
-    for (const [cls, text] of Object.entries(cellMap)) { const td = document.createElement('td'); td.classList.add(cls); td.textContent = text; tr.appendChild(td); }
+    for (const [cls, text] of Object.entries(cellMap)) {
+      const td = document.createElement('td');
+      td.classList.add(cls);
+      td.textContent = text;
+      tr.appendChild(td);
+    }
     tbody.appendChild(tr);
   });
   document.getElementById('selected-count').textContent = String(selectedLeads.size);
@@ -546,7 +647,10 @@ async function loadLeadsWithFilters() {
 const selectAllBox = document.getElementById('select-all');
 selectAllBox?.addEventListener('change', (e) => {
   const checked = e.target.checked;
-  document.querySelectorAll('.lead-checkbox').forEach(cb => { cb.checked = checked; cb.dispatchEvent(new Event('change')); });
+  document.querySelectorAll('.lead-checkbox').forEach(cb => {
+    cb.checked = checked;
+    cb.dispatchEvent(new Event('change'));
+  });
 });
 
 // Requests
@@ -555,8 +659,15 @@ async function loadRequestedLeads() {
   if (!container) return;
   container.innerHTML = 'Loading...';
   const { data: requests, error } = await supabase.from('lead_requests').select('*').order('created_at', { ascending: false });
-  if (error) { console.error('Error loading requests:', error); container.innerHTML = '<p>Error loading requests.</p>'; return; }
-  if (!requests?.length) { container.innerHTML = '<p>No lead requests found.</p>'; return; }
+  if (error) {
+    console.error('Error loading requests:', error);
+    container.innerHTML = '<p>Error loading requests.</p>';
+    return;
+  }
+  if (!requests?.length) {
+    container.innerHTML = '<p>No lead requests found.</p>';
+    return;
+  }
   container.innerHTML = requests.map(req => `
     <div class="lead-request-box" data-request-id="${req.id}">
       <strong>Requested By:</strong> ${req.submitted_by_name || 'Unknown'}<br>
@@ -578,8 +689,13 @@ async function loadRequestedLeads() {
       if (!requestId) return;
       if (!confirm('Are you sure you want to delete this request?')) return;
       const { error: deleteError } = await supabase.from('lead_requests').delete().eq('id', requestId);
-      if (deleteError) { alert('❌ Failed to delete request.'); console.error(deleteError); }
-      else { box.remove(); alert('✅ Request deleted.'); }
+      if (deleteError) {
+        alert('❌ Failed to delete request.');
+        console.error(deleteError);
+      } else {
+        box.remove();
+        alert('✅ Request deleted.');
+      }
     });
   });
 }
@@ -592,8 +708,15 @@ async function loadAssignmentHistory() {
   const { data: history, error } = await supabase.from('lead_assignments')
     .select(`lead_id, assigned_at, assigned_to_agent:assigned_to(full_name), assigned_by_agent:assigned_by(full_name)`)
     .order('assigned_at', { ascending: false });
-  if (error) { console.error('Error loading history:', error); tbody.innerHTML = '<tr><td colspan="4">Error loading history.</td></tr>'; return; }
-  if (!history?.length) { tbody.innerHTML = '<tr><td colspan="4">No assignment history yet.</td></tr>'; return; }
+  if (error) {
+    console.error('Error loading history:', error);
+    tbody.innerHTML = '<tr><td colspan="4">Error loading history.</td></tr>';
+    return;
+  }
+  if (!history?.length) {
+    tbody.innerHTML = '<tr><td colspan="4">No assignment history yet.</td></tr>';
+    return;
+  }
   tbody.innerHTML = '';
   history.forEach(entry => {
     const tr = document.createElement('tr');
@@ -618,7 +741,10 @@ async function loadAgentStats() {
   if (!isAll) {
     const dates = statPicker?.selectedDates || [];
     if (dates.length === 2) [start, end] = dates;
-    else { end = new Date(); start = new Date(end.getTime() - 30 * 864e5); }
+    else {
+      end = new Date();
+      start = new Date(end.getTime() - 30 * 864e5);
+    }
   }
   const startISO = start ? start.toISOString() : null;
   const endISO = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999).toISOString() : null;
@@ -691,9 +817,13 @@ async function loadAgentStats() {
     const totalDays = Math.max(1, Math.round((+new Date(endISO) - +start) / 864e5) + 1);
     const useMonthly = totalDays > 120;
     if (useMonthly) {
-      const monthStarts = []; const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+      const monthStarts = [];
+      const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
       const last = new Date(end.getFullYear(), end.getMonth(), 1);
-      while (cursor <= last) { monthStarts.push(new Date(cursor)); cursor.setMonth(cursor.getMonth() + 1); }
+      while (cursor <= last) {
+        monthStarts.push(new Date(cursor));
+        cursor.setMonth(cursor.getMonth() + 1);
+      }
       const monthCounts = new Array(monthStarts.length).fill(0);
       for (const l of leads) {
         const dt = new Date(l.created_at);
@@ -719,24 +849,57 @@ async function loadAgentStats() {
   const weeklyTitleEl = document.querySelector('#chart-weekly')?.previousElementSibling;
   if (weeklyTitleEl) weeklyTitleEl.textContent = chartLineLabel;
 
-  const productCounts = {}; for (const l of leads) { const key = (l.product_type || 'Unknown').trim() || 'Unknown'; productCounts[key] = (productCounts[key] || 0) + 1; }
+  const productCounts = {};
+  for (const l of leads) {
+    const key = (l.product_type || 'Unknown').trim() || 'Unknown';
+    productCounts[key] = (productCounts[key] || 0) + 1;
+  }
   const productLabels = Object.keys(productCounts);
   const productValues = productLabels.map(k => productCounts[k]);
 
   const nameById = new Map(allAgents.map(a => [a.id, a.full_name]));
-  const assigns = {}; for (const l of assignedInWindow) { const id = l.assigned_to || 'Unknown'; assigns[id] = (assigns[id] || 0) + 1; }
+  const assigns = {};
+  for (const l of assignedInWindow) {
+    const id = l.assigned_to || 'Unknown';
+    assigns[id] = (assigns[id] || 0) + 1;
+  }
   const assignLabels = Object.keys(assigns).map(id => nameById.get(id) || 'Unassigned/Unknown');
   const assignValues = Object.keys(assigns).map(id => assigns[id]);
 
   const weeklyCtx = document.getElementById('chart-weekly').getContext('2d');
-  chartWeekly = new Chart(weeklyCtx, { type:'line', data:{ labels: timeLabels, datasets:[{ label: chartLineLabel, data: timeCounts, tension:0.3 }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } } }});
+  chartWeekly = new Chart(weeklyCtx, {
+    type:'line',
+    data:{ labels: timeLabels, datasets:[{ label: chartLineLabel, data: timeCounts, tension:0.3 }] },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } }
+    }
+  });
+
   const productsCtx = document.getElementById('chart-products').getContext('2d');
-  chartProducts = new Chart(productsCtx, { type:'doughnut', data:{ labels: productLabels, datasets:[{ data: productValues }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom' } } }});
+  chartProducts = new Chart(productsCtx, {
+    type:'doughnut',
+    data:{ labels: productLabels, datasets:[{ data: productValues }] },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ legend:{ position:'bottom' } }
+    }
+  });
+
   const assignsCtx = document.getElementById('chart-assignments').getContext('2d');
-  chartAssignments = new Chart(assignsCtx, { type:'bar', data:{ labels: assignLabels, datasets:[{ label:'Assignments', data: assignValues }] },
-    options:{ responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } } }});
+  chartAssignments = new Chart(assignsCtx, {
+    type:'bar',
+    data:{ labels: assignLabels, datasets:[{ label:'Assignments', data: assignValues }] },
+    options:{
+      responsive:true,
+      maintainAspectRatio:false,
+      plugins:{ legend:{ display:false } },
+      scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } }
+    }
+  });
 }
 
 // Toggle export UI
@@ -763,19 +926,38 @@ function getSelectedLeadsData() {
   });
 }
 async function assignLeads(agentId) {
-  if (!agentId || selectedLeads.size === 0) { alert('Please select leads and an agent.'); return; }
+  if (!agentId || selectedLeads.size === 0) {
+    alert('Please select leads and an agent.');
+    return;
+  }
   const leadIds = Array.from(selectedLeads);
   const now = new Date().toISOString();
-  const { error: updateError } = await supabase.from('leads').update({ assigned_to: agentId, assigned_at: now }).in('id', leadIds);
-  if (updateError) { alert('❌ Failed to assign leads: ' + updateError.message); return; }
+  const { error: updateError } = await supabase.from('leads').update({
+    assigned_to: agentId,
+    assigned_at: now
+  }).in('id', leadIds);
+  if (updateError) {
+    alert('❌ Failed to assign leads: ' + updateError.message);
+    return;
+  }
   const { data: sessionData } = await supabase.auth.getSession();
   const currentUserId = sessionData?.session?.user?.id || userId;
-  const logs = leadIds.map(leadId => ({ lead_id: leadId, assigned_to: agentId, assigned_by: currentUserId, assigned_at: now }));
+  const logs = leadIds.map(leadId => ({
+    lead_id: leadId,
+    assigned_to: agentId,
+    assigned_by: currentUserId,
+    assigned_at: now
+  }));
   const { error: logError } = await supabase.from('lead_assignments').insert(logs);
-  if (logError) { alert('⚠️ Leads assigned, but failed to log history: ' + logError.message); }
-  else { alert('✅ Lead(s) successfully assigned.'); }
-  selectedLeads.clear(); document.getElementById('selected-count').textContent = '0';
-  await loadLeadsWithFilters(); await loadAssignmentHistory();
+  if (logError) {
+    alert('⚠️ Leads assigned, but failed to log history: ' + logError.message);
+  } else {
+    alert('✅ Lead(s) successfully assigned.');
+  }
+  selectedLeads.clear();
+  document.getElementById('selected-count').textContent = '0';
+  await loadLeadsWithFilters();
+  await loadAssignmentHistory();
 }
 
 /* =========================
@@ -789,8 +971,15 @@ async function loadAnnouncements() {
   const { data, error } = await supabase.from('announcements')
     .select('*')
     .order('created_at', { ascending: false });
-  if (error) { console.error(error); list.innerHTML = '<p>Error loading announcements.</p>'; return; }
-  if (!data?.length) { list.innerHTML = '<p>No announcements yet.</p>'; return; }
+  if (error) {
+    console.error(error);
+    list.innerHTML = '<p>Error loading announcements.</p>';
+    return;
+  }
+  if (!data?.length) {
+    list.innerHTML = '<p>No announcements yet.</p>';
+    return;
+  }
 
   list.innerHTML = data.map(a => `
     <div class="annc-row" data-id="${a.id}" style="display:grid; grid-template-columns: 64px 1fr auto; gap:12px; align-items:center; padding:10px; border:1px solid #eee; border-radius:8px; margin-bottom:10px;">
@@ -806,7 +995,9 @@ async function loadAnnouncements() {
           Audience: ${summarizeAudience(a.audience)} · Published: ${a.publish_at ? new Date(a.publish_at).toLocaleString() : 'Now'}
           ${a.expires_at ? ` · Expires: ${new Date(a.expires_at).toLocaleString()}` : ''}
         </div>
-        <div style="font-size:13px; margin-top:6px; color:#333; white-space:pre-wrap;">${(a.body||'').slice(0,240)}${a.body && a.body.length>240 ? '…' : ''}</div>
+        <div style="font-size:13px; margin-top:6px; color:#333; white-space:pre-wrap;">
+          ${(a.body||'').slice(0,240)}${a.body && a.body.length>240 ? '…' : ''}
+        </div>
       </div>
       <div class="actions" style="display:flex; flex-direction:column; gap:6px;">
         <button class="annc-copy" title="Copy link JSON" style="padding:6px 10px;">Copy JSON</button>
@@ -823,7 +1014,8 @@ async function loadAnnouncements() {
       const a = data.find(x => String(x.id) === String(id));
       if (!a) return;
       navigator.clipboard?.writeText(JSON.stringify(a, null, 2));
-      btn.textContent = 'Copied!'; setTimeout(()=> btn.textContent = 'Copy JSON', 1200);
+      btn.textContent = 'Copied!';
+      setTimeout(()=> btn.textContent = 'Copy JSON', 1200);
     });
   });
 
@@ -835,10 +1027,15 @@ async function loadAnnouncements() {
       if (!id) return;
       if (!confirm('Delete this announcement?')) return;
       const { error: delErr } = await supabase.from('announcements').delete().eq('id', id);
-      if (delErr) { alert('❌ Failed to delete.'); console.error(delErr); return; }
+      if (delErr) {
+        alert('❌ Failed to delete.');
+        console.error(delErr);
+        return;
+      }
       row.remove();
-      if (!document.querySelector('#annc-list .annc-row')) document.getElementById('annc-list').innerHTML = '<p>No announcements yet.</p>';
+      if (!document.querySelector('#annc-list .annc-row')) {
+        document.getElementById('annc-list').innerHTML = '<p>No announcements yet.</p>';
+      }
     });
   });
-  
 }
