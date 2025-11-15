@@ -519,31 +519,77 @@ document.addEventListener('DOMContentLoaded', async () => {
 }); // end DOMContentLoaded
 
 // Load active agents
+// Load active agents
 async function loadAgentsForAdmin() {
-  let { data, error } = await supabase.from('agents').select('id, full_name, product_types').eq('is_active', true);
+  let { data, error } = await supabase
+    .from('agents')
+    .select('id, full_name, product_types')
+    .eq('is_active', true);
+
   if (error) {
-    const { data: dataFallback, error: err2 } = await supabase.from('agents').select('id, full_name').eq('is_active', true);
-    if (err2) { console.error('Error loading agents:', err2); return; }
+    console.error('Error loading agents (primary):', error);
+    const { data: dataFallback, error: err2 } = await supabase
+      .from('agents')
+      .select('id, full_name')
+      .eq('is_active', true);
+    if (err2) {
+      console.error('Error loading agents (fallback):', err2);
+      return;
+    }
     data = dataFallback;
   }
+
+  // 🔍 DEBUG: see exactly which agents are visible to this logged-in admin
+  console.log('loadAgentsForAdmin → data:', data);
+  window._agentsDebug = data; // so you can inspect in the console
+
   allAgents = data || [];
+
   allAgents.forEach(agent => {
     if (agent.product_types) {
-      if (Array.isArray(agent.product_types)) { /* ok */ }
-      else if (typeof agent.product_types === 'string') agent.product_types = agent.product_types.split(',').map(s => s.trim());
-      else agent.product_types = null;
+      if (Array.isArray(agent.product_types)) {
+        // ok
+      } else if (typeof agent.product_types === 'string') {
+        agent.product_types = agent.product_types
+          .split(',')
+          .map(s => s.trim());
+      } else {
+        agent.product_types = null;
+      }
     }
   });
+
   const agentFilterEl = document.getElementById('agent-filter');
-  const bulkAssignEl = document.getElementById('bulk-assign-agent');
+  const bulkAssignEl  = document.getElementById('bulk-assign-agent');
+
   agentFilterEl.innerHTML = '<option value="">All Agents</option>';
-  bulkAssignEl.innerHTML = '<option value="">Select Agent</option>';
+  bulkAssignEl.innerHTML  = '<option value="">Select Agent</option>';
+
   allAgents.forEach(agent => {
-    const opt1 = document.createElement('option'); opt1.value = agent.id; opt1.textContent = agent.full_name; agentFilterEl.appendChild(opt1);
-    const opt2 = document.createElement('option'); opt2.value = agent.id; opt2.textContent = agent.full_name; bulkAssignEl.appendChild(opt2);
+    const opt1 = document.createElement('option');
+    opt1.value = agent.id;
+    opt1.textContent = agent.full_name;
+    agentFilterEl.appendChild(opt1);
+
+    const opt2 = document.createElement('option');
+    opt2.value = agent.id;
+    opt2.textContent = agent.full_name;
+    bulkAssignEl.appendChild(opt2);
   });
-  new Choices(agentFilterEl, { shouldSort:false, searchEnabled:true, placeholder:true, itemSelectText:'' });
-  new Choices(bulkAssignEl, { shouldSort:false, searchEnabled:true, placeholder:true, itemSelectText:'' });
+
+  new Choices(agentFilterEl, {
+    shouldSort: false,
+    searchEnabled: true,
+    placeholder: true,
+    itemSelectText: ''
+  });
+
+  new Choices(bulkAssignEl, {
+    shouldSort: false,
+    searchEnabled: true,
+    placeholder: true,
+    itemSelectText: ''
+  });
 }
 
 function populateRecruiterSelect() {
