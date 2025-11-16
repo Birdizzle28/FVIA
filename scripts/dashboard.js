@@ -873,7 +873,7 @@ document.addEventListener('DOMContentLoaded', () => {
       listEl.appendChild(block);
     });
   })();
-    /* ---------- PERSONAL INFO LOCK (phone + code) ---------- */
+    /* ---------- PERSONAL INFO LOCK (phone + code via Netlify) ---------- */
     (async function initPersonalInfoLock() {
       const content   = document.getElementById('pi-content');
       const lockCard  = document.getElementById('pi-lock-card');
@@ -892,15 +892,20 @@ document.addEventListener('DOMContentLoaded', () => {
         statusEl.style.color = isError ? '#b00020' : '#2a8f6d';
       };
   
-      // get current user id
+      // get current session + user id + access token
       let userId = null;
+      let accessToken = null;
       try {
         const { data: { session } } = await supabase.auth.getSession();
         userId = session?.user?.id || null;
+        accessToken = session?.access_token || null;
       } catch (err) {
         console.error('PI lock: session error', err);
       }
-      if (!userId) return;
+      if (!userId || !accessToken) {
+        // no auth means we can't unlock anyway
+        return;
+      }
   
       const storageKey = `pi-unlocked:${userId}`;
       const unlock = () => {
@@ -909,7 +914,7 @@ document.addEventListener('DOMContentLoaded', () => {
         localStorage.setItem(storageKey, '1');
       };
   
-      // already unlocked in this browser
+      // already unlocked previously in this browser
       if (localStorage.getItem(storageKey) === '1') {
         unlock();
         return;
@@ -927,43 +932,74 @@ document.addEventListener('DOMContentLoaded', () => {
         console.warn('PI lock: agent phone lookup failed', err);
       }
   
-      // For now we SIMULATE an OTP code in the browser.
-      // Later we can swap this for a real SMS send + verify using a Netlify function.
-      let currentCode = null;
+      const apiBase = '/.netlify/functions';
   
-      sendBtn?.addEventListener('click', () => {
+      sendBtn?.addEventListener('click', async () => {
         const phone = (phoneIn?.value || '').trim();
         if (!phone) {
           setStatus('Please enter your mobile number first.', true);
           return;
         }
   
-        // generate 6-digit code
-        currentCode = String(Math.floor(100000 + Math.random() * 900000));
-        console.log('[DEBUG] Personal info OTP code:', currentCode);
-        setStatus('A verification code has been sent (simulated). Enter the 6-digit code to unlock.');
-        codeRow.hidden = false;
+        setStatus('Sending code…');
   
-        // TODO: replace this with a real fetch() to a Netlify function that sends SMS
+        try {
+          const resp = await fetch(`${apiBase}/pi-send-code`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({ phone }),
+          });
+  
+          const data = await resp.json().catch(() => ({}));
+  
+          if (!resp.ok || !data.ok) {
+            setStatus(data.error || 'Could not send code. Please try again.', true);
+            return;
+          }
+  
+          codeRow.hidden = false;
+          setStatus('Code sent. Enter the 6-digit code to unlock.');
+        } catch (err) {
+          console.error('PI lock: send-code fetch error', err);
+          setStatus('Network error while sending code.', true);
+        }
       });
   
-      verifyBtn?.addEventListener('click', () => {
+      verifyBtn?.addEventListener('click', async () => {
         const code = (codeIn?.value || '').trim();
         if (!code) {
           setStatus('Please enter the verification code.', true);
           return;
         }
-        if (!currentCode) {
-          setStatus('Please request a code first.', true);
-          return;
-        }
-        if (code !== currentCode) {
-          setStatus('That code is incorrect. Please try again.', true);
-          return;
-        }
   
-        setStatus('Verified. Unlocking…');
-        unlock();
+        setStatus('Verifying…');
+  
+        try {
+          const resp = await fetch(`${apiBase}/pi-verify-code`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${accessToken}`,
+            },
+            body: JSON.stringify({ code }),
+          });
+  
+          const data = await resp.json().catch(() => ({}));
+  
+          if (!resp.ok || !data.ok) {
+            setStatus(data.error || 'That code is incorrect or expired.', true);
+            return;
+          }
+  
+          setStatus('Verified. Unlocking…');
+          unlock();
+        } catch (err) {
+          console.error('PI lock: verify-code fetch error', err);
+          setStatus('Network error while verifying code.', true);
+        }
       });
     })();
 });
