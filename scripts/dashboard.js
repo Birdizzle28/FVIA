@@ -873,70 +873,106 @@ document.addEventListener('DOMContentLoaded', () => {
       listEl.appendChild(block);
     });
   })();
-    /* ---------- PERSONAL INFO LOCK (phone + code via Netlify) ---------- */
-    (async function initEmailLock() {
-      const card = document.getElementById("pi-lock-card");
-      const content = document.getElementById("pi-content");
-      const emailIn = document.getElementById("pi-email-input");
-      const sendBtn = document.getElementById("pi-email-send");
-      const codeRow = document.getElementById("pi-code-row");
-      const codeIn = document.getElementById("pi-email-code");
+    /* ---------- PERSONAL INFO LOCK (email + Supabase send-email) ---------- */
+    (async function initPersonalInfoLock() {
+      const card      = document.getElementById("pi-lock-card");
+      const content   = document.getElementById("pi-content");
+      const emailIn   = document.getElementById("pi-email-input");
+      const sendBtn   = document.getElementById("pi-email-send");
+      const codeRow   = document.getElementById("pi-code-row");
+      const codeIn    = document.getElementById("pi-email-code");
       const verifyBtn = document.getElementById("pi-email-verify");
-      const statusEl = document.getElementById("pi-lock-status");
+      const statusEl  = document.getElementById("pi-lock-status");
     
+      if (!card || !content) return;
+    
+      const setStatus = (msg, isError = false) => {
+        if (!statusEl) return;
+        statusEl.textContent = msg || "";
+        statusEl.style.color = isError ? "#b00020" : "#2a8f6d";
+      };
+    
+      // Get logged-in user
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user;
-      if (!user) return;
+      if (!user) {
+        setStatus("You must be logged in to unlock this section.", true);
+        return;
+      }
     
-      const userId = user.id;
-      const storageKey = `pi-email-unlocked:${userId}`;
+      const userId    = user.id;
+      const userEmail = user.email || "";
+      const unlockKey = `pi-email-unlocked:${userId}`;
+      const codeKey   = `pi-email-code:${userId}`;
     
       const unlock = () => {
         content.classList.remove("pi-locked");
         card.style.display = "none";
-        localStorage.setItem(storageKey, "1");
+        localStorage.setItem(unlockKey, "1");
       };
     
-      if (localStorage.getItem(storageKey) === "1") {
+      // Already unlocked previously in this browser
+      if (localStorage.getItem(unlockKey) === "1") {
         unlock();
         return;
       }
     
-      let expectedCode = null;
+      // Prefill email (and lock it down so they can't change it)
+      if (emailIn) {
+        emailIn.value = userEmail;
+        emailIn.readOnly = true;
+      }
     
-      sendBtn.addEventListener("click", async () => {
-        const email = emailIn.value.trim();
-        if (!email) {
-          statusEl.textContent = "Enter your email.";
+      // Send code via Supabase Edge Function
+      sendBtn?.addEventListener("click", async () => {
+        if (!userEmail) {
+          setStatus("No email found for this account.", true);
           return;
         }
     
-        expectedCode = Math.floor(100000 + Math.random() * 900000).toString();
+        const code = Math.floor(100000 + Math.random() * 900000).toString();
+        localStorage.setItem(codeKey, code);
     
-        const resp = await fetch('/.netlify/functions/pi-email-start', {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, code: expectedCode })
-        });
+        setStatus("Sending code…");
     
-        const json = await resp.json();
-        if (!resp.ok || !json.ok) {
-          statusEl.textContent = "Error sending code.";
-          return;
+        try {
+          const { data, error } = await supabase.functions.invoke("send-email", {
+            body: {
+              to: userEmail,
+              subject: "Your Family Values verification code",
+              html: `<p>Your unlock code is <strong>${code}</strong>.</p>`,
+            },
+          });
+    
+          if (error) {
+            console.error("send-email error:", error);
+            setStatus("Error sending code. Please try again.", true);
+            return;
+          }
+    
+          setStatus("Code sent! Check your email.");
+          if (codeRow) codeRow.hidden = false;
+        } catch (err) {
+          console.error("send-email invoke failed:", err);
+          setStatus("Network error while sending code.", true);
         }
-    
-        codeRow.hidden = false;
-        statusEl.textContent = "Code sent!";
       });
     
-      verifyBtn.addEventListener("click", async () => {
-        const code = codeIn.value.trim();
+      // Verify code and unlock
+      verifyBtn?.addEventListener("click", () => {
+        const entered  = (codeIn?.value || "").trim();
+        const expected = localStorage.getItem(codeKey);
     
-        if (code !== expectedCode) {
-          statusEl.textContent = "Incorrect code.";
+        if (!entered) {
+          setStatus("Enter the code from your email.", true);
+          return;
+        }
+        if (!expected || entered !== expected) {
+          setStatus("Incorrect or expired code.", true);
           return;
         }
     
+        setStatus("Verified. Unlocking…");
         unlock();
       });
     })();
