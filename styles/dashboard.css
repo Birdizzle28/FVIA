@@ -554,7 +554,7 @@ input:checked + .slider::before {
   pointer-events: none;
 }
 
-.pi-lock-card {
+#pi-lock-card {
   margin-bottom: 16px;
   border: 1px solid var(--brand-purple);
   background: #fff;
