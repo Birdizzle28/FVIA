@@ -904,11 +904,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const userEmail = user.email || "";
     const unlockKey = `pi-email-unlocked:${userId}`;
 
-    const unlock = () => {
-      content.classList.remove("pi-locked");
-      card.style.display = "none";
-      localStorage.setItem(unlockKey, "1");
-    };
+        const unlock = () => {
+          // Hide the lock card
+          if (card) {
+            card.style.display = "none";
+          }
+    
+          // Try to find a wrapper around the PI section if you have one
+          const wrapper =
+            document.getElementById("pi-wrapper") ||
+            content?.parentElement ||
+            null;
+    
+          // Remove lock / blur classes from anything in this area
+          [wrapper, content].forEach((el) => {
+            if (!el) return;
+            el.classList.remove("pi-locked", "pi-blur");
+            el.style.filter = "none";
+            el.style.pointerEvents = "auto";
+          });
+    
+          // As an extra safety net, if your CSS is using .pi-locked on descendants:
+          document
+            .querySelectorAll("#pi-content .pi-locked, #pi-content .pi-blur")
+            .forEach((el) => {
+              el.classList.remove("pi-locked", "pi-blur");
+              el.style.filter = "none";
+              el.style.pointerEvents = "auto";
+            });
+    
+          localStorage.setItem(unlockKey, "1");
+        };
 
     // Already unlocked in this browser
     if (localStorage.getItem(unlockKey) === "1") {
