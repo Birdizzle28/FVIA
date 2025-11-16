@@ -873,7 +873,8 @@ document.addEventListener('DOMContentLoaded', () => {
       listEl.appendChild(block);
     });
   })();
-      /* ---------- PERSONAL INFO LOCK (email + Supabase send-email) ---------- */
+
+  /* ---------- PERSONAL INFO LOCK (email + Supabase send-email, 15-min TTL) ---------- */
   (async function initPersonalInfoLock() {
     const card      = document.getElementById("pi-lock-card");
     const content   = document.getElementById("pi-content");
@@ -885,6 +886,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const statusEl  = document.getElementById("pi-lock-status");
 
     if (!card || !content) return;
+
+    const TTL_MS = 15 * 60 * 1000; // 15 minutes
 
     const setStatus = (msg, isError = false) => {
       if (!statusEl) return;
@@ -904,42 +907,52 @@ document.addEventListener('DOMContentLoaded', () => {
     const userEmail = user.email || "";
     const unlockKey = `pi-email-unlocked:${userId}`;
 
-        const unlock = () => {
-          // Hide the lock card
-          if (card) {
-            card.style.display = "none";
-          }
-    
-          // Try to find a wrapper around the PI section if you have one
-          const wrapper =
-            document.getElementById("pi-wrapper") ||
-            content?.parentElement ||
-            null;
-    
-          // Remove lock / blur classes from anything in this area
-          [wrapper, content].forEach((el) => {
-            if (!el) return;
-            el.classList.remove("pi-locked", "pi-blur");
-            el.style.filter = "none";
-            el.style.pointerEvents = "auto";
-          });
-    
-          // As an extra safety net, if your CSS is using .pi-locked on descendants:
-          document
-            .querySelectorAll("#pi-content .pi-locked, #pi-content .pi-blur")
-            .forEach((el) => {
-              el.classList.remove("pi-locked", "pi-blur");
-              el.style.filter = "none";
-              el.style.pointerEvents = "auto";
-            });
-    
-          localStorage.setItem(unlockKey, "1");
-        };
+    const unlock = () => {
+      // Hide the lock card
+      if (card) {
+        card.style.display = "none";
+      }
 
-    // Already unlocked in this browser
-    if (localStorage.getItem(unlockKey) === "1") {
-      unlock();
-      return;
+      // Try to find a wrapper around the PI section if you have one
+      const wrapper =
+        document.getElementById("pi-wrapper") ||
+        content?.parentElement ||
+        null;
+
+      // Remove lock / blur classes from anything in this area
+      [wrapper, content].forEach((el) => {
+        if (!el) return;
+        el.classList.remove("pi-locked", "pi-blur");
+        el.style.filter = "none";
+        el.style.pointerEvents = "auto";
+      });
+
+      // Extra safety: clear on any descendants with pi-locked/pi-blur
+      document
+        .querySelectorAll("#pi-content .pi-locked, #pi-content .pi-blur")
+        .forEach((el) => {
+          el.classList.remove("pi-locked", "pi-blur");
+          el.style.filter = "none";
+          el.style.pointerEvents = "auto";
+        });
+
+      // store expiration time (now + 15 min)
+      const expiresAt = Date.now() + TTL_MS;
+      localStorage.setItem(unlockKey, String(expiresAt));
+    };
+
+    // Check if already unlocked in this browser AND not expired
+    const stored = localStorage.getItem(unlockKey);
+    if (stored) {
+      const expiresAt = Number(stored);
+      if (Number.isFinite(expiresAt) && Date.now() < expiresAt) {
+        // still within 15 minutes → auto-unlock
+        unlock();
+        return;
+      } else {
+        // expired or invalid → clear and require re-verification
+        localStorage.removeItem(unlockKey);
+      }
     }
 
     // Prefill email with account email (and lock it)
