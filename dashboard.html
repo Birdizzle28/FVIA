@@ -318,29 +318,22 @@
       <h1 class="dash-title">Personal Information</h1>
 
       <!-- LOCK CARD -->
-      <div id="pi-lock-card" class="card pi-lock-card">
-        <h3>Locked for your privacy</h3>
-        <p>
-          Because this section contains sensitive information, please verify your mobile number
-          to unlock it.
-        </p>
-
-        <div class="pi-field-row">
-          <label for="pi-phone-input"><strong>Mobile number</strong></label>
-          <input type="tel" id="pi-phone-input" placeholder="(555) 555-1234" />
+      <div id="pi-lock-card">
+        <h3>Verify Email to Unlock</h3>
+      
+        <input id="pi-email-input" placeholder="Your Email">
+        <button id="pi-email-send">Send Code</button>
+      
+        <div id="pi-code-row" hidden>
+          <input id="pi-email-code" placeholder="Enter Code">
+          <button id="pi-email-verify">Verify</button>
         </div>
-
-        <button id="pi-send-code-btn" class="pi-btn primary">Send code</button>
-
-        <div id="pi-code-row" class="pi-code-row" hidden>
-          <div class="pi-field-row">
-            <label for="pi-code-input"><strong>Verification code</strong></label>
-            <input type="text" id="pi-code-input" maxlength="6" placeholder="123456" />
-          </div>
-          <button id="pi-verify-btn" class="pi-btn">Unlock</button>
-        </div>
-
-        <p id="pi-lock-status" class="pi-lock-status"></p>
+      
+        <p id="pi-lock-status"></p>
+      </div>
+      
+      <div id="pi-content" class="pi-locked">
+        <!-- your four Personal Info tabs here -->
       </div>
 
       <!-- LOCKED CONTENT -->
