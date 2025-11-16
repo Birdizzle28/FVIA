@@ -313,9 +313,38 @@
     </div>
     
     <!-- Personal Information -->
+        <!-- Personal Information -->
     <section class="dash-wrap">
       <h1 class="dash-title">Personal Information</h1>
-      <div class="folder-tabs">
+
+      <!-- LOCK CARD -->
+      <div id="pi-lock-card" class="card pi-lock-card">
+        <h3>Locked for your privacy</h3>
+        <p>
+          Because this section contains sensitive information, please verify your mobile number
+          to unlock it.
+        </p>
+
+        <div class="pi-field-row">
+          <label for="pi-phone-input"><strong>Mobile number</strong></label>
+          <input type="tel" id="pi-phone-input" placeholder="(555) 555-1234" />
+        </div>
+
+        <button id="pi-send-code-btn" class="pi-btn primary">Send code</button>
+
+        <div id="pi-code-row" class="pi-code-row" hidden>
+          <div class="pi-field-row">
+            <label for="pi-code-input"><strong>Verification code</strong></label>
+            <input type="text" id="pi-code-input" maxlength="6" placeholder="123456" />
+          </div>
+          <button id="pi-verify-btn" class="pi-btn">Unlock</button>
+        </div>
+
+        <p id="pi-lock-status" class="pi-lock-status"></p>
+      </div>
+
+      <!-- LOCKED CONTENT -->
+      <div id="pi-content" class="folder-tabs pi-locked">
         <div class="tablist" role="tablist" aria-label="Personal Information">
           <button class="tab is-active" id="tab-compliance" data-tab="compliance" role="tab" aria-selected="true" aria-controls="panel-compliance" aria-label="Compliance">
             <i class="fa-solid fa-shield-halved icon" aria-hidden="true"></i>
@@ -339,17 +368,14 @@
           <!-- Compliance -->
           <section id="panel-compliance" class="panel is-active" role="tabpanel" aria-labelledby="tab-compliance">
             <div class="card-grid">
-              <article class="card" id="license-card">
+              <article class="card">
                 <h3>Licenses &amp; Upline</h3>
-                <p>
-                  <strong>NPN:</strong> <span id="npn-value">—</span><br>
-                  <strong>Upline Name:</strong> <span id="upline-name">—</span><br>
-                  <strong>Upline Phone:</strong> <span id="upline-phone">—</span><br>
-                  <strong>Upline Email:</strong> <span id="upline-email">—</span>
-                </p>
-          
+                <p><strong>NPN:</strong> <span id="npn-value">—</span></p>
+                <p><strong>Upline Name:</strong> <span id="upline-name">—</span></p>
+                <p><strong>Upline Phone:</strong> <span id="upline-phone">—</span></p>
+                <p><strong>Upline Email:</strong> <span id="upline-email">—</span></p>
                 <div id="license-list" class="license-list">
-                  <p class="muted">Loading license data…</p>
+                  <p class="muted">No NIPR licenses on file yet for this agent.</p>
                 </div>
               </article>
             </div>
@@ -370,7 +396,7 @@
             <div class="card-grid">
               <article class="card">
                 <h3>Documents</h3>
-                <p>W-9, E&O, training certs, etc.</p>
+                <p>W-9, E&amp;O, training certs, etc.</p>
               </article>
             </div>
           </section>
