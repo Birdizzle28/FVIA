@@ -772,108 +772,7 @@ document.addEventListener('DOMContentLoaded', () => {
   loadCommissionSnapshot();
   loadRecruitingSnapshot();
 
-  /* ---------- COMPLIANCE CARD (YOUR RULES IMPLEMENTED EXACTLY) ---------- */
-  (async function initComplianceCard() {
-    const npnEl      = document.getElementById('npn-value');
-    const uplNameEl  = document.getElementById('upline-name');
-    const uplPhoneEl = document.getElementById('upline-phone');
-    const uplEmailEl = document.getElementById('upline-email');
-    const listEl     = document.getElementById('license-list');
-  
-    if (!npnEl || !listEl) return;
-  
-    const safe = (el, v) => el.textContent = v ? v : '—';
-  
-    // 1) WHO IS LOGGED IN?
-    const { data: { session } } = await supabase.auth.getSession();
-    const user = session?.user;
-    if (!user) return;
-  
-    // 2) GET AGENT ROW BY EMAIL (YOUR schema)
-    const { data: me } = await supabase
-      .from('agents')
-      .select('id, full_name, phone, email, agent_id, recruiter_id')
-      .eq('email', user.email)
-      .single();
-  
-    if (!me) {
-      safe(npnEl, null);
-      listEl.innerHTML = `<p class="muted">No agent entry found for this account.</p>`;
-      return;
-    }
-  
-    // -----------------------------
-    // 3) NPN = agents.agent_id
-    // -----------------------------
-    const npn = me.agent_id;
-    safe(npnEl, npn);
-  
-    // -----------------------------
-    // 4) UPLINE LOOKUP
-    // recruiter_id → agents.id
-    // -----------------------------
-    if (me.recruiter_id) {
-      const { data: upline } = await supabase
-        .from('agents')
-        .select('full_name, phone, email')
-        .eq('id', me.recruiter_id)
-        .single();
-  
-      safe(uplNameEl,  upline?.full_name);
-      safe(uplPhoneEl, upline?.phone);
-      safe(uplEmailEl, upline?.email);
-  
-    } else {
-      safe(uplNameEl,  'Not assigned');
-      safe(uplPhoneEl, null);
-      safe(uplEmailEl, null);
-    }
-  
-    // -----------------------------
-    // 5) LICENSES
-    // agent_nipr_licenses.agent_id == agents.agent_id
-    // -----------------------------
-    const { data: licenses } = await supabase
-      .from('agent_nipr_licenses')
-      .select('*')
-      .eq('agent_id', npn)
-      .order('state');
-  
-    if (!licenses?.length) {
-      listEl.innerHTML = `<p class="muted">No NIPR licenses on file yet for this agent.</p>`;
-      return;
-    }
-  
-    // Build license blocks
-    listEl.innerHTML = '';
-    licenses.forEach(lic => {
-      const block = document.createElement('div');
-      block.className = 'license-block';
-  
-      block.innerHTML = `
-        <div class="license-header">
-          <span class="license-title">${lic.state} — ${lic.license_class || ''}</span>
-          <span class="license-status ${lic.active ? 'active' : 'inactive'}">
-            ${lic.active ? 'Active' : 'Inactive'}
-          </span>
-        </div>
-  
-        <div class="license-meta">
-          <span><strong>Number:</strong> ${lic.license_number || '—'}</span>
-          <span><strong>Issued:</strong> ${lic.date_issue_orig || '—'}</span>
-          <span><strong>Expires:</strong> ${lic.date_expire || '—'}</span>
-        </div>
-  
-        <div class="license-loas">
-          ${(lic.loa_names || []).map(l => `<span class="license-chip">${l}</span>`).join('') 
-            || '<span class="muted">No LOAs listed</span>'}
-        </div>
-      `;
-  
-      listEl.appendChild(block);
-    });
-  })();
-      /* ---------- PERSONAL INFO LOCK (email + Supabase send-email) ---------- */
+    /* ---------- PERSONAL INFO LOCK (email + Supabase send-email) ---------- */
   (async function initPersonalInfoLock() {
     const card      = document.getElementById("pi-lock-card");
     const content   = document.getElementById("pi-content");
@@ -900,47 +799,44 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    const userId    = user.id;
     const userEmail = user.email || "";
-    const unlockKey = `pi-email-unlocked:${userId}`;
 
-        const unlock = () => {
-          // Hide the lock card
-          if (card) {
-            card.style.display = "none";
-          }
-    
-          // Try to find a wrapper around the PI section if you have one
-          const wrapper =
-            document.getElementById("pi-wrapper") ||
-            content?.parentElement ||
-            null;
-    
-          // Remove lock / blur classes from anything in this area
-          [wrapper, content].forEach((el) => {
-            if (!el) return;
-            el.classList.remove("pi-locked", "pi-blur");
-            el.style.filter = "none";
-            el.style.pointerEvents = "auto";
-          });
-    
-          // As an extra safety net, if your CSS is using .pi-locked on descendants:
-          document
-            .querySelectorAll("#pi-content .pi-locked, #pi-content .pi-blur")
-            .forEach((el) => {
-              el.classList.remove("pi-locked", "pi-blur");
-              el.style.filter = "none";
-              el.style.pointerEvents = "auto";
-            });
-    
-          localStorage.setItem(unlockKey, "1");
-        };
+    // Start in locked state on every page load
+    content.classList.add("pi-locked");
+    card.style.display = ""; // make sure the card is visible
 
-    // Already unlocked in this browser
-    if (localStorage.getItem(unlockKey) === "1") {
-      unlock();
-      return;
-    }
+    // When we unlock, do NOT remember it (locks again on reload)
+    const unlock = () => {
+      // Hide the lock card
+      if (card) {
+        card.style.display = "none";
+      }
+
+      // Try to find a wrapper around the PI section if you have one
+      const wrapper =
+        document.getElementById("pi-wrapper") ||
+        content?.parentElement ||
+        null;
+
+      // Remove lock / blur classes from anything in this area
+      [wrapper, content].forEach((el) => {
+        if (!el) return;
+        el.classList.remove("pi-locked", "pi-blur");
+        el.style.filter = "none";
+        el.style.pointerEvents = "auto";
+      });
+
+      // Extra safety: clean any descendants that might have pi-locked/pi-blur
+      document
+        .querySelectorAll("#pi-content .pi-locked, #pi-content .pi-blur")
+        .forEach((el) => {
+          el.classList.remove("pi-locked", "pi-blur");
+          el.style.filter = "none";
+          el.style.pointerEvents = "auto";
+        });
+
+      setStatus("Verified. Section unlocked.");
+    };
 
     // Prefill email with account email (and lock it)
     if (emailIn) {
@@ -1005,7 +901,6 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      setStatus("Verified. Unlocking…");
       unlock();
     });
   })();
