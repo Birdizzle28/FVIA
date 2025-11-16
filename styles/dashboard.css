@@ -538,11 +538,16 @@ input:checked + .slider::before {
 }
 /* ===== Personal Info lock ===== */
 
-.pi-locked {
-  filter: blur(3px);
+/* BLUR ONLY WHEN LOCKED */
+#pi-content.pi-locked {
+  filter: blur(4px);
   pointer-events: none;
-  opacity: 0.5;
-  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+/* NORMAL STATE = NO BLUR */
+#pi-content {
+  filter: none;
+  pointer-events: auto;
 }
 
 .pi-lock-card {
