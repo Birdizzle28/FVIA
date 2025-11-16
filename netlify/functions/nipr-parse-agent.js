@@ -16,7 +16,7 @@ export async function handler(event) {
 
   try {
     const body = event.body ? JSON.parse(event.body) : {};
-    const { agent_id } = body; // NPN
+    const { agent_id, snapshot_id } = body; // NPN + optional snapshot_id
 
     if (!agent_id) {
       return {
@@ -25,21 +25,49 @@ export async function handler(event) {
       };
     }
 
-    // 1) Get the latest snapshot XML for this agent
-    const { data: snapshot, error: snapError } = await supabase
-      .from("agent_nipr_snapshots")
-      .select("*")
-      .eq("agent_id", agent_id)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
+    // 1) Get the XML snapshot for this agent
+    let snapshot = null;
+    let snapError = null;
 
-    if (snapError || !snapshot) {
+    if (snapshot_id) {
+      // If we know exactly which snapshot we just created, use that
+      const { data, error } = await supabase
+        .from("agent_nipr_snapshots")
+        .select("*")
+        .eq("id", snapshot_id)
+        .maybeSingle();
+
+      snapshot = data || null;
+      snapError = error || null;
+    } else {
+      // Fallback: get the most recent snapshot for this agent
+      const { data, error } = await supabase
+        .from("agent_nipr_snapshots")
+        .select("*")
+        .eq("agent_id", agent_id)
+        .order("created_at", { ascending: false })
+        .limit(1); // <-- NO .single()
+
+      snapError = error || null;
+      snapshot = (data && data.length > 0) ? data[0] : null;
+    }
+
+    if (snapError) {
+      console.error("Snapshot lookup error:", snapError);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: "Error loading NIPR snapshot",
+          details: snapError.message,
+        }),
+      };
+    }
+
+    if (!snapshot) {
       return {
         statusCode: 404,
         body: JSON.stringify({
           error: "No NIPR snapshot found for this agent_id",
-          details: snapError?.message,
         }),
       };
     }
@@ -54,14 +82,9 @@ export async function handler(event) {
       trim: true,
     });
 
-    // The structure is roughly:
-    // PDB -> PRODUCER[0] -> INDIVIDUAL[0]
-
-    const individual =
-      pdb?.PDB?.PRODUCER?.[0]?.INDIVIDUAL?.[0] || {};
-
-    const bio =
-      individual?.ENTITY_BIOGRAPHIC?.[0]?.BIOGRAPHIC?.[0] || {};
+    // Structure: PDB -> PRODUCER[0] -> INDIVIDUAL[0]
+    const individual = pdb?.PDB?.PRODUCER?.[0]?.INDIVIDUAL?.[0] || {};
+    const bio = individual?.ENTITY_BIOGRAPHIC?.[0]?.BIOGRAPHIC?.[0] || {};
 
     // --- Agent profile data ---
     const firstName = bio.NAME_FIRST?.[0] || null;
@@ -70,7 +93,7 @@ export async function handler(event) {
     const suffix = bio.NAME_SUFFIX?.[0] || null;
     const dob = bio.DATE_BIRTH?.[0] || null;
 
-    // Get one business email/phone if present
+    // Business email / phone (grab first we find)
     let businessEmail = null;
     let businessPhone = null;
 
@@ -124,10 +147,7 @@ export async function handler(event) {
       [];
 
     // Clear old licenses for this agent
-    await supabase
-      .from("agent_nipr_licenses")
-      .delete()
-      .eq("agent_id", agent_id);
+    await supabase.from("agent_nipr_licenses").delete().eq("agent_id", agent_id);
 
     const licenseRows = [];
 
@@ -135,8 +155,6 @@ export async function handler(event) {
       const stateName = stateBlock.$?.name || null;
       const license = stateBlock.LICENSE?.[0];
       if (!license) continue;
-
-      const details = license.DETAILS?.[0]?.DETAIL || [];
 
       const row = {
         agent_id,
@@ -172,8 +190,8 @@ export async function handler(event) {
 
     // --- Appointments ---
     const appointmentBlocks =
-      individual?.PRODUCER_LICENSING?.[0]?.LICENSE_INFORMATION?.[0]
-        ?.STATE || [];
+      individual?.PRODUCER_LICENSING?.[0]?.LICENSE_INFORMATION?.[0]?.STATE ||
+      [];
 
     // Clear old appointments
     await supabase
@@ -228,6 +246,7 @@ export async function handler(event) {
       body: JSON.stringify({
         message: "Parsed NIPR data successfully",
         agent_id,
+        snapshot_id: snapshot.id,
         licenses_count: licenseRows.length,
         appointments_count: appointmentRows.length,
       }),
