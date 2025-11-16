@@ -536,3 +536,130 @@ input:checked + .slider::before {
   background: #eceff7;
   color: #333;
 }
+/* ===== Personal Info lock ===== */
+
+.pi-locked {
+  filter: blur(3px);
+  pointer-events: none;
+  opacity: 0.5;
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+.pi-lock-card {
+  margin-bottom: 16px;
+  border: 1px solid var(--brand-purple);
+  background: #fff;
+}
+
+.pi-lock-card h3 {
+  margin-top: 0;
+  color: var(--ink);
+}
+
+.pi-field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 10px 0;
+}
+
+.pi-field-row input {
+  border: 1px solid var(--tab-border);
+  border-radius: 4px;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+
+.pi-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 12px;
+  margin-top: 4px;
+  border: 1px solid var(--tab-border);
+  background: #f6f7fb;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.pi-btn.primary {
+  background: var(--brand-purple);
+  color: #fff;
+  border-color: var(--brand-purple);
+}
+
+.pi-btn:hover {
+  background: #eceff7;
+}
+
+.pi-btn.primary:hover {
+  background: #242247;
+}
+
+.pi-code-row {
+  margin-top: 8px;
+}
+
+.pi-lock-status {
+  margin-top: 8px;
+  font-size: 14px;
+}
+
+/* simple license chips already used in the compliance card */
+.license-block {
+  border-top: 1px solid var(--tab-border);
+  padding-top: 8px;
+  margin-top: 8px;
+}
+
+.license-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.license-title {
+  font-weight: 700;
+}
+
+.license-status {
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 999px;
+}
+
+.license-status.active {
+  background: #d9f4e5;
+  color: #156c3b;
+}
+
+.license-status.inactive {
+  background: #fde2e2;
+  color: #b00020;
+}
+
+.license-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 13px;
+  margin-bottom: 4px;
+}
+
+.license-loas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.license-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--brand-purple);
+  font-size: 12px;
+}
+
+.muted {
+  color: #6b7280;
+}
