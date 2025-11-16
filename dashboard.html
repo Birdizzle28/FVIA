@@ -339,14 +339,18 @@
           <!-- Compliance -->
           <section id="panel-compliance" class="panel is-active" role="tabpanel" aria-labelledby="tab-compliance">
             <div class="card-grid">
-              <article class="card">
-                <h3>License</h3>
-                <p>Individual NPN is 19866925<br>Agency NPN is --</p>
-                <a href="#" class="card-link">License (6)</a>
-              </article>
-              <article class="card">
-                <h3>Social Security Number</h3>
-                <p>SSN is ********5908</p>
+              <article class="card" id="license-card">
+                <h3>Licenses &amp; Upline</h3>
+                <p>
+                  <strong>NPN:</strong> <span id="npn-value">—</span><br>
+                  <strong>Upline Name:</strong> <span id="upline-name">—</span><br>
+                  <strong>Upline Phone:</strong> <span id="upline-phone">—</span><br>
+                  <strong>Upline Email:</strong> <span id="upline-email">—</span>
+                </p>
+          
+                <div id="license-list" class="license-list">
+                  <p class="muted">Loading license data…</p>
+                </div>
               </article>
             </div>
           </section>
