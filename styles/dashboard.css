@@ -537,11 +537,16 @@ input:checked + .slider::before {
   color: #333;
 }
 /* ===== Personal Info lock ===== */
+#pi-section {
+  position: relative;
+  min-height: 360px; /* gives the section enough height to center within */
+}
 
 /* NORMAL STATE = NO BLUR */
 #pi-content {
   filter: none;
   pointer-events: auto;
+  transition: filter 0.2s ease;
 }
 
 #pi-content.pi-locked {
@@ -553,12 +558,54 @@ input:checked + .slider::before {
   margin-bottom: 16px;
   border: 1px solid var(--brand-purple);
   background: #fff;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 20;
+  width: min(420px, 90vw);
+  padding: 18px 20px 16px;
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.18);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
-.pi-lock-card h3 {
-  margin-top: 0;
+#pi-lock-card h3 {
+  margin: 0 0 6px;
+  text-align: center;
+  font-size: 1.1rem;
   color: var(--ink);
 }
+
+/* Email + code inputs */
+#pi-lock-card input {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid var(--tab-border);
+  border-radius: 4px;
+  padding: 8px 10px;
+  font-size: 14px;
+}
+
+/* Buttons inside lock card */
+#pi-lock-card button {
+  border: 1px solid var(--tab-border);
+  background: #f6f7fb;
+  color: var(--ink);
+  font-weight: 700;
+  padding: 8px 12px;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: background 0.15s ease, transform 0.1s ease;
+}
+
+#pi-lock-card button:hover {
+  background: #eceff7;
+  transform: translateY(-1px);
+}
+
 
 .pi-field-row {
   display: flex;
@@ -600,13 +647,26 @@ input:checked + .slider::before {
   background: #242247;
 }
 
-.pi-code-row {
+#pi-code-row {
   margin-top: 8px;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
-.pi-lock-status {
-  margin-top: 8px;
-  font-size: 14px;
+#pi-code-row input {
+  flex: 1 1 150px;
+}
+
+#pi-code-row button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+
+#pi-lock-status {
+  margin-top: 6px;
+  font-size: 13px;
+  text-align: center;
 }
 
 /* simple license chips already used in the compliance card */
