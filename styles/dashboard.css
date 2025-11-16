@@ -14,6 +14,14 @@ main {
   --tab-border:var(--brand-purple);
   --ink:var(--brand-purple);
   --muted:#6b7280;
+
+  /* NEW: semantic icon colors */
+  --icon-info:    #2563eb; /* blue */
+  --icon-success: #16a34a; /* green */
+  --icon-warn:    #f59e0b; /* amber */
+  --icon-danger:  #dc2626; /* red */
+  --icon-money:   #059669; /* money green */
+  --icon-neutral: #6b7280; /* gray */
 }
 
 .dash-wrap{ max-width:1100px; margin:0 auto; padding:0 16px; }
@@ -740,4 +748,120 @@ input:checked + .slider::before {
 
 .muted {
   color: #6b7280;
+}
+/* ---------- MAIN DASHBOARD TAB ICONS ---------- */
+
+/* Announcements (bullhorn) = info blue */
+#tab-announcements .icon {
+  color: var(--icon-info);
+}
+
+/* My Sales This Month (chart-line) = money green */
+#tab-sales .icon {
+  color: var(--icon-money);
+}
+
+/* Tasks/Reminders (list-check) = warning amber */
+#tab-reminders .icon {
+  color: var(--icon-warn);
+}
+
+/* ---------- CAROUSEL ARROWS (neutral) ---------- */
+
+.carousel .car-btn i {
+  color: var(--icon-neutral);
+}
+
+/* ---------- LEAD SNAPSHOT ICONS ---------- */
+/* New = fun/purple pop */
+.lead-stats [data-key="new"] .stat-top i {
+  color: #a855f7;
+}
+
+/* Contacted (phone) = info blue */
+.lead-stats [data-key="contacted"] .stat-top i {
+  color: var(--icon-info);
+}
+
+/* Quoted (file-invoice-dollar) = amber */
+.lead-stats [data-key="quoted"] .stat-top i {
+  color: var(--icon-warn);
+}
+
+/* Closed (check-circle) = success green */
+.lead-stats [data-key="closed"] .stat-top i {
+  color: var(--icon-success);
+}
+
+/* "Open leads inbox" arrow-right = link blue */
+.snapshot-actions .btn-link i {
+  color: var(--icon-info);
+}
+
+/* ---------- COMMISSION SNAPSHOT ICONS ---------- */
+/* This is the FIRST .card.stay-white section in <main> (Commission Snapshot) */
+
+main > section.card.stay-white:nth-of-type(3) .snapshot-grid .stat:nth-child(1) .stat-top i {
+  /* Issued (This Month) */
+  color: var(--icon-money);
+}
+
+main > section.card.stay-white:nth-of-type(3) .snapshot-grid .stat:nth-child(2) .stat-top i {
+  /* YTD AP */
+  color: var(--icon-money);
+}
+
+main > section.card.stay-white:nth-of-type(3) .snapshot-grid .stat:nth-child(3) .stat-top i {
+  /* Pending Apps */
+  color: var(--icon-warn);
+}
+
+main > section.card.stay-white:nth-of-type(3) .snapshot-grid .stat:nth-child(4) .stat-top i {
+  /* Chargebacks (30d) */
+  color: var(--icon-danger);
+}
+
+/* ---------- RECRUITING SNAPSHOT ICONS ---------- */
+/* This is the SECOND .card.stay-white section in <main> (Recruiting Snapshot) */
+
+main > section.card.stay-white:nth-of-type(4) .snapshot-grid .stat:nth-child(1) .stat-top i {
+  /* Team Size */
+  color: var(--icon-info);
+}
+
+main > section.card.stay-white:nth-of-type(4) .snapshot-grid .stat:nth-child(2) .stat-top i {
+  /* Active Agents */
+  color: var(--icon-success);
+}
+
+main > section.card.stay-white:nth-of-type(4) .snapshot-grid .stat:nth-child(3) .stat-top i {
+  /* Pipeline */
+  color: #a855f7; /* pipeline / growth pop */
+}
+
+main > section.card.stay-white:nth-of-type(4) .snapshot-grid .stat:nth-child(4) .stat-top i {
+  /* Interviews (7d) */
+  color: var(--icon-warn);
+}
+
+/* ---------- PERSONAL INFO TABS ICONS ---------- */
+
+/* Compliance (shield) = info blue */
+#tab-compliance .icon {
+  color: var(--icon-info);
+}
+
+/* Banking Info (piggy-bank) = money green */
+#tab-banking .icon {
+  color: var(--icon-money);
+}
+
+/* Documents (file-lines) = neutral gray */
+#tab-docs .icon {
+  color: var(--icon-neutral);
+}
+
+/* Carrier Credentials (id-badge) = brand purple */
+#tab-carriers .icon {
+  color: var(--brand-purple);
 }
