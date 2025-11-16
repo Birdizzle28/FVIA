@@ -874,132 +874,70 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   })();
     /* ---------- PERSONAL INFO LOCK (phone + code via Netlify) ---------- */
-    (async function initPersonalInfoLock() {
-      const content   = document.getElementById('pi-content');
-      const lockCard  = document.getElementById('pi-lock-card');
-      const phoneIn   = document.getElementById('pi-phone-input');
-      const sendBtn   = document.getElementById('pi-send-code-btn');
-      const codeRow   = document.getElementById('pi-code-row');
-      const codeIn    = document.getElementById('pi-code-input');
-      const verifyBtn = document.getElementById('pi-verify-btn');
-      const statusEl  = document.getElementById('pi-lock-status');
-  
-      if (!content || !lockCard) return;
-  
-      const setStatus = (msg, isError = false) => {
-        if (!statusEl) return;
-        statusEl.textContent = msg || '';
-        statusEl.style.color = isError ? '#b00020' : '#2a8f6d';
-      };
-  
-      // get current session + user id + access token
-      let userId = null;
-      let accessToken = null;
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        userId = session?.user?.id || null;
-        accessToken = session?.access_token || null;
-      } catch (err) {
-        console.error('PI lock: session error', err);
-      }
-      if (!userId || !accessToken) {
-        // no auth means we can't unlock anyway
-        return;
-      }
-  
-      const storageKey = `pi-unlocked:${userId}`;
+    (async function initEmailLock() {
+      const card = document.getElementById("pi-lock-card");
+      const content = document.getElementById("pi-content");
+      const emailIn = document.getElementById("pi-email-input");
+      const sendBtn = document.getElementById("pi-email-send");
+      const codeRow = document.getElementById("pi-code-row");
+      const codeIn = document.getElementById("pi-email-code");
+      const verifyBtn = document.getElementById("pi-email-verify");
+      const statusEl = document.getElementById("pi-lock-status");
+    
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+      if (!user) return;
+    
+      const userId = user.id;
+      const storageKey = `pi-email-unlocked:${userId}`;
+    
       const unlock = () => {
-        content.classList.remove('pi-locked');
-        lockCard.style.display = 'none';
-        localStorage.setItem(storageKey, '1');
+        content.classList.remove("pi-locked");
+        card.style.display = "none";
+        localStorage.setItem(storageKey, "1");
       };
-  
-      // already unlocked previously in this browser
-      if (localStorage.getItem(storageKey) === '1') {
+    
+      if (localStorage.getItem(storageKey) === "1") {
         unlock();
         return;
       }
-  
-      // prefill phone from agents if available
-      try {
-        const { data: me, error } = await supabase
-          .from('agents')
-          .select('phone')
-          .eq('id', userId)
-          .single();
-        if (!error && me?.phone && phoneIn) phoneIn.value = me.phone;
-      } catch (err) {
-        console.warn('PI lock: agent phone lookup failed', err);
-      }
-  
-      const apiBase = '/.netlify/functions';
-  
-      sendBtn?.addEventListener('click', async () => {
-        const phone = (phoneIn?.value || '').trim();
-        if (!phone) {
-          setStatus('Please enter your mobile number first.', true);
+    
+      let expectedCode = null;
+    
+      sendBtn.addEventListener("click", async () => {
+        const email = emailIn.value.trim();
+        if (!email) {
+          statusEl.textContent = "Enter your email.";
           return;
         }
-  
-        setStatus('Sending code…');
-  
-        try {
-          const resp = await fetch(`${apiBase}/pi-send-code`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({ phone }),
-          });
-  
-          const data = await resp.json().catch(() => ({}));
-  
-          if (!resp.ok || !data.ok) {
-            setStatus(data.error || 'Could not send code. Please try again.', true);
-            return;
-          }
-  
-          codeRow.hidden = false;
-          setStatus('Code sent. Enter the 6-digit code to unlock.');
-        } catch (err) {
-          console.error('PI lock: send-code fetch error', err);
-          setStatus('Network error while sending code.', true);
+    
+        expectedCode = Math.floor(100000 + Math.random() * 900000).toString();
+    
+        const resp = await fetch('/.netlify/functions/pi-email-start', {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, code: expectedCode })
+        });
+    
+        const json = await resp.json();
+        if (!resp.ok || !json.ok) {
+          statusEl.textContent = "Error sending code.";
+          return;
         }
+    
+        codeRow.hidden = false;
+        statusEl.textContent = "Code sent!";
       });
-  
-      verifyBtn?.addEventListener('click', async () => {
-        const code = (codeIn?.value || '').trim();
-        if (!code) {
-          setStatus('Please enter the verification code.', true);
+    
+      verifyBtn.addEventListener("click", async () => {
+        const code = codeIn.value.trim();
+    
+        if (code !== expectedCode) {
+          statusEl.textContent = "Incorrect code.";
           return;
         }
-  
-        setStatus('Verifying…');
-  
-        try {
-          const resp = await fetch(`${apiBase}/pi-verify-code`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Bearer ${accessToken}`,
-            },
-            body: JSON.stringify({ code }),
-          });
-  
-          const data = await resp.json().catch(() => ({}));
-  
-          if (!resp.ok || !data.ok) {
-            setStatus(data.error || 'That code is incorrect or expired.', true);
-            return;
-          }
-  
-          setStatus('Verified. Unlocking…');
-          unlock();
-        } catch (err) {
-          console.error('PI lock: verify-code fetch error', err);
-          setStatus('Network error while verifying code.', true);
-        }
+    
+        unlock();
       });
     })();
 });
