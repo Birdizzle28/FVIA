@@ -111,9 +111,7 @@ export async function handler(event) {
     } else {
       // FIRM (BUSINESS ENTITY)
       const companyName = bio.NAME_COMPANY?.[0] || null;
-      // We don’t have a company_name column in agent_nipr_profile,
-      // so put it into first_name for now. You can add a real
-      // company_name column later if you want.
+      // Temporary: store companyName in first_name
       firstName = companyName;
       lastName = null;
       middleName = null;
@@ -125,8 +123,7 @@ export async function handler(event) {
     let businessEmail = null;
     let businessPhone = null;
 
-    const contactInfos =
-      entityBio.CONTACT_INFOS?.[0]?.STATE || [];
+    const contactInfos = entityBio.CONTACT_INFOS?.[0]?.STATE || [];
 
     for (const stateBlock of contactInfos) {
       const ci = stateBlock.CONTACT_INFO?.[0];
@@ -186,6 +183,31 @@ export async function handler(event) {
       const license = stateBlock.LICENSE?.[0];
       if (!license) continue;
 
+      // Pull LOA details under this license
+      const details = license.DETAILS?.[0]?.DETAIL || [];
+      const loaNames = [];
+      const loaDetails = [];
+
+      for (const det of details) {
+        const loaName = det.LOA?.[0] || null;
+        const loaCode = det.LOA_CODE?.[0] || null;
+        const authDate = det.AUTHORITY_ISSUE_DATE?.[0] || null;
+        const status = det.STATUS?.[0] || null;
+        const statusReason = det.STATUS_REASON?.[0] || null;
+        const statusReasonDate = det.STATUS_REASON_DATE?.[0] || null;
+
+        if (loaName) loaNames.push(loaName);
+
+        loaDetails.push({
+          loa_name: loaName,
+          loa_code: loaCode,
+          authority_issue_date: authDate,
+          status,
+          status_reason: statusReason,
+          status_reason_date: statusReasonDate,
+        });
+      }
+
       const row = {
         agent_id,
         state: stateName,
@@ -196,6 +218,8 @@ export async function handler(event) {
         date_issue_orig: license.DATE_ISSUE_LICENSE_ORIG?.[0] || null,
         date_expire: license.DATE_EXPIRE_LICENSE?.[0] || null,
         ce_compliance: license.CE_COMPLIANCE?.[0] || null,
+        loa_names: loaNames.length ? loaNames : null,
+        loa_details: loaDetails.length ? loaDetails : null,
       };
 
       licenseRows.push(row);
