@@ -30,7 +30,6 @@ export async function handler(event) {
     let snapError = null;
 
     if (snapshot_id) {
-      // If we know exactly which snapshot we just created, use that
       const { data, error } = await supabase
         .from("agent_nipr_snapshots")
         .select("*")
@@ -40,16 +39,15 @@ export async function handler(event) {
       snapshot = data || null;
       snapError = error || null;
     } else {
-      // Fallback: get the most recent snapshot for this agent
       const { data, error } = await supabase
         .from("agent_nipr_snapshots")
         .select("*")
         .eq("agent_id", agent_id)
         .order("created_at", { ascending: false })
-        .limit(1); // <-- NO .single()
+        .limit(1);
 
       snapError = error || null;
-      snapshot = (data && data.length > 0) ? data[0] : null;
+      snapshot = data && data.length > 0 ? data[0] : null;
     }
 
     if (snapError) {
@@ -82,23 +80,53 @@ export async function handler(event) {
       trim: true,
     });
 
-    // Structure: PDB -> PRODUCER[0] -> INDIVIDUAL[0]
-    const individual = pdb?.PDB?.PRODUCER?.[0]?.INDIVIDUAL?.[0] || {};
-    const bio = individual?.ENTITY_BIOGRAPHIC?.[0]?.BIOGRAPHIC?.[0] || {};
+    // Root under PRODUCER can be INDIVIDUAL or FIRM
+    const producerRoot = pdb?.PDB?.PRODUCER?.[0] || {};
+    const individual = producerRoot.INDIVIDUAL?.[0];
+    const firm = producerRoot.FIRM?.[0];
 
-    // --- Agent profile data ---
-    const firstName = bio.NAME_FIRST?.[0] || null;
-    const lastName = bio.NAME_LAST?.[0] || null;
-    const middleName = bio.NAME_MIDDLE?.[0] || null;
-    const suffix = bio.NAME_SUFFIX?.[0] || null;
-    const dob = bio.DATE_BIRTH?.[0] || null;
+    // Use whichever exists
+    const entity = individual || firm || {};
+    const entityBio = entity.ENTITY_BIOGRAPHIC?.[0] || {};
+    const bio = entityBio.BIOGRAPHIC?.[0] || {};
+
+    // --- Determine if this is an INDIVIDUAL vs FIRM ---
+    const transactionType = pdb?.PDB?.TRANSACTION_TYPE?.[0]?.TYPE?.[0] || null;
+    const isFirm = String(transactionType).toUpperCase() === "FIRM";
+
+    // --- Agent / Firm profile data ---
+    let firstName = null;
+    let lastName = null;
+    let middleName = null;
+    let suffix = null;
+    let dob = null;
+
+    if (!isFirm) {
+      // INDIVIDUAL
+      firstName = bio.NAME_FIRST?.[0] || null;
+      lastName = bio.NAME_LAST?.[0] || null;
+      middleName = bio.NAME_MIDDLE?.[0] || null;
+      suffix = bio.NAME_SUFFIX?.[0] || null;
+      dob = bio.DATE_BIRTH?.[0] || null;
+    } else {
+      // FIRM (BUSINESS ENTITY)
+      const companyName = bio.NAME_COMPANY?.[0] || null;
+      // We don’t have a company_name column in agent_nipr_profile,
+      // so put it into first_name for now. You can add a real
+      // company_name column later if you want.
+      firstName = companyName;
+      lastName = null;
+      middleName = null;
+      suffix = null;
+      dob = null;
+    }
 
     // Business email / phone (grab first we find)
     let businessEmail = null;
     let businessPhone = null;
 
     const contactInfos =
-      individual?.ENTITY_BIOGRAPHIC?.[0]?.CONTACT_INFOS?.[0]?.STATE || [];
+      entityBio.CONTACT_INFOS?.[0]?.STATE || [];
 
     for (const stateBlock of contactInfos) {
       const ci = stateBlock.CONTACT_INFO?.[0];
@@ -143,11 +171,13 @@ export async function handler(event) {
 
     // --- Licenses ---
     const licInfo =
-      individual?.PRODUCER_LICENSING?.[0]?.LICENSE_INFORMATION?.[0]?.STATE ||
-      [];
+      entity?.PRODUCER_LICENSING?.[0]?.LICENSE_INFORMATION?.[0]?.STATE || [];
 
     // Clear old licenses for this agent
-    await supabase.from("agent_nipr_licenses").delete().eq("agent_id", agent_id);
+    await supabase
+      .from("agent_nipr_licenses")
+      .delete()
+      .eq("agent_id", agent_id);
 
     const licenseRows = [];
 
@@ -155,33 +185,7 @@ export async function handler(event) {
       const stateName = stateBlock.$?.name || null;
       const license = stateBlock.LICENSE?.[0];
       if (!license) continue;
-      
-      // --- NEW: pull LOA details for this state/license ---
-      const details = license.DETAILS?.[0]?.DETAIL || [];
-      const loaNames = [];
-      const loaDetails = [];
-      
-      for (const det of details) {
-        const loaName = det.LOA?.[0] || null;
-        const loaCode = det.LOA_CODE?.[0] || null;
-        const authorityIssueDate = det.AUTHORITY_ISSUE_DATE?.[0] || null;
-        const status = det.STATUS?.[0] || null;
-        const statusReason = det.STATUS_REASON?.[0] || null;
-        const statusReasonDate = det.STATUS_REASON_DATE?.[0] || null;
-      
-        if (loaName) {
-          loaNames.push(loaName);
-          loaDetails.push({
-            loa: loaName,
-            loa_code: loaCode,
-            authority_issue_date: authorityIssueDate,
-            status,
-            status_reason: statusReason,
-            status_reason_date: statusReasonDate,
-          });
-        }
-      }
-      
+
       const row = {
         agent_id,
         state: stateName,
@@ -192,13 +196,7 @@ export async function handler(event) {
         date_issue_orig: license.DATE_ISSUE_LICENSE_ORIG?.[0] || null,
         date_expire: license.DATE_EXPIRE_LICENSE?.[0] || null,
         ce_compliance: license.CE_COMPLIANCE?.[0] || null,
-      
-        // NEW fields:
-        loa_names: loaNames.length ? loaNames : null,
-        loa_details: loaDetails.length ? loaDetails : null,
       };
-      
-      licenseRows.push(row);
 
       licenseRows.push(row);
     }
@@ -222,8 +220,7 @@ export async function handler(event) {
 
     // --- Appointments ---
     const appointmentBlocks =
-      individual?.PRODUCER_LICENSING?.[0]?.LICENSE_INFORMATION?.[0]?.STATE ||
-      [];
+      entity?.PRODUCER_LICENSING?.[0]?.LICENSE_INFORMATION?.[0]?.STATE || [];
 
     // Clear old appointments
     await supabase
