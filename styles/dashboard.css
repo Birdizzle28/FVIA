@@ -454,3 +454,85 @@ input:checked + .slider::before {
   .annc-detail-body { grid-template-columns: 1fr; }
   .annc-detail-body .hero { min-height: 200px; }
 }
+/* muted helper text */
+.muted {
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+/* Compliance license card extras */
+#license-card p {
+  margin-bottom: 12px;
+}
+
+.license-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* each license row */
+.license-block {
+  border: 1px solid var(--brand-purple);
+  background: #fff;
+  padding: 10px 12px;
+}
+
+.license-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.license-title {
+  font-size: 0.95rem;
+}
+
+.license-status {
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid #bbb;
+}
+
+.license-status.active {
+  background: #e6f6ea;
+  border-color: #4caf50;
+  color: #256029;
+}
+
+.license-status.inactive {
+  background: #fbeaea;
+  border-color: #d32f2f;
+  color: #7f1d1d;
+}
+
+.license-meta {
+  font-size: 0.85rem;
+  color: #555;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-bottom: 6px;
+}
+
+.license-meta span strong {
+  font-weight: 700;
+}
+
+.license-loas {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.license-chip {
+  font-size: 0.8rem;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: #eceff7;
+  color: #333;
+}
