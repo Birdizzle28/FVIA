@@ -646,7 +646,21 @@ input:checked + .slider::before {
 .pi-btn.primary:hover {
   background: #242247;
 }
+#pi-email-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
 
+#pi-email-row input {
+  flex: 1 1 150px;
+}
+
+#pi-email-row button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
 #pi-code-row {
   margin-top: 8px;
   display: flex;
