@@ -155,7 +155,33 @@ export async function handler(event) {
       const stateName = stateBlock.$?.name || null;
       const license = stateBlock.LICENSE?.[0];
       if (!license) continue;
-
+      
+      // --- NEW: pull LOA details for this state/license ---
+      const details = license.DETAILS?.[0]?.DETAIL || [];
+      const loaNames = [];
+      const loaDetails = [];
+      
+      for (const det of details) {
+        const loaName = det.LOA?.[0] || null;
+        const loaCode = det.LOA_CODE?.[0] || null;
+        const authorityIssueDate = det.AUTHORITY_ISSUE_DATE?.[0] || null;
+        const status = det.STATUS?.[0] || null;
+        const statusReason = det.STATUS_REASON?.[0] || null;
+        const statusReasonDate = det.STATUS_REASON_DATE?.[0] || null;
+      
+        if (loaName) {
+          loaNames.push(loaName);
+          loaDetails.push({
+            loa: loaName,
+            loa_code: loaCode,
+            authority_issue_date: authorityIssueDate,
+            status,
+            status_reason: statusReason,
+            status_reason_date: statusReasonDate,
+          });
+        }
+      }
+      
       const row = {
         agent_id,
         state: stateName,
@@ -166,7 +192,13 @@ export async function handler(event) {
         date_issue_orig: license.DATE_ISSUE_LICENSE_ORIG?.[0] || null,
         date_expire: license.DATE_EXPIRE_LICENSE?.[0] || null,
         ce_compliance: license.CE_COMPLIANCE?.[0] || null,
+      
+        // NEW fields:
+        loa_names: loaNames.length ? loaNames : null,
+        loa_details: loaDetails.length ? loaDetails : null,
       };
+      
+      licenseRows.push(row);
 
       licenseRows.push(row);
     }
