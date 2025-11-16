@@ -643,7 +643,129 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  // kick off snapshots
-  loadCommissionSnapshot();
-  loadRecruitingSnapshot();
+    // kick off snapshots
+    loadCommissionSnapshot();
+    loadRecruitingSnapshot();
+  
+    /* ---------- COMPLIANCE CARD: NPN, Upline, Licenses ---------- */
+    (async function initComplianceCard(){
+      const npnEl       = document.getElementById('npn-value');
+      const uplNameEl   = document.getElementById('upline-name');
+      const uplPhoneEl  = document.getElementById('upline-phone');
+      const uplEmailEl  = document.getElementById('upline-email');
+      const listEl      = document.getElementById('license-list');
+  
+      if (!npnEl || !listEl) return;
+  
+      const safeSet = (el, val, fallback = '—') => {
+        if (!el) return;
+        const v = (val ?? '').toString().trim();
+        el.textContent = v || fallback;
+      };
+  
+      // get current user
+      let user;
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        user = session?.user;
+        if (!user) return; // not logged in; nothing to show
+      } catch (err) {
+        console.error('Compliance: session error', err);
+        return;
+      }
+  
+      // pull npn + upline from agents
+      let npn = null;
+      try {
+        const { data: agent, error } = await supabase
+          .from('agents')
+          .select('npn, upline_name, upline_phone, upline_email')
+          .eq('id', user.id)
+          .single();
+  
+        if (error) {
+          console.error('Compliance: agent lookup error', error);
+        }
+  
+        npn = agent?.npn || null;
+        safeSet(npnEl, npn);
+        safeSet(uplNameEl,  agent?.upline_name);
+        safeSet(uplPhoneEl, agent?.upline_phone);
+        safeSet(uplEmailEl, agent?.upline_email);
+      } catch (err) {
+        console.error('Compliance: agent lookup failed', err);
+      }
+  
+      if (!npn) {
+        listEl.innerHTML = '<p class="muted">No NIPR licenses on file yet for this agent.</p>';
+        return;
+      }
+  
+      // load licenses for this NPN from NIPR table
+      try {
+        const { data: licRows, error } = await supabase
+          .from('agent_nipr_licenses')
+          .select('state, license_number, license_class, active, date_issue_orig, date_expire, loa_names, loa_details')
+          .eq('agent_id', npn)
+          .order('state', { ascending: true });
+  
+        if (error) {
+          console.error('Compliance: license lookup error', error);
+          listEl.innerHTML = '<p class="muted">Unable to load license info right now.</p>';
+          return;
+        }
+  
+        const rows = licRows || [];
+        if (!rows.length) {
+          listEl.innerHTML = '<p class="muted">No licenses found in NIPR snapshot.</p>';
+          return;
+        }
+  
+        const fmtDate = (d) => {
+          if (!d) return '—';
+          try { return new Date(d).toLocaleDateString(); }
+          catch { return d.toString(); }
+        };
+  
+        listEl.innerHTML = '';
+        rows.forEach(row => {
+          const state  = row.state || '—';
+          const cls    = row.license_class || 'License';
+          const num    = row.license_number || '—';
+          const active = !!row.active;
+  
+          const block = document.createElement('div');
+          block.className = 'license-block';
+  
+          const statusClass = active ? 'active' : 'inactive';
+          const statusLabel = active ? 'Active' : 'Inactive';
+  
+          const loas = Array.isArray(row.loa_names) ? row.loa_names : [];
+          const loasHtml = loas.length
+            ? loas.map(name => `<span class="license-chip">${name}</span>`).join('')
+            : '<span class="muted">No LOAs listed.</span>';
+  
+          block.innerHTML = `
+            <div class="license-header">
+              <span class="license-title">${state} — ${cls}</span>
+              <span class="license-status ${statusClass}">${statusLabel}</span>
+            </div>
+            <div class="license-meta">
+              <span><strong>Number:</strong> ${num}</span>
+              <span><strong>Issued:</strong> ${fmtDate(row.date_issue_orig)}</span>
+              <span><strong>Expires:</strong> ${fmtDate(row.date_expire)}</span>
+            </div>
+            <div class="license-loas">
+              ${loasHtml}
+            </div>
+          `;
+  
+          listEl.appendChild(block);
+        });
+      } catch (err) {
+        console.error('Compliance: license render error', err);
+        listEl.innerHTML = '<p class="muted">Something went wrong loading licenses.</p>';
+      }
+    })();
+  });
 });
