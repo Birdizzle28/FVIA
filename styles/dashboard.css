@@ -329,21 +329,7 @@ input:checked + .slider::before {
   gap:16px; margin:6px 0 14px;
 }
 .panel.is-active .card{ background:#fff;}
-.stay-white{ background:#f6f7fb;}
-/* Stripe the top-level sections inside <main> */
-main > section{
-  padding: 20px 0 32px;
-}
-
-/* 1: Main Dashboard  |  3: Commission  | 5: Personal Info */
-main > section:nth-of-type(odd){
-  background:#ffffff;
-}
-
-/* 2: Lead Snapshot   |  4: Recruiting */
-main > section:nth-of-type(even){
-  background:#f6f7fb;
-}
+.stay-white{ background:white;}
 .snapshot-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .snapshot-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:12px}
 .stat{border:1px solid var(--brand-purple);background:var(--brand-pink);padding:14px}
