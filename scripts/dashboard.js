@@ -319,7 +319,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const { data: agent } = await supabase
       .from('agents')
-      .select('is_admin, state, product_types')
+      .select('is_admin')
       .eq('id', myId)
       .single();
 
