@@ -62,53 +62,7 @@
 	      </a>
 		</div>
 
-  <main class="dash-wrap">
-    <h1 class="dash-title">Downline Tree</h1>
-
-    <div id="schema-warning" class="schema-warning" style="display:none;">
-      <strong>Heads up:</strong> Add a <code>recruiter_id uuid</code> column to <code>agents</code> (FK to <code>agents.id</code>) to enable downline trees.
-    </div>
-
-    <section class="card">
-      <div class="tree-toolbar">
-        <div class="left">
-          <button id="expand-all" class="see-all">Expand all</button>
-          <button id="collapse-all" class="see-all">Collapse all</button>
-        </div>
-        <div class="right">
-          <input id="tree-search" type="text" placeholder="Search agent name…" />
-        </div>
-      </div>
-
-      <div class="tree-wrap">
-        <ul id="downline-tree" class="tree"></ul>
-
-        <aside id="agent-panel" class="agent-panel">
-          <div class="panel-header">
-            <h3 id="panel-name">Select an agent</h3>
-            <button id="panel-close" title="Close">&times;</button>
-          </div>
-          <div class="panel-body">
-            <div class="mini-metrics">
-              <div><div class="num" id="m-24h">0</div><div class="lbl">Activities (24h)</div></div>
-              <div><div class="num" id="m-7d">0</div><div class="lbl">Activities (7d)</div></div>
-              <div><div class="num" id="m-issued30">0</div><div class="lbl">Issued (30d)</div></div>
-            </div>
-            <div class="panel-meta">
-              <p><strong>Email:</strong> <span id="panel-email">—</span></p>
-              <p><strong>Products:</strong> <span id="panel-products">—</span></p>
-              <p><strong>Joined:</strong> <span id="panel-joined">—</span></p>
-            </div>
-            <hr/>
-            <h4>Recent Activity</h4>
-            <ul id="panel-activity" class="activity-list"></ul>
-          </div>
-        </aside>
-      </div>
-    </section>
-  </main>
-
-  <!-- Footer -->
+  		<!-- Footer -->
 		<footer class="index-grid-footer">
 			<img id="footerlogo" src="Pics/img17.png">
 			<hr class="footerhr">
