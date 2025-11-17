@@ -958,7 +958,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Prefill email with account email (and lock it)
     if (emailIn) {
       emailIn.value = userEmail;
-      emailIn.readOnly = true;
+      emailIn.readOnly = false;
     }
 
     // This holds the *current* code only while the page is open
@@ -966,8 +966,21 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // SEND CODE
     sendBtn?.addEventListener("click", async () => {
+      const typed = (emailIn?.value || "").trim();
+      
+      if (!typed) {
+        setStatus("Enter your email address first.", true);
+        return;
+      }
+      
       if (!userEmail) {
         setStatus("No email found for this account.", true);
+        return;
+      }
+
+      // core requirement: typed must match auth email
+      if (typed.toLowerCase() !== userEmail.toLowerCase()) {
+        setStatus("That email doesn’t match the one on your account.", true);
         return;
       }
 
