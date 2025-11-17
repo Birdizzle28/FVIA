@@ -741,46 +741,138 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-  /* ---------- RECRUITING SNAPSHOT ---------- */
-  async function loadRecruitingSnapshot(){
-    let team=0, active=0; let activity=[];
-    try{
-      const agQ = await supabase.from('agents')
-        .select('id,is_active,full_name,created_at')
-        .order('created_at', {ascending:false})
-        .limit(50);
-      if(!agQ.error && agQ.data){
-        team   = agQ.data.length;
-        active = agQ.data.filter(a=>a.is_active).length;
-        activity = agQ.data.slice(0,6).map(a=>({
-          name:a.full_name||'—',
-          stage:a.is_active?'Active':'Onboarding',
-          owner:'—',
-          date:new Date(a.created_at).toLocaleDateString()
-        }));
+/* ---------- RECRUITING SNAPSHOT (FINAL, USING agents.is_active) ---------- */
+
+function getDownlineAgentIds(rootId, agents) {
+  const downline = [];
+  const seen = new Set([rootId]);
+  const queue = [rootId];
+
+  while (queue.length) {
+    const current = queue.shift();
+    for (const a of agents) {
+      if (a.recruiter_id === current && !seen.has(a.id)) {
+        seen.add(a.id);
+        downline.push(a.id);
+        queue.push(a.id);
       }
-    }catch(err){
-      console.warn('Recruiting snapshot error:', err);
-    }
-
-    const $ = (id)=>document.getElementById(id);
-    $('rec-team')       && ($('rec-team').textContent       = String(team));
-    $('rec-active')     && ($('rec-active').textContent     = String(active));
-    $('rec-pipeline')   && ($('rec-pipeline').textContent   = String(0));
-    $('rec-interviews') && ($('rec-interviews').textContent = String(0));
-
-    const tbody = document.getElementById('rec-recent-activity');
-    if (tbody) {
-      tbody.innerHTML = activity.map(r=>`
-        <tr>
-          <td>${r.name}</td>
-          <td>${r.stage}</td>
-          <td>${r.owner}</td>
-          <td>${r.date}</td>
-        </tr>
-      `).join('') || `<tr><td colspan="4">No recruiting activity yet.</td></tr>`;
     }
   }
+  return downline;
+}
+
+function prettyStage(stage) {
+  if (!stage) return '—';
+  const s = String(stage).toLowerCase();
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
+async function loadRecruitingSnapshot() {
+  const $ = (id) => document.getElementById(id);
+
+  // Get logged-in agent's ID
+  let userId = null;
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    userId = session?.user?.id || null;
+  } catch {}
+  if (!userId) return;
+
+  /* 1) LOAD ALL AGENTS (needed for team & recruiter names) */
+  const agentsRes = await supabase
+    .from('agents')
+    .select('id, recruiter_id, full_name, is_active, created_at');
+
+  if (agentsRes.error) {
+    console.warn('Agents error:', agentsRes.error);
+    return;
+  }
+  const agents = agentsRes.data || [];
+
+  /* Build complete downline tree */
+  const downlineIds = getDownlineAgentIds(userId, agents);
+
+  /* ---------- METRIC 1: TEAM SIZE ---------- */
+  const teamSize = downlineIds.length;
+
+  /* ---------- METRIC 2: ACTIVE AGENTS ---------- */
+  // agents.is_active determines this
+  const activeCount = agents.filter(
+    (a) => downlineIds.includes(a.id) && a.is_active === true
+  ).length;
+
+  /* ---------- METRIC 3/4/5: RECRUITS ---------- */
+
+  // IDs in recruiting scope (you + downline)
+  const recruiterTreeIds = [userId, ...downlineIds];
+
+  const recRes = await supabase
+    .from('recruits')
+    .select('id, first_name, last_name, stage, recruiter_id, stage_updated_at')
+    .in('recruiter_id', recruiterTreeIds)
+    .order('stage_updated_at', { ascending: false })
+    .limit(200);
+
+  let recruits = [];
+  if (!recRes.error && recRes.data) {
+    recruits = recRes.data;
+  } else {
+    recruits = [];
+    console.warn('Recruits query error:', recRes.error);
+  }
+
+  /* ---------- METRIC 3: PIPELINE ---------- */
+  const excludedStages = new Set(['dropped', 'contracting', 'active']);
+  const pipelineCount = recruits.filter((r) => {
+    const s = (r.stage || '').toLowerCase();
+    return !excludedStages.has(s);
+  }).length;
+
+  /* ---------- METRIC 4: INTERVIEWS (last 30 days) ---------- */
+  const cutoff30 = new Date(Date.now() - 30 * 864e5);
+  const interviews30 = recruits.filter((r) => {
+    const s = (r.stage || '').toLowerCase();
+    if (s !== 'interview') return false;
+    if (!r.stage_updated_at) return false;
+    return new Date(r.stage_updated_at) >= cutoff30;
+  }).length;
+
+  /* ---------- METRIC 5: RECENT RECRUITING ACTIVITY ---------- */
+  const tbody = $('rec-recent-activity');
+  if (tbody) {
+    const idToName = new Map(agents.map((a) => [a.id, a.full_name || '—']));
+
+    const recent = recruits.slice(0, 6);
+    if (!recent.length) {
+      tbody.innerHTML = `<tr><td colspan="4">No recruiting activity yet.</td></tr>`;
+    } else {
+      tbody.innerHTML = recent
+        .map((r) => {
+          const name =
+            [r.first_name, r.last_name].filter(Boolean).join(' ') || '—';
+          const recruiterName = idToName.get(r.recruiter_id) || '—';
+          const date = r.stage_updated_at
+            ? new Date(r.stage_updated_at).toLocaleDateString()
+            : '—';
+          return `
+            <tr>
+              <td>${name}</td>
+              <td>${prettyStage(r.stage)}</td>
+              <td>${recruiterName}</td>
+              <td>${date}</td>
+            </tr>
+          `;
+        })
+        .join('');
+    }
+  }
+
+  /* ---------- WRITE METRIC COUNTS TO UI ---------- */
+  if ($('rec-team')) $('rec-team').textContent = String(teamSize);
+  if ($('rec-active')) $('rec-active').textContent = String(activeCount);
+  if ($('rec-pipeline')) $('rec-pipeline').textContent = String(pipelineCount);
+  if ($('rec-interviews')) $('rec-interviews').textContent = String(interviews30);
+}
 
   // kick off snapshots
   loadCommissionSnapshot();
