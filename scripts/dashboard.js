@@ -316,24 +316,32 @@ document.addEventListener('DOMContentLoaded', () => {
   async function getMyAgentMini() {
     const { data: { session } } = await supabase.auth.getSession();
     const myId = session?.user?.id || null;
-    let me = { id: myId, is_admin: false, state: null, product_types: [] };
+  
+    // keep the shape so the rest of the code doesn't break
+    let me = { 
+      id: myId, 
+      is_admin: false, 
+      state: null, 
+      product_types: [] 
+    };
+  
     if (!myId) return me;
-
-    const { data: agent } = await supabase
+  
+    const { data: agent, error } = await supabase
       .from('agents')
       .select('is_admin')
       .eq('id', myId)
       .single();
-
+  
+    if (error && error.code !== 'PGRST116') {
+      console.warn('Error loading agent mini:', error);
+      return me;
+    }
+  
     if (agent) {
       me.is_admin = !!agent.is_admin;
-      me.state = agent.state || null;
-      me.product_types = Array.isArray(agent.product_types)
-        ? agent.product_types
-        : (typeof agent.product_types === 'string'
-            ? agent.product_types.split(',').map(s=>s.trim()).filter(Boolean)
-            : []);
     }
+  
     return me;
   }
 
