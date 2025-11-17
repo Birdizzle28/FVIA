@@ -24,7 +24,11 @@ main {
   --icon-neutral: #6b7280; /* gray */
 }
 
-.dash-wrap{ max-width:1100px; margin:0 auto; padding:0 16px; }
+.dash-wrap{ 
+  max-width:1100px; 
+  margin:0 auto 32px; 
+  padding:0 16px; 
+}
 .dash-title{
   margin:0 0 14px !important;
   font-size:clamp(22px,2.8vw,34px);
@@ -325,8 +329,21 @@ input:checked + .slider::before {
   gap:16px; margin:6px 0 14px;
 }
 .panel.is-active .card{ background:#fff;}
-.stay-white{ background:#f6f7fb !important;}
+.stay-white{ background:#f6f7fb;}
+/* Stripe the top-level sections inside <main> */
+main > section{
+  padding: 20px 0 32px;
+}
 
+/* 1: Main Dashboard  |  3: Commission  | 5: Personal Info */
+main > section:nth-of-type(odd){
+  background:#ffffff;
+}
+
+/* 2: Lead Snapshot   |  4: Recruiting */
+main > section:nth-of-type(even){
+  background:#f6f7fb;
+}
 .snapshot-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .snapshot-grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:12px}
 .stat{border:1px solid var(--brand-purple);background:var(--brand-pink);padding:14px}
@@ -548,6 +565,7 @@ input:checked + .slider::before {
 #pi-section {
   position: relative;
   min-height: 360px; /* gives the section enough height to center within */
+  margin-bottom: 40px;
 }
 
 /* NORMAL STATE = NO BLUR */
@@ -864,4 +882,34 @@ main > section.card.stay-white:nth-of-type(4) .snapshot-grid .stat:nth-child(4) 
 /* Carrier Credentials (id-badge) = brand purple */
 #tab-carriers .icon {
   color: var(--brand-purple);
+}
+
+/* Commission & Recruiting snapshot sections (outer container) */
+main > section.card.stay-white {
+  max-width: 1100px;
+  margin: 0 auto 32px;
+  padding: 0 16px 24px;
+  border: none;          /* remove outer border */
+  box-shadow: none;      /* remove outer shadow */
+  background: transparent;
+}
+
+/* Make their titles match "Main Dashboard", "Lead Snapshot", etc. */
+.snapshot-head h3{
+  margin:0 0 14px;
+  font-size:clamp(22px,2.8vw,34px);  /* same as .dash-title */
+  color:var(--ink);
+  font-weight:800;
+}
+/* Stronger header styling for all mini tables on this page */
+.mini-table thead th{
+  background: var(--brand-purple);
+  color: #ffffff;
+  font-weight: 700;
+  border: 2px solid var(--brand-purple);  /* thicker border for header row */
+}
+
+/* Optional: slightly separate header from body rows */
+.mini-table thead th + th{
+  border-left-width: 1px;
 }
