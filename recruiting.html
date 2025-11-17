@@ -61,8 +61,450 @@
 	        <i class="fa-solid fa-user-shield"></i><p>Admin</p>
 	      </a>
 		</div>
+		<main class="page-shell recruiting-page">
 
-  		<!-- Footer -->
+		  <!-- ========= Top: Page header + snapshot ========= -->
+		  <section class="page-header">
+		    <div class="page-header-main">
+		      <div>
+		        <h1 class="page-title">Recruiting</h1>
+		        <p class="page-subtitle">
+		          Track your downline, see who&rsquo;s active, and grow your team with intention.
+		        </p>
+		      </div>
+		
+		      <div class="page-header-actions">
+		        <button id="add-recruit-btn" class="btn-primary">
+		          <span class="btn-icon">+</span>
+		          <span>Add Recruit</span>
+		        </button>
+		      </div>
+		    </div>
+		
+		    <div class="metric-row" aria-label="Recruiting snapshot">
+		      <article class="metric-card">
+		        <h2 class="metric-label">My Team</h2>
+		        <p class="metric-value" id="rec-team">0</p>
+		        <p class="metric-hint">Total agents in your downline</p>
+		      </article>
+		
+		      <article class="metric-card">
+		        <h2 class="metric-label">Active Agents</h2>
+		        <p class="metric-value" id="rec-active">0</p>
+		        <p class="metric-hint">Agents currently marked active</p>
+		      </article>
+		
+		      <article class="metric-card">
+		        <h2 class="metric-label">Pipeline</h2>
+		        <p class="metric-value" id="rec-pipeline">0</p>
+		        <p class="metric-hint">Recruits in motion (not dropped / contracting / active)</p>
+		      </article>
+		
+		      <article class="metric-card">
+		        <h2 class="metric-label">Interviews (30d)</h2>
+		        <p class="metric-value" id="rec-interviews">0</p>
+		        <p class="metric-hint">Recruits that hit “Interview” in the last 30 days</p>
+		      </article>
+		    </div>
+		  </section>
+		
+		  <!-- ========= Middle: Tree + Selected Agent panel ========= -->
+		  <section class="recruiting-main" aria-label="Team structure and details">
+		    <!-- Left: Downline tree -->
+		    <div class="recruiting-left">
+		      <header class="section-header">
+		        <div>
+		          <h2 class="section-title">Team Map</h2>
+		          <p class="section-subtitle">
+		            Click your card to reveal branches. Click branches to zoom into that agent.
+		          </p>
+		        </div>
+		        <div class="section-tools">
+		          <button id="tree-reset-btn" class="btn-ghost-sm" type="button">
+		            Reset to Me
+		          </button>
+		        </div>
+		      </header>
+		
+		      <div class="tree-legend" aria-hidden="true">
+		        <span class="legend-chip legend-self">You</span>
+		        <span class="legend-chip legend-direct">Direct recruit</span>
+		        <span class="legend-chip legend-downline">Downline</span>
+		        <span class="legend-chip legend-active">Active</span>
+		        <span class="legend-chip legend-inactive">Inactive</span>
+		      </div>
+		
+		      <div class="tree-card-wrapper">
+		        <!-- Root agent summary (you) -->
+		        <div id="tree-root-card" class="tree-root-card">
+		          <div class="tree-root-main">
+		            <h3 id="tree-root-name">Loading…</h3>
+		            <p class="tree-root-meta">
+		              Agent ID: <span id="tree-root-agent-id">—</span>
+		            </p>
+		          </div>
+		          <div class="tree-root-stats">
+		            <div class="tree-root-stat">
+		              <span class="label">Direct recruits</span>
+		              <span class="value" id="tree-root-direct">0</span>
+		            </div>
+		            <div class="tree-root-stat">
+		              <span class="label">Total team</span>
+		              <span class="value" id="tree-root-team">0</span>
+		            </div>
+		            <div class="tree-root-stat">
+		              <span class="label">Active</span>
+		              <span class="value" id="tree-root-active">0</span>
+		            </div>
+		          </div>
+		        </div>
+		
+		        <!-- Actual visual tree goes here -->
+		        <div id="downline-tree" class="downline-tree" aria-label="Downline tree">
+		          <!-- JS will render the interactive tree nodes + connecting lines here -->
+		        </div>
+		      </div>
+		    </div>
+		
+		    <!-- Right: Selected agent panel -->
+		    <aside class="recruiting-right" aria-label="Selected agent summary">
+		      <header class="section-header">
+		        <div>
+		          <h2 class="section-title">Selected Agent</h2>
+		          <p class="section-subtitle">
+		            Click a card in the tree to see stats for that agent and their team.
+		          </p>
+		        </div>
+		      </header>
+		
+		      <div id="agent-detail-panel" class="agent-detail-card">
+		        <div class="agent-detail-header">
+		          <div>
+		            <h3 id="sel-agent-name">You</h3>
+		            <p class="agent-detail-id">
+		              Agent ID: <span id="sel-agent-id">—</span>
+		            </p>
+		          </div>
+		          <div class="agent-detail-tags">
+		            <span class="pill pill-role" id="sel-agent-role-pill">Agent</span>
+		            <span class="pill pill-active" id="sel-agent-active-pill">Status: —</span>
+		          </div>
+		        </div>
+		
+		        <dl class="agent-detail-metrics">
+		          <div class="metric-row-small">
+		            <dt>Direct recruits</dt>
+		            <dd id="sel-direct-count">0</dd>
+		          </div>
+		          <div class="metric-row-small">
+		            <dt>Total team size</dt>
+		            <dd id="sel-team-count">0</dd>
+		          </div>
+		          <div class="metric-row-small">
+		            <dt>Active agents</dt>
+		            <dd id="sel-active-count">0</dd>
+		          </div>
+		        </dl>
+		
+		        <div class="agent-detail-meta">
+		          <h4>Upline</h4>
+		          <p id="sel-upline">
+		            —
+		          </p>
+		        </div>
+		
+		        <div class="agent-detail-actions">
+		          <button id="sel-focus-btn" class="btn-ghost-sm" type="button">
+		            Focus this agent in tree
+		          </button>
+		        </div>
+		      </div>
+		
+		      <div class="agent-mini-activity">
+		        <h3 class="mini-section-title">Recent activity (this agent&rsquo;s line)</h3>
+		        <ul id="sel-agent-activity" class="mini-activity-list">
+		          <!-- JS will inject small recent recruiting events for the selected agent/team -->
+		        </ul>
+		      </div>
+		    </aside>
+		  </section>
+		
+		  <!-- ========= Bottom: Tabs (Pipeline / Interviews / Activity / Add Recruit) ========= -->
+		  <section class="recruiting-lists" aria-label="Recruiting details">
+		    <!-- Tabs -->
+		    <div class="rec-tabs" role="tablist" aria-label="Recruiting views">
+		      <button
+		        class="rec-tab is-active"
+		        role="tab"
+		        aria-selected="true"
+		        aria-controls="rec-panel-pipeline"
+		        data-tab="pipeline"
+		        type="button"
+		      >
+		        Pipeline
+		      </button>
+		
+		      <button
+		        class="rec-tab"
+		        role="tab"
+		        aria-selected="false"
+		        aria-controls="rec-panel-interviews"
+		        data-tab="interviews"
+		        type="button"
+		      >
+		        Interviews
+		      </button>
+		
+		      <button
+		        class="rec-tab"
+		        role="tab"
+		        aria-selected="false"
+		        aria-controls="rec-panel-activity"
+		        data-tab="activity"
+		        type="button"
+		      >
+		        Recent Activity
+		      </button>
+		
+		      <button
+		        class="rec-tab rec-tab-add"
+		        role="tab"
+		        aria-selected="false"
+		        aria-controls="rec-panel-add"
+		        data-tab="add"
+		        type="button"
+		      >
+		        Add Recruit
+		      </button>
+		    </div>
+		
+		    <!-- Panels -->
+		    <div class="rec-panels">
+		      <!-- Pipeline panel -->
+		      <section
+		        class="rec-panel is-active"
+		        id="rec-panel-pipeline"
+		        role="tabpanel"
+		        aria-labelledby="rec-tab-pipeline"
+		        data-tab-panel="pipeline"
+		      >
+		        <header class="panel-header">
+		          <div>
+		            <h2 class="panel-title">Pipeline</h2>
+		            <p class="panel-subtitle">
+		              Everyone in your recruiting pipeline (excluding dropped, contracting, and active).
+		            </p>
+		          </div>
+		        </header>
+		
+		        <div class="table-shell">
+		          <table class="data-table" id="pipeline-table">
+		            <thead>
+		              <tr>
+		                <th>Recruit</th>
+		                <th>Stage</th>
+		                <th>Recruiter</th>
+		                <th>Last Update</th>
+		                <th>Notes</th>
+		              </tr>
+		            </thead>
+		            <tbody id="pipeline-tbody">
+		              <tr>
+		                <td colspan="5">Loading pipeline…</td>
+		              </tr>
+		            </tbody>
+		          </table>
+		        </div>
+		      </section>
+		
+		      <!-- Interviews panel -->
+		      <section
+		        class="rec-panel"
+		        id="rec-panel-interviews"
+		        role="tabpanel"
+		        aria-labelledby="rec-tab-interviews"
+		        data-tab-panel="interviews"
+		      >
+		        <header class="panel-header">
+		          <div>
+		            <h2 class="panel-title">Interviews (Last 30 Days)</h2>
+		            <p class="panel-subtitle">
+		              Recruits that have hit the Interview stage in the past 30 days, including your downline.
+		            </p>
+		          </div>
+		        </header>
+		
+		        <div class="table-shell">
+		          <table class="data-table" id="interviews-table">
+		            <thead>
+		              <tr>
+		                <th>Recruit</th>
+		                <th>Stage</th>
+		                <th>Recruiter</th>
+		                <th>Last Update</th>
+		              </tr>
+		            </thead>
+		            <tbody id="interviews-tbody">
+		              <tr>
+		                <td colspan="4">Loading interviews…</td>
+		              </tr>
+		            </tbody>
+		          </table>
+		        </div>
+		      </section>
+		
+		      <!-- Recent Activity panel -->
+		      <section
+		        class="rec-panel"
+		        id="rec-panel-activity"
+		        role="tabpanel"
+		        aria-labelledby="rec-tab-activity"
+		        data-tab-panel="activity"
+		      >
+		        <header class="panel-header">
+		          <div>
+		            <h2 class="panel-title">Recent Recruiting Activity</h2>
+		            <p class="panel-subtitle">
+		              Most recent status changes across your entire downline, newest first.
+		            </p>
+		          </div>
+		        </header>
+		
+		        <div class="table-shell">
+		          <table class="data-table" id="rec-activity-table">
+		            <thead>
+		              <tr>
+		                <th>Recruit</th>
+		                <th>Stage</th>
+		                <th>Recruiter</th>
+		                <th>Date</th>
+		              </tr>
+		            </thead>
+		            <tbody id="rec-recent-activity">
+		              <tr>
+		                <td colspan="4">Loading activity…</td>
+		              </tr>
+		            </tbody>
+		          </table>
+		        </div>
+		      </section>
+		
+		      <!-- Add Recruit panel -->
+		      <section
+		        class="rec-panel"
+		        id="rec-panel-add"
+		        role="tabpanel"
+		        aria-labelledby="rec-tab-add"
+		        data-tab-panel="add"
+		      >
+		        <header class="panel-header">
+		          <div>
+		            <h2 class="panel-title">Add Recruit</h2>
+		            <p class="panel-subtitle">
+		              Capture new recruits into your pipeline. You can always update their stage later.
+		            </p>
+		          </div>
+		        </header>
+		
+		        <form id="add-recruit-form" class="card form-card" autocomplete="off">
+		          <div class="form-grid">
+		            <div class="form-field">
+		              <label for="recruit-first-name">First Name<span class="req">*</span></label>
+		              <input
+		                type="text"
+		                id="recruit-first-name"
+		                name="first_name"
+		                required
+		                autocomplete="off"
+		              />
+		            </div>
+		
+		            <div class="form-field">
+		              <label for="recruit-last-name">Last Name<span class="req">*</span></label>
+		              <input
+		                type="text"
+		                id="recruit-last-name"
+		                name="last_name"
+		                required
+		                autocomplete="off"
+		              />
+		            </div>
+		
+		            <div class="form-field">
+		              <label for="recruit-stage">Stage<span class="req">*</span></label>
+		              <select id="recruit-stage" name="stage" required>
+		                <option value="applied">Applied</option>
+		                <option value="interview">Interview</option>
+		                <option value="licensing">Licensing</option>
+		                <option value="contracting">Contracting</option>
+		                <option value="agent">Agent</option>
+		                <option value="rejected">Rejected</option>
+		                <option value="dropped">Dropped</option>
+		              </select>
+		            </div>
+		
+		            <div class="form-field">
+		              <label for="recruit-recruiter">Recruiter<span class="req">*</span></label>
+		              <select id="recruit-recruiter" name="recruiter_id" required>
+		                <!-- JS will populate: default = current agent; leaders/admins can choose from their downline -->
+		              </select>
+		              <p class="field-hint">
+		                Defaults to you. If you&rsquo;re adding for someone in your team, pick their name here.
+		              </p>
+		            </div>
+		
+		            <div class="form-field">
+		              <label for="recruit-phone">Phone</label>
+		              <input
+		                type="tel"
+		                id="recruit-phone"
+		                name="phone"
+		                autocomplete="off"
+		              />
+		            </div>
+		
+		            <div class="form-field">
+		              <label for="recruit-email">Email</label>
+		              <input
+		                type="email"
+		                id="recruit-email"
+		                name="email"
+		                autocomplete="off"
+		              />
+		            </div>
+		
+		            <div class="form-field form-field-full">
+		              <label for="recruit-notes">Notes</label>
+		              <textarea
+		                id="recruit-notes"
+		                name="notes"
+		                rows="3"
+		                placeholder="Where did they come from? Any context about their background, interest level, or timing?"
+		              ></textarea>
+		            </div>
+		          </div>
+		
+		          <div class="form-footer">
+		            <label class="checkbox-inline">
+		              <input type="checkbox" id="recruit-add-another" />
+		              <span>Add another recruit after this</span>
+		            </label>
+		
+		            <div class="form-actions">
+		              <button type="submit" class="btn-primary" id="submit-recruit-btn">
+		                Save Recruit
+		              </button>
+		            </div>
+		          </div>
+		
+		          <p id="recruit-form-message" class="form-message" aria-live="polite"></p>
+		        </form>
+		      </section>
+		    </div>
+		  </section>
+		</main>
+		
+  	<!-- Footer -->
 		<footer class="index-grid-footer">
 			<img id="footerlogo" src="Pics/img17.png">
 			<hr class="footerhr">
