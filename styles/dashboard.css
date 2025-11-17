@@ -1,6 +1,6 @@
 /* ==== lighter full-width page area under your sections ==== */
 main {
-  background: #f6f7fb;           /* softer, light gray-blue */
+  background: white;           /* softer, light gray-blue */
   width: 100%;
   margin: 0 !important;
 }
