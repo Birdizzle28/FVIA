@@ -228,6 +228,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ---------- Announcement DETAIL overlay ---------- */
   const detailOverlay = document.getElementById('annc-detail-overlay');
+  if (!detailOverlay) return; // or wrap all detail functions in a guard
+  
   const detailBody = detailOverlay.querySelector('.annc-detail-body');
   const detailTitle = detailOverlay.querySelector('#annc-detail-title');
 
