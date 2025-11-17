@@ -594,70 +594,84 @@ document.addEventListener('DOMContentLoaded', () => {
     await refresh();
   })();
 
-    /* ---------- AVAILABILITY SWITCH (agents.is_available) ---------- */
-    (async () => {
-      const switchEl = document.getElementById("availabilitySwitch");
-      const statusEl = document.getElementById("availabilityStatus");
-      if (!switchEl || !statusEl) return;
+      /* ---------- AVAILABILITY SWITCH (agents.is_available) ---------- */
+      (async () => {
+        const switchEl = document.getElementById("availabilitySwitch");
+        const statusEl = document.getElementById("availabilityStatus");
+        if (!switchEl || !statusEl) return;
     
-      let user = null;
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        user = session?.user;
-        if (!user) {
-          console.warn("No user found — redirecting to login");
-          window.location.href = "login.html";
+        let user = null;
+        try {
+          const { data: { session } } = await supabase.auth.getSession();
+          user = session?.user;
+          if (!user) {
+            console.warn("No user found — redirecting to login");
+            window.location.href = "login.html";
+            return;
+          }
+        } catch (err) {
+          console.error("Error fetching session:", err);
           return;
         }
-      } catch (err) {
-        console.error("Error fetching session:", err);
-        return;
-      }
     
-      // Read current availability from agents.is_available
-      let isAvail = false;
-      try {
-        const { data: agentRow, error } = await supabase
-          .from("agents")
-          .select("is_available")
-          .eq("id", user.id)
-          .single();
+        // Read current availability from agents.is_available
+        let isAvail = false;
+        let hasAgentRow = false;
+        try {
+          const { data: agentRow, error } = await supabase
+            .from("agents")
+            .select("is_available")
+            .eq("id", user.id)
+            .single();
     
-        if (error && error.code !== "PGRST116") {
-          console.error("Error fetching agent availability:", error);
+          if (error && error.code !== "PGRST116") {
+            console.error("Error fetching agent availability:", error);
+          }
+    
+          if (agentRow) {
+            hasAgentRow = true;
+            isAvail = !!agentRow.is_available;
+          }
+        } catch (err) {
+          console.error("Error loading availability:", err);
         }
-        isAvail = !!agentRow?.is_available;
-      } catch (err) {
-        console.error("Error loading availability:", err);
-      }
     
-      // Initialize UI
-      switchEl.checked = isAvail;
-      statusEl.textContent = isAvail ? "I’m Available" : "I’m Offline";
-      statusEl.style.color = isAvail ? "#4caf50" : "#999";
-    
-      // Toggle handler → update agents.is_available
-      switchEl.addEventListener("change", async () => {
-        const next = switchEl.checked;
-        // optimistic UI
-        statusEl.textContent = next ? "I’m Available" : "I’m Offline";
-        statusEl.style.color = next ? "#4caf50" : "#999";
-    
-        // persist to agents table (upsert protects in case row is missing)
-        const { error } = await supabase.from("agents").upsert(
-          { id: user.id, is_available: next },
-          { onConflict: "id" }
-        );
-    
-        if (error) {
-          // revert on failure
-          alert("Could not update availability: " + error.message);
-          switchEl.checked = !next;
-          statusEl.textContent = switchEl.checked ? "I’m Available" : "I’m Offline";
-          statusEl.style.color = switchEl.checked ? "#4caf50" : "#999";
+        // If there's literally no agents row for this user, disable toggle
+        if (!hasAgentRow) {
+          switchEl.disabled = true;
+          statusEl.textContent = "No agent record";
+          statusEl.style.color = "#b00020";
+          return;
         }
-      });
-    })();
+    
+        // Initialize UI
+        switchEl.checked = isAvail;
+        statusEl.textContent = isAvail ? "I’m Available" : "I’m Offline";
+        statusEl.style.color = isAvail ? "#4caf50" : "#999";
+    
+        // Toggle handler → UPDATE agents.is_available (no upsert)
+        switchEl.addEventListener("change", async () => {
+          const next = switchEl.checked;
+    
+          // optimistic UI
+          statusEl.textContent = next ? "I’m Available" : "I’m Offline";
+          statusEl.style.color = next ? "#4caf50" : "#999";
+    
+          const { error } = await supabase
+            .from("agents")
+            .update({ is_available: next })
+            .eq("id", user.id);
+    
+          if (error) {
+            console.error("Availability update error:", error);
+            alert("Could not update availability: " + (error.message || "Unknown error"));
+            // revert on failure
+            switchEl.checked = !next;
+            statusEl.textContent = switchEl.checked ? "I’m Available" : "I’m Offline";
+            statusEl.style.color = switchEl.checked ? "#4caf50" : "#999";
+          }
+        });
+      })();
 
   /* ---------- COMMISSION SNAPSHOT ---------- */
   async function loadCommissionSnapshot(){
