@@ -51,10 +51,9 @@ function getDownlineAgentIds(rootId, agents) {
 function buildChildrenMap(agents) {
   const map = new Map();
   agents.forEach(a => {
-    if (!map.has(a.recruiter_id || 'root')) {
-      map.set(a.recruiter_id || 'root', []);
-    }
-    map.get(a.recruiter_id || 'root').push(a);
+    const key = a.recruiter_id || 'root';
+    if (!map.has(key)) map.set(key, []);
+    map.get(key).push(a);
   });
   return map;
 }
@@ -142,7 +141,7 @@ async function initRecruitingPage() {
     recruits
   };
 
-  // wire up once so we can reuse context when things change (add recruit)
+  // wire up UI once, using this context
   setupTabs();
   setupAddRecruitForm(ctx);
 
@@ -195,30 +194,28 @@ function renderTopMetrics(ctx) {
 function renderTree(ctx) {
   const { me, agents, userId, downlineIds } = ctx;
   const treeEl = $('downline-tree');
-  const rootNameEl = $('tree-root-name');
-  const rootMetaEl = $('tree-root-meta');
+  const rootNameEl   = $('tree-root-name');
+  const rootAgentIdEl = $('tree-root-agent-id');
   const rootDirectEl = $('tree-root-direct');
-  const rootTeamEl = $('tree-root-team');
-  const rootRecruitsEl = $('tree-root-recruits');
+  const rootTeamEl   = $('tree-root-team');
+  const rootActiveEl = $('tree-root-active');
 
   if (!treeEl || !me) return;
 
   // root card text
   if (rootNameEl) rootNameEl.textContent = me.full_name || 'You';
-  if (rootMetaEl) {
-    const since = me.created_at ? fmtDate(me.created_at) : '—';
-    const idText = me.agent_id ? `NPN ${me.agent_id}` : 'Agent';
-    rootMetaEl.textContent = `${idText} • Since ${since}`;
-  }
+  if (rootAgentIdEl) rootAgentIdEl.textContent = me.agent_id || '—';
 
   // stats
   const directs = agents.filter(a => a.recruiter_id === me.id);
   const teamCount = downlineIds.length;
-  const totalRecruits = ctx.recruits.length;
+  const activeInTeam = agents.filter(
+    a => downlineIds.includes(a.id) && a.is_active
+  ).length;
 
-  if (rootDirectEl)   rootDirectEl.textContent  = String(directs.length);
-  if (rootTeamEl)     rootTeamEl.textContent    = String(teamCount);
-  if (rootRecruitsEl) rootRecruitsEl.textContent = String(totalRecruits);
+  if (rootDirectEl) rootDirectEl.textContent = String(directs.length);
+  if (rootTeamEl)   rootTeamEl.textContent   = String(teamCount);
+  if (rootActiveEl) rootActiveEl.textContent = String(activeInTeam);
 
   // tree levels
   const levels = buildTreeLevels(userId, agents);
@@ -233,7 +230,7 @@ function renderTree(ctx) {
     return;
   }
 
-  levels.forEach((lvl, idx) => {
+  levels.forEach((lvl) => {
     const row = document.createElement('div');
     row.className = 'tree-level';
     row.style.display = 'flex';
@@ -275,37 +272,49 @@ function renderSelectedAgent(ctx, agentId) {
   const agent = getAgentById(agents, agentId) || ctx.me;
   if (!agent) return;
 
-  const nameEl   = $('sel-agent-name');
-  const idEl     = $('sel-agent-id');
-  const roleEl   = $('sel-agent-role');
-  const statusEl = $('sel-agent-status');
-  const directsEl= $('sel-agent-directs');
-  const teamEl   = $('sel-agent-team');
-  const recsEl   = $('sel-agent-recruits');
-  const emailEl  = $('sel-agent-email');
-  const phoneEl  = $('sel-agent-phone');
-  const miniList = $('sel-mini-activity');
+  const nameEl        = $('sel-agent-name');
+  const idEl          = $('sel-agent-id');
+  const rolePillEl    = $('sel-agent-role-pill');
+  const activePillEl  = $('sel-agent-active-pill');
+  const directsEl     = $('sel-direct-count');
+  const teamEl        = $('sel-team-count');
+  const activeCountEl = $('sel-active-count');
+  const uplineEl      = $('sel-upline');
+  const miniList      = $('sel-agent-activity');
 
-  if (nameEl)  nameEl.textContent = agent.full_name || 'Agent';
-  if (idEl)    idEl.textContent = agent.agent_id || '—';
-  if (roleEl)  roleEl.textContent = agent.id === ctx.userId ? 'You' : 'Downline';
+  if (nameEl) nameEl.textContent = agent.full_name || 'Agent';
+  if (idEl)   idEl.textContent   = agent.agent_id || '—';
 
-  if (statusEl) {
-    statusEl.textContent = agent.is_active ? 'Active' : 'Inactive';
-    statusEl.classList.toggle('active', agent.is_active);
-    statusEl.classList.toggle('inactive', !agent.is_active);
+  if (rolePillEl) {
+    rolePillEl.textContent = agent.id === ctx.userId ? 'You' : 'Downline';
+  }
+
+  if (activePillEl) {
+    const activeText = agent.is_active ? 'Status: Active' : 'Status: Inactive';
+    activePillEl.textContent = activeText;
+    activePillEl.classList.toggle('is-active', !!agent.is_active);
   }
 
   const directs = agents.filter(a => a.recruiter_id === agent.id);
   const teamIds = getDownlineAgentIds(agent.id, agents);
+  const teamActive = agents.filter(
+    a => teamIds.includes(a.id) && a.is_active
+  ).length;
   const agentRecruits = recruits.filter(r => r.recruiter_id === agent.id);
 
-  if (directsEl) directsEl.textContent = String(directs.length);
-  if (teamEl)    teamEl.textContent    = String(teamIds.length);
-  if (recsEl)    recsEl.textContent    = String(agentRecruits.length);
+  if (directsEl)     directsEl.textContent     = String(directs.length);
+  if (teamEl)        teamEl.textContent        = String(teamIds.length);
+  if (activeCountEl) activeCountEl.textContent = String(teamActive);
 
-  if (emailEl)  emailEl.textContent = agent.email || '—';
-  if (phoneEl)  phoneEl.textContent = agent.phone || '—';
+  // Upline
+  if (uplineEl) {
+    if (!agent.recruiter_id) {
+      uplineEl.textContent = 'No upline recorded.';
+    } else {
+      const up = getAgentById(agents, agent.recruiter_id);
+      uplineEl.textContent = up?.full_name || 'Unknown upline';
+    }
+  }
 
   // mini recent activity (last 5 for this agent)
   if (miniList) {
@@ -323,6 +332,15 @@ function renderSelectedAgent(ctx, agentId) {
         });
     }
   }
+
+  // Focus button: for now just scroll tree into view
+  const focusBtn = $('sel-focus-btn');
+  if (focusBtn) {
+    focusBtn.onclick = () => {
+      const tree = $('downline-tree');
+      if (tree) tree.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+  }
 }
 
 // --------- bottom panels (tabs) ---------
@@ -334,10 +352,12 @@ function setupTabs() {
     tabs.forEach(t => {
       const active = t.dataset.tab === key;
       t.classList.toggle('is-active', active);
+      t.setAttribute('aria-selected', active ? 'true' : 'false');
     });
     panels.forEach(p => {
-      const active = p.dataset.panel === key;
+      const active = p.dataset.tabPanel === key;
       p.classList.toggle('is-active', active);
+      p.hidden = !active;
     });
   }
 
@@ -348,6 +368,18 @@ function setupTabs() {
       activate(key);
     });
   });
+
+  // header "Add Recruit" button should switch to Add tab
+  const addBtn = $('add-recruit-btn');
+  if (addBtn) {
+    addBtn.addEventListener('click', () => {
+      activate('add');
+      const addPanel = document.querySelector('[data-tab-panel="add"]');
+      if (addPanel) {
+        addPanel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+    });
+  }
 
   // default
   activate('pipeline');
@@ -361,7 +393,7 @@ function renderBottomPanels(ctx) {
 
 // pipeline: recruits in scope not excluded
 function renderPipelinePanel(ctx) {
-  const tbody = $('rec-pipeline-body');
+  const tbody = $('pipeline-tbody');
   if (!tbody) return;
 
   const excludedStages = new Set(['dropped', 'contracting', 'active']);
@@ -394,7 +426,7 @@ function renderPipelinePanel(ctx) {
 
 // interviews: stage == interview, last 30d
 function renderInterviewsPanel(ctx) {
-  const tbody = $('rec-interviews-body');
+  const tbody = $('interviews-tbody');
   if (!tbody) return;
 
   const cutoff30 = new Date(Date.now() - 30 * 864e5);
@@ -418,9 +450,9 @@ function renderInterviewsPanel(ctx) {
     return `
       <tr>
         <td>${name}</td>
+        <td>${prettyStage(r.stage)}</td>
         <td>${recName}</td>
         <td>${fmtDate(r.stage_updated_at || r.created_at)}</td>
-        <td>${(r.notes || '').slice(0,80)}</td>
       </tr>
     `;
   }).join('');
@@ -428,7 +460,7 @@ function renderInterviewsPanel(ctx) {
 
 // activity: last 6 in entire tree
 function renderActivityPanel(ctx) {
-  const tbody = $('rec-activity-body');
+  const tbody = $('rec-recent-activity');
   if (!tbody) return;
 
   const idToName = new Map(ctx.agents.map(a => [a.id, a.full_name || '—']));
@@ -455,15 +487,31 @@ function renderActivityPanel(ctx) {
 
 // --------- add recruit form ---------
 function setupAddRecruitForm(ctx) {
-  const form   = $('rec-add-form');
-  const first  = $('rec-first-name');
-  const last   = $('rec-last-name');
-  const stage  = $('rec-stage');
-  const notes  = $('rec-notes');
-  const keepCB = $('rec-keep-open');
-  const msgEl  = $('rec-form-message');
+  const form      = $('add-recruit-form');
+  const first     = $('recruit-first-name');
+  const last      = $('recruit-last-name');
+  const stageSel  = $('recruit-stage');
+  const notesIn   = $('recruit-notes');
+  const keepCB    = $('recruit-add-another');
+  const msgEl     = $('recruit-form-message');
+  const recruiterSel = $('recruit-recruiter');
 
   if (!form) return;
+
+  // Populate recruiter dropdown: you + your downline
+  if (recruiterSel) {
+    recruiterSel.innerHTML = '';
+    const scopeAgents = ctx.agents.filter(
+      a => a.id === ctx.userId || ctx.downlineIds.includes(a.id)
+    );
+    scopeAgents.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = a.full_name || 'Agent';
+      recruiterSel.appendChild(opt);
+    });
+    recruiterSel.value = ctx.userId;
+  }
 
   const setMsg = (txt, ok = false) => {
     if (!msgEl) return;
@@ -477,8 +525,9 @@ function setupAddRecruitForm(ctx) {
 
     const fName = (first?.value || '').trim();
     const lName = (last?.value || '').trim();
-    const stg   = (stage?.value || '').trim();
-    const nts   = (notes?.value || '').trim();
+    const stg   = (stageSel?.value || '').trim();
+    const nts   = (notesIn?.value || '').trim();
+    const recruiterId = (recruiterSel?.value || '').trim() || ctx.userId;
 
     if (!fName || !stg) {
       setMsg('First name and stage are required.', false);
@@ -489,7 +538,7 @@ function setupAddRecruitForm(ctx) {
       first_name: fName,
       last_name: lName || null,
       stage: stg,
-      recruiter_id: ctx.userId,
+      recruiter_id: recruiterId,
       notes: nts || null,
       stage_updated_at: new Date().toISOString()
     };
@@ -513,13 +562,15 @@ function setupAddRecruitForm(ctx) {
     setMsg('Recruit added to your pipeline.', true);
 
     if (keepCB?.checked) {
-      // keep stage, clear names/notes
+      // keep stage + recruiter, clear names/notes
       if (first) first.value = '';
       if (last)  last.value  = '';
-      if (notes) notes.value = '';
+      if (notesIn) notesIn.value = '';
       first?.focus();
     } else {
       form.reset();
+      // restore default recruiter = you
+      if (recruiterSel) recruiterSel.value = ctx.userId;
       first?.focus();
     }
   });
