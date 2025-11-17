@@ -913,3 +913,7 @@ main > section.card.stay-white {
 .mini-table thead th + th{
   border-left-width: 1px;
 }
+
+#panel-leads {
+  background: white;
+}
