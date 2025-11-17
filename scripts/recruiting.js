@@ -1,269 +1,526 @@
+// scripts/recruiting.js
+// Recruiting page logic: team tree, metrics, pipeline, interviews, activity, add recruit
+
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+
 const supabase = createClient(
   'https://ddlbgkolnayqrxslzsxn.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
 );
 
-let me = null;
-let agents = [];
-let byUpline = new Map();
-let searchIndex = [];
+window.supabase = supabase;
 
-function initMenus() {
-  const toggle = document.getElementById("agent-hub-toggle");
-  const menu = document.getElementById("agent-hub-menu");
-  if (!toggle || !menu) return;
-  menu.style.display = "none";
-  toggle.addEventListener("click", (e) => {
-    e.stopPropagation();
-    menu.style.display = (menu.style.display === "block") ? "none" : "block";
-  });
-  document.addEventListener("click", (e) => {
-    if (!e.target.closest(".dropdown")) menu.style.display = "none";
-  });
+// --------- helpers ---------
+const $  = (id)   => document.getElementById(id);
+const $$ = (sel)  => Array.from(document.querySelectorAll(sel));
+
+function prettyStage(stage) {
+  if (!stage) return '—';
+  const s = String(stage).toLowerCase();
+  return s.charAt(0).toUpperCase() + s.slice(1);
 }
 
-async function requireSession() {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session) { window.location.href = 'login.html'; return null; }
-  return session.user;
-}
-
-async function fetchMe(userId) {
-  const { data, error } = await supabase.from('agents').select('*').eq('id', userId).single();
-  if (error) return null;
-  return data;
-}
-
-async function fetchAgents() {
+function fmtDate(d) {
+  if (!d) return '—';
   try {
-    const { data, error } = await supabase.from('agents')
-      .select('id, recruiter_id, full_name, email, created_at, product_types, is_admin, is_active');
-    if (error) throw error;
-    return data || [];
-  } catch (e) {
-    document.getElementById('schema-warning').style.display = 'block';
-    return [];
+    return new Date(d).toLocaleDateString();
+  } catch {
+    return '—';
   }
 }
 
-function buildIndex() {
-  byUpline.clear();
-  agents.forEach(a => {
-    const key = a.recruiter_id || 'root';
-    if (!byUpline.has(key)) byUpline.set(key, []);
-    byUpline.get(key).push(a);
-  });
-  searchIndex = agents.map(a => ({ id: a.id, name: (a.full_name || '').toLowerCase() }));
-}
+// BFS: all downline agent ids for a given root
+function getDownlineAgentIds(rootId, agents) {
+  const downline = [];
+  const seen = new Set([rootId]);
+  const queue = [rootId];
 
-function isAdmin(a) { return a?.is_admin === true; }
-
-function rootsFor(user) {
-  if (isAdmin(user)) return (byUpline.get('root') || []).slice();
-  return [user];
-}
-
-function nodeBadgeHTML(a) {
-  const active = a.is_active ? 'Active' : 'Inactive';
-  const prods = Array.isArray(a.product_types) ? a.product_types.join(', ') : (a.product_types || '');
-  return `
-    <span class="badge">${active}</span>
-    ${prods ? `<span class="badge">${prods}</span>` : ''}
-  `;
-}
-
-function liNode(a, hasChildren) {
-  const li = document.createElement('li');
-  li.dataset.id = a.id;
-  li.className = hasChildren ? 'collapsed' : '';
-  li.innerHTML = `
-    <div class="node">
-      <span class="chev">${hasChildren ? '▸' : ''}</span>
-      <span class="name">${a.full_name}</span>
-      <span class="badges">${nodeBadgeHTML(a)}</span>
-    </div>
-  `;
-  if (hasChildren) {
-    const ul = document.createElement('ul');
-    li.appendChild(ul);
-  }
-  return li;
-}
-
-function buildSubtree(parentEl, parentAgent) {
-  const kids = byUpline.get(parentAgent.id) || [];
-  const ul = parentEl.querySelector(':scope > ul') || document.createElement('ul');
-  if (!parentEl.contains(ul)) parentEl.appendChild(ul);
-  ul.innerHTML = '';
-  kids.sort((a,b) => a.full_name.localeCompare(b.full_name)).forEach(child => {
-    const hasChildren = (byUpline.get(child.id) || []).length > 0;
-    const li = liNode(child, hasChildren);
-    ul.appendChild(li);
-  });
-}
-
-function expand(li) {
-  if (!li.classList.contains('collapsed')) return;
-  const id = li.dataset.id;
-  const agent = agents.find(a => a.id === id);
-  buildSubtree(li, agent);
-  li.classList.remove('collapsed');
-  const chev = li.querySelector('.chev'); if (chev) chev.textContent = '▾';
-}
-
-function collapse(li) {
-  if (li.classList.contains('collapsed')) return;
-  li.classList.add('collapsed');
-  const chev = li.querySelector('.chev'); if (chev) chev.textContent = '▸';
-}
-
-function expandAll() {
-  document.querySelectorAll('#downline-tree li').forEach(li => expand(li));
-}
-function collapseAll() {
-  document.querySelectorAll('#downline-tree li').forEach(li => collapse(li));
-}
-
-function renderTree() {
-  const host = document.getElementById('downline-tree');
-  host.innerHTML = '';
-  const roots = rootsFor(me);
-  roots.sort((a,b) => (a.full_name || '').localeCompare(b.full_name || ''));
-  roots.forEach(rootAgent => {
-    const hasChildren = (byUpline.get(rootAgent.id) || []).length > 0;
-    const li = liNode(rootAgent, hasChildren);
-    host.appendChild(li);
-    if (hasChildren) expand(li);
-  });
-}
-
-function bindTreeEvents() {
-  const tree = document.getElementById('downline-tree');
-  tree.addEventListener('click', (e) => {
-    const node = e.target.closest('.node');
-    if (!node) return;
-    const li = node.closest('li');
-    const id = li.dataset.id;
-    const a = agents.find(x => x.id === id);
-    if (li.classList.contains('collapsed')) expand(li); else collapse(li);
-    openPanel(a);
-  });
-  document.getElementById('expand-all').addEventListener('click', expandAll);
-  document.getElementById('collapse-all').addEventListener('click', collapseAll);
-  const panel = document.getElementById('agent-panel');
-  document.getElementById('panel-close').addEventListener('click', () => panel.classList.remove('open'));
-}
-
-function bindSearch() {
-  const input = document.getElementById('tree-search');
-  input.addEventListener('input', () => {
-    const q = input.value.trim().toLowerCase();
-    if (!q) {
-      document.querySelectorAll('#downline-tree .node').forEach(n => n.style.background='');
-      return;
-    }
-    const hits = new Set(searchIndex.filter(r => r.name.includes(q)).map(r => r.id));
-    document.querySelectorAll('#downline-tree li').forEach(li => {
-      const match = hits.has(li.dataset.id);
-      li.querySelector('.node').style.background = match ? 'rgba(237,158,165,0.25)' : '';
-      if (match) {
-        let cur = li.parentElement.closest('li');
-        while (cur) { expand(cur); cur = cur.parentElement.closest('li'); }
+  while (queue.length) {
+    const current = queue.shift();
+    for (const a of agents) {
+      if (a.recruiter_id === current && !seen.has(a.id)) {
+        seen.add(a.id);
+        downline.push(a.id);
+        queue.push(a.id);
       }
+    }
+  }
+  return downline;
+}
+
+function buildChildrenMap(agents) {
+  const map = new Map();
+  agents.forEach(a => {
+    if (!map.has(a.recruiter_id || 'root')) {
+      map.set(a.recruiter_id || 'root', []);
+    }
+    map.get(a.recruiter_id || 'root').push(a);
+  });
+  return map;
+}
+
+// levels: array of arrays [ [directs], [grandkids], ... ]
+function buildTreeLevels(rootId, agents) {
+  const childrenMap = buildChildrenMap(agents);
+  const levels = [];
+  let current = childrenMap.get(rootId) || [];
+
+  const used = new Set();
+  while (current.length) {
+    const thisLevel = current.filter(a => !used.has(a.id));
+    if (!thisLevel.length) break;
+    levels.push(thisLevel);
+    thisLevel.forEach(a => used.add(a.id));
+    current = thisLevel.flatMap(a => childrenMap.get(a.id) || []);
+  }
+
+  return levels;
+}
+
+function getAgentById(agents, id) {
+  return agents.find(a => a.id === id) || null;
+}
+
+// --------- main init ---------
+document.addEventListener('DOMContentLoaded', () => {
+  initRecruitingPage().catch(err => {
+    console.error('Recruiting page init error:', err);
+  });
+});
+
+async function initRecruitingPage() {
+  // 1) auth
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
+  if (!user) {
+    console.warn('No session on recruiting page; redirecting to login');
+    window.location.href = 'login.html';
+    return;
+  }
+  const userId = user.id;
+
+  // 2) load agents (for team + recruiter names)
+  const agentsRes = await supabase
+    .from('agents')
+    .select('id, recruiter_id, full_name, is_active, created_at, email, phone, agent_id')
+    .order('created_at', { ascending: true });
+
+  if (agentsRes.error) {
+    console.error('Error loading agents:', agentsRes.error);
+    return;
+  }
+
+  const agents = agentsRes.data || [];
+  const me = getAgentById(agents, userId);
+
+  // 3) downline + recruiter scope for recruits
+  const downlineIds = getDownlineAgentIds(userId, agents);
+  const recruiterTreeIds = [userId, ...downlineIds];
+
+  // 4) recruits
+  const recRes = await supabase
+    .from('recruits')
+    .select('id, first_name, last_name, stage, recruiter_id, notes, stage_updated_at, created_at')
+    .in('recruiter_id', recruiterTreeIds)
+    .order('stage_updated_at', { ascending: false })
+    .limit(500);
+
+  let recruits = [];
+  if (!recRes.error && recRes.data) {
+    recruits = recRes.data;
+  } else if (recRes.error) {
+    console.warn('Error loading recruits:', recRes.error);
+  }
+
+  const ctx = {
+    user,
+    userId,
+    me,
+    agents,
+    downlineIds,
+    recruiterTreeIds,
+    recruits
+  };
+
+  // wire up once so we can reuse context when things change (add recruit)
+  setupTabs();
+  setupAddRecruitForm(ctx);
+
+  renderAll(ctx);
+}
+
+// Re-render everything that depends on ctx.recruits, ctx.agents
+function renderAll(ctx) {
+  renderTopMetrics(ctx);
+  renderTree(ctx);
+  renderSelectedAgent(ctx, ctx.me?.id || ctx.userId);
+  renderBottomPanels(ctx);
+}
+
+// --------- metrics (top 4) ---------
+function renderTopMetrics(ctx) {
+  const { agents, downlineIds, recruits } = ctx;
+
+  // team size: all agents in your downline
+  const teamSize = downlineIds.length;
+
+  // active: agents in downline with is_active true
+  const activeCount = agents.filter(
+    a => downlineIds.includes(a.id) && a.is_active === true
+  ).length;
+
+  // pipeline: recruits that are NOT in excluded stages
+  const excludedStages = new Set(['dropped', 'contracting', 'active']);
+  const pipelineCount = recruits.filter(r => {
+    const s = (r.stage || '').toLowerCase();
+    return !excludedStages.has(s);
+  }).length;
+
+  // interviews: stage == interview within last 30 days (by stage_updated_at)
+  const cutoff30 = new Date(Date.now() - 30 * 864e5);
+  const interviews30 = recruits.filter(r => {
+    const s = (r.stage || '').toLowerCase();
+    if (s !== 'interview') return false;
+    if (!r.stage_updated_at) return false;
+    return new Date(r.stage_updated_at) >= cutoff30;
+  }).length;
+
+  if ($('rec-team'))       $('rec-team').textContent = String(teamSize);
+  if ($('rec-active'))     $('rec-active').textContent = String(activeCount);
+  if ($('rec-pipeline'))   $('rec-pipeline').textContent = String(pipelineCount);
+  if ($('rec-interviews')) $('rec-interviews').textContent = String(interviews30);
+}
+
+// --------- tree rendering ---------
+function renderTree(ctx) {
+  const { me, agents, userId, downlineIds } = ctx;
+  const treeEl = $('downline-tree');
+  const rootNameEl = $('tree-root-name');
+  const rootMetaEl = $('tree-root-meta');
+  const rootDirectEl = $('tree-root-direct');
+  const rootTeamEl = $('tree-root-team');
+  const rootRecruitsEl = $('tree-root-recruits');
+
+  if (!treeEl || !me) return;
+
+  // root card text
+  if (rootNameEl) rootNameEl.textContent = me.full_name || 'You';
+  if (rootMetaEl) {
+    const since = me.created_at ? fmtDate(me.created_at) : '—';
+    const idText = me.agent_id ? `NPN ${me.agent_id}` : 'Agent';
+    rootMetaEl.textContent = `${idText} • Since ${since}`;
+  }
+
+  // stats
+  const directs = agents.filter(a => a.recruiter_id === me.id);
+  const teamCount = downlineIds.length;
+  const totalRecruits = ctx.recruits.length;
+
+  if (rootDirectEl)   rootDirectEl.textContent  = String(directs.length);
+  if (rootTeamEl)     rootTeamEl.textContent    = String(teamCount);
+  if (rootRecruitsEl) rootRecruitsEl.textContent = String(totalRecruits);
+
+  // tree levels
+  const levels = buildTreeLevels(userId, agents);
+  treeEl.innerHTML = '';
+
+  if (!levels.length) {
+    const empty = document.createElement('p');
+    empty.textContent = 'No downline agents yet. Your first recruit will appear here.';
+    empty.style.color = 'var(--muted)';
+    empty.style.fontSize = '0.9rem';
+    treeEl.appendChild(empty);
+    return;
+  }
+
+  levels.forEach((lvl, idx) => {
+    const row = document.createElement('div');
+    row.className = 'tree-level';
+    row.style.display = 'flex';
+    row.style.gap = '12px';
+    row.style.marginBottom = '8px';
+    row.style.justifyContent = 'center';
+    row.style.flexWrap = 'wrap';
+
+    lvl.forEach(a => {
+      const node = document.createElement('button');
+      node.type = 'button';
+      node.className = 'downline-node';
+      if (a.recruiter_id === userId) node.classList.add('direct');
+      if (a.is_active) node.classList.add('active');
+      node.dataset.agentId = a.id;
+
+      const name = a.full_name || 'Agent';
+      node.innerHTML = `
+        <span class="downline-node-name">${name}</span>
+        <span class="downline-node-meta">
+          ${a.is_active ? 'Active' : 'Inactive'}
+        </span>
+      `;
+
+      node.addEventListener('click', () => {
+        renderSelectedAgent(ctx, a.id);
+      });
+
+      row.appendChild(node);
+    });
+
+    treeEl.appendChild(row);
+  });
+}
+
+// --------- selected agent (right-side panel) ---------
+function renderSelectedAgent(ctx, agentId) {
+  const { agents, recruits } = ctx;
+  const agent = getAgentById(agents, agentId) || ctx.me;
+  if (!agent) return;
+
+  const nameEl   = $('sel-agent-name');
+  const idEl     = $('sel-agent-id');
+  const roleEl   = $('sel-agent-role');
+  const statusEl = $('sel-agent-status');
+  const directsEl= $('sel-agent-directs');
+  const teamEl   = $('sel-agent-team');
+  const recsEl   = $('sel-agent-recruits');
+  const emailEl  = $('sel-agent-email');
+  const phoneEl  = $('sel-agent-phone');
+  const miniList = $('sel-mini-activity');
+
+  if (nameEl)  nameEl.textContent = agent.full_name || 'Agent';
+  if (idEl)    idEl.textContent = agent.agent_id || '—';
+  if (roleEl)  roleEl.textContent = agent.id === ctx.userId ? 'You' : 'Downline';
+
+  if (statusEl) {
+    statusEl.textContent = agent.is_active ? 'Active' : 'Inactive';
+    statusEl.classList.toggle('active', agent.is_active);
+    statusEl.classList.toggle('inactive', !agent.is_active);
+  }
+
+  const directs = agents.filter(a => a.recruiter_id === agent.id);
+  const teamIds = getDownlineAgentIds(agent.id, agents);
+  const agentRecruits = recruits.filter(r => r.recruiter_id === agent.id);
+
+  if (directsEl) directsEl.textContent = String(directs.length);
+  if (teamEl)    teamEl.textContent    = String(teamIds.length);
+  if (recsEl)    recsEl.textContent    = String(agentRecruits.length);
+
+  if (emailEl)  emailEl.textContent = agent.email || '—';
+  if (phoneEl)  phoneEl.textContent = agent.phone || '—';
+
+  // mini recent activity (last 5 for this agent)
+  if (miniList) {
+    miniList.innerHTML = '';
+    if (!agentRecruits.length) {
+      miniList.innerHTML = `<li>No recruiting activity for this agent yet.</li>`;
+    } else {
+      agentRecruits
+        .slice(0, 5)
+        .forEach(r => {
+          const li = document.createElement('li');
+          const nm = [r.first_name, r.last_name].filter(Boolean).join(' ') || 'Recruit';
+          li.textContent = `${nm} • ${prettyStage(r.stage)} • ${fmtDate(r.stage_updated_at || r.created_at)}`;
+          miniList.appendChild(li);
+        });
+    }
+  }
+}
+
+// --------- bottom panels (tabs) ---------
+function setupTabs() {
+  const tabs   = $$('.rec-tab');
+  const panels = $$('.rec-panel');
+
+  function activate(key) {
+    tabs.forEach(t => {
+      const active = t.dataset.tab === key;
+      t.classList.toggle('is-active', active);
+    });
+    panels.forEach(p => {
+      const active = p.dataset.panel === key;
+      p.classList.toggle('is-active', active);
+    });
+  }
+
+  tabs.forEach(t => {
+    t.addEventListener('click', () => {
+      const key = t.dataset.tab;
+      if (!key) return;
+      activate(key);
     });
   });
+
+  // default
+  activate('pipeline');
 }
 
-async function panelMetrics(agentId) {
-  const now = Date.now();
-  const d24 = new Date(now - 24*3600*1000).toISOString();
-  const d7  = new Date(now - 7*24*3600*1000).toISOString();
-  const d30 = new Date(now - 30*24*3600*1000).toISOString();
-
-  const [{ count: c24 }] = await Promise.all([
-    supabase.from('activities').select('id',{count:'exact',head:true})
-      .eq('actor_user_id', agentId).gte('created_at', d24)
-  ]);
-
-  const { count: c7 } = await supabase.from('activities').select('id',{count:'exact',head:true})
-      .eq('actor_user_id', agentId).gte('created_at', d7);
-
-  const { data: issuedActs } = await supabase.from('activities')
-      .select('policy_id, kind, created_at')
-      .eq('actor_user_id', agentId)
-      .eq('kind','status_change')
-      .gte('created_at', d30);
-
-  const issued = (issuedActs || []).filter(x => !!x.policy_id).length;
-  return { c24: c24 || 0, c7: c7 || 0, issued };
+function renderBottomPanels(ctx) {
+  renderPipelinePanel(ctx);
+  renderInterviewsPanel(ctx);
+  renderActivityPanel(ctx);
 }
 
-async function panelRecent(agentId) {
-  const { data, error } = await supabase.from('activities')
-    .select('created_at, kind, summary')
-    .eq('actor_user_id', agentId)
-    .order('created_at', { ascending:false })
-    .limit(10);
-  if (error) return [];
-  return data || [];
-}
+// pipeline: recruits in scope not excluded
+function renderPipelinePanel(ctx) {
+  const tbody = $('rec-pipeline-body');
+  if (!tbody) return;
 
-function setText(id, txt) { const el = document.getElementById(id); if (el) el.textContent = txt || '—'; }
-
-async function openPanel(a) {
-  const panel = document.getElementById('agent-panel');
-  setText('panel-name', a.full_name || '—');
-  setText('panel-email', a.email || '—');
-  const prods = Array.isArray(a.product_types) ? a.product_types.join(', ') : (a.product_types || '');
-  setText('panel-products', prods || '—');
-  try { setText('panel-joined', new Date(a.created_at).toLocaleDateString()); } catch { setText('panel-joined','—'); }
-
-  const { c24, c7, issued } = await panelMetrics(a.id);
-  setText('m-24h', String(c24));
-  setText('m-7d', String(c7));
-  setText('m-issued30', String(issued));
-
-  const items = await panelRecent(a.id);
-  const ul = document.getElementById('panel-activity');
-  ul.innerHTML = '';
-  items.forEach(it => {
-    const li = document.createElement('li');
-    li.textContent = `${new Date(it.created_at).toLocaleString()} — ${it.kind} — ${it.summary || ''}`;
-    ul.appendChild(li);
+  const excludedStages = new Set(['dropped', 'contracting', 'active']);
+  const recruits = ctx.recruits.filter(r => {
+    const s = (r.stage || '').toLowerCase();
+    return !excludedStages.has(s);
   });
 
-  panel.classList.add('open');
+  const idToName = new Map(ctx.agents.map(a => [a.id, a.full_name || '—']));
+
+  if (!recruits.length) {
+    tbody.innerHTML = `<tr><td colspan="5">No recruits in your pipeline yet.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = recruits.map(r => {
+    const name = [r.first_name, r.last_name].filter(Boolean).join(' ') || '—';
+    const recName = idToName.get(r.recruiter_id) || '—';
+    return `
+      <tr>
+        <td>${name}</td>
+        <td>${prettyStage(r.stage)}</td>
+        <td>${recName}</td>
+        <td>${fmtDate(r.stage_updated_at || r.created_at)}</td>
+        <td>${(r.notes || '').slice(0,80)}</td>
+      </tr>
+    `;
+  }).join('');
 }
 
-function subscribeRealtime() {
-  const ch = supabase.channel('agents_activities')
-    .on('postgres_changes', { event:'*', schema:'public', table:'agents' }, async () => {
-      agents = await fetchAgents(); buildIndex(); renderTree();
-    })
-    .on('postgres_changes', { event:'*', schema:'public', table:'activities' }, () => {
-      const openName = document.getElementById('panel-name')?.textContent || '';
-      const current = agents.find(a => a.full_name === openName);
-      if (current) openPanel(current);
-    })
-    .subscribe();
-  window.addEventListener('beforeunload', () => { try { supabase.removeChannel(ch); } catch {} });
+// interviews: stage == interview, last 30d
+function renderInterviewsPanel(ctx) {
+  const tbody = $('rec-interviews-body');
+  if (!tbody) return;
+
+  const cutoff30 = new Date(Date.now() - 30 * 864e5);
+  const recruits = ctx.recruits.filter(r => {
+    const s = (r.stage || '').toLowerCase();
+    if (s !== 'interview') return false;
+    if (!r.stage_updated_at) return false;
+    return new Date(r.stage_updated_at) >= cutoff30;
+  });
+
+  const idToName = new Map(ctx.agents.map(a => [a.id, a.full_name || '—']));
+
+  if (!recruits.length) {
+    tbody.innerHTML = `<tr><td colspan="4">No interviews in the last 30 days.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = recruits.map(r => {
+    const name = [r.first_name, r.last_name].filter(Boolean).join(' ') || '—';
+    const recName = idToName.get(r.recruiter_id) || '—';
+    return `
+      <tr>
+        <td>${name}</td>
+        <td>${recName}</td>
+        <td>${fmtDate(r.stage_updated_at || r.created_at)}</td>
+        <td>${(r.notes || '').slice(0,80)}</td>
+      </tr>
+    `;
+  }).join('');
 }
 
-(async () => {
-  initMenus();
-  const user = await requireSession();
-  if (!user) return;
-  me = await fetchMe(user.id);
-  if (!me) { window.location.href = 'login.html'; return; }
+// activity: last 6 in entire tree
+function renderActivityPanel(ctx) {
+  const tbody = $('rec-activity-body');
+  if (!tbody) return;
 
-  agents = await fetchAgents();
-  buildIndex();
-  renderTree();
-  bindTreeEvents();
-  bindSearch();
-  subscribeRealtime();
+  const idToName = new Map(ctx.agents.map(a => [a.id, a.full_name || '—']));
+  const recent = (ctx.recruits || []).slice(0, 6);
 
-  const adminLink = document.querySelector('.admin-only');
-  if (me && me.is_admin !== true && adminLink) adminLink.style.display = 'none';
-})();
+  if (!recent.length) {
+    tbody.innerHTML = `<tr><td colspan="4">No recruiting activity yet.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = recent.map(r => {
+    const name = [r.first_name, r.last_name].filter(Boolean).join(' ') || '—';
+    const recruiterName = idToName.get(r.recruiter_id) || '—';
+    return `
+      <tr>
+        <td>${name}</td>
+        <td>${prettyStage(r.stage)}</td>
+        <td>${recruiterName}</td>
+        <td>${fmtDate(r.stage_updated_at || r.created_at)}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
+// --------- add recruit form ---------
+function setupAddRecruitForm(ctx) {
+  const form   = $('rec-add-form');
+  const first  = $('rec-first-name');
+  const last   = $('rec-last-name');
+  const stage  = $('rec-stage');
+  const notes  = $('rec-notes');
+  const keepCB = $('rec-keep-open');
+  const msgEl  = $('rec-form-message');
+
+  if (!form) return;
+
+  const setMsg = (txt, ok = false) => {
+    if (!msgEl) return;
+    msgEl.textContent = txt || '';
+    msgEl.style.color = ok ? '#2a8f6d' : '#b22424';
+  };
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    setMsg('');
+
+    const fName = (first?.value || '').trim();
+    const lName = (last?.value || '').trim();
+    const stg   = (stage?.value || '').trim();
+    const nts   = (notes?.value || '').trim();
+
+    if (!fName || !stg) {
+      setMsg('First name and stage are required.', false);
+      return;
+    }
+
+    const payload = {
+      first_name: fName,
+      last_name: lName || null,
+      stage: stg,
+      recruiter_id: ctx.userId,
+      notes: nts || null,
+      stage_updated_at: new Date().toISOString()
+    };
+
+    const { data, error } = await supabase
+      .from('recruits')
+      .insert([payload])
+      .select('*')
+      .single();
+
+    if (error) {
+      console.error('Add recruit error:', error);
+      setMsg(error.message || 'Could not save recruit.', false);
+      return;
+    }
+
+    // update context + re-render
+    ctx.recruits.unshift(data);
+    renderAll(ctx);
+
+    setMsg('Recruit added to your pipeline.', true);
+
+    if (keepCB?.checked) {
+      // keep stage, clear names/notes
+      if (first) first.value = '';
+      if (last)  last.value  = '';
+      if (notes) notes.value = '';
+      first?.focus();
+    } else {
+      form.reset();
+      first?.focus();
+    }
+  });
+}
