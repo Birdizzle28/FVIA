@@ -472,11 +472,48 @@
 			</div>
 	
 	    <!-- Marketing -->
-	    <div class="card">
-	      <h3>Add Marketing Asset</h3>
-	      <p>Publish a new download/link to the marketing hub.</p>
-	      <button id="open-mkt-modal" class="card-link">Add Asset</button>
-	    </div>
+			<div class="card">
+			  <h3>Add Marketing Asset</h3>
+			  <p>Publish a new download/link to the marketing hub.</p>
+			  <button id="open-mkt-modal" class="card-link">Add Asset</button>
+			
+			  <!-- NEW: Collapsible manage area (like Announcements / Training) -->
+			  <button
+			    id="toggle-mkt-list"
+			    type="button"
+			    class="see-all"
+			    style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;"
+			    aria-expanded="false"
+			  >
+			    <span>Manage marketing library</span>
+			    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+			  </button>
+			
+			  <div
+			    id="mkt-manage-panel"
+			    hidden
+			    style="margin-top: 8px;"
+			  >
+			    <!-- Search bar -->
+			    <div style="margin-bottom: 8px;">
+			      <input
+			        id="mkt-search"
+			        type="text"
+			        placeholder="Search by title, description, or tags…"
+			        style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;"
+			      />
+			    </div>
+			
+			    <!-- Scrollable list -->
+			    <div
+			      id="mkt-list"
+			      class="scroll-container"
+			      style="max-height: 260px; overflow-y: auto;"
+			    >
+			      <!-- Populated by admin.js → loadMarketingAssets() -->
+			    </div>
+			  </div>
+			</div>
 	
 	    <!-- Agents -->
 	    <div class="card">
