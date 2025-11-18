@@ -1217,6 +1217,40 @@ async function loadAnnouncements() {
     });
   });
 }
+  // === Training list collapse ===
+  const trainingPanelEl = document.getElementById('training-manage-panel');
+  const trainingToggleEl = document.getElementById('toggle-training-list');
+  const trainingSearchEl = document.getElementById('training-search');
+
+  if (trainingPanelEl && trainingToggleEl) {
+    trainingToggleEl.addEventListener('click', () => {
+      const isHidden = trainingPanelEl.hasAttribute('hidden');
+      if (isHidden) {
+        trainingPanelEl.removeAttribute('hidden');
+        trainingToggleEl.setAttribute('aria-expanded', 'true');
+        trainingToggleEl
+          .querySelector('i')
+          ?.classList.replace('fa-chevron-down', 'fa-chevron-up');
+        // When first opened, ensure list is loaded
+        loadTrainingMaterials();
+      } else {
+        trainingPanelEl.setAttribute('hidden', '');
+        trainingToggleEl.setAttribute('aria-expanded', 'false');
+        trainingToggleEl
+          .querySelector('i')
+          ?.classList.replace('fa-chevron-up', 'fa-chevron-down');
+      }
+    });
+  }
+
+  // Search within training list
+  window._trainingSearchTerm = '';
+  if (trainingSearchEl) {
+    trainingSearchEl.addEventListener('input', () => {
+      window._trainingSearchTerm = trainingSearchEl.value.toLowerCase();
+      loadTrainingMaterials();
+    });
+  }
 /* =========================
    Training Materials: List/Delete
    ========================= */
@@ -1242,39 +1276,66 @@ async function loadTrainingMaterials() {
     return;
   }
 
-  listEl.innerHTML = data.map(item => {
-    const created = item.created_at
-      ? new Date(item.created_at).toLocaleString()
-      : '';
-    const tags = Array.isArray(item.tags) ? item.tags.join(', ') : '';
+  // Apply search filter (title, description, tags)
+  const term = (window._trainingSearchTerm || '').trim().toLowerCase();
+  const filtered = term
+    ? data.filter(item => {
+        const tagsText = Array.isArray(item.tags) ? item.tags.join(' ') : '';
+        const haystack = [
+          item.title || '',
+          item.description || '',
+          tagsText
+        ]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(term);
+      })
+    : data;
 
-    return `
-      <div class="training-row" data-id="${item.id}"
-           style="display:grid; grid-template-columns: 1fr auto; gap:8px; padding:8px 10px; border:1px solid #eee; border-radius:6px; margin-bottom:8px;">
-        <div class="meta" style="min-width:0;">
-          <strong>${item.title || '(no title)'}</strong>
-          <div style="font-size:12px; color:#666; margin-top:2px;">
-            ${created ? `Created: ${created}` : ''}
-            ${tags ? ` · Tags: ${tags}` : ''}
+  if (!filtered.length) {
+    listEl.innerHTML = '<p>No training items match your search.</p>';
+    return;
+  }
+
+  listEl.innerHTML = filtered
+    .map(item => {
+      const created = item.created_at
+        ? new Date(item.created_at).toLocaleString()
+        : '';
+      const tags = Array.isArray(item.tags) ? item.tags.join(', ') : '';
+
+      return `
+        <div class="training-row" data-id="${item.id}"
+             style="display:grid; grid-template-columns: 1fr auto; gap:8px; padding:8px 10px; border:1px solid #eee; border-radius:6px; margin-bottom:8px;">
+          <div class="meta" style="min-width:0;">
+            <strong>${item.title || '(no title)'}</strong>
+            <div style="font-size:12px; color:#666; margin-top:2px;">
+              ${created ? `Created: ${created}` : ''}
+              ${tags ? ` · Tags: ${tags}` : ''}
+            </div>
+            <div style="font-size:13px; margin-top:4px; color:#333; white-space:pre-wrap;">
+              ${(item.description || '').slice(0, 240)}${item.description && item.description.length > 240 ? '…' : ''}
+            </div>
+            ${
+              item.url
+                ? `
+              <div style="margin-top:4px; font-size:13px;">
+                <a href="${item.url}" target="_blank" rel="noopener">
+                  <i class="fa-solid fa-link"></i> Open link
+                </a>
+              </div>`
+                : ''
+            }
           </div>
-          <div style="font-size:13px; margin-top:4px; color:#333; white-space:pre-wrap;">
-            ${(item.description || '').slice(0, 240)}${item.description && item.description.length > 240 ? '…' : ''}
+          <div class="actions" style="display:flex; flex-direction:column; gap:6px;">
+            <button class="train-delete" style="padding:6px 10px; background:#ffe6e6; border:1px solid #ffb3b3;">
+              Delete
+            </button>
           </div>
-          ${item.url ? `
-            <div style="margin-top:4px; font-size:13px;">
-              <a href="${item.url}" target="_blank" rel="noopener">
-                <i class="fa-solid fa-link"></i> Open link
-              </a>
-            </div>` : ''}
         </div>
-        <div class="actions" style="display:flex; flex-direction:column; gap:6px;">
-          <button class="train-delete" style="padding:6px 10px; background:#ffe6e6; border:1px solid #ffb3b3;">
-            Delete
-          </button>
-        </div>
-      </div>
-    `;
-  }).join('');
+      `;
+    })
+    .join('');
 
   // Wire delete buttons
   listEl.querySelectorAll('.train-delete').forEach(btn => {
