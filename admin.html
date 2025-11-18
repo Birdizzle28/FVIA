@@ -428,11 +428,48 @@
 	    </div>
 	
 	    <!-- Training -->
-	    <div class="card">
-	      <h3>Add Training Material</h3>
-	      <p>Publish a new item to the training hub.</p>
-	      <button id="open-train-modal" class="card-link">Add Training</button>
-	    </div>
+			<div class="card">
+			  <h3>Add Training Material</h3>
+			  <p>Publish a new item to the training hub.</p>
+			  <button id="open-train-modal" class="card-link">Add Training</button>
+			
+			  <!-- NEW: Collapsible manage area (like Announcements) -->
+			  <button
+			    id="toggle-training-list"
+			    type="button"
+			    class="see-all"
+			    style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;"
+			    aria-expanded="false"
+			  >
+			    <span>Manage training library</span>
+			    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+			  </button>
+			
+			  <div
+			    id="training-manage-panel"
+			    hidden
+			    style="margin-top: 8px;"
+			  >
+			    <!-- Search bar -->
+			    <div style="margin-bottom: 8px;">
+			      <input
+			        id="training-search"
+			        type="text"
+			        placeholder="Search by title, description, or tags…"
+			        style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;"
+			      />
+			    </div>
+			
+			    <!-- Scrollable list -->
+			    <div
+			      id="training-list"
+			      class="scroll-container"
+			      style="max-height: 260px; overflow-y: auto;"
+			    >
+			      <!-- Populated by admin.js → loadTrainingMaterials() -->
+			    </div>
+			  </div>
+			</div>
 	
 	    <!-- Marketing -->
 	    <div class="card">
@@ -449,16 +486,6 @@
 	    </div>
 	  </div>
 		
-		<!-- Training Library List -->
-	  <section aria-label="Training Library" style="margin-top: 24px;">
-	    <h3>Training Library</h3>
-	    <p class="muted">
-	      These items appear in the agent Training hub (Video Library / Training Materials).
-	    </p>
-	    <div id="training-list" class="scroll-container" style="max-height: 260px; overflow-y: auto;">
-	      <!-- Populated by admin.js → loadTrainingMaterials() -->
-	    </div>
-	  </section>
 	  <!-- ===== Modals ===== -->
 	
 	  <!-- Announcement Modal -->
