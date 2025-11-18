@@ -1065,47 +1065,73 @@ async function assignLeads(agentId) {
 async function loadAnnouncements() {
   const list = document.getElementById('annc-list');
   if (!list) return;
+
   list.innerHTML = 'Loading…';
-  // Expecting columns: id, title, body, image_url, link_url, audience, publish_at, expires_at, created_at
-  const { data, error } = await supabase.from('announcements')
+
+  const { data, error } = await supabase
+    .from('announcements')
     .select('*')
     .order('created_at', { ascending: false });
+
   if (error) {
     console.error(error);
     list.innerHTML = '<p>Error loading announcements.</p>';
     return;
   }
+
   if (!data?.length) {
     list.innerHTML = '<p>No announcements yet.</p>';
     return;
   }
 
-  list.innerHTML = data.map(a => `
-    <div class="annc-row" data-id="${a.id}" style="display:grid; grid-template-columns: 64px 1fr auto; gap:12px; align-items:center; padding:10px; border:1px solid #eee; border-radius:8px; margin-bottom:10px;">
-      <div class="thumb" style="width:64px; height:64px; background:#f7f7f7; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:6px;">
-        ${a.image_url ? `<img src="${a.image_url}" alt="" style="max-width:100%; max-height:100%;">` : `<i class="fa-regular fa-image"></i>`}
-      </div>
-      <div class="meta" style="min-width:0;">
-        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
-          <strong>${a.title || '(no title)'}</strong>
-          ${a.link_url ? `<a href="${a.link_url}" target="_blank" rel="noopener" style="font-size:12px;"><i class="fa-solid fa-link"></i> Open link</a>` : ''}
-        </div>
-        <div style="font-size:12px; color:#666; margin-top:2px;">
-          Audience: ${summarizeAudience(a.audience)} · Published: ${a.publish_at ? new Date(a.publish_at).toLocaleString() : 'Now'}
-          ${a.expires_at ? ` · Expires: ${new Date(a.expires_at).toLocaleString()}` : ''}
-        </div>
-        <div style="font-size:13px; margin-top:6px; color:#333; white-space:pre-wrap;">
-          ${(a.body||'').slice(0,240)}${a.body && a.body.length>240 ? '…' : ''}
-        </div>
-      </div>
-      <div class="actions" style="display:flex; flex-direction:column; gap:6px;">
-        <button class="annc-copy" title="Copy link JSON" style="padding:6px 10px;">Copy JSON</button>
-        <button class="annc-delete" style="padding:6px 10px; background:#ffe6e6; border:1px solid #ffb3b3;">Delete</button>
-      </div>
-    </div>
-  `).join('');
+  list.innerHTML = data.map(a => {
+    const aud = a.audience || {};
+    const repeat = aud.repeat || null;
 
-  // Copy JSON (handy for debugging)
+    let repeatText = '';
+    if (repeat && repeat.frequency && repeat.frequency !== 'none') {
+      const labels = {
+        daily: 'Daily',
+        weekly: 'Weekly',
+        monthly: 'Monthly',
+        yearly: 'Yearly'
+      };
+      const freqLabel = labels[repeat.frequency] || repeat.frequency;
+      repeatText = ` · Repeats: ${freqLabel}`;
+      if (repeat.until) {
+        repeatText += ` until ${new Date(repeat.until).toLocaleDateString()}`;
+      }
+    }
+
+    return `
+      <div class="annc-row" data-id="${a.id}" style="display:grid; grid-template-columns: 64px 1fr auto; gap:12px; align-items:center; padding:10px; border:1px solid #eee; border-radius:8px; margin-bottom:10px;">
+        <div class="thumb" style="width:64px; height:64px; background:#f7f7f7; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:6px;">
+          ${a.image_url ? `<img src="${a.image_url}" alt="" style="max-width:100%; max-height:100%;">` : `<i class="fa-regular fa-image"></i>`}
+        </div>
+        <div class="meta" style="min-width:0;">
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <strong>${a.title || '(no title)'}</strong>
+            ${a.link_url ? `<a href="${a.link_url}" target="_blank" rel="noopener" style="font-size:12px;"><i class="fa-solid fa-link"></i> Open link</a>` : ''}
+          </div>
+          <div style="font-size:12px; color:#666; margin-top:2px;">
+            Audience: ${summarizeAudience(a.audience)}
+            · Published: ${a.publish_at ? new Date(a.publish_at).toLocaleString() : 'Now'}
+            ${a.expires_at ? ` · Expires: ${new Date(a.expires_at).toLocaleString()}` : ''}
+            ${repeatText}
+          </div>
+          <div style="font-size:13px; margin-top:6px; color:#333; white-space:pre-wrap;">
+            ${(a.body || '').slice(0, 240)}${a.body && a.body.length > 240 ? '…' : ''}
+          </div>
+        </div>
+        <div class="actions" style="display:flex; flex-direction:column; gap:6px;">
+          <button class="annc-copy" title="Copy link JSON" style="padding:6px 10px;">Copy JSON</button>
+          <button class="annc-delete" style="padding:6px 10px; background:#ffe6e6; border:1px solid #ffb3b3;">Delete</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Copy JSON
   list.querySelectorAll('.annc-copy').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const row = e.target.closest('.annc-row');
@@ -1114,7 +1140,7 @@ async function loadAnnouncements() {
       if (!a) return;
       navigator.clipboard?.writeText(JSON.stringify(a, null, 2));
       btn.textContent = 'Copied!';
-      setTimeout(()=> btn.textContent = 'Copy JSON', 1200);
+      setTimeout(() => btn.textContent = 'Copy JSON', 1200);
     });
   });
 
