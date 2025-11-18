@@ -171,17 +171,34 @@ sendBtn?.addEventListener("click", handleSend);
   if (!sessionData?.session) return;
 
   const userId = sessionData.session.user.id;
-  const lsKey = `fvia_last_seen_notifications_${userId}`;
 
-  function getLastSeen() {
-    const raw = localStorage.getItem(lsKey);
-    if (!raw) return null;
-    const d = new Date(raw);
-    return isNaN(+d) ? null : d;
+  // === READ STATE (per user, per item) ===
+  const readKey = `fvia_notif_read_${userId}`;
+
+  function getReadSet() {
+    try {
+      const raw = localStorage.getItem(readKey);
+      if (!raw) return new Set();
+      const arr = JSON.parse(raw);
+      if (!Array.isArray(arr)) return new Set();
+      return new Set(arr);
+    } catch {
+      return new Set();
+    }
   }
-  function setLastSeen() {
-    localStorage.setItem(lsKey, new Date().toISOString());
+
+  function saveReadSet(set) {
+    try {
+      localStorage.setItem(readKey, JSON.stringify([...set]));
+    } catch {
+      // ignore
+    }
   }
+
+  const readSet = getReadSet();
+
+  // ---- HELPER: unique key per notification ----
+  const notifKey = (item) => `${item.type}:${item.id}`;
 
   // --- Add unread red dot to the bell ---
   const badge = document.createElement("span");
@@ -227,16 +244,87 @@ sendBtn?.addEventListener("click", handleSend);
   const notifList = panel.querySelector("#fvia-notif-list");
   const markBtn = panel.querySelector("#notif-mark-read");
 
+  // --- PREVIEW MODAL ---
+  const preview = document.createElement("div");
+  preview.id = "fvia-notif-preview";
+  preview.style.cssText = `
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,0.4);
+    display:none;
+    align-items:center;
+    justify-content:center;
+    z-index:10000;
+  `;
+  preview.innerHTML = `
+    <div style="
+      background:white;
+      width:min(480px, 92vw);
+      max-height:80vh;
+      overflow:auto;
+      border-radius:10px;
+      box-shadow:0 10px 30px rgba(0,0,0,0.25);
+      padding:16px 18px 18px;
+      position:relative;
+      font-size:14px;
+    ">
+      <button id="notif-preview-close" style="
+        position:absolute;
+        top:8px; right:10px;
+        border:0; background:none;
+        font-size:22px; cursor:pointer;
+      ">&times;</button>
+      <div id="notif-preview-meta" style="font-size:12px; color:#777; margin-bottom:6px;"></div>
+      <h3 id="notif-preview-title" style="margin:0 0 8px; color:#353468;"></h3>
+      <div id="notif-preview-body" style="white-space:pre-wrap; color:#333;"></div>
+    </div>
+  `;
+  document.body.appendChild(preview);
+
+  const previewMeta = preview.querySelector("#notif-preview-meta");
+  const previewTitle = preview.querySelector("#notif-preview-title");
+  const previewBody = preview.querySelector("#notif-preview-body");
+  const previewClose = preview.querySelector("#notif-preview-close");
+
+  function openPreview(item) {
+    previewMeta.textContent = `${
+      item.type === "task" ? "Task" : "Announcement"
+    } · ${item.ts.toLocaleString()}`;
+    previewTitle.textContent = item.title || "(No title)";
+    let bodyText = item.body || "";
+    if (item.type === "task" && item.due) {
+      bodyText =
+        `Due: ${item.due.toLocaleString()}` +
+        (bodyText ? `\n\n${bodyText}` : "");
+    }
+    previewBody.textContent = bodyText;
+    preview.style.display = "flex";
+
+    // Close the panel while previewing
+    panel.style.display = "none";
+  }
+
+  function closePreview() {
+    preview.style.display = "none";
+  }
+
+  previewClose.addEventListener("click", closePreview);
+  preview.addEventListener("click", (e) => {
+    if (e.target === preview) closePreview();
+  });
+
+  // store the currently loaded items so we can look them up by index
+  let currentItems = [];
+
   // --- Fetch notifications ---
   async function loadNotifications() {
-    const lastSeen = getLastSeen();
-
     const nowISO = new Date().toISOString();
+    const now = new Date();
 
     const [annc, tasks] = await Promise.all([
       supabase
         .from("announcements")
-        .select("id,title,body,created_at,publish_at")
+        .select("id,title,body,created_at,publish_at,expires_at")
         .eq("is_active", true)
         .lte("publish_at", nowISO)
         .order("publish_at", { ascending: false }),
@@ -250,18 +338,22 @@ sendBtn?.addEventListener("click", handleSend);
 
     const merged = [];
 
-    (annc.data || []).forEach(a => {
-      const ts = new Date(a.publish_at || a.created_at);
-      merged.push({
-        type: "announcement",
-        id: a.id,
-        title: a.title,
-        body: a.body,
-        ts,
+    // Announcements (filter out expired)
+    (annc.data || [])
+      .filter((a) => !a.expires_at || new Date(a.expires_at) > now)
+      .forEach((a) => {
+        const ts = new Date(a.publish_at || a.created_at);
+        merged.push({
+          type: "announcement",
+          id: a.id,
+          title: a.title,
+          body: a.body,
+          ts,
+        });
       });
-    });
 
-    (tasks.data || []).forEach(t => {
+    // Tasks
+    (tasks.data || []).forEach((t) => {
       const ts = new Date(t.created_at);
       merged.push({
         type: "task",
@@ -274,23 +366,25 @@ sendBtn?.addEventListener("click", handleSend);
     });
 
     merged.sort((a, b) => b.ts - a.ts);
+    currentItems = merged;
 
-    // Detect unread
     let anyUnread = false;
 
     notifList.innerHTML = merged
-      .map(item => {
-        const unread =
-          !lastSeen || (item.ts && item.ts > lastSeen);
-
+      .map((item, index) => {
+        const key = notifKey(item);
+        const unread = !readSet.has(key);
         if (unread) anyUnread = true;
 
         return `
-        <div style="
+        <div class="fvia-notif-item"
+             data-index="${index}"
+             style="
           padding:10px 12px;
           border-bottom:1px solid #f2f2f2;
           background:${unread ? "#f7f4ff" : "white"};
           position:relative;
+          cursor:pointer;
         ">
           ${
             unread
@@ -308,18 +402,54 @@ sendBtn?.addEventListener("click", handleSend);
             · ${item.ts.toLocaleString()}
           </div>
           <div style="font-size:.9rem;font-weight:600;color:#353468;margin-top:4px;">
-            ${item.title}
+            ${item.title || "(No title)"}
           </div>
           <div style="font-size:.8rem;color:#444;margin-top:4px;">
             ${(item.body || "").slice(0, 120)}${
-              item.body?.length > 120 ? "…" : ""
+              item.body && item.body.length > 120 ? "…" : ""
             }
           </div>
         </div>`;
       })
       .join("");
 
+    // Attach click handlers for preview + mark as read
+    notifList
+      .querySelectorAll(".fvia-notif-item")
+      .forEach((row) => {
+        row.addEventListener("click", () => {
+          const idx = Number(row.getAttribute("data-index") || "0");
+          const item = currentItems[idx];
+          if (!item) return;
+
+          // mark THIS item as read
+          const key = notifKey(item);
+          if (!readSet.has(key)) {
+            readSet.add(key);
+            saveReadSet(readSet);
+          }
+
+          // update visuals
+          row.style.background = "white";
+          const dot = row.querySelector("div[style*='border-radius:50%']");
+          if (dot) dot.remove();
+
+          // recompute unread to update bell badge
+          const stillUnread = currentItems.some((it) => !readSet.has(notifKey(it)));
+          badge.style.display = stillUnread ? "block" : "none";
+
+          // open preview modal
+          openPreview(item);
+        });
+      });
+
     badge.style.display = anyUnread ? "block" : "none";
+
+    if (!merged.length) {
+      notifList.innerHTML =
+        '<div style="padding:10px 12px; font-size:.85rem; color:#666;">No notifications yet.</div>';
+      badge.style.display = "none";
+    }
   }
 
   // --- Toggle panel ---
@@ -329,25 +459,31 @@ sendBtn?.addEventListener("click", handleSend);
       panel.style.display === "none" ? "block" : "none";
     if (panel.style.display === "block") {
       loadNotifications();
-      setLastSeen(); // mark all read when opened
-      badge.style.display = "none";
     }
   };
 
   // --- Mark all read ---
   markBtn.onclick = () => {
-    setLastSeen();
+    currentItems.forEach((item) => {
+      readSet.add(notifKey(item));
+    });
+    saveReadSet(readSet);
+    // refresh UI
     loadNotifications();
     badge.style.display = "none";
   };
 
-  // --- Click outside closes panel ---
+  // --- Click outside closes panel (but not preview) ---
   document.addEventListener("click", (e) => {
-    if (!panel.contains(e.target) && !bell.contains(e.target)) {
+    if (
+      panel.style.display === "block" &&
+      !panel.contains(e.target) &&
+      !bell.contains(e.target)
+    ) {
       panel.style.display = "none";
     }
   });
 
-  // --- Background check so bell shows unread dot immediately ---
+  // --- Background check so bell shows unread dot on page load ---
   loadNotifications();
 })();
