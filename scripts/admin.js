@@ -469,6 +469,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     // reset form
     e.target.reset();
   });
+  document.getElementById('train-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('train-msg');
+    if (msg) msg.textContent = '';
+
+    const titleEl = document.getElementById('train-title');
+    const descEl = document.getElementById('train-desc');
+    const urlEl  = document.getElementById('train-url');
+    const tagsEl = document.getElementById('train-tags');
+
+    const title = titleEl?.value.trim() || '';
+    const description = descEl?.value.trim() || '';
+    const url = urlEl?.value.trim() || '';
+    const rawTags = tagsEl?.value.trim() || '';
+
+    if (!title) {
+      if (msg) msg.textContent = 'Title is required.';
+      return;
+    }
+
+    const tags = rawTags
+      ? rawTags.split(',').map(s => s.trim()).filter(Boolean)
+      : null;
+
+    const payload = {
+      title,
+      description: description || null,
+      url: url || null,
+      tags,
+      created_by: userId || null,
+      is_published: true
+    };
+
+    const { error } = await supabase.from('training_materials').insert(payload);
+    if (error) {
+      if (msg) msg.textContent = '❌ ' + error.message;
+      return;
+    }
+
+    if (msg) msg.textContent = '✅ Training item saved.';
+
+    await loadTrainingMaterials();
+
+    e.target.reset();
+
+    setTimeout(() => {
+      document.querySelector('#train-modal [data-close]')?.click();
+      if (msg) msg.textContent = '';
+    }, 700);
+  });
 
   // Pagination buttons
   const nextBtn = document.getElementById('next-page');
