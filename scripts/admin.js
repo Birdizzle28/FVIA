@@ -319,7 +319,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     navButtons[name].classList.add('active');
     if (name === 'history') loadAssignmentHistory();
     if (name === 'stats') loadAgentStats();
-    if (name === 'content') loadAnnouncements(); // refresh when switching back
+    if (name === 'content') {
+      loadAnnouncements();      // keep existing
+      loadTrainingMaterials();  // NEW
+    }
   }
   showAdminSection('all');
   navButtons.all.addEventListener('click', () => showAdminSection('all'));
