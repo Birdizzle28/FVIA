@@ -357,8 +357,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (name === 'history') loadAssignmentHistory();
     if (name === 'stats') loadAgentStats();
     if (name === 'content') {
-      loadAnnouncements();      // keep existing
-      loadTrainingMaterials();  // NEW
+      loadAnnouncements();
+      loadTrainingMaterials();
+      loadMarketingAssets();    // 🔹 now also loads marketing assets
     }
   }
   showAdminSection('all');
@@ -1547,6 +1548,40 @@ async function loadAnnouncements() {
       loadTrainingMaterials();
     });
   }
+  // === Marketing list collapse ===
+  const mktPanelEl  = document.getElementById('mkt-manage-panel');
+  const mktToggleEl = document.getElementById('toggle-mkt-list');
+  const mktSearchEl = document.getElementById('mkt-search');
+  
+  if (mktPanelEl && mktToggleEl) {
+    mktToggleEl.addEventListener('click', () => {
+      const isHidden = mktPanelEl.hasAttribute('hidden');
+      if (isHidden) {
+        mktPanelEl.removeAttribute('hidden');
+        mktToggleEl.setAttribute('aria-expanded', 'true');
+        mktToggleEl
+          .querySelector('i')
+          ?.classList.replace('fa-chevron-down', 'fa-chevron-up');
+        // When first opened, ensure list is loaded
+        loadMarketingAssets();
+      } else {
+        mktPanelEl.setAttribute('hidden', '');
+        mktToggleEl.setAttribute('aria-expanded', 'false');
+        mktToggleEl
+          .querySelector('i')
+          ?.classList.replace('fa-chevron-up', 'fa-chevron-down');
+      }
+    });
+  }
+  
+  // Search within marketing list
+  window._marketingSearchTerm = '';
+  if (mktSearchEl) {
+    mktSearchEl.addEventListener('input', () => {
+      window._marketingSearchTerm = mktSearchEl.value.toLowerCase();
+      loadMarketingAssets();
+    });
+  }
 /* =========================
    Training Materials: List/Delete
    ========================= */
@@ -1656,6 +1691,124 @@ async function loadTrainingMaterials() {
       row.remove();
       if (!document.querySelector('#training-list .training-row')) {
         listEl.innerHTML = '<p>No training items yet.</p>';
+      }
+    });
+  });
+}
+/* =========================
+   Marketing Assets: List/Delete
+   ========================= */
+async function loadMarketingAssets() {
+  const listEl = document.getElementById('mkt-list');
+  if (!listEl) return;
+
+  listEl.innerHTML = 'Loading…';
+
+  const { data, error } = await supabase
+    .from('marketing_assets')
+    .select('*')
+    .eq('is_published', true)
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error loading marketing assets:', error);
+    listEl.innerHTML = '<p>Error loading marketing assets.</p>';
+    return;
+  }
+
+  if (!data || !data.length) {
+    listEl.innerHTML = '<p>No marketing assets yet.</p>';
+    return;
+  }
+
+  // Apply search filter (title, description, tags)
+  const term = (window._marketingSearchTerm || '').trim().toLowerCase();
+  const filtered = term
+    ? data.filter(item => {
+        const tagsText = Array.isArray(item.tags) ? item.tags.join(' ') : '';
+        const haystack = [
+          item.title || '',
+          item.description || '',
+          tagsText
+        ]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(term);
+      })
+    : data;
+
+  if (!filtered.length) {
+    listEl.innerHTML = '<p>No marketing assets match your search.</p>';
+    return;
+  }
+
+  listEl.innerHTML = filtered
+    .map(item => {
+      const created = item.created_at
+        ? new Date(item.created_at).toLocaleString()
+        : '';
+      const tags = Array.isArray(item.tags) ? item.tags.join(', ') : '';
+      const linkUrl = item.url || item.file_url || null;
+
+      let linkHtml = '';
+      if (linkUrl) {
+        linkHtml = `
+          <div style="margin-top:4px; font-size:13px;">
+            <a href="${linkUrl}" target="_blank" rel="noopener">
+              <i class="fa-solid fa-link"></i> Open asset
+            </a>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="mkt-row" data-id="${item.id}"
+             style="display:grid; grid-template-columns: 1fr auto; gap:8px; padding:8px 10px; border:1px solid #eee; border-radius:6px; margin-bottom:8px;">
+          <div class="meta" style="min-width:0;">
+            <strong>${item.title || '(no title)'}</strong>
+            <div style="font-size:12px; color:#666; margin-top:2px;">
+              ${created ? `Created: ${created}` : ''}
+              ${tags ? ` · Tags: ${tags}` : ''}
+            </div>
+            <div style="font-size:13px; margin-top:4px; color:#333; white-space:pre-wrap;">
+              ${(item.description || '').slice(0, 240)}${item.description && item.description.length > 240 ? '…' : ''}
+            </div>
+            ${linkHtml}
+          </div>
+          <div class="actions" style="display:flex; flex-direction:column; gap:6px;">
+            <button class="mkt-delete"
+                    style="padding:6px 10px; background:#ffe6e6; border:1px solid #ffb3b3;">
+              Delete
+            </button>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  // Wire delete buttons
+  listEl.querySelectorAll('.mkt-delete').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const row = e.target.closest('.mkt-row');
+      const id = row?.getAttribute('data-id');
+      if (!id) return;
+
+      if (!confirm('Delete this marketing asset?')) return;
+
+      const { error: delErr } = await supabase
+        .from('marketing_assets')
+        .delete()
+        .eq('id', id);
+
+      if (delErr) {
+        alert('❌ Failed to delete marketing asset.');
+        console.error(delErr);
+        return;
+      }
+
+      row.remove();
+      if (!document.querySelector('#mkt-list .mkt-row')) {
+        listEl.innerHTML = '<p>No marketing assets yet.</p>';
       }
     });
   });
