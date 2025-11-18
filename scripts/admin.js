@@ -357,6 +357,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       flatpickr('#annc-expires', { enableTime:true, dateFormat:'Y-m-d H:i' });
       flatpickr('#annc-repeat-end', { enableTime:true, dateFormat:'Y-m-d H:i' });
     } catch(_) {}
+    
+    // Announcements list collapse toggle
+    const anncListEl   = document.getElementById('annc-list');
+    const anncToggleEl = document.getElementById('toggle-annc-list');
+    if (anncListEl && anncToggleEl) {
+      anncToggleEl.addEventListener('click', () => {
+        const isHidden = anncListEl.hasAttribute('hidden');
+        if (isHidden) {
+          anncListEl.removeAttribute('hidden');
+          anncToggleEl.setAttribute('aria-expanded', 'true');
+          anncToggleEl.querySelector('i')?.classList.replace('fa-chevron-down', 'fa-chevron-up');
+        } else {
+          anncListEl.setAttribute('hidden', '');
+          anncToggleEl.setAttribute('aria-expanded', 'false');
+          anncToggleEl.querySelector('i')?.classList.replace('fa-chevron-up', 'fa-chevron-down');
+        }
+      });
+    }
 
   const scopeSel = document.getElementById('annc-scope');
   const wrapProducts = document.getElementById('annc-products-wrap');
