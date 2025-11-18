@@ -1214,3 +1214,89 @@ async function loadAnnouncements() {
     });
   });
 }
+/* =========================
+   Training Materials: List/Delete
+   ========================= */
+async function loadTrainingMaterials() {
+  const listEl = document.getElementById('training-list');
+  if (!listEl) return;
+
+  listEl.innerHTML = 'Loading…';
+
+  const { data, error } = await supabase
+    .from('training_materials')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error loading training materials:', error);
+    listEl.innerHTML = '<p>Error loading training materials.</p>';
+    return;
+  }
+
+  if (!data || !data.length) {
+    listEl.innerHTML = '<p>No training items yet.</p>';
+    return;
+  }
+
+  listEl.innerHTML = data.map(item => {
+    const created = item.created_at
+      ? new Date(item.created_at).toLocaleString()
+      : '';
+    const tags = Array.isArray(item.tags) ? item.tags.join(', ') : '';
+
+    return `
+      <div class="training-row" data-id="${item.id}"
+           style="display:grid; grid-template-columns: 1fr auto; gap:8px; padding:8px 10px; border:1px solid #eee; border-radius:6px; margin-bottom:8px;">
+        <div class="meta" style="min-width:0;">
+          <strong>${item.title || '(no title)'}</strong>
+          <div style="font-size:12px; color:#666; margin-top:2px;">
+            ${created ? `Created: ${created}` : ''}
+            ${tags ? ` · Tags: ${tags}` : ''}
+          </div>
+          <div style="font-size:13px; margin-top:4px; color:#333; white-space:pre-wrap;">
+            ${(item.description || '').slice(0, 240)}${item.description && item.description.length > 240 ? '…' : ''}
+          </div>
+          ${item.url ? `
+            <div style="margin-top:4px; font-size:13px;">
+              <a href="${item.url}" target="_blank" rel="noopener">
+                <i class="fa-solid fa-link"></i> Open link
+              </a>
+            </div>` : ''}
+        </div>
+        <div class="actions" style="display:flex; flex-direction:column; gap:6px;">
+          <button class="train-delete" style="padding:6px 10px; background:#ffe6e6; border:1px solid #ffb3b3;">
+            Delete
+          </button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  // Wire delete buttons
+  listEl.querySelectorAll('.train-delete').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const row = e.target.closest('.training-row');
+      const id = row?.getAttribute('data-id');
+      if (!id) return;
+
+      if (!confirm('Delete this training item?')) return;
+
+      const { error: delErr } = await supabase
+        .from('training_materials')
+        .delete()
+        .eq('id', id);
+
+      if (delErr) {
+        alert('❌ Failed to delete training item.');
+        console.error(delErr);
+        return;
+      }
+
+      row.remove();
+      if (!document.querySelector('#training-list .training-row')) {
+        listEl.innerHTML = '<p>No training items yet.</p>';
+      }
+    });
+  });
+}
