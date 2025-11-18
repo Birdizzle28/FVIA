@@ -559,7 +559,59 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (msg) msg.textContent = '';
     }, 700);
   });
+  document.getElementById('mkt-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('mkt-msg');
+    if (msg) msg.textContent = '';
 
+    const titleEl = document.getElementById('mkt-title');
+    const descEl  = document.getElementById('mkt-desc');
+    const urlEl   = document.getElementById('mkt-url');
+    const tagsEl  = document.getElementById('mkt-tags');
+
+    const title = titleEl?.value.trim() || '';
+    const description = descEl?.value.trim() || '';
+    const url = urlEl?.value.trim() || '';
+    const rawTags = tagsEl?.value.trim() || '';
+
+    if (!title) {
+      if (msg) msg.textContent = 'Title is required.';
+      return;
+    }
+
+    const tags = rawTags
+      ? rawTags.split(',').map(s => s.trim()).filter(Boolean)
+      : null;
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const created_by = session?.user?.id || userId || null;
+
+    const payload = {
+      title,
+      description: description || null,
+      url: url || null,
+      file_url: null,
+      tags,
+      created_by,
+      is_published: true
+    };
+
+    const { error } = await supabase.from('marketing_assets').insert(payload);
+    if (error) {
+      if (msg) msg.textContent = '❌ ' + error.message;
+      return;
+    }
+
+    if (msg) msg.textContent = '✅ Asset saved.';
+
+    e.target.reset();
+
+    setTimeout(() => {
+      document.querySelector('#mkt-modal [data-close]')?.click();
+      if (msg) msg.textContent = '';
+    }, 700);
+  });
+  
   // Pagination buttons
   const nextBtn = document.getElementById('next-page');
   const prevBtn = document.getElementById('prev-page');
