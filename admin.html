@@ -401,9 +401,29 @@
 	  <div class="card-grid">
 	    <!-- Announcements -->
 	    <div class="card">
-	      <h3>Post Announcement</h3>
+	      <h3>Announcements</h3>
 	      <p>Send a message to specific agents or everyone. Appears on the dashboard.</p>
+	
 	      <button id="open-annc-modal" class="card-link">Create Announcement</button>
+	
+	      <!-- Collapsible manage area -->
+	      <button
+	        id="toggle-annc-list"
+	        type="button"
+	        class="see-all"
+	        style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;"
+	        aria-expanded="false"
+	      >
+	        <span>Manage announcements</span>
+	        <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+	      </button>
+	
+	      <div
+	        id="annc-list"
+	        class="scroll-container"
+	        hidden
+	        style="margin-top: 8px; max-height: 260px; overflow-y: auto;"
+	      ></div>
 	    </div>
 	
 	    <!-- Training -->
@@ -426,13 +446,6 @@
 	      <p>Issue an agent ID + invite so they can sign up.</p>
 	      <button id="open-agent-modal" class="card-link">Add Agent</button>
 	    </div>
-	  </div>
-
-	  <!-- Manage Announcements -->
-	  <div class="card" style="margin-top:16px;">
-	    <h3>Manage Announcements</h3>
-	    <p>View, copy links, or delete announcements.</p>
-		<div id="annc-list" class="scroll-container"></div>
 	  </div>
 	
 	  <!-- ===== Modals ===== -->
@@ -522,7 +535,22 @@
 	              <input id="annc-expires" type="text" />
 	            </label>
 	          </div>
-	
+						<div class="form-row" style="display:flex; gap:12px;">
+	            <label class="form-group" style="flex:1;">
+	              <span>Repeat</span>
+	              <select id="annc-repeat">
+	                <option value="none">Does not repeat</option>
+	                <option value="daily">Daily</option>
+	                <option value="weekly">Weekly</option>
+	                <option value="monthly">Monthly</option>
+	                <option value="yearly">Yearly</option>
+	              </select>
+	            </label>
+	            <label class="form-group" style="flex:1;">
+	              <span>Repeat until (optional)</span>
+	              <input id="annc-repeat-end" type="text" placeholder="No end date" />
+	            </label>
+	          </div>
 	          <div style="display:flex; gap:10px; justify-content:flex-end;">
 	            <button type="button" data-close>Cancel</button>
 	            <button type="submit" class="see-all">Save</button>
