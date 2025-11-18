@@ -922,171 +922,378 @@ async function loadAssignmentHistory() {
 }
 
 let chartWeekly, chartProducts, chartAssignments;
+
 async function loadAgentStats() {
   const isAll = document.getElementById('stat-all-time')?.checked === true;
   const agentId = document.getElementById('stat-agent')?.value || '';
-  chartWeekly?.destroy(); chartProducts?.destroy(); chartAssignments?.destroy();
-  let start = null, end = null;
+
+  // destroy existing charts
+  chartWeekly?.destroy();
+  chartProducts?.destroy();
+  chartAssignments?.destroy();
+
+  // ----- Date window -----
+  let start = null;
+  let end   = null;
+
   if (!isAll) {
     const dates = statPicker?.selectedDates || [];
-    if (dates.length === 2) [start, end] = dates;
-    else {
+    if (dates.length === 2) {
+      [start, end] = dates;
+    } else {
       end = new Date();
-      start = new Date(end.getTime() - 30 * 864e5);
+      start = new Date(end.getTime() - 30 * DAY_MS);
     }
   }
+
   const startISO = start ? start.toISOString() : null;
-  const endISO = end ? new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999).toISOString() : null;
+  const endISO   = end
+    ? new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999).toISOString()
+    : null;
 
-  let q = supabase.from('leads').select('*', { count: 'exact' });
-  if (!isAll && startISO && endISO) q = q.gte('created_at', startISO).lte('created_at', endISO);
-  if (agentId) q = q.eq('assigned_to', agentId);
-  const { data: leads, error } = await q;
-  if (error) { console.error('Stats load error:', error); return; }
+  // ----- Build queries -----
+  let leadsQ = supabase.from('leads').select('*');
+  if (!isAll && startISO && endISO) {
+    leadsQ = leadsQ.gte('created_at', startISO).lte('created_at', endISO);
+  }
+  if (agentId) {
+    leadsQ = leadsQ.eq('assigned_to', agentId);
+  }
 
-  const kNew = leads.length;
-  const assignedInWindow = leads.filter(l => {
-    if (!l.assigned_at) return false;
+  // Only completed tasks count for contact/quote stats
+  let tasksQ = supabase.from('tasks').select('*').eq('status', 'completed');
+  if (!isAll && startISO && endISO) {
+    tasksQ = tasksQ.gte('completed_at', startISO).lte('completed_at', endISO);
+  }
+  if (agentId) {
+    tasksQ = tasksQ.eq('assigned_to', agentId);
+  }
+
+  // Policies for close rate & persistency
+  let policiesQ = supabase.from('policies').select('*');
+  if (!isAll && startISO && endISO) {
+    policiesQ = policiesQ.gte('issued_at', startISO).lte('issued_at', endISO);
+  }
+  if (agentId) {
+    policiesQ = policiesQ.eq('agent_id', agentId);
+  }
+
+  const [
+    { data: leads,    error: leadErr },
+    { data: tasks,    error: taskErr },
+    { data: policies, error: polErr }
+  ] = await Promise.all([leadsQ, tasksQ, policiesQ]);
+
+  if (leadErr) {
+    console.error('Stats load error (leads):', leadErr);
+    return;
+  }
+  if (taskErr) {
+    console.error('Stats load error (tasks):', taskErr);
+  }
+  if (polErr) {
+    console.error('Stats load error (policies):', polErr);
+  }
+
+  const leadsArr    = leads    || [];
+  const tasksArr    = tasks    || [];
+  const policiesArr = policies || [];
+
+  // ----- Basic lead KPIs (same idea as before) -----
+  const kNew = leadsArr.length;
+
+  const assignedInWindow = leadsArr.filter(l => {
+    if (!l.assigned_to || !l.assigned_at) return false;
     if (isAll) return true;
     const t = new Date(l.assigned_at).getTime();
     return t >= start.getTime() && t <= new Date(endISO).getTime();
   });
+
   const kAssigned = assignedInWindow.length;
-  const ages = leads.map(l => Number(l.age)).filter(n => Number.isFinite(n) && n > 0);
-  const avgAge = ages.length ? (ages.reduce((a,b)=>a+b,0)/ages.length) : NaN;
-  const distinctAgents = new Set(assignedInWindow.map(l => l.assigned_to).filter(Boolean));
+
+  const ages = leadsArr
+    .map(l => Number(l.age))
+    .filter(n => Number.isFinite(n) && n > 0);
+  const avgAge = ages.length
+    ? (ages.reduce((a, b) => a + b, 0) / ages.length)
+    : NaN;
+
+  const distinctAgents = new Set(
+    assignedInWindow.map(l => l.assigned_to).filter(Boolean)
+  );
   const kAgents = distinctAgents.size;
 
-  document.getElementById('kpi-new').textContent = String(kNew);
+  document.getElementById('kpi-new').textContent      = String(kNew);
   document.getElementById('kpi-assigned').textContent = String(kAssigned);
-  document.getElementById('kpi-avg-age').textContent = Number.isFinite(avgAge) ? (Math.round(avgAge * 10) / 10) : '—';
-  document.getElementById('kpi-agents').textContent = String(kAgents);
+  document.getElementById('kpi-avg-age').textContent  =
+    Number.isFinite(avgAge) ? (Math.round(avgAge * 10) / 10) : '—';
+  document.getElementById('kpi-agents').textContent   = String(kAgents);
 
-  const baseDen = leads.length;
-  const contacted = leads.filter(isContacted).length;
-  const quoted    = leads.filter(isQuoted).length;
-  const closed    = leads.filter(isClosed).length;
-  const contactRate = safeDiv(contacted, baseDen);
-  const quoteRate   = safeDiv(quoted, baseDen);
-  const closeRate   = safeDiv(closed, baseDen);
+  // ----- Contact / Quote / Close via tasks + policies -----
+  const baseDen = leadsArr.length;
+  let contactedCount = 0;
+  let quotedCount    = 0;
+  let closedCount    = 0;
 
+  const contactLeadIds = new Set();
+  const quoteLeadIds   = new Set();
+  const closedLeadIds  = new Set();
+
+  // From tasks
+  tasksArr.forEach(t => {
+    const stage  = getTaskStage(t);
+    const leadId = t.lead_id;
+    if (!leadId) return;
+
+    if (stage === 'contact') {
+      contactLeadIds.add(leadId);
+    }
+    if (stage === 'quote') {
+      contactLeadIds.add(leadId);
+      quoteLeadIds.add(leadId);
+    }
+    if (stage === 'close') {
+      contactLeadIds.add(leadId);
+      quoteLeadIds.add(leadId);
+      closedLeadIds.add(leadId);
+    }
+  });
+
+  // From policies (any issued policy counts as closed)
+  policiesArr.forEach(p => {
+    const leadId = p.lead_id;
+    if (!leadId) return;
+    if (p.issued_at) {
+      closedLeadIds.add(leadId);
+    }
+  });
+
+  if (baseDen > 0) {
+    contactedCount = leadsArr.filter(l => contactLeadIds.has(l.id)).length;
+    quotedCount    = leadsArr.filter(
+      l => quoteLeadIds.has(l.id) || closedLeadIds.has(l.id)
+    ).length;
+    closedCount    = leadsArr.filter(l => closedLeadIds.has(l.id)).length;
+  }
+
+  const contactRate = safeDiv(contactedCount, baseDen);
+  const quoteRate   = safeDiv(quotedCount, baseDen);
+  const closeRate   = safeDiv(closedCount, baseDen);
+
+  // ----- Persistency 90-day (policies) -----
   const now = Date.now();
-  const persistCandidates = leads.filter(l => {
-    if (!isClosed(l)) return false;
-    const ia = issuedAt(l); if (!ia) return false;
-    if (!isAll && !inRange(ia, start, new Date(endISO))) return false;
-    return (now - +ia) >= PERSISTENCY_DAYS * DAY_MS;
+  const persistCandidates = policiesArr.filter(p => {
+    if (!p.issued_at) return false;
+    const ia = new Date(p.issued_at);
+
+    if (!isAll && start && end && !inRange(ia, start, new Date(endISO))) {
+      return false;
+    }
+
+    return (now - ia.getTime()) >= PERSISTENCY_DAYS * DAY_MS;
   });
-  const persistent = persistCandidates.filter(l => {
-    const ia = issuedAt(l);
-    const canc = l.cancelled_at ? new Date(l.cancelled_at) : null;
-    return !canc || (+canc > (+ia + PERSISTENCY_DAYS * DAY_MS));
+
+  const persistentPolicies = persistCandidates.filter(p => {
+    const status = (p.status || '').toLowerCase();
+    return !['cancelled', 'canceled', 'terminated', 'lapsed'].includes(status);
   });
-  const persistency = safeDiv(persistent.length, persistCandidates.length);
+
+  const persistency = safeDiv(
+    persistentPolicies.length,
+    persistCandidates.length
+  );
 
   document.getElementById('kpi-contact').textContent     = fmtPct(contactRate);
   document.getElementById('kpi-quote').textContent       = fmtPct(quoteRate);
   document.getElementById('kpi-close').textContent       = fmtPct(closeRate);
   document.getElementById('kpi-persistency').textContent = fmtPct(persistency);
 
-  let timeLabels, timeCounts, chartLineLabel;
+  // ----- Weekly/monthly new leads chart (still based on leads) -----
+  let timeLabels;
+  let timeCounts;
+  let chartLineLabel;
+
   if (isAll) {
     const nowD = new Date();
-    const monthStarts = Array.from({ length: 12 }, (_, i) => new Date(nowD.getFullYear(), nowD.getMonth() - (11 - i), 1));
+    const monthStarts = Array.from({ length: 12 }, (_, i) =>
+      new Date(nowD.getFullYear(), nowD.getMonth() - (11 - i), 1)
+    );
     const monthCounts = new Array(12).fill(0);
-    for (const l of leads) {
+
+    for (const l of leadsArr) {
       const dt = new Date(l.created_at);
       const base = monthStarts[0];
-      const diffMonths = (dt.getFullYear() - base.getFullYear()) * 12 + (dt.getMonth() - base.getMonth());
-      if (diffMonths >= 0 && diffMonths < 12) monthCounts[diffMonths]++;
+      const diffMonths =
+        (dt.getFullYear() - base.getFullYear()) * 12 +
+        (dt.getMonth() - base.getMonth());
+      if (diffMonths >= 0 && diffMonths < 12) {
+        monthCounts[diffMonths]++;
+      }
     }
-    timeLabels = monthStarts.map(d => `${d.toLocaleString('default', { month: 'short' })} ${String(d.getFullYear()).slice(-2)}`);
-    timeCounts = monthCounts; chartLineLabel = 'Monthly New Leads';
+
+    timeLabels = monthStarts.map(d =>
+      `${d.toLocaleString('default', { month: 'short' })} ${String(
+        d.getFullYear()
+      ).slice(-2)}`
+    );
+    timeCounts     = monthCounts;
+    chartLineLabel = 'Monthly New Leads';
   } else {
-    const totalDays = Math.max(1, Math.round((+new Date(endISO) - +start) / 864e5) + 1);
+    const totalDays = Math.max(
+      1,
+      Math.round((+new Date(endISO) - +start) / DAY_MS) + 1
+    );
     const useMonthly = totalDays > 120;
+
     if (useMonthly) {
       const monthStarts = [];
       const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
-      const last = new Date(end.getFullYear(), end.getMonth(), 1);
+      const last   = new Date(end.getFullYear(), end.getMonth(), 1);
       while (cursor <= last) {
         monthStarts.push(new Date(cursor));
         cursor.setMonth(cursor.getMonth() + 1);
       }
       const monthCounts = new Array(monthStarts.length).fill(0);
-      for (const l of leads) {
+      for (const l of leadsArr) {
         const dt = new Date(l.created_at);
-        const idx = monthStarts.findIndex(m => dt.getFullYear() === m.getFullYear() && dt.getMonth() === m.getMonth());
+        const idx = monthStarts.findIndex(
+          m =>
+            dt.getFullYear() === m.getFullYear() &&
+            dt.getMonth() === m.getMonth()
+        );
         if (idx !== -1) monthCounts[idx]++;
       }
-      timeLabels = monthStarts.map(d => `${d.toLocaleString('default', { month: 'short' })} ${String(d.getFullYear()).slice(-2)}`);
-      timeCounts = monthCounts; chartLineLabel = 'Monthly New Leads';
+      timeLabels = monthStarts.map(d =>
+        `${d.toLocaleString('default', { month: 'short' })} ${String(
+          d.getFullYear()
+        ).slice(-2)}`
+      );
+      timeCounts     = monthCounts;
+      chartLineLabel = 'Monthly New Leads';
     } else {
-      const weekMs = 7 * 864e5;
-      const bucketCount = Math.min(24, Math.max(1, Math.ceil(totalDays / 7)));
-      const bucketStarts = Array.from({ length: bucketCount }, (_, i) => new Date(start.getTime() + i * weekMs));
+      const weekMs       = 7 * DAY_MS;
+      const bucketCount  = Math.min(
+        24,
+        Math.max(1, Math.ceil(totalDays / 7))
+      );
+      const bucketStarts = Array.from({ length: bucketCount }, (_, i) =>
+        new Date(start.getTime() + i * weekMs)
+      );
       const weeklyCounts = new Array(bucketCount).fill(0);
-      for (const l of leads) {
+
+      for (const l of leadsArr) {
         const t = new Date(l.created_at).getTime();
         const idx = Math.floor((t - start.getTime()) / weekMs);
         if (idx >= 0 && idx < bucketCount) weeklyCounts[idx]++;
       }
-      timeLabels = bucketStarts.map(d => `${(d.getMonth() + 1).toString().padStart(2, '0')}/${d.getDate().toString().padStart(2, '0')}`);
-      timeCounts = weeklyCounts; chartLineLabel = 'Weekly New Leads';
+
+      timeLabels = bucketStarts.map(d =>
+        `${String(d.getMonth() + 1).padStart(2, '0')}/${String(
+          d.getDate()
+        ).padStart(2, '0')}`
+      );
+      timeCounts     = weeklyCounts;
+      chartLineLabel = 'Weekly New Leads';
     }
   }
-  const weeklyTitleEl = document.querySelector('#chart-weekly')?.previousElementSibling;
-  if (weeklyTitleEl) weeklyTitleEl.textContent = chartLineLabel;
 
-  const productCounts = {};
-  for (const l of leads) {
-    const key = (l.product_type || 'Unknown').trim() || 'Unknown';
-    productCounts[key] = (productCounts[key] || 0) + 1;
+  const weeklyTitleEl = document
+    .querySelector('#chart-weekly')
+    ?.previousElementSibling;
+  if (weeklyTitleEl) {
+    weeklyTitleEl.textContent = chartLineLabel;
   }
+
+  // ----- Product mix (prefer policies; fall back to leads) -----
+  const productCounts = {};
+
+  if (policiesArr.length) {
+    policiesArr.forEach(p => {
+      const key =
+        (p.product_line || p.policy_type || 'Unknown').trim() || 'Unknown';
+      productCounts[key] = (productCounts[key] || 0) + 1;
+    });
+  } else {
+    leadsArr.forEach(l => {
+      const key = (l.product_type || 'Unknown').trim() || 'Unknown';
+      productCounts[key] = (productCounts[key] || 0) + 1;
+    });
+  }
+
   const productLabels = Object.keys(productCounts);
   const productValues = productLabels.map(k => productCounts[k]);
 
+  // ----- Assignments by agent (same concept as before) -----
   const nameById = new Map(allAgents.map(a => [a.id, a.full_name]));
-  const assigns = {};
+  const assigns  = {};
   for (const l of assignedInWindow) {
     const id = l.assigned_to || 'Unknown';
     assigns[id] = (assigns[id] || 0) + 1;
   }
-  const assignLabels = Object.keys(assigns).map(id => nameById.get(id) || 'Unassigned/Unknown');
+  const assignLabels = Object.keys(assigns).map(
+    id => nameById.get(id) || 'Unassigned/Unknown'
+  );
   const assignValues = Object.keys(assigns).map(id => assigns[id]);
 
+  // ----- Build charts -----
   const weeklyCtx = document.getElementById('chart-weekly').getContext('2d');
   chartWeekly = new Chart(weeklyCtx, {
-    type:'line',
-    data:{ labels: timeLabels, datasets:[{ label: chartLineLabel, data: timeCounts, tension:0.3 }] },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{ legend:{ display:false } },
-      scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } }
+    type: 'line',
+    data: {
+      labels: timeLabels,
+      datasets: [
+        {
+          label: chartLineLabel,
+          data: timeCounts,
+          tension: 0.3
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
     }
   });
 
   const productsCtx = document.getElementById('chart-products').getContext('2d');
   chartProducts = new Chart(productsCtx, {
-    type:'doughnut',
-    data:{ labels: productLabels, datasets:[{ data: productValues }] },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{ legend:{ position:'bottom' } }
+    type: 'doughnut',
+    data: {
+      labels: productLabels,
+      datasets: [
+        {
+          data: productValues
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { position: 'bottom' } }
     }
   });
 
-  const assignsCtx = document.getElementById('chart-assignments').getContext('2d');
+  const assignsCtx = document
+    .getElementById('chart-assignments')
+    .getContext('2d');
   chartAssignments = new Chart(assignsCtx, {
-    type:'bar',
-    data:{ labels: assignLabels, datasets:[{ label:'Assignments', data: assignValues }] },
-    options:{
-      responsive:true,
-      maintainAspectRatio:false,
-      plugins:{ legend:{ display:false } },
-      scales:{ y:{ beginAtZero:true, ticks:{ precision:0 } } }
+    type: 'bar',
+    data: {
+      labels: assignLabels,
+      datasets: [
+        {
+          label: 'Assignments',
+          data: assignValues
+        }
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
     }
   });
 }
