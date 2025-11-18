@@ -352,10 +352,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   });
 
-  try {
-    flatpickr('#annc-publish', { enableTime:true, dateFormat:'Y-m-d H:i' });
-    flatpickr('#annc-expires', { enableTime:true, dateFormat:'Y-m-d H:i' });
-  } catch(_) {}
+    try {
+      flatpickr('#annc-publish', { enableTime:true, dateFormat:'Y-m-d H:i' });
+      flatpickr('#annc-expires', { enableTime:true, dateFormat:'Y-m-d H:i' });
+      flatpickr('#annc-repeat-end', { enableTime:true, dateFormat:'Y-m-d H:i' });
+    } catch(_) {}
 
   const scopeSel = document.getElementById('annc-scope');
   const wrapProducts = document.getElementById('annc-products-wrap');
