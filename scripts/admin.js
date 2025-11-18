@@ -28,6 +28,43 @@ const isClosed = l => !!(l.issued_at || l.closed_at) || ['closed','issued','poli
 const issuedAt = l => l.issued_at ? new Date(l.issued_at) : (l.closed_at ? new Date(l.closed_at) : null);
 const inRange = (d, start, end) => { if (!d) return false; const t = +d; return (!start || t >= +start) && (!end || t <= +end); };
 
+// NEW: interpret task metadata/title as contact / quote / close
+function getTaskStage(task) {
+  const meta = task.metadata || {};
+
+  let raw = (meta.stage || meta.type || meta.kind || '').toString().toLowerCase();
+
+  if (!raw) {
+    const title = (task.title || '').toLowerCase();
+    if (title.includes('quote')) raw = 'quote';
+    else if (
+      title.includes('app') ||
+      title.includes('application') ||
+      title.includes('issue') ||
+      title.includes('close') ||
+      title.includes('sale') ||
+      title.includes('policy')
+    ) {
+      raw = 'close';
+    } else if (
+      title.includes('call') ||
+      title.includes('contact') ||
+      title.includes('vm') ||
+      title.includes('voice') ||
+      title.includes('text') ||
+      title.includes('sms')
+    ) {
+      raw = 'contact';
+    }
+  }
+
+  if (raw.startsWith('contact')) return 'contact';
+  if (raw.startsWith('quote'))   return 'quote';
+  if (raw.startsWith('close') || raw.startsWith('sale') || raw.startsWith('issue')) return 'close';
+
+  return '';
+}
+
 // ===== Helpers for announcements =====
 async function uploadAnnouncementImage(file, me) {
   if (!file) return null;
