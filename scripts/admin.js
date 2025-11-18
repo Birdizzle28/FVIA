@@ -392,34 +392,59 @@ document.addEventListener('DOMContentLoaded', async () => {
   // === Announcements (Create/Upload) ===
   document.getElementById('annc-form')?.addEventListener('submit', async (e)=>{
     e.preventDefault();
-    const msg = document.getElementById('annc-msg'); msg.textContent = '';
+    const msg = document.getElementById('annc-msg');
+    msg.textContent = '';
+
     const { data: { session } } = await supabase.auth.getSession();
     const me = session?.user?.id;
 
-    const title = document.getElementById('annc-title').value.trim();
-    const body  = document.getElementById('annc-body').value.trim();
+    const title   = document.getElementById('annc-title').value.trim();
+    const body    = document.getElementById('annc-body').value.trim();
     const linkUrl = document.getElementById('annc-link').value.trim() || null;
     const imgFile = document.getElementById('annc-image').files[0] || null;
 
-    const scope = document.getElementById('annc-scope').value;
+    const scope     = document.getElementById('annc-scope').value;
     const publishAt = document.getElementById('annc-publish').value.trim() || null;
     const expiresAt = document.getElementById('annc-expires').value.trim() || null;
 
+    const repeatFreq = document.getElementById('annc-repeat')?.value || 'none';
+    const repeatEnd  = document.getElementById('annc-repeat-end')?.value.trim() || null;
+
     const audience = { scope };
-    if (scope === 'by_product') audience.products = Array.from(document.getElementById('annc-products')?.selectedOptions||[]).map(o=>o.value);
-    if (scope === 'by_state')   audience.states = Array.from(document.getElementById('annc-states')?.selectedOptions||[]).map(o=>o.value);
-    if (scope === 'custom_agents') audience.agent_ids = Array.from(document.getElementById('annc-agent-ids')?.selectedOptions||[]).map(o=>o.value);
+    if (scope === 'by_product') {
+      audience.products = Array.from(document.getElementById('annc-products')?.selectedOptions || [])
+        .map(o => o.value);
+    }
+    if (scope === 'by_state') {
+      audience.states = Array.from(document.getElementById('annc-states')?.selectedOptions || [])
+        .map(o => o.value);
+    }
+    if (scope === 'custom_agents') {
+      audience.agent_ids = Array.from(document.getElementById('annc-agent-ids')?.selectedOptions || [])
+        .map(o => o.value);
+    }
+
+    // Store recurrence info inside the audience JSON so no new DB columns are needed
+    if (repeatFreq && repeatFreq !== 'none') {
+      audience.repeat = {
+        frequency: repeatFreq,
+        until: repeatEnd ? new Date(repeatEnd).toISOString() : null
+      };
+    }
 
     let image_url = null;
     try {
-      if (imgFile) image_url = await uploadAnnouncementImage(imgFile, me);
+      if (imgFile) {
+        image_url = await uploadAnnouncementImage(imgFile, me);
+      }
     } catch (err) {
       msg.textContent = '❌ Image upload failed: ' + (err?.message || err);
       return;
     }
 
     const { error } = await supabase.from('announcements').insert({
-      title, body,
+      title,
+      body,
       link_url: linkUrl || null,
       image_url: image_url || null,
       created_by: me || null,
@@ -428,10 +453,19 @@ document.addEventListener('DOMContentLoaded', async () => {
       expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
       is_active: true
     });
-    if (error) { msg.textContent = '❌ ' + error.message; return; }
+
+    if (error) {
+      msg.textContent = '❌ ' + error.message;
+      return;
+    }
+
     msg.textContent = '✅ Saved.';
     await loadAnnouncements();
-    setTimeout(()=> document.querySelector('#annc-modal .overlay-close')?.click(), 600);
+
+    setTimeout(() => {
+      document.querySelector('#annc-modal .overlay-close')?.click();
+    }, 600);
+
     // reset form
     e.target.reset();
   });
