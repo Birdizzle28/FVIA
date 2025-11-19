@@ -1,6 +1,7 @@
 // netlify/functions/signwell-webhook.js
 // Receives SignWell events and updates ICA + approved_agents
-// Also captures Phone_1 from the document fields.
+// Also captures Phone_1 from the document fields and notifies uplines
+// when an ICA becomes completed for the first time.
 
 const { createClient } = require('@supabase/supabase-js');
 
@@ -66,7 +67,7 @@ function flattenFields(fieldsGrid) {
   return flat;
 }
 
-exports.handler = async (event, context) => {
+exports.handler = async (event) => {
   // CORS preflight
   if (event.httpMethod === 'OPTIONS') {
     return jsonResponse(200, { ok: true });
@@ -122,7 +123,9 @@ exports.handler = async (event, context) => {
   }
 
   const completedAt =
-    isCompleted && doc.updated_at ? doc.updated_at : (isCompleted ? new Date().toISOString() : null);
+    isCompleted && doc.updated_at
+      ? doc.updated_at
+      : (isCompleted ? new Date().toISOString() : null);
 
   // ---- 2) Update ica_envelopes with latest status & payload ----
   const { error: updateIcaErr } = await supabase
@@ -139,14 +142,47 @@ exports.handler = async (event, context) => {
     // Not fatal for our logic below – continue
   }
 
-  // ---- 3) Extract Phone_1 from fields (if present) ----
+  // ---- 3) Load existing approved_agent row so we can detect first-time completion ----
+  const { data: approved, error: apprErr } = await supabase
+    .from('approved_agents')
+    .select('*')
+    .eq('id', icaRow.approved_agent_id)
+    .maybeSingle();
+
+  if (apprErr) {
+    console.error(
+      '❌ Error loading approved_agents for id',
+      icaRow.approved_agent_id,
+      apprErr
+    );
+    return jsonResponse(500, { error: 'DB error loading approved_agent' });
+  }
+
+  if (!approved) {
+    console.warn(
+      '⚠️ No approved_agents row found for id',
+      icaRow.approved_agent_id
+    );
+    return jsonResponse(200, { ok: true, skipped: 'no approved_agents match' });
+  }
+
+  const prevStatus = (approved.ica_status || '').toLowerCase();
+  const prevSigned = approved.ica_signed === true;
+  const wasCompletedBefore = prevStatus === 'completed';
+
+  // ---- 4) Extract Phone_1 from fields (if present) ----
   let phoneFromDoc = null;
   try {
     const flatFields = flattenFields(doc.fields || []);
     const phoneField = flatFields.find(f => f.api_id === 'Phone_1');
     if (phoneField && phoneField.value) {
       phoneFromDoc = normalizePhoneToE164(phoneField.value);
-      console.log('📞 Extracted Phone_1 from doc:', phoneField.value, '=>', phoneFromDoc);
+      console.log(
+        '📞 Extracted Phone_1 from doc:',
+        phoneField.value,
+        '=>',
+        phoneFromDoc
+      );
     } else {
       console.log('ℹ️ No Phone_1 field value found on this document.');
     }
@@ -154,17 +190,19 @@ exports.handler = async (event, context) => {
     console.error('❌ Error extracting Phone_1 from fields:', err);
   }
 
-  // ---- 4) Build update payload for approved_agents ----
+  // ---- 5) Build update payload for approved_agents ----
   const approvedUpdate = {
     ica_status: status,
     ica_envelope_id: documentId,
     // Only mark signed when completed
-    ica_signed: isCompleted,
-    ica_signed_at: isCompleted ? completedAt : null
+    ica_signed: isCompleted || prevSigned,
+    ica_signed_at: isCompleted
+      ? (approved.ica_signed_at || completedAt || new Date().toISOString())
+      : approved.ica_signed_at || null
   };
 
   // If you’re using onboarding stages, bump the stage on completion
-  if (isCompleted) {
+  if (isCompleted && (!approved.onboarding_stage || approved.onboarding_stage === 'pre_approved')) {
     approvedUpdate.onboarding_stage = 'ica_signed';
   }
 
@@ -177,14 +215,89 @@ exports.handler = async (event, context) => {
   const { error: approvedErr } = await supabase
     .from('approved_agents')
     .update(approvedUpdate)
-    .eq('id', icaRow.approved_agent_id);
+    .eq('id', approved.id);
 
   if (approvedErr) {
     console.error('❌ Error updating approved_agents from webhook:', approvedErr);
     return jsonResponse(500, { error: 'Failed to update approved_agents' });
   }
 
-  console.log('✅ Updated approved_agents from SignWell webhook for approved_agent_id', icaRow.approved_agent_id);
+  console.log(
+    '✅ Updated approved_agents from SignWell webhook for approved_agent_id',
+    approved.id
+  );
+
+  // ---- 6) Upline notifications when ICA becomes completed for the first time ----
+  let justCompletedNow = false;
+  if (isCompleted && !prevSigned && !wasCompletedBefore) {
+    justCompletedNow = true;
+  }
+
+  if (justCompletedNow) {
+    console.log(
+      '📣 ICA just completed for the first time for approved_agent_id',
+      approved.id
+    );
+    try {
+      // Collect recipient IDs: recruiter + all admins
+      const recipientIds = new Set();
+
+      if (approved.recruiter_id) {
+        recipientIds.add(approved.recruiter_id);
+      }
+
+      const { data: admins, error: adminErr } = await supabase
+        .from('agents')
+        .select('id')
+        .eq('is_admin', true);
+
+      if (adminErr) {
+        console.error(
+          'Error loading admins for ICA notification from webhook:',
+          adminErr
+        );
+      } else if (admins) {
+        admins.forEach(a => recipientIds.add(a.id));
+      }
+
+      const recipients = Array.from(recipientIds);
+      if (recipients.length) {
+        const agentName =
+          (approved.first_name || approved.last_name)
+            ? `${approved.first_name || ''} ${approved.last_name || ''}`.trim()
+            : approved.agent_id;
+
+        const tasks = recipients.map(rid => ({
+          title: `New agent ICA signed: ${agentName}`,
+          status: 'open',
+          assigned_to: rid,
+          metadata: {
+            type: 'onboarding',
+            stage: 'ica_signed',
+            agent_id: approved.agent_id,
+            approved_agent_id: approved.id
+          }
+        }));
+
+        const { error: taskErr } = await supabase
+          .from('tasks')
+          .insert(tasks);
+
+        if (taskErr) {
+          console.error('Error inserting ICA notification tasks (webhook):', taskErr);
+        } else {
+          console.log(
+            '✅ Inserted ICA notification tasks for recipients:',
+            recipients
+          );
+        }
+      } else {
+        console.log('ℹ️ No recipients found for ICA notification (webhook).');
+      }
+    } catch (notifyErr) {
+      console.error('Error during ICA upline notifications (webhook):', notifyErr);
+    }
+  }
 
   return jsonResponse(200, { ok: true });
 };
