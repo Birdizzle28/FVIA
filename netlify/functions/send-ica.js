@@ -40,10 +40,7 @@ function jsonResponse(statusCode, data) {
 }
 
 /**
- * Actually create a SignWell document from the ICA template.
- * payload = { email, firstName, lastName, level, agentId, approvedAgentId }
- *//**
- * Actually create a SignWell document from the ICA template.
+ * Create a SignWell document from a saved template.
  * payload = { email, firstName, lastName, level, agentId, approvedAgentId }
  */
 async function createEnvelopeWithEsignProvider(payload) {
@@ -51,32 +48,36 @@ async function createEnvelopeWithEsignProvider(payload) {
     throw new Error('SignWell API not fully configured');
   }
 
-  // ✅ Use the generic /documents endpoint
-  const url = `${ESIGN_API_BASE_URL}/documents`;
+  // ✅ This is the correct endpoint from your screenshot:
+  // POST https://www.signwell.com/api/v1/document_templates/documents/
+  const url = `${ESIGN_API_BASE_URL}/document_templates/documents/`;
 
-  // This role MUST match the role name defined in your SignWell template
-  const signerRole = 'Contractor'; // change if your template role name is different
+  // This MUST match the recipient/role identifier used inside your template.
+  // (If your template role is named something else, change this string.)
+  const templateRecipientId = 'Contractor';
 
   const body = {
-    // test_mode: true will send "test" envelopes in SignWell
-    test_mode: false,
+    test_mode: false, // set true if you want non-binding tests
 
-    // Either `title` or `name` (we'll send both just to be safe)
-    title: `Independent Contractor Agreement - ${payload.firstName} ${payload.lastName}`,
-    name:  `Independent Contractor Agreement - ${payload.firstName} ${payload.lastName}`,
+    // From the "Create Document from Template" docs:
+    template_id: ESIGN_ICA_TEMPLATE_ID,
 
+    name: `Independent Contractor Agreement - ${payload.firstName} ${payload.lastName}`,
     subject: 'Independent Contractor Agreement',
     message:
       'Please review and sign the Independent Contractor Agreement to get started with Family Values Group.',
 
-    signers: [
+    // Recipients for this document
+    recipients: [
       {
+        // id ties this recipient to the placeholder in the template
+        id: templateRecipientId,
         name: `${payload.firstName} ${payload.lastName}`,
-        email: payload.email,
-        role: signerRole
+        email: payload.email
       }
     ],
-    // Optional: store extra info on the document
+
+    // Extra info for you, stored on the document
     metadata: {
       agent_id: payload.agentId,
       level: payload.level,
@@ -174,7 +175,9 @@ exports.handler = async (event, context) => {
 
       if (error) {
         console.error('Error loading approved_agents by id:', error);
-        return jsonResponse(500, { error: 'Failed to load approved agent (by id)' });
+        return jsonResponse(500, {
+          error: 'Failed to load approved agent (by id)'
+        });
       }
       approvedAgentRow = data;
     } else {
