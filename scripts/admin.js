@@ -741,24 +741,41 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    // 4) Stub: kick off ICA send (we’ll implement the Netlify function next)
+    // 4) Send ICA via Netlify + SignWell
     try {
       if (msg) msg.textContent = '✅ NIPR synced. Sending ICA for e-sign…';
-
+    
       const icaRes = await fetch('/.netlify/functions/send-ica', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
+          // these names must match what send-ica.js expects
+          agent_id: npn,
+          email,
+          first_name: firstName,
+          last_name: lastName,
+          level,
           approved_agent_id: approvedId
         })
       });
-
+    
       if (!icaRes.ok) {
         const txt = await icaRes.text();
         console.error('ICA send error:', txt);
         if (msg) msg.textContent = '⚠️ NIPR ok, but ICA send failed. Check logs.';
         return;
       }
+    
+      const icaJson = await icaRes.json();
+      console.log('ICA send result:', icaJson);
+      if (msg) msg.textContent =
+        '🎉 Pre-approved, NIPR synced, and ICA sent for e-sign.';
+    } catch (err) {
+      console.error('Error calling send-ica function:', err);
+      if (msg) msg.textContent =
+        '⚠️ NIPR ok, but there was an error sending ICA.';
+      return;
+    }
 
       const icaJson = await icaRes.json();
       console.log('ICA send result:', icaJson);
