@@ -69,7 +69,7 @@ async function createEnvelopeWithEsignProvider(payload) {
     message:
       'Please review and sign the Independent Contractor Agreement to get started with Family Values Group.',
 
-    template_ids: [ESIGN_ICA_TEMPLATE_ID],
+    files: [ESIGN_ICA_TEMPLATE_ID],
     recipients: [
       {
         name: `${payload.firstName} ${payload.lastName}`,
