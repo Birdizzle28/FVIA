@@ -48,31 +48,37 @@ async function createEnvelopeWithEsignProvider(payload) {
     throw new Error('SignWell API not fully configured');
   }
 
-  const url = `${ESIGN_API_BASE_URL}/document_templates/${ESIGN_ICA_TEMPLATE_ID}/send_document/`;
-
-  // This role MUST match the placeholder role name in your template: "Contractor"
-  const signerRole = 'Contractor';
+  // ✅ Correct endpoint: /documents
+  const base = ESIGN_API_BASE_URL.replace(/\/$/, '');
+  const url = `${base}/documents`;
 
   const body = {
-    // set to true if you want to test without sending real emails
+    // flip to true if you want sandbox behavior
     test_mode: false,
-    name: `Independent Contractor Agreement - ${payload.firstName} ${payload.lastName}`,
+
+    // ✅ use template_ids instead of a /document_templates/... URL
+    template_ids: [ESIGN_ICA_TEMPLATE_ID],
+
+    title: `Independent Contractor Agreement - ${payload.firstName} ${payload.lastName}`,
     subject: 'Independent Contractor Agreement',
     message:
       'Please review and sign the Independent Contractor Agreement to get started with Family Values Group.',
+
     signers: [
       {
         name: `${payload.firstName} ${payload.lastName}`,
         email: payload.email,
-        role: signerRole,
-        // SignWell defaults to sending the email; send_email is optional
-        send_email: true
+        send_email: true,
+        // role is optional unless your template explicitly uses roles
+        // role: 'Contractor'
       }
     ],
-    // Optional: store extra info on the document
-    custom_fields: {
+
+    // attach extra info to the document in metadata
+    metadata: {
       agent_id: payload.agentId,
-      level: payload.level
+      level: payload.level,
+      approved_agent_id: payload.approvedAgentId || null
     }
   };
 
@@ -89,7 +95,7 @@ async function createEnvelopeWithEsignProvider(payload) {
   let json;
   try {
     json = text ? JSON.parse(text) : {};
-  } catch (e) {
+  } catch (_) {
     json = { raw: text };
   }
 
@@ -102,7 +108,6 @@ async function createEnvelopeWithEsignProvider(payload) {
     );
   }
 
-  // SignWell returns an "id" for the document
   const envelopeId = json.id || json.document_id || null;
   const status = json.status || 'sent';
 
