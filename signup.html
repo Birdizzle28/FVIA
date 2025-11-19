@@ -38,28 +38,10 @@
 	<div class="auth-container">
 		<h2>Agent Sign-Up</h2>
 		<form id="signup-form">
-		  <!-- First Name -->
-		  <div class="float-field">
-		    <input id="first-name" type="text" placeholder=" " required>
-		    <label for="first-name">First Name</label>
-		  </div>
-		
-		  <!-- Last Name -->
-		  <div class="float-field">
-		    <input id="last-name" type="text" placeholder=" " required>
-		    <label for="last-name">Last Name</label>
-		  </div>
-		
 		  <!-- Agent ID (NPN) -->
 		  <div class="float-field">
 		    <input id="agent-id" type="text" placeholder=" " required>
 		    <label for="agent-id">Agent ID (NPN)</label>
-		  </div>
-		
-		  <!-- Email -->
-		  <div class="float-field">
-		    <input id="email" type="email" placeholder=" " required>
-		    <label for="email">Email (used as username)</label>
 		  </div>
 		
 		  <!-- Password -->
@@ -142,99 +124,120 @@
 	  const form = document.getElementById('signup-form');
 	  const status = document.getElementById('status');
 	  const message = document.getElementById('message');
-	  
+	
 	  form.addEventListener('submit', async (event) => {
 	    event.preventDefault();
 	    status.textContent = '⏳ Signing up...';
 	    message.textContent = '';
-	  
+	
 	    const agentId   = document.getElementById('agent-id').value.trim();
-	    const firstName = document.getElementById('first-name').value.trim();
-	    const lastName  = document.getElementById('last-name').value.trim();
-	    const email     = document.getElementById('email').value.trim();
 	    const password  = document.getElementById('password').value;
 	    const confirmPw = document.getElementById('confirm-password').value;
-	  
-	    if (!agentId || !firstName || !lastName || !email || !password) {
-	      status.textContent = '⚠️ Fill out all fields.';
+	
+	    if (!agentId || !password) {
+	      status.textContent = '⚠️ Enter your Agent ID and password.';
 	      return;
 	    }
 	    if (password !== confirmPw) {
 	      status.textContent = '⚠️ Passwords do not match.';
 	      return;
 	    }
-
-		// 🔁 1) Sync ICA status from SignWell into Supabase
-		  try {
-		    await fetch('/.netlify/functions/sync-ica-status', {
-		      method: 'POST',
-		      headers: { 'Content-Type': 'application/json' },
-		      body: JSON.stringify({ agent_id: agentId })
-		    });
-		    // we don't even have to read the response; we just want Supabase updated
-		  } catch (err) {
-		    console.error('sync-ica-status error (frontend):', err);
-		    // Don't hard-fail signup here — we still rely on the DB values below.
-		  }
-
-	    // Check pre-approval AND ICA status
+	
+	    // 🔁 1) Sync ICA status from SignWell into Supabase (best-effort)
+	    try {
+	      await fetch('/.netlify/functions/sync-ica-status', {
+	        method: 'POST',
+	        headers: { 'Content-Type': 'application/json' },
+	        body: JSON.stringify({ agent_id: agentId })
+	      });
+	    } catch (err) {
+	      console.error('sync-ica-status error (frontend):', err);
+	      // We still rely on DB state below.
+	    }
+	
+	    // 2) Load approved_agents row with ICA + contact info
 	    const { data: approved, error: checkErr } = await supabase
 	      .from('approved_agents')
-	      .select('id, is_registered, ica_signed, ica_status, level, recruiter_id, email, first_name, last_name')
+	      .select(`
+	        id,
+	        agent_id,
+	        is_registered,
+	        ica_signed,
+	        ica_status,
+	        level,
+	        recruiter_id,
+	        email,
+	        first_name,
+	        last_name,
+	        phone
+	      `)
 	      .eq('agent_id', agentId)
 	      .maybeSingle();
-	  
+	
 	    if (checkErr) {
 	      console.error('Error checking approved_agents:', checkErr);
 	      status.textContent = '❌ Error checking agent ID. Please contact support.';
 	      return;
 	    }
-	  
+	
 	    if (!approved) {
 	      status.textContent = '❌ Agent ID not found. Ask your upline or admin to pre-approve you.';
 	      return;
 	    }
-	  
+	
 	    if (approved.is_registered) {
 	      status.textContent = '❌ This agent ID is already registered. Try logging in instead.';
 	      return;
 	    }
-	  
-	    // Enforce "ICA must be signed" rule
-	    const isSigned = approved.ica_signed === true || (approved.ica_status || '').toLowerCase() === 'completed';
+	
+	    // 3) Enforce "ICA must be signed" rule
+	    const icaStatus = (approved.ica_status || '').toLowerCase();
+	    const isSigned = approved.ica_signed === true || icaStatus === 'completed';
+	
 	    if (!isSigned) {
-	      status.textContent = '⚠️ Your Independent Contractor Agreement is not marked as signed yet. Please complete the contract that was emailed to you or contact your upline.';
+	      status.textContent =
+	        '⚠️ Your Independent Contractor Agreement is not marked as signed yet. ' +
+	        'Please complete the contract that was emailed to you or contact your upline.';
 	      return;
 	    }
-	  
-	    // Optional sanity check: if we have an email on file and it doesn't match, warn
-	    if (approved.email && approved.email.toLowerCase() !== email.toLowerCase()) {
-	      status.textContent = '⚠️ Use the same email we have on file for your contract, or contact an admin.';
+	
+	    // 4) We MUST have an email from pre-approval/ICA
+	    if (!approved.email) {
+	      status.textContent =
+	        '⚠️ No email is on file for your contract. Please contact an admin to fix your pre-approval.';
 	      return;
 	    }
-	  
-	    // Create auth user; metadata includes agent & level info
+	
+	    const authEmail = approved.email.trim();
+	    const metaFirst = approved.first_name || '';
+	    const metaLast  = approved.last_name || '';
+	    const metaPhone = approved.phone || null; // already normalized from webhook (Phone_1)
+	
+	    // 5) Create auth user; metadata includes agent, name, phone, level, recruiter
 	    const { error: signUpError } = await supabase.auth.signUp({
-	      email,
+	      email: authEmail,
 	      password,
 	      options: {
 	        emailRedirectTo: 'https://familyvaluesgroup.com/confirmed.html',
 	        data: {
 	          agent_id: agentId,
-	          first_name: firstName,
-	          last_name: lastName,
+	          first_name: metaFirst,
+	          last_name: metaLast,
+	          phone: metaPhone,
 	          level: approved.level || null,
 	          recruiter_id: approved.recruiter_id || null
 	        }
 	      }
 	    });
-	  
+	
 	    if (signUpError) {
+	      console.error('signUp error:', signUpError);
 	      status.textContent = '❌ Signup failed: ' + signUpError.message;
 	      return;
 	    }
-	  
-	    status.textContent = '✅ All set. Check your email to confirm your account.';
+	
+	    status.textContent =
+	      '✅ Account created. Check ' + authEmail + ' to confirm your account.';
 	  });
 	</script>
 </body>
