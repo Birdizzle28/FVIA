@@ -52,7 +52,7 @@ async function createEnvelopeWithEsignProvider(payload) {
   }
 
   // ✅ Use the generic /documents endpoint
-  const url = `${ESIGN_API_BASE_URL}/document_templates/${ESIGN_ICA_TEMPLATE_ID}/send_document/`;
+  const url = `${ESIGN_API_BASE_URL}/documents/`;
 
   // This role MUST match the role name defined in your SignWell template
   const signerRole = 'Contractor'; // change if your template role name is different
@@ -70,7 +70,7 @@ async function createEnvelopeWithEsignProvider(payload) {
       'Please review and sign the Independent Contractor Agreement to get started with Family Values Group.',
 
     // ✅ IMPORTANT: This is what the 422 error is asking for
-    recipients: [
+    signers: [
       {
         name:  `${payload.firstName} ${payload.lastName}`,
         email: payload.email,
