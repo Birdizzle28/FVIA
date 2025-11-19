@@ -2,7 +2,7 @@
 // Hit this ONCE to register the webhook URL with SignWell
 
 const ESIGN_API_KEY = process.env.ESIGN_API_KEY;
-const ESIGN_APP_ID  = process.env.ESIGN_APP_ID;
+const ESIGN_APP_ID  = process.env.ESIGN_ICA_TEMPLATE_ID;
 const ESIGN_API_BASE_URL =
   process.env.ESIGN_API_BASE_URL || 'https://www.signwell.com/api/v1';
 
