@@ -54,6 +54,18 @@ async function createEnvelopeWithEsignProvider(payload) {
   // Match docs exactly
   const url = `${ESIGN_API_BASE_URL}/document_templates/documents/`;
 
+    // Prefill specific template fields by API ID
+  const templateFields = [
+    {
+      api_id: 'Name_3',              // Document Sender printed name
+      value: 'Chancellor Timothy Johnson'
+    },
+    {
+      api_id: 'Title_1',             // Document Sender title
+      value: 'Operations Manager'
+    }
+  ];
+  
   const body = {
     // use test_mode: true until you're happy
     test_mode: true,
@@ -83,6 +95,7 @@ async function createEnvelopeWithEsignProvider(payload) {
         placeholder_name: 'Document Sender'     // must match template role
       }
     ],
+    template_fields: templateFields,
 
     // optional extra data
     metadata: {
