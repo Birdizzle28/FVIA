@@ -52,7 +52,7 @@ async function createEnvelopeWithEsignProvider(payload) {
   }
 
   // ✅ Use the generic /documents endpoint
-  const url = const url = `${ESIGN_API_BASE_URL}/document_templates/${ESIGN_ICA_TEMPLATE_ID}/send_document`;
+  const url = `${ESIGN_API_BASE_URL}/document_templates/${ESIGN_ICA_TEMPLATE_ID}/send_document`;
 
   // This role MUST match the role name defined in your SignWell template
   const signerRole = 'Contractor'; // change if your template role name is different
@@ -69,7 +69,6 @@ async function createEnvelopeWithEsignProvider(payload) {
     message:
       'Please review and sign the Independent Contractor Agreement to get started with Family Values Group.',
 
-    template_ids: [ESIGN_ICA_TEMPLATE_ID],
     signers: [
       {
         name: `${payload.firstName} ${payload.lastName}`,
