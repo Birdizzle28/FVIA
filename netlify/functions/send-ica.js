@@ -69,11 +69,11 @@ async function createEnvelopeWithEsignProvider(payload) {
     message:
       'Please review and sign the Independent Contractor Agreement to get started with Family Values Group.',
 
-    recipients: [
+    signers: [
       {
         name: `${payload.firstName} ${payload.lastName}`,
         email: payload.email,
-        id: signerRole
+        role: signerRole
       }
     ],
     // Optional: store extra info on the document
