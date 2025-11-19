@@ -54,14 +54,11 @@ async function createEnvelopeWithEsignProvider(payload) {
   // Match docs exactly
   const url = `${ESIGN_API_BASE_URL}/document_templates/documents/`;
 
-  // This MUST match the role name defined in your SignWell template
-  const signerRole = 'Contractor'; // change if your template role is named differently
-
   const body = {
-    // Use test mode until you're happy
+    // use test_mode: true until you're happy
     test_mode: true,
 
-    // Tell SignWell which template to use
+    // tell SignWell which template
     template_id: ESIGN_ICA_TEMPLATE_ID,
 
     title: `Independent Contractor Agreement - ${payload.firstName} ${payload.lastName}`,
@@ -71,14 +68,23 @@ async function createEnvelopeWithEsignProvider(payload) {
     message:
       'Please review and sign the Independent Contractor Agreement to get started with Family Values Group.',
 
-    signers: [
+    // 👇 THIS is what the endpoint actually expects
+    recipients: [
       {
+        id: 1,
         name: `${payload.firstName} ${payload.lastName}`,
         email: payload.email,
-        role: signerRole
+        placeholder_name: 'Contractor'          // must match template role
+      },
+      {
+        id: 2,
+        name: 'Chancellor Timothy Johnson',
+        email: 'info@familyvaluesgroup.com',    // or whatever email should sign
+        placeholder_name: 'Document Sender'     // must match template role
       }
     ],
 
+    // optional extra data
     metadata: {
       agent_id: payload.agentId,
       level: payload.level,
