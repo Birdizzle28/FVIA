@@ -132,62 +132,97 @@
 	  });
 	</script>
   <script type="module">
-    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-  
-    const supabase = createClient(
-      'https://ddlbgkolnayqrxslzsxn.supabase.co',
-      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
-    );
-  
-    const form = document.getElementById('signup-form');
-    const status = document.getElementById('status');
-    const message = document.getElementById('message');
-  
-    form.addEventListener('submit', async (event) => {
-      event.preventDefault();
-      status.textContent = '⏳ Signing up...';
-      message.textContent = '';
-  
-      const agentId   = document.getElementById('agent-id').value.trim();
-      const firstName = document.getElementById('first-name').value.trim();
-      const lastName  = document.getElementById('last-name').value.trim();
-      const email     = document.getElementById('email').value.trim();
-      const password  = document.getElementById('password').value;
-      const confirmPw = document.getElementById('confirm-password').value;
-  
-      if (!agentId || !firstName || !lastName || !email || !password) {
-        status.textContent = '⚠️ Fill out all fields.'; return;
-      }
-      if (password !== confirmPw) {
-        status.textContent = '⚠️ Passwords do not match.'; return;
-      }
-  
-      // Check pre-approval (public/anon SELECT allowed by your policies)
-      const { data: approved, error: checkErr } = await supabase
-        .from('approved_agents')
-        .select('id, is_registered')
-        .eq('agent_id', agentId)
-        .maybeSingle();
-  
-      if (checkErr || !approved || approved.is_registered) {
-        status.textContent = '❌ Invalid or already registered agent ID.'; return;
-      }
-  
-      // Create auth user; trigger will create agents row & flip approved_agents
-      const { error: signUpError } = await supabase.auth.signUp({
-        email, password,
-        options: {
-          emailRedirectTo: 'https://familyvaluesgroup.com/confirmed.html',
-          data: { agent_id: agentId, first_name: firstName, last_name: lastName }
-        }
-      });
-  
-      if (signUpError) {
-        status.textContent = '❌ Signup failed: ' + signUpError.message; return;
-      }
-  
-      status.textContent = '✅ All set. Check your email to confirm your account.';
-    });
-  </script>
+	  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+	  
+	  const supabase = createClient(
+	    'https://ddlbgkolnayqrxslzsxn.supabase.co',
+	    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
+	  );
+	  
+	  const form = document.getElementById('signup-form');
+	  const status = document.getElementById('status');
+	  const message = document.getElementById('message');
+	  
+	  form.addEventListener('submit', async (event) => {
+	    event.preventDefault();
+	    status.textContent = '⏳ Signing up...';
+	    message.textContent = '';
+	  
+	    const agentId   = document.getElementById('agent-id').value.trim();
+	    const firstName = document.getElementById('first-name').value.trim();
+	    const lastName  = document.getElementById('last-name').value.trim();
+	    const email     = document.getElementById('email').value.trim();
+	    const password  = document.getElementById('password').value;
+	    const confirmPw = document.getElementById('confirm-password').value;
+	  
+	    if (!agentId || !firstName || !lastName || !email || !password) {
+	      status.textContent = '⚠️ Fill out all fields.';
+	      return;
+	    }
+	    if (password !== confirmPw) {
+	      status.textContent = '⚠️ Passwords do not match.';
+	      return;
+	    }
+	  
+	    // Check pre-approval AND ICA status
+	    const { data: approved, error: checkErr } = await supabase
+	      .from('approved_agents')
+	      .select('id, is_registered, ica_signed, ica_status, level, recruiter_id, email, first_name, last_name')
+	      .eq('agent_id', agentId)
+	      .maybeSingle();
+	  
+	    if (checkErr) {
+	      console.error('Error checking approved_agents:', checkErr);
+	      status.textContent = '❌ Error checking agent ID. Please contact support.';
+	      return;
+	    }
+	  
+	    if (!approved) {
+	      status.textContent = '❌ Agent ID not found. Ask your upline or admin to pre-approve you.';
+	      return;
+	    }
+	  
+	    if (approved.is_registered) {
+	      status.textContent = '❌ This agent ID is already registered. Try logging in instead.';
+	      return;
+	    }
+	  
+	    // Enforce "ICA must be signed" rule
+	    const isSigned = approved.ica_signed === true || (approved.ica_status || '').toLowerCase() === 'completed';
+	    if (!isSigned) {
+	      status.textContent = '⚠️ Your Independent Contractor Agreement is not marked as signed yet. Please complete the contract that was emailed to you or contact your upline.';
+	      return;
+	    }
+	  
+	    // Optional sanity check: if we have an email on file and it doesn't match, warn
+	    if (approved.email && approved.email.toLowerCase() !== email.toLowerCase()) {
+	      status.textContent = '⚠️ Use the same email we have on file for your contract, or contact an admin.';
+	      return;
+	    }
+	  
+	    // Create auth user; metadata includes agent & level info
+	    const { error: signUpError } = await supabase.auth.signUp({
+	      email,
+	      password,
+	      options: {
+	        emailRedirectTo: 'https://familyvaluesgroup.com/confirmed.html',
+	        data: {
+	          agent_id: agentId,
+	          first_name: firstName,
+	          last_name: lastName,
+	          level: approved.level || null,
+	          recruiter_id: approved.recruiter_id || null
+	        }
+	      }
+	    });
+	  
+	    if (signUpError) {
+	      status.textContent = '❌ Signup failed: ' + signUpError.message;
+	      return;
+	    }
+	  
+	    status.textContent = '✅ All set. Check your email to confirm your account.';
+	  });
+	</script>
 </body>
 </html>
