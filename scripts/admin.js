@@ -619,8 +619,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   nextBtn?.addEventListener('click', async () => { currentPage++; await loadLeadsWithFilters(); });
   prevBtn?.addEventListener('click', async () => { if (currentPage > 1) { currentPage--; await loadLeadsWithFilters(); } });
 
-    // === Pre-Approve New Agent (NPN + name + email + level + NIPR + ICA stub) ===
-  document.getElementById('agent-form')?.addEventListener('submit', async (e) => {
+      document.getElementById('agent-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const msg = document.getElementById('agent-msg');
     if (msg) msg.textContent = '';
@@ -700,7 +699,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    // 3) NIPR sync + parse (same as before)
+    // 3) NIPR sync + parse
     try {
       if (msg) msg.textContent = '✅ Pre-approved. Syncing NIPR data…';
 
@@ -744,12 +743,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     // 4) Send ICA via Netlify + SignWell
     try {
       if (msg) msg.textContent = '✅ NIPR synced. Sending ICA for e-sign…';
-    
+
       const icaRes = await fetch('/.netlify/functions/send-ica', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          // these names must match what send-ica.js expects
           agent_id: npn,
           email,
           first_name: firstName,
@@ -758,14 +756,14 @@ document.addEventListener('DOMContentLoaded', async () => {
           approved_agent_id: approvedId
         })
       });
-    
+
       if (!icaRes.ok) {
         const txt = await icaRes.text();
         console.error('ICA send error:', txt);
         if (msg) msg.textContent = '⚠️ NIPR ok, but ICA send failed. Check logs.';
         return;
       }
-    
+
       const icaJson = await icaRes.json();
       console.log('ICA send result:', icaJson);
       if (msg) msg.textContent =
@@ -774,15 +772,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       console.error('Error calling send-ica function:', err);
       if (msg) msg.textContent =
         '⚠️ NIPR ok, but there was an error sending ICA.';
-      return;
-    }
-
-      const icaJson = await icaRes.json();
-      console.log('ICA send result:', icaJson);
-      if (msg) msg.textContent = '🎉 Pre-approved, NIPR synced, and ICA sent for e-sign.';
-    } catch (err) {
-      console.error('Error calling send-ica function:', err);
-      if (msg) msg.textContent = '⚠️ NIPR ok, but there was an error sending ICA.';
       return;
     }
 
