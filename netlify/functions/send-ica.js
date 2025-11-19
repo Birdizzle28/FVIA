@@ -70,11 +70,10 @@ async function createEnvelopeWithEsignProvider(payload) {
       'Please review and sign the Independent Contractor Agreement to get started with Family Values Group.',
 
     // ✅ IMPORTANT: This is what the 422 error is asking for
-    signers: [
+    recipients: [
       {
         name:  `${payload.firstName} ${payload.lastName}`,
         email: payload.email,
-        id:  signerRole,   // must match the template role
       }
     ],
 
