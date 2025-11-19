@@ -81,103 +81,165 @@
 		</footer>
 	<script type="module" src="scripts/general.js"></script>
 	<script type="module">
-	import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-	
-	document.addEventListener('DOMContentLoaded', async () => {
-	  const supabase = createClient(
-	    'https://ddlbgkolnayqrxslzsxn.supabase.co',
-	    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
-	  );
-	
-	  const status = document.getElementById('status');
-	  status.textContent = '⏳ Checking session...';
-	
-	  const { data, error } = await supabase.auth.getSession();
-	  const session = data?.session;
-	
-	  if (!session || !session.user) {
-	    status.textContent = '⚠️ No active session found. Try logging in again.';
-	    return;
-	  }
-	
-	  const user = session.user;
-	  const email = user.email;
-	
-	  status.textContent = '🔑 Session loaded for ' + email;
-	
-	  const { data: exists } = await supabase
-	    .from('agents')
-	    .select('id')
-	    .eq('id', user.id)
-	    .single();
-	
-	  if (exists) {
-	    status.textContent = '✅ Agent already exists. Redirecting to login...';
-	    setTimeout(() => window.location.href = 'login.html', 3000);
-	    return;
-	  }
-	
-	  status.textContent = '🔍 Step 2: Reading metadata...';
-	
-	  const agentId = user.user_metadata?.agent_id;
-	  const firstName = user.user_metadata?.first_name;
-	  const lastName = user.user_metadata?.last_name;
-	
-	  if (!agentId || !firstName || !lastName) {
-	    status.textContent = '❌ Step 2 FAIL: Missing metadata.';
-	    return;
-	  }
-	
-	  status.textContent = '🔍 Step 3: Checking approved_agents...';
-	
-	  const { data: approved, error: fetchErr } = await supabase
-	    .from('approved_agents')
-	    .select('agent_id')
-	    .eq('agent_id', agentId)
-	    .single();
-	
-	  if (fetchErr || !approved) {
-	    status.textContent = '❌ Step 3 FAIL: Approved agent not found.';
-	    return;
-	  }
-	
-	  status.textContent = '🔍 Step 4: Inserting into agents...';
-	
-	  const payload = {
-	    id: user.id,
-	    agent_id: agentId,
-	    first_name: firstName,
-	    last_name: lastName,
-	    full_name: `${firstName} ${lastName}`,
-	    email: email,
-	    is_active: true,
-	    is_admin: false
-	  };
-	
-	  const { data: insertData, error: insertErr } = await supabase
-		  .from('agents')
-		  .insert(payload, { returning: 'minimal' });
-	
-	  if (insertErr) {
-	    status.textContent = '❌ Step 4 FAIL: Insert error: ' + insertErr.message;
-	    return;
-	  }
-	
-	  status.textContent = '✅ Step 5: Inserted. Now updating approved_agents...';
-	
-	  const { error: updateErr } = await supabase
-	    .from('approved_agents')
-	    .update({ is_registered: true })
-	    .eq('agent_id', agentId);
-	
-	  if (updateErr) {
-	    status.textContent += '\n⚠️ Step 5 WARNING: Could not update approved_agents: ' + updateErr.message;
-	  } else {
-	    status.textContent += '\n🎉 Step 6: All done! Redirecting...';
-	    setTimeout(() => window.location.href = 'login.html', 3000);
-	  }
-	});
-	const allowed = sessionStorage.getItem("siteAccess");
-</script>
+	  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+	  
+	  document.addEventListener('DOMContentLoaded', async () => {
+	    const supabase = createClient(
+	      'https://ddlbgkolnayqrxslzsxn.supabase.co',
+	      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
+	    );
+	  
+	    const status = document.getElementById('status');
+	    status.textContent = '⏳ Checking session...';
+	  
+	    const { data, error } = await supabase.auth.getSession();
+	    if (error) {
+	      console.error('getSession error:', error);
+	      status.textContent = '❌ Error checking session. Try logging in again.';
+	      return;
+	    }
+	  
+	    const session = data?.session;
+	    if (!session || !session.user) {
+	      status.textContent = '⚠️ No active session found. Try logging in again.';
+	      return;
+	    }
+	  
+	    const user  = session.user;
+	    const email = user.email;
+	  
+	    status.textContent = '🔑 Session loaded for ' + email;
+	  
+	    // Step 1: If agent already exists, just redirect.
+	    const { data: exists, error: existsErr } = await supabase
+	      .from('agents')
+	      .select('id')
+	      .eq('id', user.id)
+	      .maybeSingle();
+	  
+	    if (existsErr) {
+	      console.error('Error checking agents:', existsErr);
+	      status.textContent = '❌ Error checking agent record.';
+	      return;
+	    }
+	  
+	    if (exists) {
+	      status.textContent = '✅ Agent already exists. Redirecting to login...';
+	      setTimeout(() => window.location.href = 'login.html', 3000);
+	      return;
+	    }
+	  
+	    status.textContent = '🔍 Step 2: Reading metadata...';
+	  
+	    const agentId   = user.user_metadata?.agent_id;
+	    const firstName = user.user_metadata?.first_name;
+	    const lastName  = user.user_metadata?.last_name;
+	    const metaLevel = user.user_metadata?.level || null;
+	    const metaRecruiterId = user.user_metadata?.recruiter_id || null;
+	  
+	    if (!agentId || !firstName || !lastName) {
+	      status.textContent = '❌ Step 2 FAIL: Missing agent metadata. Contact support.';
+	      return;
+	    }
+	  
+	    status.textContent = '🔍 Step 3: Checking approved_agents & ICA status...';
+	  
+	    const { data: approved, error: fetchErr } = await supabase
+	      .from('approved_agents')
+	      .select('agent_id, recruiter_id, level, ica_signed, ica_status, is_registered, first_name, last_name, email')
+	      .eq('agent_id', agentId)
+	      .maybeSingle();
+	  
+	    if (fetchErr) {
+	      console.error('Error fetching approved_agents:', fetchErr);
+	      status.textContent = '❌ Step 3 FAIL: Approved agent not found. Contact support.';
+	      return;
+	    }
+	  
+	    if (!approved) {
+	      status.textContent = '❌ Step 3 FAIL: Approved agent not found. Contact support.';
+	      return;
+	    }
+	  
+	    // Enforce ICA signed before activating agent
+	    const isSigned = approved.ica_signed === true || (approved.ica_status || '').toLowerCase() === 'completed';
+	    if (!isSigned) {
+	      status.textContent = '❌ Step 3 FAIL: Your ICA is not marked as signed yet. Contact your upline or admin.';
+	      return;
+	    }
+	  
+	    if (approved.is_registered) {
+	      status.textContent = '✅ This agent ID is already registered. Redirecting to login...';
+	      setTimeout(() => window.location.href = 'login.html', 3000);
+	      return;
+	    }
+	  
+	    status.textContent = '🔍 Step 4: Inserting into agents...';
+	  
+	    const levelFromApproved   = approved.level || metaLevel || null;
+	    const recruiterFromApproved = approved.recruiter_id || metaRecruiterId || null;
+	  
+	    const payload = {
+	      id: user.id,
+	      agent_id: agentId,
+	      first_name: firstName,
+	      last_name: lastName,
+	      full_name: `${firstName} ${lastName}`,
+	      email: email,
+	      is_active: true,
+	      is_admin: false,
+	      level: levelFromApproved,
+	      recruiter_id: recruiterFromApproved
+	    };
+	  
+	    const { error: insertErr } = await supabase
+	      .from('agents')
+	      .insert(payload, { returning: 'minimal' });
+	  
+	    if (insertErr) {
+	      console.error('Insert agents error:', insertErr);
+	      status.textContent = '❌ Step 4 FAIL: Insert error: ' + insertErr.message;
+	      return;
+	    }
+	  
+	    status.textContent = '✅ Step 5: Inserted agent. Updating approved_agents...';
+	  
+	    const { error: updateErr } = await supabase
+	      .from('approved_agents')
+	      .update({ is_registered: true })
+	      .eq('agent_id', agentId);
+	  
+	    if (updateErr) {
+	      console.error('Update approved_agents error:', updateErr);
+	      status.textContent += '\n⚠️ Step 5 WARNING: Could not update approved_agents: ' + updateErr.message;
+	    } else {
+	      status.textContent += '\n✅ Step 5: approved_agents updated.';
+	    }
+	  
+	    // Step 6: Try to bump any matching recruit to stage = 'Agent'
+	    if (recruiterFromApproved) {
+	      status.textContent += '\n🔁 Step 6: Updating recruits (if any)...';
+	      const { error: recErr } = await supabase
+	        .from('recruits')
+	        .update({
+	          stage: 'Agent',
+	          stage_updated_at: new Date().toISOString()
+	        })
+	        .eq('recruiter_id', recruiterFromApproved)
+	        .ilike('first_name', firstName)
+	        .ilike('last_name', lastName);
+	  
+	      if (recErr) {
+	        console.error('Update recruits error:', recErr);
+	        status.textContent += '\n⚠️ Step 6 WARNING: Could not update recruits: ' + recErr.message;
+	      } else {
+	        status.textContent += '\n✅ Step 6: Updated recruits (if any matched).';
+	      }
+	    }
+	  
+	    status.textContent += '\n🎉 All done! Redirecting to login...';
+	    setTimeout(() => window.location.href = 'login.html', 4000);
+	  });
+	</script>
 </body>
 </html>
