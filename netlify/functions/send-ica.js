@@ -51,17 +51,19 @@ async function createEnvelopeWithEsignProvider(payload) {
     throw new Error('SignWell API not fully configured');
   }
 
-  // ✅ Use the generic /documents endpoint
-  const url = `${ESIGN_API_BASE_URL}/document_templates/documents`;
+  // Match docs exactly
+  const url = `${ESIGN_API_BASE_URL}/document_templates/documents/`;
 
-  // This role MUST match the role name defined in your SignWell template
-  const signerRole = 'Contractor'; // change if your template role name is different
+  // This MUST match the role name defined in your SignWell template
+  const signerRole = 'Contractor'; // change if your template role is named differently
 
   const body = {
-    // test_mode: true will send "test" envelopes in SignWell
-    test_mode: false,
+    // Use test mode until you're happy
+    test_mode: true,
 
-    // Either `title` or `name` (we'll send both just to be safe)
+    // Tell SignWell which template to use
+    template_id: ESIGN_ICA_TEMPLATE_ID,
+
     title: `Independent Contractor Agreement - ${payload.firstName} ${payload.lastName}`,
     name:  `Independent Contractor Agreement - ${payload.firstName} ${payload.lastName}`,
 
@@ -76,7 +78,7 @@ async function createEnvelopeWithEsignProvider(payload) {
         role: signerRole
       }
     ],
-    // Optional: store extra info on the document
+
     metadata: {
       agent_id: payload.agentId,
       level: payload.level,
@@ -110,7 +112,6 @@ async function createEnvelopeWithEsignProvider(payload) {
     );
   }
 
-  // SignWell returns an id for the document
   const envelopeId = json.id || json.document_id || null;
   const status = json.status || 'sent';
 
