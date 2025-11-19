@@ -113,132 +113,122 @@
 	    icon.classList.toggle('fa-eye-slash');
 	  });
 	</script>
-  <script type="module">
-	  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-	  
-	  const supabase = createClient(
-	    'https://ddlbgkolnayqrxslzsxn.supabase.co',
-	    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
-	  );
-	  
-	  const form = document.getElementById('signup-form');
-	  const status = document.getElementById('status');
-	  const message = document.getElementById('message');
-	
-	  form.addEventListener('submit', async (event) => {
-	    event.preventDefault();
-	    status.textContent = '⏳ Signing up...';
-	    message.textContent = '';
-	
-	    const agentId   = document.getElementById('agent-id').value.trim();
-	    const password  = document.getElementById('password').value;
-	    const confirmPw = document.getElementById('confirm-password').value;
-	
-	    if (!agentId || !password) {
-	      status.textContent = '⚠️ Enter your Agent ID and password.';
-	      return;
-	    }
-	    if (password !== confirmPw) {
-	      status.textContent = '⚠️ Passwords do not match.';
-	      return;
-	    }
-	
-	    // 🔁 1) Sync ICA status from SignWell into Supabase (best-effort)
-	    try {
-	      await fetch('/.netlify/functions/sync-ica-status', {
-	        method: 'POST',
-	        headers: { 'Content-Type': 'application/json' },
-	        body: JSON.stringify({ agent_id: agentId })
-	      });
-	    } catch (err) {
-	      console.error('sync-ica-status error (frontend):', err);
-	      // We still rely on DB state below.
-	    }
-	
-	    // 2) Load approved_agents row with ICA + contact info
-	    const { data: approved, error: checkErr } = await supabase
-	      .from('approved_agents')
-	      .select(`
-	        id,
-	        agent_id,
-	        is_registered,
-	        ica_signed,
-	        ica_status,
-	        level,
-	        recruiter_id,
-	        email,
-	        first_name,
-	        last_name,
-	        phone
-	      `)
-	      .eq('agent_id', agentId)
-	      .maybeSingle();
-	
-	    if (checkErr) {
-	      console.error('Error checking approved_agents:', checkErr);
-	      status.textContent = '❌ Error checking agent ID. Please contact support.';
-	      return;
-	    }
-	
-	    if (!approved) {
-	      status.textContent = '❌ Agent ID not found. Ask your upline or admin to pre-approve you.';
-	      return;
-	    }
-	
-	    if (approved.is_registered) {
-	      status.textContent = '❌ This agent ID is already registered. Try logging in instead.';
-	      return;
-	    }
-	
-	    // 3) Enforce "ICA must be signed" rule
-	    const icaStatus = (approved.ica_status || '').toLowerCase();
-	    const isSigned = approved.ica_signed === true || icaStatus === 'completed';
-	
-	    if (!isSigned) {
-	      status.textContent =
-	        '⚠️ Your Independent Contractor Agreement is not marked as signed yet. ' +
-	        'Please complete the contract that was emailed to you or contact your upline.';
-	      return;
-	    }
-	
-	    // 4) We MUST have an email from pre-approval/ICA
-	    if (!approved.email) {
-	      status.textContent =
-	        '⚠️ No email is on file for your contract. Please contact an admin to fix your pre-approval.';
-	      return;
-	    }
-	
-	    const authEmail = approved.email.trim();
-	    const metaFirst = approved.first_name || '';
-	    const metaLast  = approved.last_name || '';
-	    const metaPhone = approved.phone || null; // already normalized from webhook (Phone_1)
-	
-	    // 5) Create auth user; metadata includes agent, name, phone, level, recruiter
-	    const { error: signUpError } = await supabase.auth.signUp({
-	      email: authEmail,
-	      password,
-	      options: {
-	        emailRedirectTo: 'https://familyvaluesgroup.com/confirmed.html',
-	        data: {
-	          agent_id: agentId,
-	          first_name: metaFirst,
-	          last_name: metaLast,
-	          phone: metaPhone,
-	          level: approved.level || null,
-	          recruiter_id: approved.recruiter_id || null
-	        }
-	      }
-	    });
-	
-	    if (signUpError) {
-	      console.error('signUp error:', signUpError);
-	      status.textContent = '❌ Signup failed: ' + signUpError.message;
-	      return;
-	    }
-	
-	    status.textContent =
-	      '✅ Account created. Check ' + authEmail + ' to confirm your account.';
-	  });
-	</script>
+    <script type="module">
+    import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+    
+    const supabase = createClient(
+      'https://ddlbgkolnayqrxslzsxn.supabase.co',
+      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQzOb3SXV5TDT5Ho'
+    );
+    
+    const form   = document.getElementById('signup-form');
+    const status = document.getElementById('status');
+    const message = document.getElementById('message');
+  
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      status.textContent = '⏳ Signing up...';
+      message.textContent = '';
+  
+      const agentId   = document.getElementById('agent-id').value.trim();
+      const password  = document.getElementById('password').value;
+      const confirmPw = document.getElementById('confirm-password').value;
+  
+      if (!agentId || !password) {
+        status.textContent = '⚠️ Enter your Agent ID and password.';
+        return;
+      }
+      if (password !== confirmPw) {
+        status.textContent = '⚠️ Passwords do not match.';
+        return;
+      }
+  
+      // 1) Load approved_agents row with ICA + contact info.
+      // The SignWell webhook keeps this up to date.
+      const { data: approved, error: checkErr } = await supabase
+        .from('approved_agents')
+        .select(`
+          id,
+          agent_id,
+          is_registered,
+          ica_signed,
+          ica_status,
+          level,
+          recruiter_id,
+          email,
+          first_name,
+          last_name,
+          phone
+        `)
+        .eq('agent_id', agentId)
+        .maybeSingle();
+  
+      if (checkErr) {
+        console.error('Error checking approved_agents:', checkErr);
+        status.textContent = '❌ Error checking agent ID. Please contact support.';
+        return;
+      }
+  
+      if (!approved) {
+        status.textContent = '❌ Agent ID not found. Ask your upline or admin to pre-approve you.';
+        return;
+      }
+  
+      if (approved.is_registered) {
+        status.textContent = '❌ This agent ID is already registered. Try logging in instead.';
+        return;
+      }
+  
+      // 2) Enforce "ICA must be signed" rule
+      const icaStatus = (approved.ica_status || '').toLowerCase();
+      const isSigned =
+        approved.ica_signed === true || icaStatus === 'completed';
+  
+      if (!isSigned) {
+        status.textContent =
+          '⚠️ Your Independent Contractor Agreement is not marked as signed yet. ' +
+          'If you just signed, give it a few minutes and try again. Otherwise, contact your upline.';
+        return;
+      }
+  
+      // 3) We MUST have an email from pre-approval/ICA
+      if (!approved.email) {
+        status.textContent =
+          '⚠️ No email is on file for your contract. Please contact an admin to fix your pre-approval.';
+        return;
+      }
+  
+      const authEmail = approved.email.trim();
+      const metaFirst = approved.first_name || '';
+      const metaLast  = approved.last_name || '';
+      const metaPhone = approved.phone || null; // normalized by webhook (Phone_1)
+  
+      // 4) Create auth user; metadata includes agent, name, phone, level, recruiter
+      const { error: signUpError } = await supabase.auth.signUp({
+        email: authEmail,
+        password,
+        options: {
+          emailRedirectTo: 'https://familyvaluesgroup.com/confirmed.html',
+          data: {
+            agent_id: agentId,
+            first_name: metaFirst,
+            last_name: metaLast,
+            phone: metaPhone,
+            level: approved.level || null,
+            recruiter_id: approved.recruiter_id || null
+          }
+        }
+      });
+  
+      if (signUpError) {
+        console.error('signUp error:', signUpError);
+        status.textContent = '❌ Signup failed: ' + signUpError.message;
+        return;
+      }
+  
+      status.textContent =
+        '✅ Account created. Check ' + authEmail + ' to confirm your account.';
+    });
+  </script>
 </body>
 </html>
