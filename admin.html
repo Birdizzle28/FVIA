@@ -693,26 +693,56 @@
 	        <button class="overlay-close" data-close>&times;</button>
 	      </div>
 	      <div class="overlay-body">
-	        <form id="agent-form">
-			  <label class="form-group">
-			    <span>Agent ID (NPN)</span>
-			    <input id="agent-id" placeholder="NPN (digits only or alphanumeric)" required>
-			  </label>
+	        <form id="agent-form" class="stacked-form">
+			  <!-- NPN / Agent ID -->
+			  <div class="float-field">
+			    <input id="agent-id" type="text" placeholder=" " required>
+			    <label for="agent-id">Agent ID (NPN)</label>
+			  </div>
 			
-			  <label class="form-group">
-			    <span>Recruiter</span>
+			  <!-- First Name -->
+			  <div class="float-field">
+			    <input id="agent-first-name" type="text" placeholder=" " required>
+			    <label for="agent-first-name">First Name</label>
+			  </div>
+			
+			  <!-- Last Name -->
+			  <div class="float-field">
+			    <input id="agent-last-name" type="text" placeholder=" " required>
+			    <label for="agent-last-name">Last Name</label>
+			  </div>
+			
+			  <!-- Email (for sending ICA) -->
+			  <div class="float-field">
+			    <input id="agent-email" type="email" placeholder=" " required>
+			    <label for="agent-email">Email (for ICA & login)</label>
+			  </div>
+			
+			  <!-- Upline / Recruiter -->
+			  <div class="float-field">
 			    <select id="agent-recruiter" required>
 			      <option value="">Select recruiter…</option>
-			      <!-- options filled by JS from the agents table -->
+			      <!-- populated by populateRecruiterSelect() in admin.js -->
 			    </select>
-			  </label>
-			
-			  <div style="display:flex; gap:10px; justify-content:flex-end;">
-			    <button type="button" data-close>Cancel</button>
-			    <button type="submit" class="see-all">Add</button>
+			    <label for="agent-recruiter">Recruiter / Upline</label>
 			  </div>
-			  <p id="agent-msg"></p>
+			
+			  <!-- Level -->
+			  <div class="float-field">
+			    <select id="agent-level" required>
+			      <option value="">Select level…</option>
+			      <option value="agent">Agent</option>
+			      <option value="mit">MIT</option>
+			      <option value="manager">Manager</option>
+			      <option value="mga">MGA</option>
+			      <option value="area_manager">Area Manager</option>
+			    </select>
+			    <label for="agent-level">Starting Level</label>
+			  </div>
+			
+			  <button type="submit">Pre-Approve Agent</button>
 			</form>
+			<p id="agent-msg" class="status-line"></p>
 	      </div>
 	    </div>
 	  </div>
