@@ -163,7 +163,20 @@
 	      status.textContent = '⚠️ Passwords do not match.';
 	      return;
 	    }
-	  
+
+		// 🔁 1) Sync ICA status from SignWell into Supabase
+		  try {
+		    await fetch('/.netlify/functions/sync-ica-status', {
+		      method: 'POST',
+		      headers: { 'Content-Type': 'application/json' },
+		      body: JSON.stringify({ agent_id: agentId })
+		    });
+		    // we don't even have to read the response; we just want Supabase updated
+		  } catch (err) {
+		    console.error('sync-ica-status error (frontend):', err);
+		    // Don't hard-fail signup here — we still rely on the DB values below.
+		  }
+
 	    // Check pre-approval AND ICA status
 	    const { data: approved, error: checkErr } = await supabase
 	      .from('approved_agents')
