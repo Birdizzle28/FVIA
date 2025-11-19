@@ -72,6 +72,7 @@ async function createEnvelopeWithEsignProvider(payload) {
     // ✅ IMPORTANT: This is what the 422 error is asking for
     recipients: [
       {
+        id: payload.agentId || '1',
         name:  `${payload.firstName} ${payload.lastName}`,
         email: payload.email,
       }
