@@ -42,39 +42,48 @@ function jsonResponse(statusCode, data) {
 /**
  * Actually create a SignWell document from the ICA template.
  * payload = { email, firstName, lastName, level, agentId, approvedAgentId }
+ *//**
+ * Actually create a SignWell document from the ICA template.
+ * payload = { email, firstName, lastName, level, agentId, approvedAgentId }
  */
 async function createEnvelopeWithEsignProvider(payload) {
   if (!ESIGN_API_KEY || !ESIGN_ICA_TEMPLATE_ID) {
     throw new Error('SignWell API not fully configured');
   }
 
-  // ✅ Correct endpoint: /documents
-  const base = ESIGN_API_BASE_URL.replace(/\/$/, '');
-  const url = `${base}/documents`;
+  // ✅ Use the generic /documents endpoint
+  const url = `${ESIGN_API_BASE_URL}/documents/`;
+
+  // This role MUST match the role name defined in your SignWell template
+  const signerRole = 'Contractor'; // change if your template role name is different
 
   const body = {
-    // flip to true if you want sandbox behavior
+    // test_mode: true will send "test" envelopes in SignWell
     test_mode: false,
 
-    // ✅ use template_ids instead of a /document_templates/... URL
-    template_ids: [ESIGN_ICA_TEMPLATE_ID],
-
+    // Either `title` or `name` (we'll send both just to be safe)
     title: `Independent Contractor Agreement - ${payload.firstName} ${payload.lastName}`,
+    name:  `Independent Contractor Agreement - ${payload.firstName} ${payload.lastName}`,
+
     subject: 'Independent Contractor Agreement',
     message:
       'Please review and sign the Independent Contractor Agreement to get started with Family Values Group.',
 
-    signers: [
+    // ✅ IMPORTANT: This is what the 422 error is asking for
+    recipients: [
       {
-        name: `${payload.firstName} ${payload.lastName}`,
+        name:  `${payload.firstName} ${payload.lastName}`,
         email: payload.email,
-        send_email: true,
-        // role is optional unless your template explicitly uses roles
-        // role: 'Contractor'
+        role:  signerRole,   // must match the template role
+        send_email: true
       }
     ],
 
-    // attach extra info to the document in metadata
+    // ✅ IMPORTANT: this satisfies the "files" requirement by telling
+    // SignWell to use your saved template
+    template_ids: [ESIGN_ICA_TEMPLATE_ID],
+
+    // Optional: store extra info on the document
     metadata: {
       agent_id: payload.agentId,
       level: payload.level,
@@ -95,7 +104,7 @@ async function createEnvelopeWithEsignProvider(payload) {
   let json;
   try {
     json = text ? JSON.parse(text) : {};
-  } catch (_) {
+  } catch (e) {
     json = { raw: text };
   }
 
@@ -108,6 +117,7 @@ async function createEnvelopeWithEsignProvider(payload) {
     );
   }
 
+  // SignWell returns an id for the document
   const envelopeId = json.id || json.document_id || null;
   const status = json.status || 'sent';
 
