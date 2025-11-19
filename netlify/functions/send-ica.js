@@ -74,7 +74,7 @@ async function createEnvelopeWithEsignProvider(payload) {
       {
         name:  `${payload.firstName} ${payload.lastName}`,
         email: payload.email,
-        role:  signerRole,   // must match the template role
+        id:  signerRole,   // must match the template role
       }
     ],
 
