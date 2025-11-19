@@ -74,7 +74,7 @@ async function createEnvelopeWithEsignProvider(payload) {
       {
         name: `${payload.firstName} ${payload.lastName}`,
         email: payload.email,
-        role: signerRole
+        id: signerRole
       }
     ],
     // Optional: store extra info on the document
