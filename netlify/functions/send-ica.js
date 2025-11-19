@@ -77,11 +77,6 @@ async function createEnvelopeWithEsignProvider(payload) {
         email: payload.email,
       }
     ],
-
-    // ✅ IMPORTANT: this satisfies the "files" requirement by telling
-    // SignWell to use your saved template
-    template_ids: [ESIGN_ICA_TEMPLATE_ID],
-
     // Optional: store extra info on the document
     metadata: {
       agent_id: payload.agentId,
