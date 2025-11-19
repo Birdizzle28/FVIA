@@ -75,6 +75,12 @@ async function createEnvelopeWithEsignProvider(payload) {
         name: `${payload.firstName} ${payload.lastName}`,
         email: payload.email,
         placeholder_name: 'Contractor'          // must match template role
+      },
+      {
+        id: 2,
+        name: 'Chancellor Timothy Johnson',
+        email: 'info@familyvaluesgroup.com',    // or whatever email should sign
+        placeholder_name: 'Document Sender'     // must match template role
       }
     ],
 
