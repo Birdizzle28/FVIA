@@ -619,55 +619,90 @@ document.addEventListener('DOMContentLoaded', async () => {
   nextBtn?.addEventListener('click', async () => { currentPage++; await loadLeadsWithFilters(); });
   prevBtn?.addEventListener('click', async () => { if (currentPage > 1) { currentPage--; await loadLeadsWithFilters(); } });
 
-  // === Add Agent form (NPN + recruiter + NIPR sync) ===
+    // === Pre-Approve New Agent (NPN + name + email + level + NIPR + ICA stub) ===
   document.getElementById('agent-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const msg = document.getElementById('agent-msg');
-    msg.textContent = '';
+    if (msg) msg.textContent = '';
 
-    const npn = document.getElementById('agent-id').value.trim(); // NPN = agent_id
-    const recruiterId = document.getElementById('agent-recruiter').value;
+    const npn         = document.getElementById('agent-id')?.value.trim() || '';
+    const firstName   = document.getElementById('agent-first-name')?.value.trim() || '';
+    const lastName    = document.getElementById('agent-last-name')?.value.trim() || '';
+    const email       = document.getElementById('agent-email')?.value.trim() || '';
+    const recruiterId = document.getElementById('agent-recruiter')?.value || '';
+    const level       = document.getElementById('agent-level')?.value || '';
 
-    if (!npn || !recruiterId) {
-      msg.textContent = '⚠️ Enter NPN and choose recruiter.';
+    if (!npn || !firstName || !lastName || !email || !recruiterId || !level) {
+      if (msg) msg.textContent = '⚠️ Fill out NPN, name, email, level, and recruiter.';
       return;
     }
 
-    // 1) Pre-approve in approved_agents
+    // 1) Check if already in approved_agents
     const { data: existing, error: existErr } = await supabase
       .from('approved_agents')
-      .select('id, is_registered')
+      .select('id, is_registered, onboarding_stage, level')
       .eq('agent_id', npn)
       .maybeSingle();
 
     if (existErr) {
-      msg.textContent = '❌ Error checking approval: ' + existErr.message;
+      if (msg) msg.textContent = '❌ Error checking approval: ' + existErr.message;
       return;
     }
 
     if (existing?.is_registered) {
-      msg.textContent = '❌ That agent ID is already registered.';
+      if (msg) msg.textContent = '❌ That agent ID is already registered.';
       return;
     }
 
     const payload = {
       agent_id: npn,
       recruiter_id: recruiterId,
-      is_registered: false
+      email,
+      first_name: firstName,
+      last_name: lastName,
+      level,
+      is_registered: existing?.is_registered || false,
+      onboarding_stage: existing?.onboarding_stage || 'pre_approved'
     };
 
-    const { error: upErr } = existing
-      ? await supabase.from('approved_agents').update(payload).eq('id', existing.id)
-      : await supabase.from('approved_agents').insert(payload);
+    // 2) Upsert into approved_agents and get the row id
+    let approvedId = existing?.id || null;
 
-    if (upErr) {
-      msg.textContent = '❌ Could not save pre-approval: ' + upErr.message;
+    if (existing) {
+      const { data: updated, error: upErr } = await supabase
+        .from('approved_agents')
+        .update(payload)
+        .eq('id', existing.id)
+        .select('id')
+        .maybeSingle();
+
+      if (upErr) {
+        if (msg) msg.textContent = '❌ Could not save pre-approval: ' + upErr.message;
+        return;
+      }
+      approvedId = updated?.id || existing.id;
+    } else {
+      const { data: inserted, error: upErr } = await supabase
+        .from('approved_agents')
+        .insert(payload)
+        .select('id')
+        .maybeSingle();
+
+      if (upErr) {
+        if (msg) msg.textContent = '❌ Could not save pre-approval: ' + upErr.message;
+        return;
+      }
+      approvedId = inserted?.id || null;
+    }
+
+    if (!approvedId) {
+      if (msg) msg.textContent = '⚠️ Pre-approved, but could not read record ID.';
       return;
     }
 
-    // 2) NIPR sync + parse
+    // 3) NIPR sync + parse (same as before)
     try {
-      msg.textContent = '✅ Pre-approved. Syncing NIPR data…';
+      if (msg) msg.textContent = '✅ Pre-approved. Syncing NIPR data…';
 
       const syncRes = await fetch('/.netlify/functions/nipr-sync-agent', {
         method: 'POST',
@@ -678,7 +713,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!syncRes.ok) {
         const txt = await syncRes.text();
         console.error('NIPR sync error:', txt);
-        msg.textContent = '⚠️ Pre-approved, but NIPR sync failed. Check logs.';
+        if (msg) msg.textContent = '⚠️ Pre-approved, but NIPR sync failed. Check logs.';
         return;
       }
 
@@ -694,17 +729,43 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (!parseRes.ok) {
         const txt = await parseRes.text();
         console.error('NIPR parse error:', txt);
-        msg.textContent = '⚠️ Pre-approved & synced, but parse failed. Check logs.';
+        if (msg) msg.textContent = '⚠️ Pre-approved & synced, but parse failed. Check logs.';
         return;
       }
 
       const parseJson = await parseRes.json();
       console.log('NIPR parse result:', parseJson);
-
-      msg.textContent = '✅ Pre-approved and NIPR data synced (profile, licenses, appointments, snapshot).';
     } catch (err) {
       console.error('Error calling NIPR functions:', err);
-      msg.textContent = '⚠️ Pre-approved, but there was an error syncing NIPR data.';
+      if (msg) msg.textContent = '⚠️ Pre-approved, but there was an error syncing NIPR data.';
+      return;
+    }
+
+    // 4) Stub: kick off ICA send (we’ll implement the Netlify function next)
+    try {
+      if (msg) msg.textContent = '✅ NIPR synced. Sending ICA for e-sign…';
+
+      const icaRes = await fetch('/.netlify/functions/send-ica', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          approved_agent_id: approvedId
+        })
+      });
+
+      if (!icaRes.ok) {
+        const txt = await icaRes.text();
+        console.error('ICA send error:', txt);
+        if (msg) msg.textContent = '⚠️ NIPR ok, but ICA send failed. Check logs.';
+        return;
+      }
+
+      const icaJson = await icaRes.json();
+      console.log('ICA send result:', icaJson);
+      if (msg) msg.textContent = '🎉 Pre-approved, NIPR synced, and ICA sent for e-sign.';
+    } catch (err) {
+      console.error('Error calling send-ica function:', err);
+      if (msg) msg.textContent = '⚠️ NIPR ok, but there was an error sending ICA.';
       return;
     }
 
