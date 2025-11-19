@@ -1,5 +1,5 @@
 // netlify/functions/sync-ica-status.js
-// Sync latest ICA status from SignWell into Supabase
+// Sync latest ICA status from SignWell into Supabase + notify uplines
 
 const { createClient } = require('@supabase/supabase-js');
 
@@ -105,16 +105,20 @@ exports.handler = async (event) => {
     const latestStatus = (json.status || '').toLowerCase() || 'unknown';
     const nowIso = new Date().toISOString();
     const wasSigned = approved.ica_signed === true;
+    const wasCompleted = (approved.ica_status || '').toLowerCase() === 'completed';
 
     const updatePayload = {
       ica_status: latestStatus
     };
 
+    let justCompletedNow = false;
+
     // If it just became completed, mark signed + timestamp + onboarding_stage
-    if (latestStatus === 'completed' && !wasSigned) {
+    if (latestStatus === 'completed' && !wasSigned && !wasCompleted) {
+      justCompletedNow = true;
       updatePayload.ica_signed = true;
       updatePayload.ica_signed_at = nowIso;
-      // bump onboarding stage if you want
+
       if (!approved.onboarding_stage || approved.onboarding_stage === 'pre_approved') {
         updatePayload.onboarding_stage = 'ica_signed';
       }
@@ -132,13 +136,67 @@ exports.handler = async (event) => {
       });
     }
 
+    // 3) Notify uplines only the *first* time it becomes completed
+    if (justCompletedNow) {
+      try {
+        // Collect recipient IDs: recruiter + all admins
+        const recipientIds = new Set();
+
+        if (approved.recruiter_id) {
+          recipientIds.add(approved.recruiter_id);
+        }
+
+        const { data: admins, error: adminErr } = await supabase
+          .from('agents')
+          .select('id')
+          .eq('is_admin', true);
+
+        if (adminErr) {
+          console.error('Error loading admins for ICA notification:', adminErr);
+        } else if (admins) {
+          admins.forEach(a => recipientIds.add(a.id));
+        }
+
+        const recipients = Array.from(recipientIds);
+        if (recipients.length) {
+          const agentName =
+            (approved.first_name || approved.last_name)
+              ? `${approved.first_name || ''} ${approved.last_name || ''}`.trim()
+              : approved.agent_id;
+
+          const tasks = recipients.map(rid => ({
+            title: `New agent ICA signed: ${agentName}`,
+            status: 'open',
+            assigned_to: rid,
+            metadata: {
+              type: 'onboarding',
+              stage: 'ica_signed',
+              agent_id: approved.agent_id,
+              approved_agent_id: approved.id
+            }
+          }));
+
+          const { error: taskErr } = await supabase
+            .from('tasks')
+            .insert(tasks);
+
+          if (taskErr) {
+            console.error('Error inserting ICA notification tasks:', taskErr);
+          }
+        }
+      } catch (notifyErr) {
+        console.error('Error during ICA upline notifications:', notifyErr);
+      }
+    }
+
     return jsonResponse(200, {
       ok: true,
       ica_status: latestStatus,
       ica_signed: latestStatus === 'completed' || wasSigned,
-      ica_signed_at: latestStatus === 'completed'
-        ? (approved.ica_signed_at || nowIso)
-        : (approved.ica_signed_at || null)
+      ica_signed_at:
+        latestStatus === 'completed'
+          ? (approved.ica_signed_at || nowIso)
+          : (approved.ica_signed_at || null)
     });
   } catch (err) {
     console.error('sync-ica-status error:', err);
