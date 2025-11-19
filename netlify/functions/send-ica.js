@@ -1,62 +1,37 @@
 // netlify/functions/send-ica.js
-// Generic ICA sender – wire real e-sign provider later (DocuSign, SignWell, etc.)
+// Sends ICA via SignWell template + tracks status in Supabase
 
 const { createClient } = require('@supabase/supabase-js');
 
-// ✅ Environment variables you MUST set in Netlify dashboard
+// ---- Environment variables ----
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-// Optional: placeholders for your future e-sign provider
+// SignWell config
 const ESIGN_API_KEY = process.env.ESIGN_API_KEY || '';
-const ESIGN_API_BASE_URL = process.env.ESIGN_API_BASE_URL || '';
+const ESIGN_API_BASE_URL =
+  process.env.ESIGN_API_BASE_URL || 'https://www.signwell.com/api/v1';
+const ESIGN_ICA_TEMPLATE_ID = process.env.ESIGN_ICA_TEMPLATE_ID || '';
 
 if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
   console.warn('⚠️ SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY is not set.');
 }
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
-/**
- * Placeholder: create an envelope with your e-sign provider
- * Replace this with real DocuSign / SignWell calls later.
- *
- * For now, it just returns a fake envelopeId + status so you can
- * test the entire flow (DB writes, UI, etc.) without hitting a real API.
- */
-async function createEnvelopeWithEsignProvider(payload) {
-  // payload = { email, firstName, lastName, level, agentId, approvedAgentId }
-
-  console.log('createEnvelopeWithEsignProvider() called with:', payload);
-
-  // TODO: Replace with real HTTP call to DocuSign / SignWell
-  // Example shape:
-  // const res = await fetch(`${ESIGN_API_BASE_URL}/envelopes`, { ... });
-  // const json = await res.json();
-  // return {
-  //   envelopeId: json.envelopeId,
-  //   status: json.status || 'sent',
-  //   raw: json
-  // };
-
-  const fakeEnvelopeId = `DEMO-ENV-${Date.now()}`;
-
-  return {
-    envelopeId: fakeEnvelopeId,
-    status: 'sent',
-    raw: {
-      provider: 'demo',
-      at: new Date().toISOString()
-    }
-  };
+if (!ESIGN_API_KEY || !ESIGN_ICA_TEMPLATE_ID) {
+  console.warn(
+    '⚠️ ESIGN_API_KEY or ESIGN_ICA_TEMPLATE_ID is not set. ICA sending will fail.'
+  );
 }
 
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+// ---- Helper for responses ----
 function jsonResponse(statusCode, data) {
   return {
     statusCode,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*', // same-origin in your app, but leave * for now
+      'Access-Control-Allow-Origin': '*',
       'Access-Control-Allow-Methods': 'OPTIONS, POST',
       'Access-Control-Allow-Headers': 'Content-Type'
     },
@@ -64,6 +39,81 @@ function jsonResponse(statusCode, data) {
   };
 }
 
+/**
+ * Actually create a SignWell document from the ICA template.
+ * payload = { email, firstName, lastName, level, agentId, approvedAgentId }
+ */
+async function createEnvelopeWithEsignProvider(payload) {
+  if (!ESIGN_API_KEY || !ESIGN_ICA_TEMPLATE_ID) {
+    throw new Error('SignWell API not fully configured');
+  }
+
+  const url = `${ESIGN_API_BASE_URL}/document_templates/${ESIGN_ICA_TEMPLATE_ID}/send_document/`;
+
+  // This role MUST match the placeholder role name in your template: "Contractor"
+  const signerRole = 'Contractor';
+
+  const body = {
+    // set to true if you want to test without sending real emails
+    test_mode: false,
+    name: `Independent Contractor Agreement - ${payload.firstName} ${payload.lastName}`,
+    subject: 'Independent Contractor Agreement',
+    message:
+      'Please review and sign the Independent Contractor Agreement to get started with Family Values Group.',
+    signers: [
+      {
+        name: `${payload.firstName} ${payload.lastName}`,
+        email: payload.email,
+        role: signerRole,
+        // SignWell defaults to sending the email; send_email is optional
+        send_email: true
+      }
+    ],
+    // Optional: store extra info on the document
+    custom_fields: {
+      agent_id: payload.agentId,
+      level: payload.level
+    }
+  };
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Api-Key': ESIGN_API_KEY
+    },
+    body: JSON.stringify(body)
+  });
+
+  const text = await res.text();
+  let json;
+  try {
+    json = text ? JSON.parse(text) : {};
+  } catch (e) {
+    json = { raw: text };
+  }
+
+  if (!res.ok) {
+    console.error('SignWell API error:', res.status, text);
+    throw new Error(
+      `SignWell error ${res.status}: ${
+        json.error || json.message || 'see logs'
+      }`
+    );
+  }
+
+  // SignWell returns an "id" for the document
+  const envelopeId = json.id || json.document_id || null;
+  const status = json.status || 'sent';
+
+  return {
+    envelopeId,
+    status,
+    raw: json
+  };
+}
+
+// ---- Netlify handler ----
 exports.handler = async (event, context) => {
   // CORS preflight
   if (event.httpMethod === 'OPTIONS') {
@@ -78,12 +128,12 @@ exports.handler = async (event, context) => {
     const body = JSON.parse(event.body || '{}');
 
     const {
-      agent_id,           // NPN
+      agent_id, // NPN
       email,
       first_name,
       last_name,
-      level,              // Agent / MIT / Manager / MGA / Area Manager
-      approved_agent_id   // optional: direct reference to approved_agents.id
+      level, // Agent / MIT / Manager / MGA / Area Manager
+      approved_agent_id // optional: direct reference to approved_agents.id
     } = body;
 
     if (!agent_id) {
@@ -93,13 +143,18 @@ exports.handler = async (event, context) => {
       return jsonResponse(400, { error: 'email is required to send ICA' });
     }
     if (!first_name || !last_name) {
-      return jsonResponse(400, { error: 'first_name and last_name are required' });
+      return jsonResponse(400, {
+        error: 'first_name and last_name are required'
+      });
     }
     if (!level) {
-      return jsonResponse(400, { error: 'level is required (Agent / MIT / Manager / MGA / Area Manager)' });
+      return jsonResponse(400, {
+        error:
+          'level is required (Agent / MIT / Manager / MGA / Area Manager)'
+      });
     }
 
-    // 1) Fetch the approved_agents row (by id if provided, otherwise by agent_id)
+    // 1) Fetch the approved_agents row
     let approvedAgentRow = null;
 
     if (approved_agent_id) {
@@ -113,7 +168,6 @@ exports.handler = async (event, context) => {
         console.error('Error loading approved_agents by id:', error);
         return jsonResponse(500, { error: 'Failed to load approved agent (by id)' });
       }
-
       approvedAgentRow = data;
     } else {
       const { data, error } = await supabase
@@ -124,9 +178,10 @@ exports.handler = async (event, context) => {
 
       if (error) {
         console.error('Error loading approved_agents by agent_id:', error);
-        return jsonResponse(500, { error: 'Failed to load approved agent (by agent_id)' });
+        return jsonResponse(500, {
+          error: 'Failed to load approved agent (by agent_id)'
+        });
       }
-
       approvedAgentRow = data;
     }
 
@@ -138,7 +193,7 @@ exports.handler = async (event, context) => {
 
     const approvedId = approvedAgentRow.id;
 
-    // 2) Call the e-sign provider (placeholder stub for now)
+    // 2) Call SignWell
     const envelope = await createEnvelopeWithEsignProvider({
       email,
       firstName: first_name,
@@ -158,7 +213,7 @@ exports.handler = async (event, context) => {
     const envelopeId = envelope.envelopeId;
     const envelopeStatus = envelope.status || 'sent';
 
-    // 3) Insert into ica_envelopes (audit log of all envelopes)
+    // 3) Insert into ica_envelopes
     const { error: insertEnvErr } = await supabase
       .from('ica_envelopes')
       .insert({
@@ -172,10 +227,10 @@ exports.handler = async (event, context) => {
 
     if (insertEnvErr) {
       console.error('Error inserting into ica_envelopes:', insertEnvErr);
-      // Not fatal for the caller, but we should still let them know
+      // not fatal
     }
 
-    // 4) Update approved_agents with level, contact info, and ICA status
+    // 4) Update approved_agents with ICA info
     const { error: updateApprErr } = await supabase
       .from('approved_agents')
       .update({
@@ -185,13 +240,15 @@ exports.handler = async (event, context) => {
         last_name,
         ica_envelope_id: envelopeId,
         ica_status: envelopeStatus,
-        ica_signed: envelopeStatus === 'completed' // usually "sent", so this will be false
+        ica_signed: envelopeStatus === 'completed'
       })
       .eq('id', approvedId);
 
     if (updateApprErr) {
       console.error('Error updating approved_agents:', updateApprErr);
-      return jsonResponse(500, { error: 'Failed to update approved_agents with ICA info' });
+      return jsonResponse(500, {
+        error: 'Failed to update approved_agents with ICA info'
+      });
     }
 
     return jsonResponse(200, {
