@@ -70,13 +70,13 @@ async function createEnvelopeWithEsignProvider(payload) {
       'Please review and sign the Independent Contractor Agreement to get started with Family Values Group.',
 
     template_ids: [ESIGN_ICA_TEMPLATE_ID],
-    recipients: {
-      recipient_1: {
-        id: signerRole || '1',
-        name:  `${payload.firstName} ${payload.lastName}`,
+    signers: [
+      {
+        name: `${payload.firstName} ${payload.lastName}`,
         email: payload.email,
+        role: signerRole
       }
-    },
+    ],
     // Optional: store extra info on the document
     metadata: {
       agent_id: payload.agentId,
