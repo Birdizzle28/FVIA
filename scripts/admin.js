@@ -853,6 +853,19 @@ function populateRecruiterSelect() {
     sel.appendChild(opt);
   });
 }
+function populateTaskAgentSelect() {
+  const sel = document.getElementById('task-agent');
+  if (!sel) return;
+
+  sel.innerHTML = '<option value="">Select agent…</option>';
+
+  (allAgents || []).forEach(a => {
+    const opt = document.createElement('option');
+    opt.value = a.id; // agents.id (matches auth.uid)
+    opt.textContent = a.full_name || a.id;
+    sel.appendChild(opt);
+  });
+}
 
 // Leads table
 async function loadLeadsWithFilters() {
