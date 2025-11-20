@@ -2269,3 +2269,15 @@ async function confirmAndRemoveAgent(row) {
     if (msgEl) msgEl.textContent = '❌ Error calling remove-agent function.';
   }
 }
+  // Remove Agent modal: search button
+  document.getElementById('remove-agent-search-btn')?.addEventListener('click', () => {
+    searchAgentsForRemoval();
+  });
+
+  // Allow pressing Enter in the search field
+  document.getElementById('remove-agent-search')?.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      searchAgentsForRemoval();
+    }
+  });
