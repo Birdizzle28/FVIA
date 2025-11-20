@@ -123,6 +123,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   await loadAgentsForAdmin();
   await populateRecruiterSelect();
+  populateTaskAgentSelect();
 
   // Populate Announcement multi-selects
   (function hydrateAnncProducts(){
