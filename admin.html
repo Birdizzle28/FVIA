@@ -514,6 +514,38 @@
 			    </div>
 			  </div>
 			</div>
+		  	
+		  	<!-- Assign Tasks -->
+		    <div class="card">
+		      <h3>Assign Tasks</h3>
+		      <p>Create follow-ups, calls, and reminders for your agents.</p>
+		
+		      <form id="admin-task-form" class="stacked-form">
+		        <!-- Agent select -->
+		        <div class="float-field">
+		          <select id="task-agent" required>
+		            <option value="">Select agent…</option>
+		            <!-- populated by admin.js -->
+		          </select>
+		          <label for="task-agent">Assign to</label>
+		        </div>
+		
+		        <!-- Task title -->
+		        <div class="float-field">
+		          <input id="task-title" type="text" placeholder=" " required />
+		          <label for="task-title">Task title</label>
+		        </div>
+		
+		        <!-- Due date/time (optional) -->
+		        <div class="float-field">
+		          <input id="task-due" type="text" placeholder=" " />
+		          <label for="task-due">Due date/time (optional)</label>
+		        </div>
+		
+		        <button type="submit">Create Task</button>
+		        <p id="task-msg" class="status-line"></p>
+		      </form>
+		    </div>
 	
 	    <!-- Agents -->
 	    <div class="card">
@@ -522,7 +554,7 @@
 	      <button id="open-agent-modal" class="card-link">Add Agent</button>
 	    </div>
 			
-			<!-- Pre-Approval Waitlist -->
+		<!-- Pre-Approval Waitlist -->
 	    <div class="card">
 	      <h3>Pre-Approval Waitlist</h3>
 	      <p>Agents you’ve started onboarding who are waiting for you to review ICA, licenses, and Stripe.</p>
