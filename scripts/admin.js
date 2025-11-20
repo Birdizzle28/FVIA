@@ -627,6 +627,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const npn         = document.getElementById('agent-id')?.value.trim() || '';
     const firstName   = document.getElementById('agent-first-name')?.value.trim() || '';
     const lastName    = document.getElementById('agent-last-name')?.value.trim() || '';
+    const phone       = document.getElementById('agent-phone')?.value.trim() || '';
     const email       = document.getElementById('agent-email')?.value.trim() || '';
     const recruiterId = document.getElementById('agent-recruiter')?.value || '';
     const level       = document.getElementById('agent-level')?.value || '';
