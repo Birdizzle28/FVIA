@@ -570,6 +570,60 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (msg) msg.textContent = '';
     }, 700);
   });
+    // Admin creates a task for an agent
+  document.getElementById('admin-task-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = document.getElementById('task-msg');
+    if (msg) msg.textContent = '';
+
+    const agentId = document.getElementById('task-agent')?.value || '';
+    const title   = document.getElementById('task-title')?.value.trim() || '';
+    const dueRaw  = document.getElementById('task-due')?.value.trim() || '';
+
+    if (!agentId || !title) {
+      if (msg) msg.textContent = '⚠️ Choose an agent and enter a task title.';
+      return;
+    }
+
+    let dueAt = null;
+    if (dueRaw) {
+      // flatpickr uses 'Y-m-d H:i' – this parses as local time
+      const d = new Date(dueRaw.replace(' ', 'T'));
+      if (!isNaN(d.getTime())) {
+        dueAt = d.toISOString();
+      }
+    }
+
+    // who is creating the task
+    const { data: { session } } = await supabase.auth.getSession();
+    const createdBy = session?.user?.id || userId || null;
+
+    const payload = {
+      assigned_to: agentId,    // UUID → matches agents.id
+      title,
+      status: 'open',
+      due_at: dueAt,
+      metadata: {
+        created_by: createdBy,
+        source: 'admin_panel'
+      }
+    };
+
+    const { error } = await supabase.from('tasks').insert(payload);
+
+    if (error) {
+      console.error('Error creating task:', error);
+      if (msg) msg.textContent = '❌ Could not create task: ' + error.message;
+      return;
+    }
+
+    if (msg) msg.textContent = '✅ Task created and assigned.';
+
+    // Reset fields but keep agent selected if you want – here we keep agent
+    document.getElementById('task-title').value = '';
+    document.getElementById('task-due').value = '';
+  });
+  
   document.getElementById('mkt-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const msg = document.getElementById('mkt-msg');
