@@ -375,6 +375,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('open-train-modal')?.addEventListener('click', () => openOverlay('train-modal'));
   document.getElementById('open-mkt-modal')?.addEventListener('click', () => openOverlay('mkt-modal'));
   document.getElementById('open-agent-modal')?.addEventListener('click', () => openOverlay('agent-modal'));
+  document.getElementById('open-remove-agent-modal')?.addEventListener('click', () => openOverlay('remove-agent-modal'));
   function openOverlay(id){
     const el = document.getElementById(id);
     if (!el) return;
@@ -2116,5 +2117,155 @@ async function approveWaitlistEntry(row) {
     await loadWaitlist();
   } catch (err) {
     console.error('Error reloading waitlist after approval:', err);
+  }
+}
+/* =========================
+   Remove Agent: Search + Delete
+   ========================= */
+
+// Called when user hits the Search button in the Remove Agent modal
+async function searchAgentsForRemoval() {
+  const input = document.getElementById('remove-agent-search');
+  const resultsEl = document.getElementById('remove-agent-results');
+  const msgEl = document.getElementById('remove-agent-msg');
+  if (!input || !resultsEl) return;
+
+  const term = input.value.trim();
+  resultsEl.innerHTML = '';
+  msgEl.textContent = '';
+
+  if (!term) {
+    msgEl.textContent = 'Type an NPN or name to search.';
+    return;
+  }
+
+  msgEl.textContent = 'Searching…';
+
+  // Search by NPN OR name (case-insensitive)
+  const { data, error } = await supabase
+    .from('agents')
+    .select('id, agent_id, full_name, email, recruiter_id, first_name, last_name')
+    .or(
+      `agent_id.ilike.%${term}%,` +
+      `full_name.ilike.%${term}%`
+    )
+    .limit(20);
+
+  if (error) {
+    console.error('Error searching agents for removal:', error);
+    msgEl.textContent = '❌ Error searching agents.';
+    return;
+  }
+
+  if (!data || !data.length) {
+    msgEl.textContent = 'No agents found matching that search.';
+    return;
+  }
+
+  // Map recruiter_id → name using allAgents (already loaded for admin)
+  const recruiterNameById = new Map(
+    (allAgents || []).map(a => [a.id, a.full_name])
+  );
+
+  msgEl.textContent = `Found ${data.length} result(s).`;
+
+  resultsEl.innerHTML = data
+    .map(a => {
+      const recruiterName = recruiterNameById.get(a.recruiter_id) || 'Unknown recruiter';
+      return `
+        <div class="remove-agent-row"
+             data-agent-id="${a.id}"
+             data-agent-npn="${a.agent_id || ''}"
+             data-agent-name="${a.full_name || ''}"
+             style="border:1px solid #eee; border-radius:6px; padding:8px 10px; margin-bottom:8px; display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+          <div>
+            <div><strong>${a.full_name || '(no name)'}</strong></div>
+            <div>NPN: ${a.agent_id || '—'}</div>
+            <div>Email: ${a.email || '—'}</div>
+            <div>Recruiter: ${recruiterName}</div>
+          </div>
+          <div style="display:flex; flex-direction:column; justify-content:center; gap:4px;">
+            <button type="button"
+                    class="remove-agent-confirm-btn"
+                    style="padding:4px 8px; font-size:12px; background:#ffe6e6; border:1px solid #ffb3b3;">
+              Remove Agent
+            </button>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  // Wire up per-row Remove buttons
+  resultsEl.querySelectorAll('.remove-agent-confirm-btn').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const row = e.target.closest('.remove-agent-row');
+      if (!row) return;
+      await confirmAndRemoveAgent(row);
+    });
+  });
+}
+
+// Confirm + call Netlify function
+async function confirmAndRemoveAgent(row) {
+  const msgEl = document.getElementById('remove-agent-msg');
+  const agentAuthId = row.getAttribute('data-agent-id');    // agents.id == auth.user.id
+  const agentNpn    = row.getAttribute('data-agent-npn') || '';
+  const agentName   = row.getAttribute('data-agent-name') || '';
+
+  const label = `${agentName || 'this agent'}${agentNpn ? ' (NPN ' + agentNpn + ')' : ''}`;
+
+  const ok = confirm(
+    `This will permanently remove ${label}, including:\n\n` +
+    `• agent_nipr_appointments\n` +
+    `• agent_nipr_licenses\n` +
+    `• agent_nipr_profile\n` +
+    `• agent_nipr_snapshot\n` +
+    `• approved_agents row\n` +
+    `• agents row\n` +
+    `• their own recruits row (the one that represents them)\n` +
+    `• auth user (login)\n\n` +
+    `This cannot be undone. Continue?`
+  );
+  if (!ok) return;
+
+  if (msgEl) msgEl.textContent = 'Removing agent…';
+
+  try {
+    const res = await fetch('/.netlify/functions/remove-agent', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        auth_user_id: agentAuthId,
+        agent_id: agentNpn || null
+      })
+    });
+
+    if (!res.ok) {
+      const txt = await res.text();
+      console.error('remove-agent function error:', txt);
+      if (msgEl) msgEl.textContent = '❌ Failed to remove agent: ' + txt;
+      return;
+    }
+
+    const json = await res.json().catch(() => ({}));
+    console.log('remove-agent result:', json);
+
+    if (msgEl) msgEl.textContent = '✅ Agent removed.';
+
+    // Refresh in-memory agents + waitlist, etc.
+    try {
+      await loadAgentsForAdmin();
+    } catch (_) {}
+
+    try {
+      await loadWaitlist();
+    } catch (_) {}
+
+    // Refresh the search results list so they disappear
+    await searchAgentsForRemoval();
+  } catch (err) {
+    console.error('Error calling remove-agent function:', err);
+    if (msgEl) msgEl.textContent = '❌ Error calling remove-agent function.';
   }
 }
