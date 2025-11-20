@@ -521,7 +521,19 @@
 	      <p>Issue an agent ID + invite so they can sign up.</p>
 	      <button id="open-agent-modal" class="card-link">Add Agent</button>
 	    </div>
-	  </div>
+			
+			<!-- Pre-Approval Waitlist -->
+	    <div class="card">
+	      <h3>Pre-Approval Waitlist</h3>
+	      <p>Agents you’ve started onboarding who are waiting for you to review ICA, licenses, and Stripe.</p>
+	
+	      <div id="waitlist-container"
+	           class="scroll-container"
+	           style="max-height: 260px; overflow-y: auto;">
+	        <!-- Filled by admin.js → loadWaitlist() -->
+	      </div>
+	    </div>
+		</div>
 		
 	  <!-- ===== Modals ===== -->
 	
