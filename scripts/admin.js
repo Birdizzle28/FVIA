@@ -1881,3 +1881,56 @@ async function loadMarketingAssets() {
     });
   });
 }
+/* =========================
+   Agent Waitlist: List
+   ========================= */
+async function loadWaitlist() {
+  const listEl = document.getElementById('waitlist-container');
+  if (!listEl) return;
+
+  listEl.innerHTML = 'Loading…';
+
+  const { data, error } = await supabase
+    .from('agent_waitlist')
+    .select('id, agent_id, first_name, last_name, phone, email, recruiter_id, level, created_at')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error loading agent waitlist:', error);
+    listEl.innerHTML = '<p>Error loading waitlist.</p>';
+    return;
+  }
+
+  if (!data || !data.length) {
+    listEl.innerHTML = '<p>No agents in the waitlist yet.</p>';
+    return;
+  }
+
+  // Map recruiter_id → full_name using allAgents if available
+  const recruiterNameById = new Map(
+    (allAgents || []).map(a => [a.id, a.full_name])
+  );
+
+  listEl.innerHTML = data
+    .map(item => {
+      const recruiterName =
+        recruiterNameById.get(item.recruiter_id) || 'Unknown recruiter';
+      const created = item.created_at
+        ? new Date(item.created_at).toLocaleString()
+        : '';
+
+      return `
+        <div class="wait-row"
+             data-id="${item.id}"
+             style="border:1px solid #eee; border-radius:6px; padding:8px 10px; margin-bottom:8px; font-size:13px;">
+          <div><strong>${item.first_name} ${item.last_name}</strong> (${item.agent_id})</div>
+          <div>Email: ${item.email}</div>
+          <div>Phone: ${item.phone}</div>
+          <div>Recruiter: ${recruiterName}</div>
+          <div>Level: ${item.level}</div>
+          <div style="color:#666; font-size:12px;">Added: ${created}</div>
+        </div>
+      `;
+    })
+    .join('');
+}
