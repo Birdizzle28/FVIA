@@ -533,6 +533,41 @@
 	        <!-- Filled by admin.js → loadWaitlist() -->
 	      </div>
 	    </div>
+			<button id="open-remove-agent-modal" class="content-btn">
+			  Remove Agent
+			</button>
+			
+			<div id="remove-agent-modal" class="overlay" aria-hidden="true">
+			  <div class="overlay-backdrop" data-close></div>
+			  <div class="overlay-panel" role="dialog" aria-modal="true">
+			    <button class="overlay-close" type="button" data-close>&times;</button>
+			    <h2>Remove Agent</h2>
+			    <p style="font-size: 13px; color:#555;">
+			      Search by NPN (Agent ID) or name. Removing an agent will delete their NIPR
+			      records, approved agent record, CRM agent record, matching recruit row,
+			      and their login account.
+			    </p>
+			
+			    <div style="margin-top:10px; display:flex; gap:8px;">
+			      <input
+			        id="remove-agent-search"
+			        type="text"
+			        placeholder="Search by NPN or name…"
+			        style="flex:1; padding:6px 8px;"
+			      />
+			      <button id="remove-agent-search-btn" type="button">
+			        Search
+			      </button>
+			    </div>
+			
+			    <p id="remove-agent-msg" style="font-size:13px; color:#555; margin-top:8px;"></p>
+			
+			    <div id="remove-agent-results"
+			         style="margin-top:10px; max-height:260px; overflow-y:auto; font-size:13px;">
+			      <!-- results injected here -->
+			    </div>
+			  </div>
+			</div>
 		</div>
 		
 	  <!-- ===== Modals ===== -->
