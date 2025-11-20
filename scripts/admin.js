@@ -624,7 +624,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
     const msg = document.getElementById('agent-msg');
     if (msg) msg.textContent = '';
-
+  
     const npn         = document.getElementById('agent-id')?.value.trim() || '';
     const firstName   = document.getElementById('agent-first-name')?.value.trim() || '';
     const lastName    = document.getElementById('agent-last-name')?.value.trim() || '';
@@ -632,13 +632,34 @@ document.addEventListener('DOMContentLoaded', async () => {
     const email       = document.getElementById('agent-email')?.value.trim() || '';
     const recruiterId = document.getElementById('agent-recruiter')?.value || '';
     const level       = document.getElementById('agent-level')?.value || '';
-
+  
     if (!npn || !firstName || !lastName || !email || !recruiterId || !level) {
       if (msg) msg.textContent = '⚠️ Fill out NPN, name, email, level, and recruiter.';
       return;
     }
-    
-    // NEW: Add/Update in agent_waitlist
+  
+    // 1) Try to match a recruit row by recruiter + name
+    let recruitId = null;
+    try {
+      const { data: recruitMatch, error: recErr } = await supabase
+        .from('recruits')
+        .select('id')
+        .eq('recruiter_id', recruiterId)
+        .ilike('first_name', firstName)
+        .ilike('last_name', lastName)
+        .maybeSingle();
+  
+      if (recErr && recErr.code !== 'PGRST116') {
+        console.error('Error checking recruits:', recErr);
+      }
+      if (recruitMatch?.id) {
+        recruitId = recruitMatch.id;
+      }
+    } catch (err) {
+      console.error('Unexpected error looking up recruit:', err);
+    }
+  
+    // 2) Add/Update in agent_waitlist (ONLY waitlist here)
     const waitlistPayload = {
       agent_id: npn,
       first_name: firstName,
@@ -646,7 +667,9 @@ document.addEventListener('DOMContentLoaded', async () => {
       phone,
       email,
       recruiter_id: recruiterId,
-      level
+      level,
+      recruit_id: recruitId || null
+      // flags default to false via schema
     };
   
     const { error: waitErr } = await supabase
@@ -660,119 +683,53 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   
     if (msg) msg.textContent =
-      '✅ Added to pre-approval waitlist. Continuing NIPR sync and ICA send…';
+      '✅ Added to pre-approval waitlist. Syncing NIPR and sending ICA…';
   
     // Refresh the waitlist UI if Content tab is open
     try { loadWaitlist(); } catch (_) {}
-
-    // 1) Check if already in approved_agents
-    const { data: existing, error: existErr } = await supabase
-      .from('approved_agents')
-      .select('id, is_registered, onboarding_stage, level')
-      .eq('agent_id', npn)
-      .maybeSingle();
-
-    if (existErr) {
-      if (msg) msg.textContent = '❌ Error checking approval: ' + existErr.message;
-      return;
-    }
-
-    if (existing?.is_registered) {
-      if (msg) msg.textContent = '❌ That agent ID is already registered.';
-      return;
-    }
-
-    const payload = {
-      agent_id: npn,
-      recruiter_id: recruiterId,
-      email,
-      first_name: firstName,
-      last_name: lastName,
-      level,
-      is_registered: existing?.is_registered || false,
-      onboarding_stage: existing?.onboarding_stage || 'pre_approved'
-    };
-
-    // 2) Upsert into approved_agents and get the row id
-    let approvedId = existing?.id || null;
-
-    if (existing) {
-      const { data: updated, error: upErr } = await supabase
-        .from('approved_agents')
-        .update(payload)
-        .eq('id', existing.id)
-        .select('id')
-        .maybeSingle();
-
-      if (upErr) {
-        if (msg) msg.textContent = '❌ Could not save pre-approval: ' + upErr.message;
-        return;
-      }
-      approvedId = updated?.id || existing.id;
-    } else {
-      const { data: inserted, error: upErr } = await supabase
-        .from('approved_agents')
-        .insert(payload)
-        .select('id')
-        .maybeSingle();
-
-      if (upErr) {
-        if (msg) msg.textContent = '❌ Could not save pre-approval: ' + upErr.message;
-        return;
-      }
-      approvedId = inserted?.id || null;
-    }
-
-    if (!approvedId) {
-      if (msg) msg.textContent = '⚠️ Pre-approved, but could not read record ID.';
-      return;
-    }
-
-    // 3) NIPR sync + parse
+  
+    // 3) NIPR sync + parse (licenses lookup)
     try {
-      if (msg) msg.textContent = '✅ Pre-approved. Syncing NIPR data…';
-
       const syncRes = await fetch('/.netlify/functions/nipr-sync-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agent_id: npn })
       });
-
+  
       if (!syncRes.ok) {
         const txt = await syncRes.text();
         console.error('NIPR sync error:', txt);
-        if (msg) msg.textContent = '⚠️ Pre-approved, but NIPR sync failed. Check logs.';
+        if (msg) msg.textContent = '⚠️ On waitlist, but NIPR sync failed. Check logs.';
         return;
       }
-
+  
       const syncJson = await syncRes.json();
       console.log('NIPR sync result:', syncJson);
-
+  
       const parseRes = await fetch('/.netlify/functions/nipr-parse-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agent_id: npn })
       });
-
+  
       if (!parseRes.ok) {
         const txt = await parseRes.text();
         console.error('NIPR parse error:', txt);
-        if (msg) msg.textContent = '⚠️ Pre-approved & synced, but parse failed. Check logs.';
+        if (msg) msg.textContent = '⚠️ On waitlist & synced, but parse failed. Check logs.';
         return;
       }
-
+  
       const parseJson = await parseRes.json();
       console.log('NIPR parse result:', parseJson);
     } catch (err) {
       console.error('Error calling NIPR functions:', err);
-      if (msg) msg.textContent = '⚠️ Pre-approved, but there was an error syncing NIPR data.';
+      if (msg) msg.textContent =
+        '⚠️ On waitlist, but there was an error syncing NIPR data.';
       return;
     }
-
-    // 4) Send ICA via Netlify + SignWell
+  
+    // 4) Send ICA via Netlify + SignWell (NO approved_agents yet)
     try {
-      if (msg) msg.textContent = '✅ NIPR synced. Sending ICA for e-sign…';
-
       const icaRes = await fetch('/.netlify/functions/send-ica', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -782,17 +739,17 @@ document.addEventListener('DOMContentLoaded', async () => {
           first_name: firstName,
           last_name: lastName,
           level,
-          approved_agent_id: approvedId
+          approved_agent_id: null   // keep field name for compatibility
         })
       });
-
+  
       if (!icaRes.ok) {
         const txt = await icaRes.text();
         console.error('ICA send error:', txt);
         if (msg) msg.textContent = '⚠️ NIPR ok, but ICA send failed. Check logs.';
         return;
       }
-
+  
       const icaJson = await icaRes.json();
       console.log('ICA send result:', icaJson);
       if (msg) msg.textContent =
@@ -803,7 +760,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         '⚠️ NIPR ok, but there was an error sending ICA.';
       return;
     }
-
+  
     setTimeout(() => {
       document.querySelector('#agent-modal [data-close]')?.click();
     }, 900);
@@ -1910,7 +1867,7 @@ async function loadMarketingAssets() {
   });
 }
 /* =========================
-   Agent Waitlist: List
+   Agent Waitlist: List + Approvals
    ========================= */
 async function loadWaitlist() {
   const listEl = document.getElementById('waitlist-container');
@@ -1920,7 +1877,7 @@ async function loadWaitlist() {
 
   const { data, error } = await supabase
     .from('agent_waitlist')
-    .select('id, agent_id, first_name, last_name, phone, email, recruiter_id, level, created_at')
+    .select('id, agent_id, first_name, last_name, phone, email, recruiter_id, level, recruit_id, licensing_approved, ica_signed, banking_approved, created_at')
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -1947,18 +1904,167 @@ async function loadWaitlist() {
         ? new Date(item.created_at).toLocaleString()
         : '';
 
+      const licChecked  = item.licensing_approved ? 'checked' : '';
+      const icaChecked  = item.ica_signed ? 'checked' : '';
+      const bankChecked = item.banking_approved ? 'checked' : '';
+
       return `
         <div class="wait-row"
              data-id="${item.id}"
-             style="border:1px solid #eee; border-radius:6px; padding:8px 10px; margin-bottom:8px; font-size:13px;">
-          <div><strong>${item.first_name} ${item.last_name}</strong> (${item.agent_id})</div>
-          <div>Email: ${item.email}</div>
-          <div>Phone: ${item.phone}</div>
-          <div>Recruiter: ${recruiterName}</div>
-          <div>Level: ${item.level}</div>
-          <div style="color:#666; font-size:12px;">Added: ${created}</div>
+             data-agent-id="${item.agent_id || ''}"
+             data-first-name="${item.first_name || ''}"
+             data-last-name="${item.last_name || ''}"
+             data-email="${item.email || ''}"
+             data-phone="${item.phone || ''}"
+             data-recruiter-id="${item.recruiter_id || ''}"
+             data-level="${item.level || ''}"
+             data-recruit-id="${item.recruit_id || ''}"
+             style="border:1px solid #eee; border-radius:6px; padding:10px 12px; margin-bottom:10px; font-size:13px;">
+          <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+            <div>
+              <div><strong>${item.first_name || ''} ${item.last_name || ''}</strong> (${item.agent_id || 'No NPN'})</div>
+              <div>Email: ${item.email || '—'}</div>
+              <div>Phone: ${item.phone || '—'}</div>
+              <div>Recruiter: ${recruiterName}</div>
+              <div>Level: ${item.level || '—'}</div>
+              <div style="color:#666; font-size:12px;">Added: ${created}</div>
+            </div>
+            <div style="min-width:220px;">
+              <div style="font-weight:600; margin-bottom:4px;">Checklist</div>
+              <label style="display:block; margin-bottom:2px;">
+                <input type="checkbox" class="wait-lic" ${licChecked}>
+                Licensing approved
+              </label>
+              <label style="display:block; margin-bottom:2px;">
+                <input type="checkbox" class="wait-ica" ${icaChecked}>
+                ICA signed
+              </label>
+              <label style="display:block; margin-bottom:2px;">
+                <input type="checkbox" class="wait-bank" ${bankChecked}>
+                Banking / Stripe ok
+              </label>
+              <button type="button"
+                      class="wait-approve-btn"
+                      style="margin-top:6px; padding:4px 8px; font-size:12px;">
+                Approve & Add to Approved Agents
+              </button>
+              <div class="wait-msg" style="font-size:12px; margin-top:4px; color:#555;"></div>
+            </div>
+          </div>
         </div>
       `;
     })
     .join('');
+
+  // Wire up buttons after rendering
+  listEl.querySelectorAll('.wait-approve-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const row = btn.closest('.wait-row');
+      if (row) approveWaitlistEntry(row);
+    });
+  });
+}
+async function approveWaitlistEntry(row) {
+  const rowId       = row.getAttribute('data-id');
+  const agentId     = row.getAttribute('data-agent-id') || '';
+  const firstName   = row.getAttribute('data-first-name') || '';
+  const lastName    = row.getAttribute('data-last-name') || '';
+  const email       = row.getAttribute('data-email') || '';
+  const phone       = row.getAttribute('data-phone') || '';
+  const recruiterId = row.getAttribute('data-recruiter-id') || '';
+  const level       = row.getAttribute('data-level') || '';
+  const recruitId   = row.getAttribute('data-recruit-id') || null;
+
+  const msgEl  = row.querySelector('.wait-msg');
+  const licCb  = row.querySelector('.wait-lic');
+  const icaCb  = row.querySelector('.wait-ica');
+  const bankCb = row.querySelector('.wait-bank');
+
+  if (msgEl) msgEl.textContent = '';
+
+  if (!agentId || !email || !recruiterId || !level) {
+    if (msgEl) msgEl.textContent =
+      '⚠️ Missing key info (agent ID, email, recruiter, or level). Fix in waitlist first.';
+    return;
+  }
+
+  if (!licCb?.checked || !icaCb?.checked || !bankCb?.checked) {
+    if (msgEl) msgEl.textContent =
+      '⚠️ Check licensing, ICA signed, and banking/Stripe ok before approving.';
+    return;
+  }
+
+  // 1) Upsert into approved_agents
+  const approvedPayload = {
+    agent_id: agentId,
+    is_registered: false,
+    email,
+    phone,
+    first_name: firstName,
+    last_name: lastName,
+    recruiter_id: recruiterId,
+    level,
+    ica_signed: true,
+    banking_approved: true,
+    licensing_approved: true
+  };
+
+  if (msgEl) msgEl.textContent = 'Saving to approved_agents…';
+
+  const { error: appErr } = await supabase
+    .from('approved_agents')
+    .upsert(approvedPayload, { onConflict: 'agent_id' });
+
+  if (appErr) {
+    console.error('Error upserting approved_agents:', appErr);
+    if (msgEl) msgEl.textContent =
+      '❌ Could not save to approved_agents: ' + appErr.message;
+    return;
+  }
+
+  // 2) If this came from recruits table, mark them as contracting
+  if (recruitId) {
+    const updates = {
+      stage: 'contracting',
+      stage_updated_at: new Date().toISOString()
+    };
+
+    const { error: recErr } = await supabase
+      .from('recruits')
+      .update(updates)
+      .eq('id', recruitId);
+
+    if (recErr) {
+      console.error('Error updating recruit stage:', recErr);
+      if (msgEl) msgEl.textContent =
+        '⚠️ Agent approved, but could not update recruit stage.';
+      // We keep going, since approval itself already happened
+    }
+  }
+
+  // 3) Update waitlist flags so it stays in sync
+  const { error: wErr } = await supabase
+    .from('agent_waitlist')
+    .update({
+      licensing_approved: true,
+      ica_signed: true,
+      banking_approved: true
+    })
+    .eq('id', rowId);
+
+  if (wErr) {
+    console.error('Error updating waitlist flags:', wErr);
+    if (msgEl) msgEl.textContent =
+      '⚠️ Agent approved, but failed to update waitlist flags.';
+  } else {
+    if (msgEl) msgEl.textContent =
+      '✅ Agent approved and added to approved_agents.';
+  }
+
+  // 4) Reload list to reflect current status
+  try {
+    await loadWaitlist();
+  } catch (err) {
+    console.error('Error reloading waitlist after approval:', err);
+  }
 }
