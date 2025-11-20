@@ -68,7 +68,7 @@ async function createEnvelopeWithEsignProvider(payload) {
   
   const body = {
     // use test_mode: true until you're happy
-    test_mode: false,
+    test_mode: true,
 
     // tell SignWell which template
     template_id: ESIGN_ICA_TEMPLATE_ID,
