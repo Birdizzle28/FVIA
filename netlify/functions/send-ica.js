@@ -57,8 +57,8 @@ async function createEnvelopeWithEsignProvider(payload) {
     // Prefill specific template fields by API ID
   const templateFields = [
     {
-      api_id: 'Name_3',              // Document Sender printed name
-      value: 'Chancellor Timothy Johnson'
+      api_id: 'Name_1',              // Document Sender printed name
+      value: 'Chancellor Johnson'
     },
     {
       api_id: 'Title_1',             // Document Sender title
