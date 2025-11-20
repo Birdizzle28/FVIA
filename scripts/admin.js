@@ -1865,8 +1865,7 @@ async function loadMarketingAssets() {
       }
     });
   });
-}
-/* =========================
+}/* =========================
    Agent Waitlist: List + Approvals
    ========================= */
 async function loadWaitlist() {
@@ -1948,6 +1947,11 @@ async function loadWaitlist() {
                       style="margin-top:6px; padding:4px 8px; font-size:12px;">
                 Approve & Add to Approved Agents
               </button>
+              <button type="button"
+                      class="wait-delete-btn"
+                      style="margin-top:4px; padding:4px 8px; font-size:12px; background:#ffe6e6; border:1px solid #ffb3b3;">
+                Delete from Waitlist
+              </button>
               <div class="wait-msg" style="font-size:12px; margin-top:4px; color:#555;"></div>
             </div>
           </div>
@@ -1956,11 +1960,43 @@ async function loadWaitlist() {
     })
     .join('');
 
-  // Wire up buttons after rendering
+  // Wire up Approve buttons
   listEl.querySelectorAll('.wait-approve-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const row = btn.closest('.wait-row');
       if (row) approveWaitlistEntry(row);
+    });
+  });
+
+  // Wire up Delete buttons
+  listEl.querySelectorAll('.wait-delete-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const row   = btn.closest('.wait-row');
+      const rowId = row?.getAttribute('data-id');
+      if (!rowId) return;
+
+      if (!confirm('Remove this person from the waitlist? This will NOT change approved_agents.')) {
+        return;
+      }
+
+      const { error: delErr } = await supabase
+        .from('agent_waitlist')
+        .delete()
+        .eq('id', rowId);
+
+      if (delErr) {
+        alert('❌ Failed to delete from waitlist.');
+        console.error(delErr);
+        return;
+      }
+
+      // Remove row from DOM
+      row.remove();
+
+      // If no rows left, show empty message
+      if (!document.querySelector('#waitlist-container .wait-row')) {
+        listEl.innerHTML = '<p>No agents in the waitlist yet.</p>';
+      }
     });
   });
 }
@@ -2038,11 +2074,11 @@ async function approveWaitlistEntry(row) {
       console.error('Error updating recruit stage:', recErr);
       if (msgEl) msgEl.textContent =
         '⚠️ Agent approved, but could not update recruit stage.';
-      // We keep going, since approval itself already happened
+      // keep going, approval already happened
     }
   }
 
-  // 3) Update waitlist flags so it stays in sync
+  // 3) Update waitlist flags (for consistency if anything looks later)
   const { error: wErr } = await supabase
     .from('agent_waitlist')
     .update({
@@ -2056,12 +2092,26 @@ async function approveWaitlistEntry(row) {
     console.error('Error updating waitlist flags:', wErr);
     if (msgEl) msgEl.textContent =
       '⚠️ Agent approved, but failed to update waitlist flags.';
-  } else {
-    if (msgEl) msgEl.textContent =
-      '✅ Agent approved and added to approved_agents.';
+  } else if (msgEl) {
+    msgEl.textContent = '✅ Agent approved and added to approved_agents.';
   }
 
-  // 4) Reload list to reflect current status
+  // 4) Now remove them from the waitlist table entirely
+  const { error: delErr } = await supabase
+    .from('agent_waitlist')
+    .delete()
+    .eq('id', rowId);
+
+  if (delErr) {
+    console.error('Error deleting from waitlist:', delErr);
+    if (msgEl) {
+      msgEl.textContent += '\n⚠️ Approved, but could not remove from waitlist.';
+    }
+  } else if (msgEl) {
+    msgEl.textContent += '\n✅ Removed from waitlist.';
+  }
+
+  // 5) Reload list to reflect current status
   try {
     await loadWaitlist();
   } catch (err) {
