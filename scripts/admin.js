@@ -402,6 +402,13 @@ document.addEventListener('DOMContentLoaded', async () => {
       flatpickr('#annc-repeat-end', { enableTime:true, dateFormat:'Y-m-d H:i' });
     } catch(_) {}
     
+    try {
+      flatpickr('#task-due', {
+        enableTime: true,
+        dateFormat: 'Y-m-d H:i'
+      });
+    } catch (_) {}
+  
     // Announcements list collapse toggle
     const anncListEl   = document.getElementById('annc-list');
     const anncToggleEl = document.getElementById('toggle-annc-list');
