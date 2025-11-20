@@ -360,6 +360,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       loadAnnouncements();
       loadTrainingMaterials();
       loadMarketingAssets();    // 🔹 now also loads marketing assets
+      loadWaitlist();
     }
   }
   showAdminSection('all');
@@ -619,7 +620,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   nextBtn?.addEventListener('click', async () => { currentPage++; await loadLeadsWithFilters(); });
   prevBtn?.addEventListener('click', async () => { if (currentPage > 1) { currentPage--; await loadLeadsWithFilters(); } });
 
-      document.getElementById('agent-form')?.addEventListener('submit', async (e) => {
+  document.getElementById('agent-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const msg = document.getElementById('agent-msg');
     if (msg) msg.textContent = '';
@@ -636,6 +637,33 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (msg) msg.textContent = '⚠️ Fill out NPN, name, email, level, and recruiter.';
       return;
     }
+    
+    // NEW: Add/Update in agent_waitlist
+    const waitlistPayload = {
+      agent_id: npn,
+      first_name: firstName,
+      last_name: lastName,
+      phone,
+      email,
+      recruiter_id: recruiterId,
+      level
+    };
+  
+    const { error: waitErr } = await supabase
+      .from('agent_waitlist')
+      .upsert(waitlistPayload, { onConflict: 'agent_id' });
+  
+    if (waitErr) {
+      console.error('Error saving to agent_waitlist:', waitErr);
+      if (msg) msg.textContent = '❌ Could not save to pre-approval waitlist: ' + waitErr.message;
+      return;
+    }
+  
+    if (msg) msg.textContent =
+      '✅ Added to pre-approval waitlist. Continuing NIPR sync and ICA send…';
+  
+    // Refresh the waitlist UI if Content tab is open
+    try { loadWaitlist(); } catch (_) {}
 
     // 1) Check if already in approved_agents
     const { data: existing, error: existErr } = await supabase
