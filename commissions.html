@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <meta name="theme-color" content="#353468">
+    <title>Commissions | Family Values Group</title>
+    <link rel="stylesheet" href="styles/agentstyle.css" />
+    <link rel="stylesheet" href="styles/commissions.css" />
+    <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+  </head>
+  <body id="dashboardbody">
+    <!-- Header -->
+    <header class="index-grid-header">
+      <div id="logofvcontainer">
+        <div id="logodiv">
+          <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+        </div>
+        <div id="fvdiv">
+          <p><strong>Family Values Group</strong></p>
+        </div>
+      </div>
+      <div id="navcontainer">
+        <nav class="header-flex-container">
+          <a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
+          <a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
+          <div id="menu-toggle"><i class="fa-solid fa-bars"></i></div>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu">
+      <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
+
+      <!-- Toolkit parent (acts like a toggle, not a link) -->
+      <button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
+        <i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
+        <i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
+      </button>
+
+      <!-- Submenu that expands between Toolkit and Commissions -->
+      <div id="toolkit-submenu" class="submenu" hidden>
+        <a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
+        <a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
+        <a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
+        <a href="calculator.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
+        <a href="marketing.html"><i class="fa-solid fa-handshake"></i><span>Calculator</span></a>
+      </div>
+      <a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
+      <a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
+      <a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
+      <a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
+      <a href="admin.html" class="admin-link admin-hidden" data-admin-link>
+        <i class="fa-solid fa-user-shield"></i><p>Admin</p>
+      </a>
+    </div>
+
+  <main class="commissions-wrap">
+    <!-- Page Title + Level + Summary Tiles -->
+    <section class="dash-wrap">
+      <h1 class="dash-title">Commissions</h1>
+
+      <!-- Top summary bar -->
+      <section class="comm-summary">
+        <div class="comm-level">
+          <div class="comm-level-main">
+            <span class="comm-agent-name" id="comm-agent-name">Agent Name</span>
+            <span class="comm-level-badge" id="comm-level-label">Level: L1</span>
+          </div>
+          <p class="comm-level-progress" id="comm-level-progress-text">
+            You need $X more AP this month to reach the next level.
+          </p>
+        </div>
+
+        <div class="comm-summary-cards">
+          <article class="comm-card" id="card-leads-balance">
+            <h2>Leads Balance</h2>
+            <p class="comm-amount" id="summary-leads-balance">$0.00</p>
+            <p class="comm-subtext" id="summary-leads-note">Unpaid leads cost</p>
+          </article>
+
+          <article class="comm-card" id="card-chargeback-balance">
+            <h2>Chargeback Balance</h2>
+            <p class="comm-amount" id="summary-chargeback-balance">$0.00</p>
+            <p class="comm-subtext" id="summary-chargeback-note">Open chargebacks</p>
+          </article>
+
+          <article class="comm-card" id="card-total-balance">
+            <h2>Total Balance</h2>
+            <p class="comm-amount" id="summary-total-balance">$0.00</p>
+            <p class="comm-subtext" id="summary-total-note">Leads + chargebacks</p>
+          </article>
+
+          <article class="comm-card" id="card-next-payouts">
+            <h2>Upcoming Payouts</h2>
+            <p class="comm-subline">
+              <strong>Next Advance:</strong>
+              <span id="summary-next-advance-amount">$0.00</span>
+              <span id="summary-next-advance-date">(Next Friday)</span>
+            </p>
+            <p class="comm-subline">
+              <strong>Next Pay-Thru:</strong>
+              <span id="summary-next-paythru-amount">$0.00</span>
+              <span id="summary-next-paythru-date">(End of month)</span>
+            </p>
+          </article>
+        </div>
+      </section>
+    </section>
+
+    <!-- Tabbed content area (same pattern as folder-tabs on Dashboard) -->
+    <section class="dash-wrap">
+      <div class="folder-tabs commissions-tabs">
+        <div class="tablist" role="tablist" aria-label="Commissions sections">
+          <button
+            class="tab is-active"
+            id="tab-earnings"
+            data-tab="earnings"
+            role="tab"
+            aria-selected="true"
+            aria-controls="panel-earnings"
+          >
+            <i class="fa-solid fa-wallet icon" aria-hidden="true"></i>
+            <span class="label">Earnings & Payouts</span>
+          </button>
+
+          <button
+            class="tab"
+            id="tab-balances"
+            data-tab="balances"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panel-balances"
+          >
+            <i class="fa-solid fa-scale-balanced icon" aria-hidden="true"></i>
+            <span class="label">Balances & Debt</span>
+          </button>
+
+          <button
+            class="tab"
+            id="tab-policies"
+            data-tab="policies"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panel-policies"
+          >
+            <i class="fa-solid fa-file-invoice-dollar icon" aria-hidden="true"></i>
+            <span class="label">Policies & Details</span>
+          </button>
+
+          <button
+            class="tab"
+            id="tab-team"
+            data-tab="team"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panel-team"
+          >
+            <i class="fa-solid fa-people-group icon" aria-hidden="true"></i>
+            <span class="label">Team & Overrides</span>
+          </button>
+
+          <button
+            class="tab"
+            id="tab-files"
+            data-tab="files"
+            role="tab"
+            aria-selected="false"
+            aria-controls="panel-files"
+          >
+            <i class="fa-solid fa-folder-open icon" aria-hidden="true"></i>
+            <span class="label">Files & Documents</span>
+          </button>
+        </div>
+
+        <div class="panels">
+          <!-- ===== Panel: Earnings & Payouts ===== -->
+          <section
+            id="panel-earnings"
+            class="panel is-active"
+            role="tabpanel"
+            aria-labelledby="tab-earnings"
+          >
+            <header class="comm-panel-header">
+              <h2>Earnings & Payouts</h2>
+              <div class="comm-filters">
+                <label for="payout-range">Range</label>
+                <select id="payout-range">
+                  <option value="30" selected>Last 30 days</option>
+                  <option value="90">Last 90 days</option>
+                  <option value="365">Year to date</option>
+                  <option value="0">All time</option>
+                </select>
+              </div>
+            </header>
+
+            <div class="comm-payout-cards">
+              <article class="comm-card" id="card-next-advance-detail">
+                <h3>Next Weekly Advance</h3>
+                <p class="comm-amount" id="next-advance-amount">$0.00</p>
+                <p class="comm-subtext" id="next-advance-date">Pays on —</p>
+                <p class="comm-subtext" id="next-advance-note">
+                  Based on issued and pending business.
+                </p>
+              </article>
+
+              <article class="comm-card" id="card-next-paythru-detail">
+                <h3>Next Monthly Pay-Thru</h3>
+                <p class="comm-amount" id="next-paythru-amount">$0.00</p>
+                <p class="comm-subtext" id="next-paythru-date">Pays on —</p>
+                <p class="comm-subtext" id="next-paythru-note">
+                  Trails and renewal commissions.
+                </p>
+              </article>
+            </div>
+
+            <section class="comm-table-section">
+              <header class="comm-table-header">
+                <h3>Recent Payouts</h3>
+                <!-- Optional: export buttons later -->
+                <div class="comm-table-actions" id="payout-actions">
+                  <!-- Placeholder for CSV/PDF/Print buttons later -->
+                </div>
+              </header>
+              <div class="comm-table-scroll">
+                <table id="payouts-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Type</th>
+                      <th>Period</th>
+                      <th>Amount</th>
+                      <th>Source</th>
+                      <th>Details</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Filled via commissions.js -->
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <!-- ===== Panel: Balances & Debt ===== -->
+          <section
+            id="panel-balances"
+            class="panel"
+            role="tabpanel"
+            aria-labelledby="tab-balances"
+          >
+            <header class="comm-panel-header">
+              <h2>Balances & Debt</h2>
+              <div class="comm-filters">
+                <fieldset class="comm-scope-toggle">
+                  <legend>Scope</legend>
+                  <label>
+                    <input type="radio" name="balance-scope" value="me" checked />
+                    My balances
+                  </label>
+                  <label>
+                    <input type="radio" name="balance-scope" value="team" />
+                    My direct team
+                  </label>
+                </fieldset>
+              </div>
+            </header>
+
+            <div class="comm-balance-cards">
+              <article class="comm-card">
+                <h3>Leads Balance</h3>
+                <p class="comm-amount" id="balances-leads-amount">$0.00</p>
+                <p class="comm-subtext" id="balances-leads-count">0 open items</p>
+              </article>
+
+              <article class="comm-card">
+                <h3>Chargeback Balance</h3>
+                <p class="comm-amount" id="balances-chargebacks-amount">$0.00</p>
+                <p class="comm-subtext" id="balances-chargebacks-count">0 open items</p>
+              </article>
+
+              <article class="comm-card">
+                <h3>Total Repayment</h3>
+                <p class="comm-amount" id="balances-total-amount">$0.00</p>
+                <p class="comm-subtext" id="balances-total-note">
+                  Projected after next payouts: $0.00
+                </p>
+              </article>
+            </div>
+
+            <section class="comm-table-section">
+              <header class="comm-table-header">
+                <h3>Lead Debt</h3>
+              </header>
+              <div class="comm-table-scroll">
+                <table id="lead-debts-table">
+                  <thead>
+                    <tr>
+                      <th>Date Assigned</th>
+                      <th>Lead Type</th>
+                      <th>Source</th>
+                      <th>Cost</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Filled via commissions.js -->
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="comm-table-section">
+              <header class="comm-table-header">
+                <h3>Chargebacks</h3>
+              </header>
+              <div class="comm-table-scroll">
+                <table id="chargebacks-table">
+                  <thead>
+                    <tr>
+                      <th>Date</th>
+                      <th>Carrier</th>
+                      <th>Policyholder</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Filled via commissions.js -->
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <!-- ===== Panel: Policies & Details ===== -->
+          <section
+            id="panel-policies"
+            class="panel"
+            role="tabpanel"
+            aria-labelledby="tab-policies"
+          >
+            <header class="comm-panel-header">
+              <h2>Policies & Commission Details</h2>
+              <div class="comm-filters">
+                <label for="policies-date-range">Date Range</label>
+                <input type="text" id="policies-date-range" placeholder="Select range" />
+
+                <label for="policies-carrier">Carrier</label>
+                <select id="policies-carrier">
+                  <option value="">All carriers</option>
+                  <!-- choices.js will enhance -->
+                </select>
+
+                <label for="policies-status">Status</label>
+                <select id="policies-status">
+                  <option value="">Any status</option>
+                  <option value="pending">Pending</option>
+                  <option value="issued">Issued</option>
+                  <option value="in_force">In Force</option>
+                  <option value="lapsed">Lapsed</option>
+                  <option value="cancelled">Cancelled</option>
+                </select>
+
+                <button type="button" id="policies-apply-filters">Apply</button>
+                <button type="button" id="policies-reset-filters">Reset</button>
+              </div>
+            </header>
+
+            <section class="comm-table-section">
+              <div class="comm-table-header">
+                <h3>Policies</h3>
+                <div class="comm-table-actions" id="policies-actions">
+                  <!-- Export buttons later -->
+                </div>
+              </div>
+              <div class="comm-table-scroll">
+                <table id="policies-table">
+                  <thead>
+                    <tr>
+                      <th>Written Date</th>
+                      <th>Policyholder</th>
+                      <th>Carrier</th>
+                      <th>Product</th>
+                      <th>Premium</th>
+                      <th>Status</th>
+                      <th>Advance</th>
+                      <th>Pay-Thru</th>
+                      <th>Total Commission</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Filled via commissions.js -->
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <!-- ===== Panel: Team & Overrides ===== -->
+          <section
+            id="panel-team"
+            class="panel"
+            role="tabpanel"
+            aria-labelledby="tab-team"
+          >
+            <header class="comm-panel-header">
+              <h2>Team & Overrides</h2>
+              <div class="comm-filters">
+                <fieldset class="comm-scope-toggle">
+                  <legend>View</legend>
+                  <label>
+                    <input type="radio" name="team-scope" value="my-book" checked />
+                    My book
+                  </label>
+                  <label>
+                    <input type="radio" name="team-scope" value="direct-team" />
+                    Direct team
+                  </label>
+                </fieldset>
+
+                <label for="team-agent-select">Individual Agent</label>
+                <select id="team-agent-select">
+                  <option value="">Select agent…</option>
+                  <!-- options filled via JS (direct downline only) -->
+                </select>
+              </div>
+            </header>
+
+            <section class="comm-team-stats">
+              <article class="comm-card">
+                <h3>My Total AP (Period)</h3>
+                <p class="comm-amount" id="team-my-ap">$0</p>
+                <p class="comm-subtext" id="team-my-ap-period">Last 30 days</p>
+              </article>
+
+              <article class="comm-card">
+                <h3>Team AP (Direct Only)</h3>
+                <p class="comm-amount" id="team-direct-ap">$0</p>
+                <p class="comm-subtext" id="team-direct-count">0 active agents</p>
+              </article>
+
+              <article class="comm-card">
+                <h3>Overrides Earned</h3>
+                <p class="comm-amount" id="team-overrides-amount">$0.00</p>
+                <p class="comm-subtext" id="team-overrides-period">Last 30 days</p>
+              </article>
+            </section>
+
+            <section class="comm-table-section">
+              <header class="comm-table-header">
+                <h3>Direct Team Snapshot</h3>
+              </header>
+              <div class="comm-table-scroll">
+                <table id="team-agents-table">
+                  <thead>
+                    <tr>
+                      <th>Agent</th>
+                      <th>Level</th>
+                      <th>AP (Period)</th>
+                      <th>Leads Balance</th>
+                      <th>Chargebacks</th>
+                      <th>Overrides to You</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Filled via commissions.js -->
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="comm-table-section" id="team-individual-wrapper" hidden>
+              <header class="comm-table-header">
+                <h3 id="team-individual-title">Agent Detail</h3>
+              </header>
+              <div class="comm-table-scroll">
+                <table id="team-individual-table">
+                  <thead>
+                    <tr>
+                      <th>Metric</th>
+                      <th>Value</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Filled via commissions.js for selected agent -->
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+
+          <!-- ===== Panel: Files & Documents ===== -->
+          <section
+            id="panel-files"
+            class="panel"
+            role="tabpanel"
+            aria-labelledby="tab-files"
+          >
+            <header class="comm-panel-header">
+              <h2>Files & Documents</h2>
+              <div class="comm-filters files-filters">
+                <div class="files-chips" id="files-type-chips">
+                  <button type="button" class="chip is-active" data-doc-type="all">All</button>
+                  <button type="button" class="chip" data-doc-type="reports">Commission Reports</button>
+                  <button type="button" class="chip" data-doc-type="schedule">Pay Schedules</button>
+                  <button type="button" class="chip" data-doc-type="1099">1099s</button>
+                  <button type="button" class="chip" data-doc-type="other">Other</button>
+                </div>
+              </div>
+            </header>
+
+            <section class="comm-table-section">
+              <header class="comm-table-header">
+                <h3>Documents</h3>
+                <div class="comm-table-actions" id="files-actions">
+                  <!-- Maybe upload button (admin only) later -->
+                </div>
+              </header>
+              <div class="comm-table-scroll">
+                <table id="files-table">
+                  <thead>
+                    <tr>
+                      <th>File Name</th>
+                      <th>Type</th>
+                      <th>Period</th>
+                      <th>Source</th>
+                      <th>Uploaded</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Filled via commissions.js -->
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </section>
+        </div>
+      </div>
+    </section>
+  </main>
+
+<!-- Footer -->
+    <footer class="index-grid-footer">
+      <img id="footerlogo" src="Pics/img17.png">
+      <hr class="footerhr">
+      <div id="footercontact">
+        <a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
+          <span class="fa fa-envelope"></span>
+          <span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+        </a>
+        <p> | </p>
+        <a class="contactcontainer" href="tel:+16292437980">
+          <span class="fa fa-phone"></span>
+          <span class="contactcontcontacts">+1-629-243-7980</span>
+        </a>
+      </div>
+      <hr class="footerhr">
+      <div id="footersocial">
+        <a class="fab fa-facebook-f" href="https://www.facebook.com/familyvaluesgroup"></a>
+  			<a class="fab fa-linkedin-in" href="https://www.linkedin.com/in/demisi-johnson-026227391?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"></a>
+  			<a class="fab fa-instagram" href="https://www.instagram.com/family.values.group?igsh=OHl3dGdnd3RwMTV0&utm_source=qr"></a>
+  			<a class="fab fa-youtube" href="https://youtube.com/@familyvaluesgroup?si=mauqWp5nxyczgCJd"></a>
+  			<a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
+      </div>
+      <div id="footerlinks">
+        <a href="faqs.html">FAQs</a>
+        <a href="terms.html">Terms</a>
+        <a href="accessibility.html">Accessibility</a>
+        <a href="privacy.html">Privacy</a>
+      </div>
+      <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+    </footer>
+
+    <script type="module" src="scripts/general.js"></script>
+    <script type="module" src="scripts/commissions.js"></script>
+  </body>
+</html>
