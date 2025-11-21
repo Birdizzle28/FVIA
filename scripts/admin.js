@@ -556,17 +556,39 @@ document.addEventListener('DOMContentLoaded', async () => {
     const repeatEnd  = document.getElementById('annc-repeat-end')?.value.trim() || null;
 
     const audience = { scope };
+
     if (scope === 'by_product') {
-      audience.products = Array.from(document.getElementById('annc-products')?.selectedOptions || [])
-        .map(o => o.value);
+      audience.products = Array.from(
+        document.getElementById('annc-products')?.selectedOptions || []
+      ).map(o => o.value);
     }
+
     if (scope === 'by_state') {
-      audience.states = Array.from(document.getElementById('annc-states')?.selectedOptions || [])
-        .map(o => o.value);
+      audience.states = Array.from(
+        document.getElementById('annc-states')?.selectedOptions || []
+      ).map(o => o.value);
     }
+
+    if (scope === 'by_level') {
+      audience.levels = Array.from(
+        document.getElementById('annc-levels')?.selectedOptions || []
+      ).map(o => o.value);
+    }
+
+    if (scope === 'by_product_state') {
+      audience.products = Array.from(
+        document.getElementById('annc-products')?.selectedOptions || []
+      ).map(o => o.value);
+
+      audience.states = Array.from(
+        document.getElementById('annc-states')?.selectedOptions || []
+      ).map(o => o.value);
+    }
+
     if (scope === 'custom_agents') {
-      audience.agent_ids = Array.from(document.getElementById('annc-agent-ids')?.selectedOptions || [])
-        .map(o => o.value);
+      audience.agent_ids = Array.from(
+        document.getElementById('annc-agent-ids')?.selectedOptions || []
+      ).map(o => o.value);
     }
 
     // Store recurrence info inside the audience JSON so no new DB columns are needed
