@@ -6,6 +6,26 @@ const supabase = createClient(
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
 );
 window.supabase = supabase;
+// Turn a stored path into a public URL from the "tasks" bucket.
+// If it's already an http(s) URL, use it as-is.
+function resolveTaskImage(raw) {
+  if (!raw) return null;
+  const v = String(raw);
+
+  // Already a full URL?
+  if (/^https?:\/\//i.test(v)) return v;
+
+  // Strip leading slash
+  let path = v.replace(/^\/+/, '');
+
+  // If someone stored "tasks/..." trim the bucket prefix
+  if (path.toLowerCase().startsWith('tasks/')) {
+    path = path.slice('tasks/'.length);
+  }
+
+  const { data } = supabase.storage.from('tasks').getPublicUrl(path);
+  return data?.publicUrl || null;
+}
 
 document.addEventListener('DOMContentLoaded', () => {
   /* ---------- FOLDER TABS ---------- */
@@ -597,9 +617,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const art = document.createElement('article');
     art.className = 'slide task';
     art.tabIndex = 0;
-
+  
     const meta = task.metadata || {};
-
+  
     // pick a notes field if it exists
     const notes =
       meta.notes ||
@@ -608,13 +628,13 @@ document.addEventListener('DOMContentLoaded', () => {
       meta.body ||
       meta.details ||
       '';
-
+  
     // status label
     const statusRaw = (task.status || 'open').toLowerCase();
     let statusLabel = 'Open';
     if (statusRaw === 'completed') statusLabel = 'Completed';
     else if (statusRaw === 'cancelled') statusLabel = 'Cancelled';
-
+  
     // format dates
     const fmt = (d) => {
       try {
@@ -623,24 +643,28 @@ document.addEventListener('DOMContentLoaded', () => {
         return '';
       }
     };
-
+  
     const bits = [];
     bits.push(`Status: ${statusLabel}`);
     if (task.channel) bits.push(`Channel: ${task.channel}`);
     if (task.scheduled_at) bits.push(`Scheduled: ${fmt(task.scheduled_at)}`);
     if (task.due_at) bits.push(`Due: ${fmt(task.due_at)}`);
-
-    // first line: status / channel / dates
+  
     let bodyHtml = escapeHtml(bits.join(' • '));
-
-    // second line: notes, if any
+  
     if (notes) {
       bodyHtml += '<br><strong>Notes:</strong> ' + escapeHtml(notes);
     }
-
-    const imgUrl =
-      task.metadata?.image_url || null;
-    
+  
+    // >>> NEW: resolve image from tasks bucket <<<
+    const rawImg =
+      meta.image_url ||  // if you saved it as image_url
+      meta.imagePath ||  // or imagePath
+      meta.path ||       // or path
+      null;
+  
+    const imgUrl = resolveTaskImage(rawImg);
+  
     let imgHtml = '';
     if (imgUrl) {
       imgHtml = `
@@ -649,6 +673,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       `;
     }
+  
     art.innerHTML = `
       <h3>${escapeHtml(task.title || 'Task')}</h3>
       <p>${bodyHtml}</p>
