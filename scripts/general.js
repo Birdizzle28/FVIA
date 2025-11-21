@@ -151,7 +151,7 @@ sendBtn?.addEventListener("click", handleSend);
 
 /* ============================================================
    NOTIFICATION BELL — ANNOUNCEMENTS + TASKS + UNREAD BADGE
-   (audience-aware + publish_at null-safe, with images)
+   (audience-aware + publish_at null-safe, with images & type chips)
    ============================================================ */
 (async function initFVNotifications() {
   const bell = document.getElementById("notifications-tab");
@@ -164,7 +164,7 @@ sendBtn?.addEventListener("click", handleSend);
 
   const supabase = createClient(
     "https://ddlbgkolnayqrxslzsxn.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho"
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQzM8aAuldMQzOb3SXV5TDT5Ho"
   );
 
   // helper: resolve a tasks image path into a public URL
@@ -364,7 +364,7 @@ sendBtn?.addEventListener("click", handleSend);
   const notifList = panel.querySelector("#fvia-notif-list");
   const markBtn = panel.querySelector("#notif-mark-read");
 
-  // --- PREVIEW MODAL (now with image hero) ---
+  // --- PREVIEW MODAL (with image + type chip) ---
   const preview = document.createElement("div");
   preview.id = "fvia-notif-preview";
   preview.style.cssText = `
@@ -394,7 +394,10 @@ sendBtn?.addEventListener("click", handleSend);
         border:0; background:none;
         font-size:22px; cursor:pointer;
       ">&times;</button>
-      <div id="notif-preview-meta" style="font-size:12px; color:#777; margin-bottom:6px;"></div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; gap:8px;">
+        <div id="notif-preview-meta" style="font-size:12px; color:#777;"></div>
+        <div id="notif-preview-chip" style="font-size:10px; text-transform:uppercase; letter-spacing:0.03em;"></div>
+      </div>
       <div style="display:grid; grid-template-columns:1fr 1.3fr; gap:10px; align-items:flex-start;">
         <div id="notif-preview-hero" style="
           min-height:160px;
@@ -417,23 +420,52 @@ sendBtn?.addEventListener("click", handleSend);
   const previewTitle = preview.querySelector("#notif-preview-title");
   const previewBody = preview.querySelector("#notif-preview-body");
   const previewHero = preview.querySelector("#notif-preview-hero");
+  const previewChip = preview.querySelector("#notif-preview-chip");
   const previewClose = preview.querySelector("#notif-preview-close");
 
   function openPreview(item) {
-    previewMeta.textContent = `${
-      item.type === "task" ? "Task" : "Announcement"
-    } · ${item.ts.toLocaleString()}`;
+    const isTask = item.type === "task";
 
+    // Meta text
+    previewMeta.textContent = item.ts.toLocaleString();
+
+    // Chip
+    if (isTask) {
+      previewChip.innerHTML = `
+        <span style="
+          display:inline-block;
+          padding:2px 8px;
+          border-radius:999px;
+          background:#ede9ff;
+          color:#353468;
+          font-weight:600;
+        ">Task</span>
+      `;
+    } else {
+      previewChip.innerHTML = `
+        <span style="
+          display:inline-block;
+          padding:2px 8px;
+          border-radius:999px;
+          background:#ffe3ea;
+          color:#b43a5e;
+          font-weight:600;
+        ">Announcement</span>
+      `;
+    }
+
+    // Title & body
     previewTitle.textContent = item.title || "(No title)";
 
     let bodyText = item.body || "";
-    if (item.type === "task" && item.due) {
+    if (isTask && item.due) {
       bodyText =
         `Due: ${item.due.toLocaleString()}` +
         (bodyText ? `\n\n${bodyText}` : "");
     }
     previewBody.textContent = bodyText;
 
+    // Image
     if (item.imageUrl) {
       previewHero.style.display = "block";
       previewHero.style.backgroundImage = `url("${item.imageUrl}")`;
@@ -562,6 +594,8 @@ sendBtn?.addEventListener("click", handleSend);
         const unread = !readSet.has(key);
         if (unread) anyUnread = true;
 
+        const isTask = item.type === "task";
+
         // small image on the right
         const hasImg = !!item.imageUrl;
         const imgHtml = hasImg
@@ -576,6 +610,31 @@ sendBtn?.addEventListener("click", handleSend);
                "></div>
              </div>`
           : "";
+
+        // type chip
+        const chipHtml = isTask
+          ? `<span style="
+                display:inline-block;
+                padding:2px 7px;
+                border-radius:999px;
+                background:#ede9ff;
+                color:#353468;
+                font-size:10px;
+                font-weight:600;
+                text-transform:uppercase;
+                letter-spacing:0.03em;
+              ">Task</span>`
+          : `<span style="
+                display:inline-block;
+                padding:2px 7px;
+                border-radius:999px;
+                background:#ffe3ea;
+                color:#b43a5e;
+                font-size:10px;
+                font-weight:600;
+                text-transform:uppercase;
+                letter-spacing:0.03em;
+              ">Announcement</span>`;
 
         return `
         <div class="fvia-notif-item"
@@ -600,11 +659,13 @@ sendBtn?.addEventListener("click", handleSend);
           }
           <div style="display:flex; align-items:flex-start; gap:8px;">
             <div style="flex:1 1 auto; min-width:0;">
-              <div style="font-size:.75rem;color:#666;">
-                ${item.type === "task" ? "Task" : "Announcement"}
-                · ${item.ts.toLocaleString()}
+              <div style="display:flex; align-items:center; gap:6px; margin-bottom:2px;">
+                ${chipHtml}
+                <span style="font-size:.75rem; color:#666;">
+                  ${item.ts.toLocaleString()}
+                </span>
               </div>
-              <div style="font-size:.9rem;font-weight:600;color:#353468;margin-top:4px;">
+              <div style="font-size:.9rem;font-weight:600;color:#353468;margin-top:2px;">
                 ${item.title || "(No title)"}
               </div>
               <div style="font-size:.8rem;color:#444;margin-top:4px;">
