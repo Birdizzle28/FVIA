@@ -614,7 +614,7 @@ document.addEventListener('DOMContentLoaded', () => {
     overlay.querySelector('.overlay-close')?.focus();
     document.body.style.overflow = 'hidden';
   }
-    function openTasksOverlay(inst) {
+  function openTasksOverlay(inst) {
     const title = 'All Tasks & Reminders';
     activeCarousel = inst || null;
     activeCarousel?.pause();
@@ -645,6 +645,8 @@ document.addEventListener('DOMContentLoaded', () => {
           null;
 
         const imgUrl = resolveTaskImage(rawImg);
+        const hasImg = !!imgUrl;
+
         const notes =
           meta.notes ||
           meta.note ||
@@ -655,34 +657,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const snippet = notes
           ? (notes.length > 140 ? notes.slice(0, 140) + '…' : notes)
-          : '';
+          : 'No details yet.';
 
         const card = document.createElement('div');
-        card.className = imgUrl ? 'overlay-item image-card' : 'overlay-item';
+        // ALWAYS use image-card layout so styling matches announcements
+        card.className = 'overlay-item image-card';
         card.setAttribute('data-task-id', String(task.id || ''));
 
-        if (imgUrl) {
+        if (hasImg) {
           card.style.backgroundImage = `url("${imgUrl}")`;
+        } else {
+          // no image → solid fallback behind gradient
+          card.style.backgroundImage = 'none';
+          card.style.backgroundColor = '#353468';
         }
 
-        card.innerHTML = imgUrl
-          ? `
-            <div class="card-content">
-              <h3>${escapeHtml(task.title || 'Task')}</h3>
-              <p>${escapeHtml(snippet)}</p>
-              <div class="mini-actions">
-                <button class="icon-btn btn-eye" type="button">
-                  <i class="fa-solid fa-eye"></i> View
-                </button>
-              </div>
-            </div>
-          `
-          : `
+        card.innerHTML = `
+          <div class="card-content">
             <h3>${escapeHtml(task.title || 'Task')}</h3>
-            <p>${escapeHtml(snippet || 'No details yet.')}</p>
-          `;
+            <p>${escapeHtml(snippet)}</p>
+            <div class="mini-actions">
+              <button class="icon-btn btn-eye" type="button">
+                <i class="fa-solid fa-eye"></i> View
+              </button>
+            </div>
+          </div>
+        `;
 
-        // clicking the "View" button → open detail overlay
+        // clicking the "View" button → open detail overlay (do NOT close See All)
         const eyeBtn = card.querySelector('.btn-eye');
         if (eyeBtn) {
           eyeBtn.addEventListener('click', (e) => {
@@ -691,14 +693,15 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
 
-        // clicking the card (outside actions) → sync carousel to that task
+        // clicking the card background → sync carousel + close See All
         card.addEventListener('click', () => {
-          if (!activeCarousel) return;
-          const slides = activeCarousel.getAllSlides();
-          const targetId = String(task.id || '');
-          const idx = slides.findIndex(sl => sl.dataset.taskId === targetId);
-          if (idx >= 0) {
-            activeCarousel.go(idx);
+          if (activeCarousel) {
+            const slides   = activeCarousel.getAllSlides();
+            const targetId = String(task.id || '');
+            const idx      = slides.findIndex(sl => sl.dataset.taskId === targetId);
+            if (idx >= 0) {
+              activeCarousel.go(idx);
+            }
           }
           closeOverlay();
         });
