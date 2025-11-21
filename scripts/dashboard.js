@@ -199,6 +199,68 @@ document.addEventListener('DOMContentLoaded', () => {
     c => new Carousel(c)
   );
 
+    // ---------- SHARED FULL-IMAGE OVERLAY ----------
+  const imgOverlay = document.createElement('div');
+  imgOverlay.id = 'full-image-overlay';
+  imgOverlay.style.cssText = `
+    position:fixed;
+    inset:0;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:rgba(0,0,0,0.8);
+    z-index:20000;
+  `;
+  imgOverlay.innerHTML = `
+    <div style="position:relative; max-width:95vw; max-height:95vh;">
+      <button type="button" id="full-image-close" style="
+        position:absolute;
+        top:-10px; right:-10px;
+        border:none;
+        background:#000;
+        color:#fff;
+        border-radius:50%;
+        width:28px; height:28px;
+        cursor:pointer;
+        font-size:20px;
+        line-height:1;
+      ">&times;</button>
+      <img id="full-image-img" src="" alt="" style="
+        max-width:100%;
+        max-height:100%;
+        display:block;
+        border-radius:6px;
+      "/>
+    </div>
+  `;
+  document.body.appendChild(imgOverlay);
+
+  const fullImgEl    = imgOverlay.querySelector('#full-image-img');
+  const fullImgClose = imgOverlay.querySelector('#full-image-close');
+
+  function openFullImage(url) {
+    if (!url) return;
+    fullImgEl.src = url;
+    imgOverlay.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeFullImage() {
+    imgOverlay.style.display = 'none';
+    fullImgEl.src = '';
+    document.body.style.overflow = '';
+  }
+
+  fullImgClose.addEventListener('click', closeFullImage);
+  imgOverlay.addEventListener('click', (e) => {
+    if (e.target === imgOverlay) closeFullImage();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && imgOverlay.style.display === 'flex') {
+      closeFullImage();
+    }
+  });
+  
   /* ---------- SEE ALL OVERLAY (generic) ---------- */
   const overlay = document.getElementById('dash-overlay');
   const overlayGrid = document.getElementById('overlay-grid');
