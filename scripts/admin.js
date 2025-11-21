@@ -700,7 +700,8 @@ document.addEventListener('DOMContentLoaded', async () => {
       if (msg) msg.textContent = '';
     }, 700);
   });
-    // Admin creates a task for an agent
+  
+  // Admin creates a task for an agent (with optional image)
   document.getElementById('admin-task-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
     const msg = document.getElementById('task-msg');
@@ -711,6 +712,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const body    = document.getElementById('task-body')?.value.trim() || '';
     const linkUrl = document.getElementById('task-link')?.value.trim() || '';
     const dueRaw  = document.getElementById('task-due')?.value.trim() || '';
+    const imgFile = document.getElementById('task-image')?.files[0] || null;
 
     if (!agentId || !title) {
       if (msg) msg.textContent = '⚠️ Choose an agent and enter a task title.';
@@ -729,7 +731,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await supabase.auth.getSession();
     const createdBy = session?.user?.id || userId || null;
 
-    // Build metadata (we’ll use this when listing tasks)
+    // Build metadata (used when listing tasks)
     const metadata = {
       created_by: createdBy,
       source: 'admin_panel'
@@ -740,7 +742,20 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (linkUrl) {
       metadata.link_url = linkUrl;
     }
-    // (We’ll wire image uploads in the next step; for now, we ignore task-image)
+
+    // 🔹 Upload task image if present
+    if (imgFile) {
+      try {
+        const imageUrl = await uploadTaskImage(imgFile, createdBy);
+        if (imageUrl) {
+          metadata.image_url = imageUrl;
+        }
+      } catch (err) {
+        console.error('Task image upload failed:', err);
+        if (msg) msg.textContent = '❌ Task image upload failed. Please try again.';
+        return;
+      }
+    }
 
     const payload = {
       assigned_to: agentId,
@@ -765,6 +780,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('task-body').value = '';
     document.getElementById('task-link').value = '';
     document.getElementById('task-due').value = '';
+    const imgInput = document.getElementById('task-image');
+    if (imgInput) imgInput.value = '';
 
     // If the manage panel is open, refresh the list
     const taskPanelEl = document.getElementById('task-list-panel');
