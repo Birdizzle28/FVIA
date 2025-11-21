@@ -220,10 +220,20 @@ document.addEventListener('DOMContentLoaded', () => {
       items.forEach((el, idx) => {
         const card = document.createElement('div');
         card.className = 'overlay-item';
+      
+        const imgEl = el.querySelector('img');
+        const imgHtml = imgEl
+          ? `<div class="overlay-thumb"><img src="${imgEl.src}" alt=""></div>`
+          : '';
+      
         card.innerHTML = `
-          <h3>${el.querySelector('h3')?.textContent || 'Item'}</h3>
-          <p>${el.querySelector('p')?.textContent || ''}</p>
+          ${imgHtml}
+          <div class="overlay-text">
+            <h3>${el.querySelector('h3')?.textContent || 'Item'}</h3>
+            <p>${el.querySelector('p')?.textContent || ''}</p>
+          </div>
         `;
+      
         card.addEventListener('click', () => {
           if (activeCarousel && idx < activeCarousel.slides.length) {
             activeCarousel.go(idx);
