@@ -4,13 +4,15 @@
   if (!document.querySelector('[data-admin-link], .admin-link')) return;
 
   // Load supabase ESM quickly without waiting for the rest of your app
-  const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm');
+const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm');
+  // scripts/general.js (shared Supabase config)
+const SUPABASE_URL = 'https://ddlbgkolnayqrxslzsxn.supabase.co';
+const SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho';
 
   // Reuse your public URL/key already in freequote.html (same project here)
-  const supabase = createClient(
-    'https://ddlbgkolnayqrxslzsxn.supabase.co',
-    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
-  );
+  const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm');
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return; // still hidden
@@ -159,14 +161,9 @@ sendBtn?.addEventListener("click", handleSend);
   if (!bell) return; // no bell on this page, skip
 
   // --- Supabase init ONLY for this feature ---
-  const { createClient } = await import(
-    "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm"
-  );
+  const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm');
 
-  const supabase = createClient(
-    "https://ddlbgkolnayqrxslzsxn.supabase.co",
-    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQzM8aAuldMQzOb3SXV5TDT5Ho"
-  );
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // helper: resolve a tasks image path into a public URL
   function resolveTaskImage(raw) {
