@@ -647,65 +647,69 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-  function openTaskDetail(task) {
-    if (!taskDetailOverlay || !taskDetailBody || !taskDetailTitle) return;
+    function openTaskDetail(task) {
+      if (!taskDetailOverlay || !taskDetailBody || !taskDetailTitle) return;
   
-    // handle metadata string/object
-    const meta = (() => {
-      const raw = task.metadata;
-      if (!raw) return {};
-      if (typeof raw === 'string') {
-        try { return JSON.parse(raw); } catch { return {}; }
-      }
-      return raw;
-    })();
+      // handle metadata string/object
+      const meta = (() => {
+        const raw = task.metadata;
+        if (!raw) return {};
+        if (typeof raw === 'string') {
+          try { return JSON.parse(raw); } catch { return {}; }
+        }
+        return raw;
+      })();
   
-    const notes =
-      meta.notes ||
-      meta.note ||
-      meta.description ||
-      meta.body ||
-      meta.details ||
-      '';
+      const notes =
+        meta.notes ||
+        meta.note ||
+        meta.description ||
+        meta.body ||
+        meta.details ||
+        '';
   
-    const rawImg =
-      meta.image_url ||
-      meta.imagePath ||
-      meta.path ||
-      null;
+      const rawImg =
+        meta.image_url ||
+        meta.imagePath ||
+        meta.path ||
+        null;
   
-    const imgUrl = resolveTaskImage(rawImg);
+      const imgUrl = resolveTaskImage(rawImg);
   
-    const statusRaw = (task.status || 'open').toLowerCase();
-    let statusLabel = 'Open';
-    if (statusRaw === 'completed') statusLabel = 'Completed';
-    else if (statusRaw === 'cancelled') statusLabel = 'Cancelled';
+      const statusRaw = (task.status || 'open').toLowerCase();
+      let statusLabel = 'Open';
+      if (statusRaw === 'completed') statusLabel = 'Completed';
+      else if (statusRaw === 'cancelled') statusLabel = 'Cancelled';
   
-    const fmt = (d) => {
-      try { return d ? new Date(d).toLocaleString() : '—'; }
-      catch { return '—'; }
-    };
+      const fmt = (d) => {
+        try { return d ? new Date(d).toLocaleString() : '—'; }
+        catch { return '—'; }
+      };
   
-    taskDetailTitle.textContent = task.title || 'Task';
+      const title = task.title || 'Task';
+      taskDetailTitle.textContent = title;
   
-    taskDetailBody.innerHTML = `
-      ${imgUrl ? `
-        <div class="hero task-hero" style="background-image:url('${imgUrl.replace(/'/g,"\\'")}');"></div>
-      ` : ''}
-      <div class="meta">
-        <div class="row"><strong>Status:</strong> ${escapeHtml(statusLabel)}</div>
-        ${task.channel ? `<div class="row"><strong>Channel:</strong> ${escapeHtml(task.channel)}</div>` : ''}
-        ${task.scheduled_at ? `<div class="row"><strong>Scheduled:</strong> ${escapeHtml(fmt(task.scheduled_at))}</div>` : ''}
-        ${task.due_at ? `<div class="row"><strong>Due:</strong> ${escapeHtml(fmt(task.due_at))}</div>` : ''}
-        ${task.completed_at ? `<div class="row"><strong>Completed:</strong> ${escapeHtml(fmt(task.completed_at))}</div>` : ''}
-        ${notes ? `<p class="task-notes"><strong>Notes:</strong> ${escapeHtml(notes)}</p>` : ''}
-      </div>
-    `;
+      taskDetailBody.innerHTML = `
+        ${imgUrl ? `
+          <div class="hero task-hero" style="background-image:url('${imgUrl.replace(/'/g,"\\'")}');"></div>
+        ` : `
+          <div class="hero task-hero"></div>
+        `}
+        <div class="meta">
+          <h3>${escapeHtml(title)}</h3>
+          <div class="row"><strong>Status:</strong> ${escapeHtml(statusLabel)}</div>
+          ${task.channel ? `<div class="row"><strong>Channel:</strong> ${escapeHtml(task.channel)}</div>` : ''}
+          ${task.scheduled_at ? `<div class="row"><strong>Scheduled:</strong> ${escapeHtml(fmt(task.scheduled_at))}</div>` : ''}
+          ${task.due_at ? `<div class="row"><strong>Due:</strong> ${escapeHtml(fmt(task.due_at))}</div>` : ''}
+          ${task.completed_at ? `<div class="row"><strong>Completed:</strong> ${escapeHtml(fmt(task.completed_at))}</div>` : ''}
+          ${notes ? `<p class="task-notes"><strong>Notes:</strong> ${escapeHtml(notes)}</p>` : ''}
+        </div>
+      `;
   
-    taskDetailOverlay.classList.add('open');
-    taskDetailOverlay.setAttribute('aria-hidden', 'false');
-    document.body.style.overflow = 'hidden';
-  }
+      taskDetailOverlay.classList.add('open');
+      taskDetailOverlay.setAttribute('aria-hidden', 'false');
+      document.body.style.overflow = 'hidden';
+    }
   
   function closeTaskDetail() {
     if (!taskDetailOverlay) return;
