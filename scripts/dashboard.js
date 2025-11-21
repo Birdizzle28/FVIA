@@ -354,6 +354,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ---------- ANNOUNCEMENTS (live from Supabase) ---------- */
   let _announcements = []; // filtered list for overlays
+  let _tasks = []; // tasks assigned to this user, for overlays
 
   async function getMyAgentMini() {
     const { data: { session } } = await supabase.auth.getSession();
