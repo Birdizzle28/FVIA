@@ -695,6 +695,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const agentId = document.getElementById('task-agent')?.value || '';
     const title   = document.getElementById('task-title')?.value.trim() || '';
+    const body    = document.getElementById('task-body')?.value.trim() || '';
+    const linkUrl = document.getElementById('task-link')?.value.trim() || '';
     const dueRaw  = document.getElementById('task-due')?.value.trim() || '';
 
     if (!agentId || !title) {
@@ -704,7 +706,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     let dueAt = null;
     if (dueRaw) {
-      // flatpickr uses 'Y-m-d H:i' – this parses as local time
       const d = new Date(dueRaw.replace(' ', 'T'));
       if (!isNaN(d.getTime())) {
         dueAt = d.toISOString();
@@ -715,15 +716,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { data: { session } } = await supabase.auth.getSession();
     const createdBy = session?.user?.id || userId || null;
 
+    // Build metadata (we’ll use this when listing tasks)
+    const metadata = {
+      created_by: createdBy,
+      source: 'admin_panel'
+    };
+    if (body) {
+      metadata.notes = body;
+    }
+    if (linkUrl) {
+      metadata.link_url = linkUrl;
+    }
+    // (We’ll wire image uploads in the next step; for now, we ignore task-image)
+
     const payload = {
-      assigned_to: agentId,    // UUID → matches agents.id
+      assigned_to: agentId,
       title,
       status: 'open',
       due_at: dueAt,
-      metadata: {
-        created_by: createdBy,
-        source: 'admin_panel'
-      }
+      metadata
     };
 
     const { error } = await supabase.from('tasks').insert(payload);
@@ -736,9 +747,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     if (msg) msg.textContent = '✅ Task created and assigned.';
 
-    // Reset fields but keep agent selected if you want – here we keep agent
+    // Reset fields but keep agent selected
     document.getElementById('task-title').value = '';
+    document.getElementById('task-body').value = '';
+    document.getElementById('task-link').value = '';
     document.getElementById('task-due').value = '';
+
+    // If the manage panel is open, refresh the list
+    const taskPanelEl = document.getElementById('task-list-panel');
+    if (taskPanelEl && !taskPanelEl.hasAttribute('hidden')) {
+      loadMyTasks();
+    }
   });
   
   document.getElementById('mkt-form')?.addEventListener('submit', async (e) => {
@@ -2086,7 +2105,157 @@ async function loadMarketingAssets() {
       }
     });
   });
-}/* =========================
+}
+/* =========================
+   Tasks: List / Complete / Delete (sent from Admin panel)
+   ========================= */
+async function loadMyTasks() {
+  const listEl = document.getElementById('task-list');
+  if (!listEl) return;
+
+  listEl.innerHTML = 'Loading…';
+
+  // Only tasks created from the admin panel by this admin
+  const { data, error } = await supabase
+    .from('tasks')
+    .select('*')
+    .contains('metadata', {
+      created_by: userId,
+      source: 'admin_panel'
+    })
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error loading tasks:', error);
+    listEl.innerHTML = '<p>Error loading tasks.</p>';
+    return;
+  }
+
+  if (!data || !data.length) {
+    listEl.innerHTML = '<p>No tasks sent yet.</p>';
+    return;
+  }
+
+  // Map agent id → name
+  const nameById = new Map((allAgents || []).map(a => [a.id, a.full_name]));
+
+  listEl.innerHTML = data
+    .map(task => {
+      const meta = task.metadata || {};
+      const agentName = nameById.get(task.assigned_to) || 'Unknown agent';
+      const status = (task.status || 'open').toLowerCase();
+      const dueText = task.due_at
+        ? new Date(task.due_at).toLocaleString()
+        : 'No due date';
+
+      const notes = (meta.notes || '').toString();
+      const shortNotes =
+        notes.length > 200 ? notes.slice(0, 200) + '…' : notes;
+
+      const linkUrl = meta.link_url || null;
+
+      return `
+        <div class="task-row"
+             data-id="${task.id}"
+             style="display:grid; grid-template-columns: 1fr auto; gap:8px; padding:8px 10px; border:1px solid #eee; border-radius:6px; margin-bottom:8px; font-size:13px;">
+          <div class="meta" style="min-width:0;">
+            <strong>${task.title || '(no title)'}</strong>
+            <div style="font-size:12px; color:#666; margin-top:2px;">
+              Assigned to: ${agentName}
+              · Status: ${status}
+              · Due: ${dueText}
+            </div>
+            ${
+              shortNotes
+                ? `<div style="font-size:13px; margin-top:4px; color:#333; white-space:pre-wrap;">${shortNotes}</div>`
+                : ''
+            }
+            ${
+              linkUrl
+                ? `<div style="margin-top:4px; font-size:13px;">
+                     <a href="${linkUrl}" target="_blank" rel="noopener">
+                       <i class="fa-solid fa-link"></i> Open link
+                     </a>
+                   </div>`
+                : ''
+            }
+          </div>
+          <div class="actions" style="display:flex; flex-direction:column; gap:6px;">
+            <button class="task-complete" style="padding:4px 8px; font-size:12px;">
+              Mark done
+            </button>
+            <button class="task-delete"
+                    style="padding:4px 8px; font-size:12px; background:#ffe6e6; border:1px solid #ffb3b3;">
+              Delete
+            </button>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  // Wire "Mark done"
+  listEl.querySelectorAll('.task-complete').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const row = e.target.closest('.task-row');
+      const id  = row?.getAttribute('data-id');
+      if (!id) return;
+
+      try {
+        const now = new Date().toISOString();
+        const { error: updErr } = await supabase
+          .from('tasks')
+          .update({ status: 'completed', completed_at: now })
+          .eq('id', id);
+
+        if (updErr) {
+          alert('❌ Failed to mark task done.');
+          console.error(updErr);
+          return;
+        }
+
+        // Reload list
+        await loadMyTasks();
+      } catch (err) {
+        console.error('Error marking task complete:', err);
+        alert('❌ Error marking task complete.');
+      }
+    });
+  });
+
+  // Wire "Delete"
+  listEl.querySelectorAll('.task-delete').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const row = e.target.closest('.task-row');
+      const id  = row?.getAttribute('data-id');
+      if (!id) return;
+
+      if (!confirm('Delete this task?')) return;
+
+      try {
+        const { error: delErr } = await supabase
+          .from('tasks')
+          .delete()
+          .eq('id', id);
+
+        if (delErr) {
+          alert('❌ Failed to delete task.');
+          console.error(delErr);
+          return;
+        }
+
+        row.remove();
+        if (!document.querySelector('#task-list .task-row')) {
+          listEl.innerHTML = '<p>No tasks sent yet.</p>';
+        }
+      } catch (err) {
+        console.error('Error deleting task:', err);
+        alert('❌ Error deleting task.');
+      }
+    });
+  });
+}
+/* =========================
    Agent Waitlist: List + Approvals
    ========================= */
 async function loadWaitlist() {
