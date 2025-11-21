@@ -502,16 +502,35 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     }
 
-  const scopeSel = document.getElementById('annc-scope');
+  const scopeSel     = document.getElementById('annc-scope');
   const wrapProducts = document.getElementById('annc-products-wrap');
   const wrapStates   = document.getElementById('annc-states-wrap');
   const wrapAgents   = document.getElementById('annc-agents-wrap');
+  const wrapLevels   = document.getElementById('annc-levels-wrap');
+
   function refreshAudienceUI() {
+    if (!scopeSel) return;
     const v = scopeSel.value;
-    wrapProducts.style.display = (v === 'by_product') ? 'block' : 'none';
-    wrapStates.style.display   = (v === 'by_state')   ? 'block' : 'none';
-    wrapAgents.style.display   = (v === 'custom_agents') ? 'block' : 'none';
+
+    if (wrapProducts) {
+      wrapProducts.style.display =
+        (v === 'by_product' || v === 'by_product_state') ? 'block' : 'none';
+    }
+
+    if (wrapStates) {
+      wrapStates.style.display =
+        (v === 'by_state' || v === 'by_product_state') ? 'block' : 'none';
+    }
+
+    if (wrapAgents) {
+      wrapAgents.style.display = (v === 'custom_agents') ? 'block' : 'none';
+    }
+
+    if (wrapLevels) {
+      wrapLevels.style.display = (v === 'by_level') ? 'block' : 'none';
+    }
   }
+
   scopeSel?.addEventListener('change', refreshAudienceUI);
   refreshAudienceUI();
 
