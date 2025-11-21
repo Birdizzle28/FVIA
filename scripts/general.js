@@ -151,6 +151,7 @@ sendBtn?.addEventListener("click", handleSend);
 
 /* ============================================================
    NOTIFICATION BELL — ANNOUNCEMENTS + TASKS + UNREAD BADGE
+   (audience-aware + publish_at null-safe)
    ============================================================ */
 (async function initFVNotifications() {
   const bell = document.getElementById("notifications-tab");
@@ -166,11 +167,111 @@ sendBtn?.addEventListener("click", handleSend);
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho"
   );
 
-  // Get user
+  // Get user/session
   const { data: sessionData } = await supabase.auth.getSession();
   if (!sessionData?.session) return;
 
   const userId = sessionData.session.user.id;
+
+  // --- Load agent + licenses (for audience filtering) ---
+  let me = {
+    id: userId,
+    is_admin: false,
+    npn: null,
+    licenses: [] // { state, active, loa_names[] }
+  };
+
+  try {
+    const { data: agentRow } = await supabase
+      .from("agents")
+      .select("id, is_admin, agent_id")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (agentRow) {
+      me.is_admin = !!agentRow.is_admin;
+      me.npn = agentRow.agent_id || null;
+    }
+
+    if (me.npn) {
+      const { data: licRows } = await supabase
+        .from("agent_nipr_licenses")
+        .select("state, active, loa_names")
+        .eq("agent_id", me.npn);
+
+      me.licenses = Array.isArray(licRows) ? licRows : [];
+    }
+  } catch (err) {
+    console.warn("Notif: error loading agent/licenses:", err);
+  }
+
+  // --- Audience matcher (same rules as announcements carousel) ---
+  function licenseMatchesProducts(lic, products) {
+    if (!products || !products.length) return false;
+    const loas = lic.loa_names || [];
+    const wants = products.map((p) => String(p || "").toLowerCase());
+
+    return wants.some((p) => {
+      if (p === "life") return loas.includes("Life");
+      if (p === "health")
+        return loas.includes("Accident & Health") || loas.includes("Health");
+      if (p === "property") return loas.includes("Property");
+      if (p === "casualty") return loas.includes("Casualty");
+      return false;
+    });
+  }
+
+  function announcementShowsForMe(row) {
+    const aud = row.audience || { scope: "all" };
+    const scope = aud.scope || "all";
+
+    if (scope === "all") return true;
+    if (scope === "admins") return me.is_admin === true;
+
+    if (scope === "custom_agents") {
+      const ids = aud.agent_ids || [];
+      return me.id && ids.includes(me.id);
+    }
+
+    if (scope === "by_state") {
+      const states = (aud.states || []).map((s) =>
+        String(s || "").toUpperCase()
+      );
+      if (!states.length) return false;
+      return me.licenses.some(
+        (lic) =>
+          lic.active === true &&
+          states.includes(String(lic.state || "").toUpperCase())
+      );
+    }
+
+    if (scope === "by_product") {
+      const prods = aud.products || [];
+      if (!prods.length) return false;
+      return me.licenses.some(
+        (lic) => lic.active === true && licenseMatchesProducts(lic, prods)
+      );
+    }
+
+    if (scope === "by_product_state") {
+      const prods = aud.products || [];
+      const states = (aud.states || []).map((s) =>
+        String(s || "").toUpperCase()
+      );
+      if (!prods.length || !states.length) return false;
+
+      // must match BOTH on the SAME active license
+      return me.licenses.some((lic) => {
+        if (!lic.active) return false;
+        const st = String(lic.state || "").toUpperCase();
+        if (!states.includes(st)) return false;
+        return licenseMatchesProducts(lic, prods);
+      });
+    }
+
+    // ignore by_level etc. for now → can extend later if needed
+    return false;
+  }
 
   // === READ STATE (per user, per item) ===
   const readKey = `fvia_notif_read_${userId}`;
@@ -197,7 +298,6 @@ sendBtn?.addEventListener("click", handleSend);
 
   const readSet = getReadSet();
 
-  // ---- HELPER: unique key per notification ----
   const notifKey = (item) => `${item.type}:${item.id}`;
 
   // --- Add unread red dot to the bell ---
@@ -299,8 +399,6 @@ sendBtn?.addEventListener("click", handleSend);
     }
     previewBody.textContent = bodyText;
     preview.style.display = "flex";
-
-    // Close the panel while previewing
     panel.style.display = "none";
   }
 
@@ -313,21 +411,19 @@ sendBtn?.addEventListener("click", handleSend);
     if (e.target === preview) closePreview();
   });
 
-  // store the currently loaded items so we can look them up by index
   let currentItems = [];
 
-  // --- Fetch notifications ---
+  // --- Fetch notifications (audience-aware + null-safe publish_at) ---
   async function loadNotifications() {
-    const nowISO = new Date().toISOString();
     const now = new Date();
 
     const [annc, tasks] = await Promise.all([
       supabase
         .from("announcements")
-        .select("id,title,body,created_at,publish_at,expires_at")
+        .select("id,title,body,created_at,publish_at,expires_at,audience,is_active")
         .eq("is_active", true)
-        .lte("publish_at", nowISO)
-        .order("publish_at", { ascending: false }),
+        .order("publish_at", { ascending: false })
+        .order("created_at", { ascending: false }),
 
       supabase
         .from("tasks")
@@ -338,9 +434,16 @@ sendBtn?.addEventListener("click", handleSend);
 
     const merged = [];
 
-    // Announcements (filter out expired)
+    // Announcements: time window + audience filter
     (annc.data || [])
-      .filter((a) => !a.expires_at || new Date(a.expires_at) > now)
+      .filter((a) => {
+        const pub = a.publish_at ? new Date(a.publish_at) : null;
+        const exp = a.expires_at ? new Date(a.expires_at) : null;
+        const pubOk = !pub || pub <= now;       // null = "now"
+        const expOk = !exp || exp > now;        // expires_at in future or null
+        if (!pubOk || !expOk) return false;
+        return announcementShowsForMe(a);
+      })
       .forEach((a) => {
         const ts = new Date(a.publish_at || a.created_at);
         merged.push({
@@ -357,11 +460,11 @@ sendBtn?.addEventListener("click", handleSend);
       const ts = new Date(t.created_at);
       merged.push({
         type: "task",
-        id: t.id,
-        title: t.title,
-        body: "Status: " + (t.status || "—"),
-        due: t.due_at ? new Date(t.due_at) : null,
-        ts,
+          id: t.id,
+          title: t.title,
+          body: "Status: " + (t.status || "—"),
+          due: t.due_at ? new Date(t.due_at) : null,
+          ts,
       });
     });
 
@@ -369,6 +472,13 @@ sendBtn?.addEventListener("click", handleSend);
     currentItems = merged;
 
     let anyUnread = false;
+
+    if (!merged.length) {
+      notifList.innerHTML =
+        '<div style="padding:10px 12px; font-size:.85rem; color:#666;">No notifications yet.</div>';
+      badge.style.display = "none";
+      return;
+    }
 
     notifList.innerHTML = merged
       .map((item, index) => {
@@ -413,43 +523,32 @@ sendBtn?.addEventListener("click", handleSend);
       })
       .join("");
 
-    // Attach click handlers for preview + mark as read
-    notifList
-      .querySelectorAll(".fvia-notif-item")
-      .forEach((row) => {
-        row.addEventListener("click", () => {
-          const idx = Number(row.getAttribute("data-index") || "0");
-          const item = currentItems[idx];
-          if (!item) return;
+    notifList.querySelectorAll(".fvia-notif-item").forEach((row) => {
+      row.addEventListener("click", () => {
+        const idx = Number(row.getAttribute("data-index") || "0");
+        const item = currentItems[idx];
+        if (!item) return;
 
-          // mark THIS item as read
-          const key = notifKey(item);
-          if (!readSet.has(key)) {
-            readSet.add(key);
-            saveReadSet(readSet);
-          }
+        const key = notifKey(item);
+        if (!readSet.has(key)) {
+          readSet.add(key);
+          saveReadSet(readSet);
+        }
 
-          // update visuals
-          row.style.background = "white";
-          const dot = row.querySelector("div[style*='border-radius:50%']");
-          if (dot) dot.remove();
+        row.style.background = "white";
+        const dot = row.querySelector("div[style*='border-radius:50%']");
+        if (dot) dot.remove();
 
-          // recompute unread to update bell badge
-          const stillUnread = currentItems.some((it) => !readSet.has(notifKey(it)));
-          badge.style.display = stillUnread ? "block" : "none";
+        const stillUnread = currentItems.some(
+          (it) => !readSet.has(notifKey(it))
+        );
+        badge.style.display = stillUnread ? "block" : "none";
 
-          // open preview modal
-          openPreview(item);
-        });
+        openPreview(item);
       });
+    });
 
     badge.style.display = anyUnread ? "block" : "none";
-
-    if (!merged.length) {
-      notifList.innerHTML =
-        '<div style="padding:10px 12px; font-size:.85rem; color:#666;">No notifications yet.</div>';
-      badge.style.display = "none";
-    }
   }
 
   // --- Toggle panel ---
@@ -468,7 +567,6 @@ sendBtn?.addEventListener("click", handleSend);
       readSet.add(notifKey(item));
     });
     saveReadSet(readSet);
-    // refresh UI
     loadNotifications();
     badge.style.display = "none";
   };
