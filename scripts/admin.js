@@ -79,6 +79,19 @@ async function uploadAnnouncementImage(file, me) {
   const { data } = supabase.storage.from('announcements').getPublicUrl(path);
   return data?.publicUrl || null;
 }
+async function uploadTaskImage(file, me) {
+  if (!file) return null;
+  const ext = (file.name.split('.').pop() || 'bin').toLowerCase();
+  const path = `task_${me || 'anon'}_${Date.now()}.${ext}`;
+  const { error: upErr } = await supabase.storage.from('tasks').upload(path, file, {
+    cacheControl: '3600',
+    upsert: true,
+    contentType: file.type || 'application/octet-stream'
+  });
+  if (upErr) throw upErr;
+  const { data } = supabase.storage.from('tasks').getPublicUrl(path);
+  return data?.publicUrl || null;
+}
 
 function summarizeAudience(aud) {
   if (!aud || !aud.scope) return 'All users';
