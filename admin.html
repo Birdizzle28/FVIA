@@ -638,46 +638,57 @@
 	          </label>
 	
 	          <div class="form-row" style="display:flex; gap:12px; align-items:flex-end;">
-	            <label class="form-group" style="flex:1;">
-	              <span>Audience</span>
-	              <select id="annc-scope">
-	                <option value="all">All users</option>
-	                <option value="admins">Admins only</option>
-	                <option value="by_product">By product type</option>
-	                <option value="by_state">By state</option>
-	                <option value="custom_agents">Choose agents…</option>
-	              </select>
-	            </label>
-	
-	            <label class="form-group" style="flex:1; display:none;" id="annc-products-wrap">
-	              <span>Product types</span>
-	              <select id="annc-products" multiple></select>
-	            </label>
-	
-	            <label class="form-group" style="flex:1; display:none;" id="annc-states-wrap">
-	              <span>States</span>
-	              <select id="annc-states" multiple>
-	                <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
-	                <option>CA</option><option>CO</option><option>CT</option><option>DC</option>
-	                <option>DE</option><option>FL</option><option>GA</option><option>HI</option>
-	                <option>IA</option><option>ID</option><option>IL</option><option>IN</option>
-	                <option>KS</option><option>KY</option><option>LA</option><option>MA</option>
-	                <option>MD</option><option>ME</option><option>MI</option><option>MN</option>
-	                <option>MO</option><option>MS</option><option>MT</option><option>NC</option>
-	                <option>ND</option><option>NE</option><option>NH</option><option>NJ</option>
-	                <option>NM</option><option>NV</option><option>NY</option><option>OH</option>
-	                <option>OK</option><option>OR</option><option>PA</option><option>RI</option>
-	                <option>SC</option><option>SD</option><option>TN</option><option>TX</option>
-	                <option>UT</option><option>VA</option><option>VT</option><option>WA</option>
-	                <option>WI</option><option>WV</option><option>WY</option>
-	              </select>
-	            </label>
-	
-	            <label class="form-group" style="flex:1; display:none;" id="annc-agents-wrap">
-	              <span>Agents</span>
-	              <select id="annc-agent-ids" multiple></select>
-	            </label>
-	          </div>
+				  <label class="form-group" style="flex:1;">
+				    <span>Audience</span>
+				    <select id="annc-scope">
+				      <option value="all">All users</option>
+				      <option value="admins">Admins only</option>
+				      <option value="by_level">By level</option>
+				      <option value="by_product">By product type</option>
+				      <option value="by_state">By state</option>
+				      <option value="by_product_state">By product &amp; state</option>
+				      <option value="custom_agents">Choose agents…</option>
+				    </select>
+				  </label>
+				
+				  <!-- Levels -->
+				  <label class="form-group" style="flex:1; display:none;" id="annc-levels-wrap">
+				    <span>Levels</span>
+				    <select id="annc-levels" multiple></select>
+				  </label>
+				
+				  <!-- Products -->
+				  <label class="form-group" style="flex:1; display:none;" id="annc-products-wrap">
+				    <span>Product types</span>
+				    <select id="annc-products" multiple></select>
+				  </label>
+				
+				  <!-- States -->
+				  <label class="form-group" style="flex:1; display:none;" id="annc-states-wrap">
+				    <span>States</span>
+				    <select id="annc-states" multiple>
+				      <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+				      <option>CA</option><option>CO</option><option>CT</option><option>DC</option>
+				      <option>DE</option><option>FL</option><option>GA</option><option>HI</option>
+				      <option>IA</option><option>ID</option><option>IL</option><option>IN</option>
+				      <option>KS</option><option>KY</option><option>LA</option><option>MA</option>
+				      <option>MD</option><option>ME</option><option>MI</option><option>MN</option>
+				      <option>MO</option><option>MS</option><option>MT</option><option>NC</option>
+				      <option>ND</option><option>NE</option><option>NH</option><option>NJ</option>
+				      <option>NM</option><option>NV</option><option>NY</option><option>OH</option>
+				      <option>OK</option><option>OR</option><option>PA</option><option>RI</option>
+				      <option>SC</option><option>SD</option><option>TN</option><option>TX</option>
+				      <option>UT</option><option>VA</option><option>VT</option><option>WA</option>
+				      <option>WI</option><option>WV</option><option>WY</option>
+				    </select>
+				  </label>
+				
+				  <!-- Agents -->
+				  <label class="form-group" style="flex:1; display:none;" id="annc-agents-wrap">
+				    <span>Agents</span>
+				    <select id="annc-agent-ids" multiple></select>
+				  </label>
+				</div>
 	
 	          <div class="form-row" style="display:flex; gap:12px;">
 	            <label class="form-group" style="flex:1;">
@@ -689,7 +700,7 @@
 	              <input id="annc-expires" type="text" />
 	            </label>
 	          </div>
-						<div class="form-row" style="display:flex; gap:12px;">
+			<div class="form-row" style="display:flex; gap:12px;">
 	            <label class="form-group" style="flex:1;">
 	              <span>Repeat</span>
 	              <select id="annc-repeat">
