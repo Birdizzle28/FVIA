@@ -309,16 +309,19 @@
         </div>
       </div>
     </div>
-    <!-- Task detail overlay -->
+    
+    <!-- Task detail overlay (match announcement detail layout) -->
     <div id="task-detail-overlay" class="overlay" aria-hidden="true">
       <div class="overlay-backdrop" data-close></div>
-      <div class="overlay-dialog">
-        <button type="button" class="overlay-close" data-close>
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-        <div class="task-detail-body">
+      <div class="overlay-panel task-detail" role="dialog" aria-modal="true" aria-labelledby="task-detail-title">
+        <div class="overlay-header">
           <h2 id="task-detail-title">Task</h2>
-          <!-- JS fills the rest -->
+          <button class="overlay-close" aria-label="Close" data-close>&times;</button>
+        </div>
+        <div class="overlay-body">
+          <div class="task-detail-body">
+            <!-- JS fills this grid -->
+          </div>
         </div>
       </div>
     </div>
