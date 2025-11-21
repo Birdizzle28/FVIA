@@ -151,7 +151,8 @@ sendBtn?.addEventListener("click", handleSend);
 
 /* ============================================================
    NOTIFICATION BELL — ANNOUNCEMENTS + TASKS + UNREAD BADGE
-   (audience-aware + publish_at null-safe, with images & type chips)
+   (audience-aware + publish_at null-safe, with images & type chips
+   and richer Task overlay: status, created, due, notes, link)
    ============================================================ */
 (async function initFVNotifications() {
   const bell = document.getElementById("notifications-tab");
@@ -185,6 +186,16 @@ sendBtn?.addEventListener("click", handleSend);
 
     const { data } = supabase.storage.from("tasks").getPublicUrl(path);
     return data?.publicUrl || null;
+  }
+
+  // small helper so we can safely inject notes into innerHTML
+  function escapeHtml(str) {
+    return String(str || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#039;");
   }
 
   // Get user/session
@@ -426,7 +437,7 @@ sendBtn?.addEventListener("click", handleSend);
   function openPreview(item) {
     const isTask = item.type === "task";
 
-    // Meta text
+    // Meta: show created timestamp for both (tasks + annc)
     previewMeta.textContent = item.ts.toLocaleString();
 
     // Chip
@@ -454,16 +465,52 @@ sendBtn?.addEventListener("click", handleSend);
       `;
     }
 
-    // Title & body
+    // Title
     previewTitle.textContent = item.title || "(No title)";
 
-    let bodyText = item.body || "";
-    if (isTask && item.due) {
-      bodyText =
-        `Due: ${item.due.toLocaleString()}` +
-        (bodyText ? `\n\n${bodyText}` : "");
+    // Body
+    if (isTask) {
+      const statusText = item.status || "—";
+      const createdText = item.ts.toLocaleString();
+      const dueText = item.due ? item.due.toLocaleString() : "—";
+      const notes = item.notes ? escapeHtml(item.notes) : "";
+
+      let html = `
+        <div style="font-size:12px; color:#555; margin-bottom:6px;">
+          <div><strong>Status:</strong> ${escapeHtml(statusText)}</div>
+          <div><strong>Created:</strong> ${escapeHtml(createdText)}</div>
+          <div><strong>Due:</strong> ${escapeHtml(dueText)}</div>
+        </div>
+      `;
+
+      if (notes) {
+        html += `
+          <div style="margin-top:6px; white-space:pre-wrap;">
+            ${notes}
+          </div>
+        `;
+      }
+
+      if (item.linkUrl) {
+        const safeUrl = encodeURI(String(item.linkUrl));
+        html += `
+          <div style="margin-top:10px;">
+            <a href="${safeUrl}"
+               target="_blank"
+               rel="noopener noreferrer"
+               style="color:#353468; text-decoration:underline; font-weight:600;">
+              Open linked item
+            </a>
+          </div>
+        `;
+      }
+
+      previewBody.innerHTML = html;
+    } else {
+      // Announcement: keep simple body text
+      const bodyText = item.body || "";
+      previewBody.textContent = bodyText;
     }
-    previewBody.textContent = bodyText;
 
     // Image
     if (item.imageUrl) {
@@ -536,7 +583,7 @@ sendBtn?.addEventListener("click", handleSend);
     (tasks.data || []).forEach((t) => {
       const ts = new Date(t.created_at);
 
-      // parse metadata for notes + image
+      // parse metadata for notes + image + link
       const meta = (() => {
         const raw = t.metadata;
         if (!raw) return {};
@@ -554,6 +601,11 @@ sendBtn?.addEventListener("click", handleSend);
         meta.details ||
         "";
 
+      const linkUrl =
+        meta.link_url ||
+        meta.link ||
+        null;
+
       const rawImg =
         meta.image_url ||
         meta.imagePath ||
@@ -569,9 +621,14 @@ sendBtn?.addEventListener("click", handleSend);
         type: "task",
         id: t.id,
         title: t.title,
-        body: bodyText,
-        due: t.due_at ? new Date(t.due_at) : null,
+        // structured fields for overlay
+        status: t.status || null,
         ts,
+        due: t.due_at ? new Date(t.due_at) : null,
+        notes,
+        linkUrl,
+        // used for the list preview snippet
+        body: bodyText,
         imageUrl: imgUrl
       });
     });
