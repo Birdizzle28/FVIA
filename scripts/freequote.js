@@ -167,6 +167,8 @@ document.addEventListener('DOMContentLoaded', () => {
         lbl.classList.toggle('selected');
         if (cb) cb.checked = lbl.classList.contains('selected');
         updateCoverDisplayAndCsv();
+
+        toggleMenu(false);
       });
       lbl.tabIndex = 0;
       lbl.addEventListener('keydown', (e) => { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); lbl.click(); }});
