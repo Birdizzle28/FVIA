@@ -417,19 +417,76 @@ document.addEventListener('DOMContentLoaded', () => {
     };
     const showsForMe = (r) => {
       const aud = r.audience || { scope: 'all' };
-      switch (aud.scope) {
-        case 'all': return true;
-        case 'admins': return me.is_admin;
-        case 'by_state': return me.state && (aud.states || []).includes(me.state);
-        case 'by_product': {
-          const want = new Set(aud.products || []);
-          return (me.product_types || []).some(p => want.has(p));
-        }
-        case 'custom_agents':
-          return me.id && (aud.agent_ids || []).includes(me.id);
-        default:
-          return false;
+      const scope = aud.scope || 'all';
+    
+      // always show to admins if admin-only
+      if (scope === 'admins') return me.is_admin;
+    
+      // everyone
+      if (scope === 'all') return true;
+    
+      // helper: check if agent has active license in a state
+      function hasState(target) {
+        const T = String(target).toUpperCase();
+        return me.licenses.some(lic =>
+          lic.active === true &&
+          String(lic.state).toUpperCase() === T
+        );
       }
+    
+      // helper: check if agent is licensed for product
+      function hasProduct(prod) {
+        const p = String(prod).toLowerCase();
+        return me.licenses.some(lic => {
+          if (!lic.active) return false; 
+          const loas = lic.loa_names || [];
+    
+          if (p === 'life')     return loas.includes('Life');
+          if (p === 'health')   return loas.includes('Accident & Health') || loas.includes('Health');
+          if (p === 'property') return loas.includes('Property');
+          if (p === 'casualty') return loas.includes('Casualty');
+    
+          return false;
+        });
+      }
+    
+      // filter by state
+      if (scope === 'by_state') {
+        return (aud.states || []).some(s => hasState(s));
+      }
+    
+      // filter by product
+      if (scope === 'by_product') {
+        return (aud.products || []).some(p => hasProduct(p));
+      }
+    
+      // filter by BOTH
+      if (scope === 'by_product_state') {
+        const states   = aud.states   || [];
+        const products = aud.products || [];
+    
+        return me.licenses.some(lic => {
+          const stateOk = !states.length || states.includes(lic.state);
+          const loas    = lic.loa_names || [];
+    
+          const productOk = products.some(p => {
+            if (p === 'life')     return loas.includes('Life');
+            if (p === 'health')   return loas.includes('Accident & Health') || loas.includes('Health');
+            if (p === 'property') return loas.includes('Property');
+            if (p === 'casualty') return loas.includes('Casualty');
+            return false;
+          });
+    
+          return lic.active && stateOk && productOk;
+        });
+      }
+    
+      // custom specific agents
+      if (scope === 'custom_agents') {
+        return (aud.agent_ids || []).includes(me.id);
+      }
+    
+      return false;
     };
 
     const list = (rows || []).filter(timeOk).filter(showsForMe);
