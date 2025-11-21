@@ -316,40 +316,125 @@ document.addEventListener('DOMContentLoaded', () => {
     return byType;
   }
 
-  // --- Use agents table; require ALL requested lines to include detected state; prefer is_available ---
-  async function pickAgentForAll(requiredLines, state2) {
-    if (!state2 || !/^[A-Z]{2}$/.test(state2)) {
-      return { reason: 'none_fit', agent: null, shouldCall: false };
+    // --- Use agent_nipr_licenses as source of truth; require all needed lines in that state; prefer is_available ---
+    async function pickAgentForAll(requiredLines, state2) {
+      const supabase = window.supabase;
+      const state = (state2 || '').toUpperCase();
+  
+      if (!state || !/^[A-Z]{2}$/.test(state)) {
+        return { reason: 'none_fit', agent: null, shouldCall: false };
+      }
+  
+      // Map our normalized line keys to text we expect to see in NIPR line_of_authority
+      const lineTokenMap = {
+        life:       'Life',
+        health:     'Health',
+        property:   'Property',
+        casualty:   'Casualty',
+        legalshield:'Life',      // adjust if your LOA text is different
+        idshield:   'Life'       // adjust if your LOA text is different
+      };
+  
+      const neededTokens = Array.from(
+        new Set(
+          (requiredLines || [])
+            .map(lineKey => lineTokenMap[lineKey])
+            .filter(Boolean)
+        )
+      );
+  
+      if (!neededTokens.length) {
+        return { reason: 'none_fit', agent: null, shouldCall: false };
+      }
+  
+      // 1) Pull all NIPR license rows for this state
+      const { data: niprRows, error: niprErr } = await supabase
+        .from('agent_nipr_licenses')
+        .select('npn, state, line_of_authority, status, license_status')
+        .eq('state', state);
+  
+      if (niprErr) {
+        throw new Error(niprErr.message);
+      }
+  
+      if (!niprRows || !niprRows.length) {
+        return { reason: 'none_fit', agent: null, shouldCall: false };
+      }
+  
+      // Helper: is this NIPR row active?
+      function isRowActive(row) {
+        const raw =
+          (row.status || row.license_status || '')
+            .toString()
+            .trim()
+            .toLowerCase();
+        // tweak this if your statuses differ
+        if (!raw) return true; // if no status column, treat as active
+        return raw === 'active' || raw === 'authorized' || raw === 'current';
+      }
+  
+      // Helper: does this row's LOA text contain the token (e.g. "Property", "Casualty")?
+      function rowMatchesToken(row, token) {
+        if (!row.line_of_authority) return false;
+        return row.line_of_authority.toString().toLowerCase().includes(token.toLowerCase());
+      }
+  
+      // 2) Group rows by NPN and see which NPNs have *all* needed tokens active in this state
+      const byNpn = new Map();
+      for (const row of niprRows) {
+        if (!row.npn) continue;
+        if (!isRowActive(row)) continue;
+  
+        if (!byNpn.has(row.npn)) byNpn.set(row.npn, []);
+        byNpn.get(row.npn).push(row);
+      }
+  
+      const eligibleNpns = [];
+      for (const [npn, rows] of byNpn.entries()) {
+        const hasAllTokens = neededTokens.every(token =>
+          rows.some(r => rowMatchesToken(r, token))
+        );
+        if (hasAllTokens) {
+          eligibleNpns.push(npn);
+        }
+      }
+  
+      if (!eligibleNpns.length) {
+        return { reason: 'none_fit', agent: null, shouldCall: false };
+      }
+  
+      // 3) Now load agents that match those NPNs and are active
+      const { data: agents, error: agentErr } = await supabase
+        .from('agents')
+        .select('id, full_name, phone, is_active, is_available, last_assigned_at, npn')
+        .eq('is_active', true)
+        .in('npn', eligibleNpns);
+  
+      if (agentErr) {
+        throw new Error(agentErr.message);
+      }
+  
+      const eligibleAgents = (agents || []).filter(a => !!a.npn && eligibleNpns.includes(a.npn));
+  
+      if (!eligibleAgents.length) {
+        return { reason: 'none_fit', agent: null, shouldCall: false };
+      }
+  
+      // Same queue logic as before: prefer online, rotate by oldest last_assigned_at
+      const byOldest = (arr) =>
+        arr.slice().sort((a, b) => {
+          const ax = a.last_assigned_at ? new Date(a.last_assigned_at).getTime() : 0;
+          const bx = b.last_assigned_at ? new Date(b.last_assigned_at).getTime() : 0;
+          return ax - bx;
+        });
+  
+      const online = eligibleAgents.filter(a => !!a.is_available);
+      if (online.length) {
+        return { reason: 'online', agent: byOldest(online)[0], shouldCall: true };
+      }
+  
+      return { reason: 'offline_only', agent: byOldest(eligibleAgents)[0], shouldCall: false };
     }
-
-    const { data: agents, error } = await supabase
-      .from('agents')
-      .select('id, full_name, phone, is_active, is_available, licensed_states_by_line, last_assigned_at')
-      .eq('is_active', true);
-
-    if (error) throw new Error(error.message);
-
-    const eligible = (agents || []).filter(a => {
-      const lic = a.licensed_states_by_line || {};
-      return requiredLines.every(lineKey => {
-        const arr = Array.isArray(lic[lineKey]) ? lic[lineKey] : [];
-        return arr.includes(state2);
-      });
-    });
-
-    if (!eligible.length) return { reason: 'none_fit', agent: null, shouldCall: false };
-
-    const byOldest = (arr) =>
-      arr.slice().sort((a,b) => {
-        const ax = a.last_assigned_at ? new Date(a.last_assigned_at).getTime() : 0;
-        const bx = b.last_assigned_at ? new Date(b.last_assigned_at).getTime() : 0;
-        return ax - bx;
-      });
-
-    const online = eligible.filter(a => !!a.is_available);
-    if (online.length) return { reason: 'online', agent: byOldest(online)[0], shouldCall: true };
-    return { reason: 'offline_only', agent: byOldest(eligible)[0], shouldCall: false };
-  }
 
   // ----- STEP NAV -----
   btnStep1.addEventListener('click', async () => {
