@@ -452,6 +452,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('open-mkt-modal')?.addEventListener('click', () => openOverlay('mkt-modal'));
   document.getElementById('open-agent-modal')?.addEventListener('click', () => openOverlay('agent-modal'));
   document.getElementById('open-remove-agent-modal')?.addEventListener('click', () => openOverlay('remove-agent-modal'));
+    document.getElementById('open-task-modal')?.addEventListener('click', () => openOverlay('task-modal'));
   function openOverlay(id){
     const el = document.getElementById(id);
     if (!el) return;
@@ -1825,6 +1826,34 @@ async function loadAnnouncements() {
     mktSearchEl.addEventListener('input', () => {
       window._marketingSearchTerm = mktSearchEl.value.toLowerCase();
       loadMarketingAssets();
+    });
+  }
+  // === Task list collapse ===
+  const taskPanelEl  = document.getElementById('task-list-panel');
+  const taskToggleEl = document.getElementById('toggle-task-list');
+
+  if (taskPanelEl && taskToggleEl) {
+    taskToggleEl.addEventListener('click', () => {
+      const isHidden = taskPanelEl.hasAttribute('hidden');
+
+      if (isHidden) {
+        // Open panel
+        taskPanelEl.removeAttribute('hidden');
+        taskToggleEl.setAttribute('aria-expanded', 'true');
+        taskToggleEl
+          .querySelector('i')
+          ?.classList.replace('fa-chevron-down', 'fa-chevron-up');
+
+        // Load tasks when first opened
+        loadMyTasks();
+      } else {
+        // Close panel
+        taskPanelEl.setAttribute('hidden', '');
+        taskToggleEl.setAttribute('aria-expanded', 'false');
+        taskToggleEl
+          .querySelector('i')
+          ?.classList.replace('fa-chevron-up', 'fa-chevron-down');
+      }
     });
   }
 /* =========================
