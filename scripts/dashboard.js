@@ -278,7 +278,14 @@ document.addEventListener('DOMContentLoaded', () => {
   function openDetail(annc) {
     detailTitle.textContent = annc.title || 'Announcement';
     detailBody.innerHTML = `
-      <div class="hero" style="background-image:url('${(annc.image_url || '').replace(/'/g,"\\'")}');"></div>
+      <div class="hero"
+        style="
+          background-image:url('${(annc.image_url || '').replace(/'/g,"\\'")}');
+          background-size:contain;
+          background-position:center;
+          background-repeat:no-repeat;
+          background-color:#f3f3fb;
+        "></div>
       <div class="meta">
         <h3>${annc.title || 'Untitled'}</h3>
         <p>${(annc.body || '').replace(/\n/g,'<br>')}</p>
@@ -792,7 +799,14 @@ document.addEventListener('DOMContentLoaded', () => {
   
       taskDetailBody.innerHTML = `
         ${imgUrl ? `
-          <div class="hero task-hero" style="background-image:url('${imgUrl.replace(/'/g,"\\'")}');"></div>
+          <<div class="hero task-hero"
+          style="
+            ${imgUrl ? `background-image:url('${imgUrl.replace(/'/g,"\\'")}');` : ''}
+            background-size:contain;
+            background-position:center;
+            background-repeat:no-repeat;
+            background-color:#f3f3fb;
+          "></div>
         ` : `
           <div class="hero task-hero"></div>
         `}
