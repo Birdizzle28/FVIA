@@ -416,59 +416,67 @@ document.addEventListener('DOMContentLoaded', () => {
       return true;
     };
     const showsForMe = (r) => {
-      const aud = r.audience || { scope: 'all' };
+      const aud   = r.audience || { scope: 'all' };
       const scope = aud.scope || 'all';
+      const licenses = me.licenses || [];
     
-      // always show to admins if admin-only
+      // Admin-only
       if (scope === 'admins') return me.is_admin;
     
-      // everyone
+      // Everyone
       if (scope === 'all') return true;
     
-      // helper: check if agent has active license in a state
-      function hasState(target) {
+      // Helpers that ALWAYS respect active === true
+      const hasState = (target) => {
+        if (!target) return false;
         const T = String(target).toUpperCase();
-        return me.licenses.some(lic =>
+        return licenses.some(lic =>
           lic.active === true &&
-          String(lic.state).toUpperCase() === T
+          String(lic.state || '').toUpperCase() === T
         );
-      }
+      };
     
-      // helper: check if agent is licensed for product
-      function hasProduct(prod) {
+      const hasProduct = (prod) => {
+        if (!prod) return false;
         const p = String(prod).toLowerCase();
-        return me.licenses.some(lic => {
-          if (!lic.active) return false; 
+        return licenses.some(lic => {
+          if (!lic.active) return false;
           const loas = lic.loa_names || [];
-    
           if (p === 'life')     return loas.includes('Life');
           if (p === 'health')   return loas.includes('Accident & Health') || loas.includes('Health');
           if (p === 'property') return loas.includes('Property');
           if (p === 'casualty') return loas.includes('Casualty');
-    
           return false;
         });
-      }
+      };
     
-      // filter by state
+      // By state only
       if (scope === 'by_state') {
-        return (aud.states || []).some(s => hasState(s));
+        const states = aud.states || [];
+        if (!states.length) return false;
+        return states.some(s => hasState(s));
       }
     
-      // filter by product
+      // By product only
       if (scope === 'by_product') {
-        return (aud.products || []).some(p => hasProduct(p));
+        const products = aud.products || [];
+        if (!products.length) return false;
+        return products.some(p => hasProduct(p));
       }
     
-      // filter by BOTH
+      // By product AND state (THIS WAS BUGGY BEFORE)
       if (scope === 'by_product_state') {
-        const states   = aud.states   || [];
-        const products = aud.products || [];
+        const states   = (aud.states   || []).map(s => String(s).toUpperCase());
+        const products = (aud.products || []).map(p => String(p).toLowerCase());
+        if (!states.length || !products.length) return false;
     
-        return me.licenses.some(lic => {
-          const stateOk = !states.length || states.includes(lic.state);
-          const loas    = lic.loa_names || [];
+        return licenses.some(lic => {
+          if (!lic.active) return false;
     
+          const licState = String(lic.state || '').toUpperCase();
+          if (!states.includes(licState)) return false;
+    
+          const loas = lic.loa_names || [];
           const productOk = products.some(p => {
             if (p === 'life')     return loas.includes('Life');
             if (p === 'health')   return loas.includes('Accident & Health') || loas.includes('Health');
@@ -477,15 +485,16 @@ document.addEventListener('DOMContentLoaded', () => {
             return false;
           });
     
-          return lic.active && stateOk && productOk;
+          return productOk;
         });
       }
     
-      // custom specific agents
+      // Custom specific agents
       if (scope === 'custom_agents') {
-        return (aud.agent_ids || []).includes(me.id);
+        return me.id && (aud.agent_ids || []).includes(me.id);
       }
     
+      // Anything unknown → hide
       return false;
     };
 
