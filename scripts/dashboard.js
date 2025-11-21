@@ -638,11 +638,23 @@ document.addEventListener('DOMContentLoaded', () => {
       bodyHtml += '<br><strong>Notes:</strong> ' + escapeHtml(notes);
     }
 
+    const imgUrl =
+      task.metadata?.image_url || null;
+    
+    let imgHtml = '';
+    if (imgUrl) {
+      imgHtml = `
+        <div class="task-img-wrap">
+          <img src="${imgUrl}" alt="" style="width:100%; border-radius:8px; margin-top:8px;">
+        </div>
+      `;
+    }
     art.innerHTML = `
       <h3>${escapeHtml(task.title || 'Task')}</h3>
       <p>${bodyHtml}</p>
+      ${imgHtml}
     `;
-
+  
     return art;
   }
 
