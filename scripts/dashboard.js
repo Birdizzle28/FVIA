@@ -332,25 +332,28 @@ document.addEventListener('DOMContentLoaded', () => {
     return `<div class="row"><strong>Audience:</strong> ${label}</div>`;
   }
 
-  // “See all” button handlers (Announcements get a custom renderer)
-  document.querySelectorAll('.see-all').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const key  = btn.dataset.overlay;
-      const host = btn.closest('.carousel');
-      const inst = host ? carousels.find(c => c.root === host) : null;
-      const titleMap = {
-        announcements: 'All Announcements',
-        sales: 'All Sales Entries',
-        reminders: 'All Tasks & Reminders'
-      };
-      if (key === 'announcements') {
-        openAnnouncementsOverlay(inst);
-      } else {
-        const items = inst ? inst.getAllSlides() : [];
-        openOverlay(titleMap[key] || 'All Items', items, inst);
-      }
+    // “See all” button handlers (Announcements & Tasks get custom renderers)
+    document.querySelectorAll('.see-all').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const key  = btn.dataset.overlay;
+        const host = btn.closest('.carousel');
+        const inst = host ? carousels.find(c => c.root === host) : null;
+        const titleMap = {
+          announcements: 'All Announcements',
+          sales: 'All Sales Entries',
+          reminders: 'All Tasks & Reminders'
+        };
+  
+        if (key === 'announcements') {
+          openAnnouncementsOverlay(inst);
+        } else if (key === 'reminders') {
+          openTasksOverlay(inst);
+        } else {
+          const items = inst ? inst.getAllSlides() : [];
+          openOverlay(titleMap[key] || 'All Items', items, inst);
+        }
+      });
     });
-  });
 
   /* ---------- ANNOUNCEMENTS (live from Supabase) ---------- */
   let _announcements = []; // filtered list for overlays
@@ -716,7 +719,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const art = document.createElement('article');
     art.className = 'slide task';
     art.tabIndex = 0;
-  
+    art.dataset.taskId = String(task.id || '');
     // metadata might be object or JSON string
     const meta = (() => {
       const raw = task.metadata;
@@ -845,6 +848,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     const rows = data || [];
+    _tasks = rows;
 
     if (!rows.length) {
       const slide = makeTaskSlide({
