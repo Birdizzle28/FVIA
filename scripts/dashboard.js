@@ -337,31 +337,38 @@ document.addEventListener('DOMContentLoaded', () => {
   const detailBody = detailOverlay.querySelector('.annc-detail-body');
   const detailTitle = detailOverlay.querySelector('#annc-detail-title');
 
-  function openDetail(annc) {
-    detailTitle.textContent = annc.title || 'Announcement';
-    detailBody.innerHTML = `
-      <div class="hero"
-        style="
-          background-image:url('${(annc.image_url || '').replace(/'/g,"\\'")}');
-          background-size:contain;
-          background-position:center;
-          background-repeat:no-repeat;
-          background-color:#f3f3fb;
-        "></div>
-      <div class="meta">
-        <h3>${annc.title || 'Untitled'}</h3>
-        <p>${(annc.body || '').replace(/\n/g,'<br>')}</p>
-        <div class="row"><strong>Visible:</strong> ${formatRange(annc.publish_at, annc.expires_at)}</div>
-        ${audienceLine(annc)}
-        <div class="cta">
-          ${annc.link_url ? `<a href="${annc.link_url}" target="_blank" rel="noopener"><i class="fa-solid fa-link"></i> Open link</a>` : ''}
+    function openDetail(annc) {
+      detailTitle.textContent = annc.title || 'Announcement';
+      detailBody.innerHTML = `
+        <div class="hero"
+          style="
+            background-image:url('${(annc.image_url || '').replace(/'/g,"\\'")}');
+            background-size:contain;
+            background-position:center;
+            background-repeat:no-repeat;
+            background-color:#f3f3fb;
+          "></div>
+        <div class="meta">
+          <h3>${annc.title || 'Untitled'}</h3>
+          <p>${(annc.body || '').replace(/\n/g,'<br>')}</p>
+          <div class="row"><strong>Visible:</strong> ${formatRange(annc.publish_at, annc.expires_at)}</div>
+          ${audienceLine(annc)}
+          <div class="cta">
+            ${annc.link_url ? `<a href="${annc.link_url}" target="_blank" rel="noopener"><i class="fa-solid fa-link"></i> Open link</a>` : ''}
+          </div>
         </div>
-      </div>
-    `;
-    detailOverlay.classList.add('open');
-    detailOverlay.setAttribute('aria-hidden','false');
-    document.body.style.overflow = 'hidden';
-  }
+      `;
+  
+      const heroEl = detailBody.querySelector('.hero');
+      if (heroEl && annc.image_url) {
+        heroEl.style.cursor = 'zoom-in';
+        heroEl.addEventListener('click', () => openFullImage(annc.image_url), { once: true });
+      }
+  
+      detailOverlay.classList.add('open');
+      detailOverlay.setAttribute('aria-hidden','false');
+      document.body.style.overflow = 'hidden';
+    }
 
   function closeDetail() {
     detailOverlay.classList.remove('open');
@@ -817,76 +824,77 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
-    function openTaskDetail(task) {
-      if (!taskDetailOverlay || !taskDetailBody || !taskDetailTitle) return;
-  
-      // handle metadata string/object
-      const meta = (() => {
-        const raw = task.metadata;
-        if (!raw) return {};
-        if (typeof raw === 'string') {
-          try { return JSON.parse(raw); } catch { return {}; }
-        }
-        return raw;
-      })();
-  
-      const notes =
-        meta.notes ||
-        meta.note ||
-        meta.description ||
-        meta.body ||
-        meta.details ||
-        '';
-  
-      const rawImg =
-        meta.image_url ||
-        meta.imagePath ||
-        meta.path ||
-        null;
-  
-      const imgUrl = resolveTaskImage(rawImg);
-  
-      const statusRaw = (task.status || 'open').toLowerCase();
-      let statusLabel = 'Open';
-      if (statusRaw === 'completed') statusLabel = 'Completed';
-      else if (statusRaw === 'cancelled') statusLabel = 'Cancelled';
-  
-      const fmt = (d) => {
-        try { return d ? new Date(d).toLocaleString() : '—'; }
-        catch { return '—'; }
-      };
-  
-      const title = task.title || 'Task';
-      taskDetailTitle.textContent = title;
-  
-      taskDetailBody.innerHTML = `
-        ${imgUrl ? `
+      function openTaskDetail(task) {
+        if (!taskDetailOverlay || !taskDetailBody || !taskDetailTitle) return;
+    
+        const meta = (() => {
+          const raw = task.metadata;
+          if (!raw) return {};
+          if (typeof raw === 'string') {
+            try { return JSON.parse(raw); } catch { return {}; }
+          }
+          return raw;
+        })();
+    
+        const notes =
+          meta.notes ||
+          meta.note ||
+          meta.description ||
+          meta.body ||
+          meta.details ||
+          '';
+    
+        const rawImg =
+          meta.image_url ||
+          meta.imagePath ||
+          meta.path ||
+          null;
+    
+        const imgUrl = resolveTaskImage(rawImg);
+    
+        const statusRaw = (task.status || 'open').toLowerCase();
+        let statusLabel = 'Open';
+        if (statusRaw === 'completed') statusLabel = 'Completed';
+        else if (statusRaw === 'cancelled') statusLabel = 'Cancelled';
+    
+        const fmt = (d) => {
+          try { return d ? new Date(d).toLocaleString() : '—'; }
+          catch { return '—'; }
+        };
+    
+        const title = task.title || 'Task';
+        taskDetailTitle.textContent = title;
+    
+        taskDetailBody.innerHTML = `
           <div class="hero task-hero"
-          style="
-            ${imgUrl ? `background-image:url('${imgUrl.replace(/'/g,"\\'")}');` : ''}
-            background-size:contain;
-            background-position:center;
-            background-repeat:no-repeat;
-            background-color:#f3f3fb;
-          "></div>
-        ` : `
-          <div class="hero task-hero"></div>
-        `}
-        <div class="meta">
-          <h3>${escapeHtml(title)}</h3>
-          <div class="row"><strong>Status:</strong> ${escapeHtml(statusLabel)}</div>
-          ${task.channel ? `<div class="row"><strong>Channel:</strong> ${escapeHtml(task.channel)}</div>` : ''}
-          ${task.scheduled_at ? `<div class="row"><strong>Scheduled:</strong> ${escapeHtml(fmt(task.scheduled_at))}</div>` : ''}
-          ${task.due_at ? `<div class="row"><strong>Due:</strong> ${escapeHtml(fmt(task.due_at))}</div>` : ''}
-          ${task.completed_at ? `<div class="row"><strong>Completed:</strong> ${escapeHtml(fmt(task.completed_at))}</div>` : ''}
-          ${notes ? `<p class="task-notes"><strong>Notes:</strong> ${escapeHtml(notes)}</p>` : ''}
-        </div>
-      `;
-  
-      taskDetailOverlay.classList.add('open');
-      taskDetailOverlay.setAttribute('aria-hidden', 'false');
-      document.body.style.overflow = 'hidden';
-    }
+            style="
+              ${imgUrl ? `background-image:url('${imgUrl.replace(/'/g,"\\'")}');` : ''}
+              background-size:contain;
+              background-position:center;
+              background-repeat:no-repeat;
+              background-color:#f3f3fb;
+            "></div>
+          <div class="meta">
+            <h3>${escapeHtml(title)}</h3>
+            <div class="row"><strong>Status:</strong> ${escapeHtml(statusLabel)}</div>
+            ${task.channel ? `<div class="row"><strong>Channel:</strong> ${escapeHtml(task.channel)}</div>` : ''}
+            ${task.scheduled_at ? `<div class="row"><strong>Scheduled:</strong> ${escapeHtml(fmt(task.scheduled_at))}</div>` : ''}
+            ${task.due_at ? `<div class="row"><strong>Due:</strong> ${escapeHtml(fmt(task.due_at))}</div>` : ''}
+            ${task.completed_at ? `<div class="row"><strong>Completed:</strong> ${escapeHtml(fmt(task.completed_at))}</div>` : ''}
+            ${notes ? `<p class="task-notes"><strong>Notes:</strong> ${escapeHtml(notes)}</p>` : ''}
+          </div>
+        `;
+    
+        const heroEl = taskDetailBody.querySelector('.task-hero');
+        if (heroEl && imgUrl) {
+          heroEl.style.cursor = 'zoom-in';
+          heroEl.addEventListener('click', () => openFullImage(imgUrl), { once: true });
+        }
+    
+        taskDetailOverlay.classList.add('open');
+        taskDetailOverlay.setAttribute('aria-hidden', 'false');
+        document.body.style.overflow = 'hidden';
+      }
   
   function closeTaskDetail() {
     if (!taskDetailOverlay) return;
