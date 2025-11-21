@@ -799,7 +799,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
       taskDetailBody.innerHTML = `
         ${imgUrl ? `
-          <<div class="hero task-hero"
+          <div class="hero task-hero"
           style="
             ${imgUrl ? `background-image:url('${imgUrl.replace(/'/g,"\\'")}');` : ''}
             background-size:contain;
