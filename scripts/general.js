@@ -382,7 +382,7 @@ sendBtn?.addEventListener("click", handleSend);
   const notifList = panel.querySelector("#fvia-notif-list");
   const markBtn = panel.querySelector("#notif-mark-read");
 
-  // --- PREVIEW MODAL (with image + type chip) ---
+  // --- DETAIL MODAL (styled like dashboard announcement/task detail overlays) ---
   const preview = document.createElement("div");
   preview.id = "fvia-notif-preview";
   preview.style.cssText = `
@@ -395,16 +395,14 @@ sendBtn?.addEventListener("click", handleSend);
     z-index:10000;
   `;
   preview.innerHTML = `
-    <div style="
+    <div id="notif-detail-card" style="
       background:white;
-      width:min(480px, 92vw);
+      width:min(540px, 94vw);
       max-height:80vh;
       overflow:auto;
       border-radius:10px;
       box-shadow:0 10px 30px rgba(0,0,0,0.25);
-      padding:16px 18px 18px;
       position:relative;
-      font-size:14px;
     ">
       <button id="notif-preview-close" style="
         position:absolute;
@@ -412,120 +410,176 @@ sendBtn?.addEventListener("click", handleSend);
         border:0; background:none;
         font-size:22px; cursor:pointer;
       ">&times;</button>
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px; gap:8px;">
-        <div id="notif-preview-meta" style="font-size:12px; color:#777;"></div>
-        <div id="notif-preview-chip" style="font-size:10px; text-transform:uppercase; letter-spacing:0.03em;"></div>
-      </div>
-      <div style="display:grid; grid-template-columns:1fr 1.3fr; gap:10px; align-items:flex-start;">
-        <div id="notif-preview-hero" style="
-          min-height:160px;
-          background:#eef1f8;
-          background-size:cover;
-          background-position:center;
-          border-radius:6px;
-          display:none;
-        "></div>
-        <div>
-          <h3 id="notif-preview-title" style="margin:0 0 8px; color:#353468;"></h3>
-          <div id="notif-preview-body" style="white-space:pre-wrap; color:#333;"></div>
-        </div>
-      </div>
+      <div id="notif-detail-body"></div>
     </div>
   `;
   document.body.appendChild(preview);
 
-  const previewMeta = preview.querySelector("#notif-preview-meta");
-  const previewTitle = preview.querySelector("#notif-preview-title");
-  const previewBody = preview.querySelector("#notif-preview-body");
-  const previewHero = preview.querySelector("#notif-preview-hero");
-  const previewChip = preview.querySelector("#notif-preview-chip");
+  const previewBody = preview.querySelector("#notif-detail-body");
   const previewClose = preview.querySelector("#notif-preview-close");
 
+  // helpers to match dashboard detail overlay text
+  function formatRange(pub, exp) {
+    const fmt = (d) => {
+      if (!d) return 'Now';
+      try {
+        return new Date(d).toLocaleString();
+      } catch {
+        return String(d);
+      }
+    };
+    const left = pub ? fmt(pub) : 'Now';
+    const right = exp ? fmt(exp) : 'No expiry';
+    return `${left} → ${right}`;
+  }
+
+  function audienceLine(aud) {
+    const a = aud || { scope: 'all' };
+    const scope = a.scope || 'all';
+    switch (scope) {
+      case 'all': return 'Everyone';
+      case 'admins': return 'Admins only';
+      case 'by_state':
+        return `States: ${(a.states || []).join(', ')}`;
+      case 'by_product':
+        return `Products: ${(a.products || []).join(', ')}`;
+      case 'by_product_state': {
+        const states = (a.states || []).join(', ');
+        const prods  = (a.products || []).join(', ');
+        return `Products: ${prods} in States: ${states}`;
+      }
+      case 'custom_agents':
+        return `Selected agents (${(a.agent_ids || []).length})`;
+      default: return '—';
+    }
+  }
+
   function openPreview(item) {
+    if (!previewBody) return;
+
     const isTask = item.type === "task";
 
-    // Meta: show created timestamp for both (tasks + annc)
-    previewMeta.textContent = item.ts.toLocaleString();
+    // ANNOUNCEMENT DETAIL — clone of dashboard style
+    if (!isTask) {
+      const heroUrl = item.imageUrl || "";
+      const visibleText = formatRange(item.publish_at, item.expires_at);
+      const audText = audienceLine(item.audience);
 
-    // Chip
-    if (isTask) {
-      previewChip.innerHTML = `
-        <span style="
-          display:inline-block;
-          padding:2px 8px;
-          border-radius:999px;
-          background:#ede9ff;
-          color:#353468;
-          font-weight:600;
-        ">Task</span>
-      `;
-    } else {
-      previewChip.innerHTML = `
-        <span style="
-          display:inline-block;
-          padding:2px 8px;
-          border-radius:999px;
-          background:#ffe3ea;
-          color:#b43a5e;
-          font-weight:600;
-        ">Announcement</span>
-      `;
-    }
+      const safeTitle = escapeHtml(item.title || 'Announcement');
+      const safeBody = escapeHtml(item.body || '').replace(/\n/g, '<br>');
 
-    // Title
-    previewTitle.textContent = item.title || "(No title)";
+      const linkHtml = item.linkUrl
+        ? `
+        <div class="cta" style="margin-top:10px;">
+          <a href="${encodeURI(String(item.linkUrl))}"
+             target="_blank"
+             rel="noopener noreferrer"
+             style="
+               display:inline-flex;
+               align-items:center;
+               gap:6px;
+               padding:6px 12px;
+               border-radius:999px;
+               background:#353468;
+               color:white;
+               font-size:13px;
+               text-decoration:none;
+             ">
+            <span>Open link</span>
+          </a>
+        </div>
+      `
+        : '';
 
-    // Body
-    if (isTask) {
-      const statusText = item.status || "—";
-      const createdText = item.ts.toLocaleString();
-      const dueText = item.due ? item.due.toLocaleString() : "—";
-      const notes = item.notes ? escapeHtml(item.notes) : "";
-
-      let html = `
-        <div style="font-size:12px; color:#555; margin-bottom:6px;">
-          <div><strong>Status:</strong> ${escapeHtml(statusText)}</div>
-          <div><strong>Created:</strong> ${escapeHtml(createdText)}</div>
-          <div><strong>Due:</strong> ${escapeHtml(dueText)}</div>
+      previewBody.innerHTML = `
+        <div style="padding:16px 18px 18px;">
+          <div class="hero" style="
+            width:100%;
+            height:180px;
+            border-radius:8px;
+            background-size:cover;
+            background-position:center;
+            background-color:#f3f3fb;
+            ${heroUrl ? `background-image:url('${heroUrl.replace(/'/g,"\\'")}');` : ''}
+          "></div>
+          <div class="meta" style="margin-top:14px; font-size:14px; color:#333;">
+            <h3 style="margin:0 0 8px; color:#353468; font-size:18px;">${safeTitle}</h3>
+            <p style="margin:0 0 10px; line-height:1.5;">${safeBody}</p>
+            <div class="row" style="margin-bottom:4px;font-size:13px;">
+              <strong>Visible:</strong> ${escapeHtml(visibleText)}
+            </div>
+            <div class="row" style="margin-bottom:8px;font-size:13px;">
+              <strong>Audience:</strong> ${escapeHtml(audText)}
+            </div>
+            ${linkHtml}
+          </div>
         </div>
       `;
-
-      if (notes) {
-        html += `
-          <div style="margin-top:6px; white-space:pre-wrap;">
-            ${notes}
-          </div>
-        `;
-      }
-
-      if (item.linkUrl) {
-        const safeUrl = encodeURI(String(item.linkUrl));
-        html += `
-          <div style="margin-top:10px;">
-            <a href="${safeUrl}"
-               target="_blank"
-               rel="noopener noreferrer"
-               style="color:#353468; text-decoration:underline; font-weight:600;">
-              Open linked item
-            </a>
-          </div>
-        `;
-      }
-
-      previewBody.innerHTML = html;
     } else {
-      // Announcement: keep simple body text
-      const bodyText = item.body || "";
-      previewBody.textContent = bodyText;
-    }
+      // TASK DETAIL — styled to match announcement overlay
+      const heroUrl = item.imageUrl || "";
+      const statusRaw = (item.status || 'open').toLowerCase();
+      let statusLabel = 'Open';
+      if (statusRaw === 'completed') statusLabel = 'Completed';
+      else if (statusRaw === 'cancelled') statusLabel = 'Cancelled';
 
-    // Image
-    if (item.imageUrl) {
-      previewHero.style.display = "block";
-      previewHero.style.backgroundImage = `url("${item.imageUrl}")`;
-    } else {
-      previewHero.style.display = "none";
-      previewHero.style.backgroundImage = "none";
+      const createdText = item.ts ? item.ts.toLocaleString() : '—';
+      const dueText = item.due ? item.due.toLocaleString() : '—';
+      const notes = item.notes || '';
+
+      const safeTitle = escapeHtml(item.title || 'Task');
+      const safeNotes = escapeHtml(notes);
+
+      const linkHtml = item.linkUrl
+        ? `
+        <div class="cta" style="margin-top:10px;">
+          <a href="${encodeURI(String(item.linkUrl))}"
+             target="_blank"
+             rel="noopener noreferrer"
+             style="
+               display:inline-flex;
+               align-items:center;
+               gap:6px;
+               padding:6px 12px;
+               border-radius:999px;
+               background:#353468;
+               color:white;
+               font-size:13px;
+               text-decoration:none;
+             ">
+            <span>Open linked item</span>
+          </a>
+        </div>
+      `
+        : '';
+
+      previewBody.innerHTML = `
+        <div style="padding:16px 18px 18px;">
+          <div class="hero task-hero" style="
+            width:100%;
+            height:180px;
+            border-radius:8px;
+            background-size:cover;
+            background-position:center;
+            background-color:#f3f3fb;
+            ${heroUrl ? `background-image:url('${heroUrl.replace(/'/g,"\\'")}');` : ''}
+          "></div>
+          <div class="meta" style="margin-top:14px; font-size:14px; color:#333;">
+            <h3 style="margin:0 0 8px; color:#353468; font-size:18px;">${safeTitle}</h3>
+            <div class="row" style="margin-bottom:4px;font-size:13px;">
+              <strong>Status:</strong> ${escapeHtml(statusLabel)}
+            </div>
+            <div class="row" style="margin-bottom:4px;font-size:13px;">
+              <strong>Created:</strong> ${escapeHtml(createdText)}
+            </div>
+            <div class="row" style="margin-bottom:8px;font-size:13px;">
+              <strong>Due:</strong> ${escapeHtml(dueText)}
+            </div>
+            ${safeNotes ? `<p class="task-notes" style="margin-top:4px; font-size:13px; line-height:1.5;"><strong>Notes:</strong> ${safeNotes}</p>` : ''}
+            ${linkHtml}
+          </div>
+        </div>
+      `;
     }
 
     preview.style.display = "flex";
@@ -550,7 +604,7 @@ sendBtn?.addEventListener("click", handleSend);
     const [annc, tasks] = await Promise.all([
       supabase
         .from("announcements")
-        .select("id,title,body,created_at,publish_at,expires_at,audience,is_active,image_url")
+        .select("id,title,body,created_at,publish_at,expires_at,audience,is_active,image_url,link_url")
         .eq("is_active", true)
         .order("publish_at", { ascending: false })
         .order("created_at", { ascending: false }),
@@ -582,7 +636,11 @@ sendBtn?.addEventListener("click", handleSend);
           title: a.title,
           body: a.body,
           ts,
-          imageUrl: a.image_url || null
+          imageUrl: a.image_url || null,
+          publish_at: a.publish_at || null,
+          expires_at: a.expires_at || null,
+          audience: a.audience || null,
+          linkUrl: a.link_url || null
         });
       });
 
