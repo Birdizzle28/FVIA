@@ -410,6 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
         .from('agents')
         .select('id, full_name, phone, is_active, is_available, last_assigned_at, npn')
         .eq('is_active', true)
+        .eq('receiving_leads', true)
         .in('npn', eligibleNpns);
   
       if (agentErr) {
