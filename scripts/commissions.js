@@ -40,6 +40,27 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Unexpected error loading agent profile:', e);
   }
 
+  // 🔹 NEW: load commission overview from Supabase
+  const overview = await loadAgentCommissionOverview();
+  if (overview) {
+    // Map Supabase values to your IDs
+    // Top snapshot / summary
+    setText('summary-leads-balance', formatMoney(overview.lead_balance));
+    setText('summary-chargeback-balance', formatMoney(overview.chargeback_balance));
+    setText('summary-total-balance', formatMoney(overview.total_debt));
+
+    // You can also show AP Last Month and withholding %
+    setText('summary-ap-last-month', formatMoney(overview.ap_last_month));
+    setText('summary-withholding-rate', `${(overview.withholding_rate * 100).toFixed(0)}%`);
+
+    // Balances & Debt panel
+    setText('balances-leads-amount', formatMoney(overview.lead_balance));
+    setText('balances-chargebacks-amount', formatMoney(overview.chargeback_balance));
+    setText('balances-total-amount', formatMoney(overview.total_debt));
+  } else {
+    // Fallback to fake data if it fails
+    renderPlaceholderSummary();
+  }
   // ----- 3. Wire up tabs -----
   initTabs();
 
@@ -49,9 +70,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTeamAgentPanelToggle();
 
   // ----- 5. Render placeholder data (we’ll replace with Supabase later) -----
-  renderPlaceholderSummary();
+
   renderPlaceholderPayouts();
-  renderPlaceholderBalances();
   renderPlaceholderLeadDebts();
   renderPlaceholderChargebacks();
   renderPlaceholderPolicies();
@@ -81,6 +101,22 @@ function hydrateHeaderFromProfile(profile) {
   if (progressEl) {
     progressEl.textContent = 'Level progress tracking coming soon.';
   }
+}
+async function loadAgentCommissionOverview() {
+  if (!me) return null;
+
+  const { data, error } = await supabase
+    .from('agent_commission_overview')
+    .select('*')
+    .eq('agent_id', me.id)
+    .single();
+
+  if (error) {
+    console.error('Error loading agent_commission_overview:', error);
+    return null;
+  }
+
+  return data;
 }
 
 /* ===============================
@@ -452,4 +488,8 @@ function renderPlaceholderFiles() {
 function setText(id, text) {
   const el = document.getElementById(id);
   if (el) el.textContent = text;
+}
+function formatMoney(value) {
+  const num = Number(value) || 0;
+  return `$${num.toFixed(2)}`;
 }
