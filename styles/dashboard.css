@@ -974,3 +974,50 @@ main > section.card.stay-white {
   object-fit: cover;
   display: block;
 }
+
+/* ===== Task Detail overlay (match announcement detail style) ===== */
+.task-detail-body {
+  display: grid;
+  grid-template-columns: 1fr 1.2fr;
+  gap: 14px;
+}
+
+/* hero image in task detail */
+.task-detail-body .hero.task-hero {
+  background: #eef1f8;
+  min-height: 260px;
+  background-size: cover;
+  background-position: center;
+}
+
+.task-detail-body .meta h3 {
+  margin: 0 0 8px;
+  color: var(--ink);
+}
+
+.task-detail-body .meta p {
+  margin: 0 0 8px;
+  color: #444;
+}
+
+.task-detail-body .meta .row {
+  margin-top: 6px;
+  color: #555;
+  font-size: 14px;
+}
+
+/* notes text inside task detail */
+.task-detail-body .task-notes {
+  margin-top: 10px;
+  line-height: 1.5;
+}
+
+/* mobile stacking like announcement detail */
+@media (max-width: 720px) {
+  .task-detail-body {
+    grid-template-columns: 1fr;
+  }
+  .task-detail-body .hero.task-hero {
+    min-height: 200px;
+  }
+}
