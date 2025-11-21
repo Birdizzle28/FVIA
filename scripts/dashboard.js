@@ -9,6 +9,18 @@ window.supabase = supabase;
 
 document.addEventListener('DOMContentLoaded', () => {
   /* ---------- FOLDER TABS ---------- */
+    function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    return String(str).replace(/[&<>"]/g, (c) => {
+      switch (c) {
+        case '&': return '&amp;';
+        case '<': return '&lt;';
+        case '>': return '&gt;';
+        case '"': return '&quot;';
+        default:  return c;
+      }
+    });
+  }
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('.folder-tabs .tab');
     if (!btn) return;
