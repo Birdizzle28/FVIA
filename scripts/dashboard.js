@@ -317,29 +317,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const { data: { session } } = await supabase.auth.getSession();
     const myId = session?.user?.id || null;
   
-    // keep the shape so the rest of the code doesn't break
-    let me = { 
-      id: myId, 
-      is_admin: false, 
-      state: null, 
-      product_types: [] 
+    const me = {
+      id: myId,
+      is_admin: false,
+      level: null,
+      npn: null,
+      licenses: []
     };
   
     if (!myId) return me;
   
-    const { data: agent, error } = await supabase
+    // load base agent info
+    const { data: agent } = await supabase
       .from('agents')
-      .select('is_admin')
+      .select('is_admin, level, agent_id')
       .eq('id', myId)
       .single();
   
-    if (error && error.code !== 'PGRST116') {
-      console.warn('Error loading agent mini:', error);
-      return me;
-    }
-  
     if (agent) {
       me.is_admin = !!agent.is_admin;
+      me.level    = agent.level || null;
+      me.npn      = agent.agent_id || null;
+    }
+  
+    // load NIPR licenses for this agent (by NPN)
+    if (me.npn) {
+      const { data: licRows } = await supabase
+        .from('agent_nipr_licenses')
+        .select('state, active, license_class, loa_names, loa_details')
+        .eq('agent_id', me.npn);
+  
+      me.licenses = licRows || [];
     }
   
     return me;
