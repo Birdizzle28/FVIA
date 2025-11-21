@@ -903,3 +903,74 @@ main > section.card.stay-white {
 #panel-leads {
   background: white;
 }
+
+/* ===== Tasks slide with 3/4 image on right (match announcements) ===== */
+.slide.task {
+  padding: 0;
+}
+
+.task-inner {
+  display: grid;
+  grid-template-columns: 1fr 3fr; /* 25% text | 75% image, same as .annc-inner */
+  min-height: 220px;
+}
+
+.task-text {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.task-text h3 {
+  margin: 0;
+  color: var(--ink);
+  font-weight: 800;
+}
+
+.task-text p {
+  margin: 0;
+  color: #5f6472;
+}
+
+.task-img {
+  position: relative;
+  overflow: hidden;
+  background: #fff;
+}
+
+/* hero image inside the task card */
+.task-img .task-hero {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  background-size: cover;
+  background-position: center;
+}
+
+/* stack on small screens similar to announcements */
+@media (max-width: 720px) {
+  .task-inner {
+    grid-template-columns: 1fr;
+  }
+  .task-img {
+    height: 180px;
+  }
+}
+
+/* ===== Overlay thumbnails for Tasks / Sales (See All) ===== */
+.overlay-item .overlay-thumb {
+  width: 100%;
+  max-height: 160px;
+  overflow: hidden;
+  border-radius: 8px;
+  margin-bottom: 8px;
+}
+
+.overlay-item .overlay-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
