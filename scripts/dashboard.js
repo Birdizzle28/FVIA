@@ -591,6 +591,126 @@ document.addEventListener('DOMContentLoaded', () => {
     console.warn('Realtime not available:', e);
   }
 
+    /* ---------- TASKS / REMINDERS (from public.tasks) ---------- */
+
+  function makeTaskSlide(task) {
+    const art = document.createElement('article');
+    art.className = 'slide task';
+    art.tabIndex = 0;
+
+    const meta = task.metadata || {};
+
+    // pick a notes field if it exists
+    const notes =
+      meta.notes ||
+      meta.note ||
+      meta.description ||
+      meta.body ||
+      meta.details ||
+      '';
+
+    // status label
+    const statusRaw = (task.status || 'open').toLowerCase();
+    let statusLabel = 'Open';
+    if (statusRaw === 'completed') statusLabel = 'Completed';
+    else if (statusRaw === 'cancelled') statusLabel = 'Cancelled';
+
+    // format dates
+    const fmt = (d) => {
+      try {
+        return d ? new Date(d).toLocaleString() : '';
+      } catch {
+        return '';
+      }
+    };
+
+    const bits = [];
+    bits.push(`Status: ${statusLabel}`);
+    if (task.channel) bits.push(`Channel: ${task.channel}`);
+    if (task.scheduled_at) bits.push(`Scheduled: ${fmt(task.scheduled_at)}`);
+    if (task.due_at) bits.push(`Due: ${fmt(task.due_at)}`);
+
+    // first line: status / channel / dates
+    let bodyHtml = escapeHtml(bits.join(' • '));
+
+    // second line: notes, if any
+    if (notes) {
+      bodyHtml += '<br><strong>Notes:</strong> ' + escapeHtml(notes);
+    }
+
+    art.innerHTML = `
+      <h3>${escapeHtml(task.title || 'Task')}</h3>
+      <p>${bodyHtml}</p>
+    `;
+
+    return art;
+  }
+
+  async function loadTasksCarousel() {
+    const root = document.querySelector('.carousel[data-key="reminders"]');
+    if (!root) return;
+
+    const inst = carousels.find((c) => c.root === root);
+
+    // who is logged in?
+    let userId = null;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      userId = session?.user?.id || null;
+    } catch (err) {
+      console.warn('Could not get session for tasks:', err);
+    }
+
+    if (!userId) {
+      const slide = makeTaskSlide({
+        title: 'No tasks available',
+        status: 'open',
+        channel: null,
+        scheduled_at: null,
+        due_at: null,
+        metadata: { notes: 'Log in to see your assigned tasks.' }
+      });
+      inst?.setSlides([slide]);
+      return;
+    }
+
+    // Only tasks for THIS user, and only non-cancelled (you can tighten this to status = open if you want)
+    const { data, error } = await supabase
+      .from('tasks')
+      .select('id, title, scheduled_at, due_at, completed_at, status, channel, metadata, created_at')
+      .eq('assigned_to', userId)
+      .neq('status', 'cancelled')
+      .order('status', { ascending: true })           // open first, then completed
+      .order('due_at', { ascending: true, nullsLast: true })
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      console.warn('Tasks load error:', error);
+      const slide = makeTaskSlide({
+        title: 'Could not load tasks',
+        status: 'open',
+        metadata: { notes: 'There was an error loading your tasks. Please try again later.' }
+      });
+      inst?.setSlides([slide]);
+      return;
+    }
+
+    const rows = data || [];
+
+    if (!rows.length) {
+      const slide = makeTaskSlide({
+        title: 'No tasks assigned to you',
+        status: 'open',
+        metadata: { notes: 'You don’t have any tasks yet.' }
+      });
+      inst?.setSlides([slide]);
+      return;
+    }
+
+    const slides = rows.map(makeTaskSlide);
+    inst?.setSlides(slides);
+  }
   /* ---------- LEAD SNAPSHOT ---------- */
   (async function initLeadSnapshot(){
     let userId = null;
@@ -973,6 +1093,7 @@ async function loadRecruitingSnapshot() {
   // kick off snapshots
   loadCommissionSnapshot();
   loadRecruitingSnapshot();
+  loadTasksCarousel();
 
   /* ---------- COMPLIANCE CARD (YOUR RULES IMPLEMENTED EXACTLY) ---------- */
   (async function initComplianceCard() {
