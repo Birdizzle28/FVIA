@@ -614,6 +614,104 @@ document.addEventListener('DOMContentLoaded', () => {
     overlay.querySelector('.overlay-close')?.focus();
     document.body.style.overflow = 'hidden';
   }
+    function openTasksOverlay(inst) {
+    const title = 'All Tasks & Reminders';
+    activeCarousel = inst || null;
+    activeCarousel?.pause();
+    overlayTitle.textContent = title;
+    overlayGrid.innerHTML = '';
+
+    if (!_tasks.length) {
+      const empty = document.createElement('div');
+      empty.className = 'overlay-item';
+      empty.innerHTML = `<p>No tasks to show yet.</p>`;
+      overlayGrid.appendChild(empty);
+    } else {
+      _tasks.forEach((task) => {
+        // parse metadata for image + notes
+        const meta = (() => {
+          const raw = task.metadata;
+          if (!raw) return {};
+          if (typeof raw === 'string') {
+            try { return JSON.parse(raw); } catch { return {}; }
+          }
+          return raw;
+        })();
+
+        const rawImg =
+          meta.image_url ||
+          meta.imagePath ||
+          meta.path ||
+          null;
+
+        const imgUrl = resolveTaskImage(rawImg);
+        const notes =
+          meta.notes ||
+          meta.note ||
+          meta.description ||
+          meta.body ||
+          meta.details ||
+          '';
+
+        const snippet = notes
+          ? (notes.length > 140 ? notes.slice(0, 140) + '…' : notes)
+          : '';
+
+        const card = document.createElement('div');
+        card.className = imgUrl ? 'overlay-item image-card' : 'overlay-item';
+        card.setAttribute('data-task-id', String(task.id || ''));
+
+        if (imgUrl) {
+          card.style.backgroundImage = `url("${imgUrl}")`;
+        }
+
+        card.innerHTML = imgUrl
+          ? `
+            <div class="card-content">
+              <h3>${escapeHtml(task.title || 'Task')}</h3>
+              <p>${escapeHtml(snippet)}</p>
+              <div class="mini-actions">
+                <button class="icon-btn btn-eye" type="button">
+                  <i class="fa-solid fa-eye"></i> View
+                </button>
+              </div>
+            </div>
+          `
+          : `
+            <h3>${escapeHtml(task.title || 'Task')}</h3>
+            <p>${escapeHtml(snippet || 'No details yet.')}</p>
+          `;
+
+        // clicking the "View" button → open detail overlay
+        const eyeBtn = card.querySelector('.btn-eye');
+        if (eyeBtn) {
+          eyeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            openTaskDetail(task);
+          });
+        }
+
+        // clicking the card (outside actions) → sync carousel to that task
+        card.addEventListener('click', () => {
+          if (!activeCarousel) return;
+          const slides = activeCarousel.getAllSlides();
+          const targetId = String(task.id || '');
+          const idx = slides.findIndex(sl => sl.dataset.taskId === targetId);
+          if (idx >= 0) {
+            activeCarousel.go(idx);
+          }
+          closeOverlay();
+        });
+
+        overlayGrid.appendChild(card);
+      });
+    }
+
+    overlay.classList.add('open');
+    overlay.setAttribute('aria-hidden', 'false');
+    overlay.querySelector('.overlay-close')?.focus();
+    document.body.style.overflow = 'hidden';
+  }
 
   // initial announcements load + realtime
   loadAnnouncementsCarousel();
