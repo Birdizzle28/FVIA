@@ -2187,7 +2187,17 @@ async function loadMyTasks() {
       return `
         <div class="task-row"
              data-id="${task.id}"
-             style="display:grid; grid-template-columns: 1fr auto; gap:8px; padding:8px 10px; border:1px solid #eee; border-radius:6px; margin-bottom:8px; font-size:13px;">
+             style="display:grid; grid-template-columns: 64px 1fr auto; gap:8px; padding:8px 10px; border:1px solid #eee; border-radius:6px; margin-bottom:8px; font-size:13px;">
+      
+          <div class="thumb"
+               style="width:64px; height:64px; background:#f7f7f7; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:6px;">
+            ${
+              meta.image_url
+                ? `<img src="${meta.image_url}" style="max-width:100%; max-height:100%;">`
+                : `<i class="fa-regular fa-image"></i>`
+            }
+          </div>
+      
           <div class="meta" style="min-width:0;">
             <strong>${task.title || '(no title)'}</strong>
             <div style="font-size:12px; color:#666; margin-top:2px;">
@@ -2197,28 +2207,23 @@ async function loadMyTasks() {
             </div>
             ${
               shortNotes
-                ? `<div style="font-size:13px; margin-top:4px; color:#333; white-space:pre-wrap;">${shortNotes}</div>`
+                ? `<div style="font-size:13px; margin-top:4px; white-space:pre-wrap;">${shortNotes}</div>`
                 : ''
             }
             ${
               linkUrl
                 ? `<div style="margin-top:4px; font-size:13px;">
-                     <a href="${linkUrl}" target="_blank" rel="noopener">
-                       <i class="fa-solid fa-link"></i> Open link
-                     </a>
+                     <a href="${linkUrl}" target="_blank"><i class="fa-solid fa-link"></i> Open link</a>
                    </div>`
                 : ''
             }
           </div>
+      
           <div class="actions" style="display:flex; flex-direction:column; gap:6px;">
-            <button class="task-complete" style="padding:4px 8px; font-size:12px;">
-              Mark done
-            </button>
-            <button class="task-delete"
-                    style="padding:4px 8px; font-size:12px; background:#ffe6e6; border:1px solid #ffb3b3;">
-              Delete
-            </button>
+            <button class="task-complete" style="padding:4px 8px; font-size:12px;">Mark done</button>
+            <button class="task-delete" style="padding:4px 8px; font-size:12px; background:#ffe6e6; border:1px solid #ffb3b3;">Delete</button>
           </div>
+      
         </div>
       `;
     })
