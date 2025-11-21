@@ -621,6 +621,94 @@ document.addEventListener('DOMContentLoaded', () => {
     console.warn('Realtime not available:', e);
   }
 
+  /* ---------- TASK DETAIL overlay ---------- */
+  const taskDetailOverlay = document.getElementById('task-detail-overlay');
+  let taskDetailBody = null;
+  let taskDetailTitle = null;
+  
+  if (taskDetailOverlay) {
+    taskDetailBody  = taskDetailOverlay.querySelector('.task-detail-body');
+    taskDetailTitle = taskDetailOverlay.querySelector('#task-detail-title');
+  
+    taskDetailOverlay.addEventListener('click', (e) => {
+      if (e.target.matches('[data-close], .overlay-backdrop')) {
+        closeTaskDetail();
+      }
+    });
+  
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && taskDetailOverlay.classList.contains('open')) {
+        closeTaskDetail();
+      }
+    });
+  }
+  
+  function openTaskDetail(task) {
+    if (!taskDetailOverlay || !taskDetailBody || !taskDetailTitle) return;
+  
+    // handle metadata string/object
+    const meta = (() => {
+      const raw = task.metadata;
+      if (!raw) return {};
+      if (typeof raw === 'string') {
+        try { return JSON.parse(raw); } catch { return {}; }
+      }
+      return raw;
+    })();
+  
+    const notes =
+      meta.notes ||
+      meta.note ||
+      meta.description ||
+      meta.body ||
+      meta.details ||
+      '';
+  
+    const rawImg =
+      meta.image_url ||
+      meta.imagePath ||
+      meta.path ||
+      null;
+  
+    const imgUrl = resolveTaskImage(rawImg);
+  
+    const statusRaw = (task.status || 'open').toLowerCase();
+    let statusLabel = 'Open';
+    if (statusRaw === 'completed') statusLabel = 'Completed';
+    else if (statusRaw === 'cancelled') statusLabel = 'Cancelled';
+  
+    const fmt = (d) => {
+      try { return d ? new Date(d).toLocaleString() : '—'; }
+      catch { return '—'; }
+    };
+  
+    taskDetailTitle.textContent = task.title || 'Task';
+  
+    taskDetailBody.innerHTML = `
+      ${imgUrl ? `
+        <div class="hero task-hero" style="background-image:url('${imgUrl.replace(/'/g,"\\'")}');"></div>
+      ` : ''}
+      <div class="meta">
+        <div class="row"><strong>Status:</strong> ${escapeHtml(statusLabel)}</div>
+        ${task.channel ? `<div class="row"><strong>Channel:</strong> ${escapeHtml(task.channel)}</div>` : ''}
+        ${task.scheduled_at ? `<div class="row"><strong>Scheduled:</strong> ${escapeHtml(fmt(task.scheduled_at))}</div>` : ''}
+        ${task.due_at ? `<div class="row"><strong>Due:</strong> ${escapeHtml(fmt(task.due_at))}</div>` : ''}
+        ${task.completed_at ? `<div class="row"><strong>Completed:</strong> ${escapeHtml(fmt(task.completed_at))}</div>` : ''}
+        ${notes ? `<p class="task-notes"><strong>Notes:</strong> ${escapeHtml(notes)}</p>` : ''}
+      </div>
+    `;
+  
+    taskDetailOverlay.classList.add('open');
+    taskDetailOverlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+  
+  function closeTaskDetail() {
+    if (!taskDetailOverlay) return;
+    taskDetailOverlay.classList.remove('open');
+    taskDetailOverlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
     /* ---------- TASKS / REMINDERS (from public.tasks) ---------- */
 
   function makeTaskSlide(task) {
@@ -628,13 +716,15 @@ document.addEventListener('DOMContentLoaded', () => {
     art.className = 'slide task';
     art.tabIndex = 0;
   
-    let meta = {};
-    if (task.metadata) {
-      if (typeof task.metadata === 'string') {
-        try { meta = JSON.parse(task.metadata); }
-        catch { meta = {}; }
-      } else meta = task.metadata;
-    }
+    // metadata might be object or JSON string
+    const meta = (() => {
+      const raw = task.metadata;
+      if (!raw) return {};
+      if (typeof raw === 'string') {
+        try { return JSON.parse(raw); } catch { return {}; }
+      }
+      return raw;
+    })();
   
     const notes =
       meta.notes ||
@@ -649,7 +739,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (statusRaw === 'completed') statusLabel = 'Completed';
     else if (statusRaw === 'cancelled') statusLabel = 'Cancelled';
   
-    const fmt = (d) => d ? new Date(d).toLocaleString() : '';
+    const fmt = (d) => {
+      try { return d ? new Date(d).toLocaleString() : ''; }
+      catch { return ''; }
+    };
   
     const bits = [];
     bits.push(`Status: ${statusLabel}`);
@@ -658,7 +751,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (task.due_at) bits.push(`Due: ${fmt(task.due_at)}`);
   
     let bodyHtml = escapeHtml(bits.join(' • '));
-    if (notes) bodyHtml += '<br><strong>Notes:</strong> ' + escapeHtml(notes);
+    if (notes) {
+      bodyHtml += '<br><strong>Notes:</strong> ' + escapeHtml(notes);
+    }
   
     const rawImg =
       meta.image_url ||
@@ -667,24 +762,33 @@ document.addEventListener('DOMContentLoaded', () => {
       null;
   
     const imgUrl = resolveTaskImage(rawImg);
-  
-    const imgHtml = imgUrl
-      ? `
-        <div class="annc-img">
-          <img src="${imgUrl}" alt="">
-        </div>
-      `
-      : '';
+    const hasImg = !!imgUrl;
   
     art.innerHTML = `
-      <div class="annc-inner">
-        <div class="annc-text">
+      <div class="task-inner">
+        <div class="task-text">
           <h3>${escapeHtml(task.title || 'Task')}</h3>
           <p>${bodyHtml}</p>
         </div>
-        ${imgHtml}
+        <div class="task-img">
+          ${hasImg ? `
+            <div class="task-hero" style="background-image:url('${imgUrl.replace(/'/g,"\\'")}');"></div>
+          ` : ''}
+        </div>
       </div>
     `;
+  
+    const open = (e) => {
+      if (e.target.closest('a,button')) return;
+      openTaskDetail(task);
+    };
+    art.addEventListener('click', open);
+    art.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        open(e);
+      }
+    });
   
     return art;
   }
