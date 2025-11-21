@@ -631,15 +631,9 @@ document.addEventListener('DOMContentLoaded', () => {
     let meta = {};
     if (task.metadata) {
       if (typeof task.metadata === 'string') {
-        try {
-          meta = JSON.parse(task.metadata);
-        } catch (e) {
-          console.warn('Bad task.metadata JSON for task', task.id, task.metadata);
-          meta = {};
-        }
-      } else if (typeof task.metadata === 'object') {
-        meta = task.metadata;
-      }
+        try { meta = JSON.parse(task.metadata); }
+        catch { meta = {}; }
+      } else meta = task.metadata;
     }
   
     const notes =
@@ -655,13 +649,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (statusRaw === 'completed') statusLabel = 'Completed';
     else if (statusRaw === 'cancelled') statusLabel = 'Cancelled';
   
-    const fmt = (d) => {
-      try {
-        return d ? new Date(d).toLocaleString() : '';
-      } catch {
-        return '';
-      }
-    };
+    const fmt = (d) => d ? new Date(d).toLocaleString() : '';
   
     const bits = [];
     bits.push(`Status: ${statusLabel}`);
@@ -670,10 +658,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (task.due_at) bits.push(`Due: ${fmt(task.due_at)}`);
   
     let bodyHtml = escapeHtml(bits.join(' • '));
-  
-    if (notes) {
-      bodyHtml += '<br><strong>Notes:</strong> ' + escapeHtml(notes);
-    }
+    if (notes) bodyHtml += '<br><strong>Notes:</strong> ' + escapeHtml(notes);
   
     const rawImg =
       meta.image_url ||
@@ -683,19 +668,22 @@ document.addEventListener('DOMContentLoaded', () => {
   
     const imgUrl = resolveTaskImage(rawImg);
   
-    let imgHtml = '';
-    if (imgUrl) {
-      imgHtml = `
-        <div class="task-img-wrap">
-          <img src="${imgUrl}" alt="" style="width:100%; border-radius:8px; margin-top:8px;">
+    const imgHtml = imgUrl
+      ? `
+        <div class="annc-img">
+          <img src="${imgUrl}" alt="">
         </div>
-      `;
-    }
+      `
+      : '';
   
     art.innerHTML = `
-      <h3>${escapeHtml(task.title || 'Task')}</h3>
-      <p>${bodyHtml}</p>
-      ${imgHtml}
+      <div class="annc-inner">
+        <div class="annc-text">
+          <h3>${escapeHtml(task.title || 'Task')}</h3>
+          <p>${bodyHtml}</p>
+        </div>
+        ${imgHtml}
+      </div>
     `;
   
     return art;
