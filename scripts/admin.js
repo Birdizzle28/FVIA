@@ -82,12 +82,45 @@ async function uploadAnnouncementImage(file, me) {
 
 function summarizeAudience(aud) {
   if (!aud || !aud.scope) return 'All users';
+
+  const levelLabels = {
+    agent: 'Agent',
+    mit: 'MIT',
+    manager: 'Manager',
+    mga: 'MGA',
+    area_manager: 'Area Manager'
+  };
+
   switch (aud.scope) {
-    case 'admins': return 'Admins only';
-    case 'by_product': return `Products: ${(aud.products||[]).join(', ') || '—'}`;
-    case 'by_state': return `States: ${(aud.states||[]).join(', ') || '—'}`;
-    case 'custom_agents': return `Agents: ${(aud.agent_ids||[]).length}`;
-    default: return 'All users';
+    case 'admins':
+      return 'Admins only';
+
+    case 'by_product': {
+      const prods = (aud.products || []).join(', ') || '—';
+      return `Products: ${prods}`;
+    }
+
+    case 'by_state': {
+      const states = (aud.states || []).join(', ') || '—';
+      return `States: ${states}`;
+    }
+
+    case 'by_level': {
+      const lvls = (aud.levels || []).map(v => levelLabels[v] || v);
+      return `Levels: ${lvls.join(', ') || '—'}`;
+    }
+
+    case 'by_product_state': {
+      const prods = (aud.products || []).join(', ') || 'Any';
+      const states = (aud.states || []).join(', ') || 'Any';
+      return `Products: ${prods} · States: ${states}`;
+    }
+
+    case 'custom_agents':
+      return `Agents: ${(aud.agent_ids || []).length}`;
+
+    default:
+      return 'All users';
   }
 }
 
@@ -127,10 +160,52 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // Populate Announcement multi-selects
   (function hydrateAnncProducts(){
-    const sel = document.getElementById('annc-products'); if (!sel) return;
-    const set = new Set(); (allAgents||[]).forEach(a => (a.product_types||[]).forEach(p => set.add(p)));
-    [...set].sort().forEach(p => { const o=document.createElement('option'); o.value=p; o.textContent=p; sel.appendChild(o); });
-    try { new Choices(sel, { removeItemButton:true, shouldSort:true }); } catch(_) {}
+    const sel = document.getElementById('annc-products');
+    if (!sel) return;
+
+    const products = ['Life', 'Health', 'Property', 'Casualty'];
+
+    products.forEach(p => {
+      const o = document.createElement('option');
+      o.value = p;
+      o.textContent = p;
+      sel.appendChild(o);
+    });
+
+    try {
+      new Choices(sel, {
+        removeItemButton: true,
+        shouldSort: false,
+        searchEnabled: false
+      });
+    } catch (_) {}
+  })();
+    (function hydrateAnncLevels(){
+    const sel = document.getElementById('annc-levels');
+    if (!sel) return;
+
+    const levels = [
+      { value: 'agent',        label: 'Agent' },
+      { value: 'mit',          label: 'MIT' },
+      { value: 'manager',      label: 'Manager' },
+      { value: 'mga',          label: 'MGA' },
+      { value: 'area_manager', label: 'Area Manager' }
+    ];
+
+    levels.forEach(l => {
+      const o = document.createElement('option');
+      o.value = l.value;
+      o.textContent = l.label;
+      sel.appendChild(o);
+    });
+
+    try {
+      new Choices(sel, {
+        removeItemButton: true,
+        shouldSort: false,
+        searchEnabled: false
+      });
+    } catch (_) {}
   })();
   (function hydrateAnncAgents(){
     const sel = document.getElementById('annc-agent-ids'); if (!sel) return;
