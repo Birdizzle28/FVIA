@@ -151,7 +151,7 @@ sendBtn?.addEventListener("click", handleSend);
 
 /* ============================================================
    NOTIFICATION BELL — ANNOUNCEMENTS + TASKS + UNREAD BADGE
-   (audience-aware + publish_at null-safe)
+   (audience-aware + publish_at null-safe, with images)
    ============================================================ */
 (async function initFVNotifications() {
   const bell = document.getElementById("notifications-tab");
@@ -166,6 +166,26 @@ sendBtn?.addEventListener("click", handleSend);
     "https://ddlbgkolnayqrxslzsxn.supabase.co",
     "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho"
   );
+
+  // helper: resolve a tasks image path into a public URL
+  function resolveTaskImage(raw) {
+    if (!raw) return null;
+    const v = String(raw);
+
+    // Already a full URL?
+    if (/^https?:\/\//i.test(v)) return v;
+
+    // Strip leading slash
+    let path = v.replace(/^\/+/, "");
+
+    // If someone stored "tasks/..." trim the bucket prefix
+    if (path.toLowerCase().startsWith("tasks/")) {
+      path = path.slice("tasks/".length);
+    }
+
+    const { data } = supabase.storage.from("tasks").getPublicUrl(path);
+    return data?.publicUrl || null;
+  }
 
   // Get user/session
   const { data: sessionData } = await supabase.auth.getSession();
@@ -344,7 +364,7 @@ sendBtn?.addEventListener("click", handleSend);
   const notifList = panel.querySelector("#fvia-notif-list");
   const markBtn = panel.querySelector("#notif-mark-read");
 
-  // --- PREVIEW MODAL ---
+  // --- PREVIEW MODAL (now with image hero) ---
   const preview = document.createElement("div");
   preview.id = "fvia-notif-preview";
   preview.style.cssText = `
@@ -375,8 +395,20 @@ sendBtn?.addEventListener("click", handleSend);
         font-size:22px; cursor:pointer;
       ">&times;</button>
       <div id="notif-preview-meta" style="font-size:12px; color:#777; margin-bottom:6px;"></div>
-      <h3 id="notif-preview-title" style="margin:0 0 8px; color:#353468;"></h3>
-      <div id="notif-preview-body" style="white-space:pre-wrap; color:#333;"></div>
+      <div style="display:grid; grid-template-columns:1fr 1.3fr; gap:10px; align-items:flex-start;">
+        <div id="notif-preview-hero" style="
+          min-height:160px;
+          background:#eef1f8;
+          background-size:cover;
+          background-position:center;
+          border-radius:6px;
+          display:none;
+        "></div>
+        <div>
+          <h3 id="notif-preview-title" style="margin:0 0 8px; color:#353468;"></h3>
+          <div id="notif-preview-body" style="white-space:pre-wrap; color:#333;"></div>
+        </div>
+      </div>
     </div>
   `;
   document.body.appendChild(preview);
@@ -384,13 +416,16 @@ sendBtn?.addEventListener("click", handleSend);
   const previewMeta = preview.querySelector("#notif-preview-meta");
   const previewTitle = preview.querySelector("#notif-preview-title");
   const previewBody = preview.querySelector("#notif-preview-body");
+  const previewHero = preview.querySelector("#notif-preview-hero");
   const previewClose = preview.querySelector("#notif-preview-close");
 
   function openPreview(item) {
     previewMeta.textContent = `${
       item.type === "task" ? "Task" : "Announcement"
     } · ${item.ts.toLocaleString()}`;
+
     previewTitle.textContent = item.title || "(No title)";
+
     let bodyText = item.body || "";
     if (item.type === "task" && item.due) {
       bodyText =
@@ -398,6 +433,15 @@ sendBtn?.addEventListener("click", handleSend);
         (bodyText ? `\n\n${bodyText}` : "");
     }
     previewBody.textContent = bodyText;
+
+    if (item.imageUrl) {
+      previewHero.style.display = "block";
+      previewHero.style.backgroundImage = `url("${item.imageUrl}")`;
+    } else {
+      previewHero.style.display = "none";
+      previewHero.style.backgroundImage = "none";
+    }
+
     preview.style.display = "flex";
     panel.style.display = "none";
   }
@@ -420,14 +464,14 @@ sendBtn?.addEventListener("click", handleSend);
     const [annc, tasks] = await Promise.all([
       supabase
         .from("announcements")
-        .select("id,title,body,created_at,publish_at,expires_at,audience,is_active")
+        .select("id,title,body,created_at,publish_at,expires_at,audience,is_active,image_url")
         .eq("is_active", true)
         .order("publish_at", { ascending: false })
         .order("created_at", { ascending: false }),
 
       supabase
         .from("tasks")
-        .select("id,title,status,created_at,due_at")
+        .select("id,title,status,created_at,due_at,metadata")
         .eq("assigned_to", userId)
         .order("created_at", { ascending: false }),
     ]);
@@ -452,19 +496,51 @@ sendBtn?.addEventListener("click", handleSend);
           title: a.title,
           body: a.body,
           ts,
+          imageUrl: a.image_url || null
         });
       });
 
     // Tasks
     (tasks.data || []).forEach((t) => {
       const ts = new Date(t.created_at);
+
+      // parse metadata for notes + image
+      const meta = (() => {
+        const raw = t.metadata;
+        if (!raw) return {};
+        if (typeof raw === "string") {
+          try { return JSON.parse(raw); } catch { return {}; }
+        }
+        return raw;
+      })();
+
+      const notes =
+        meta.notes ||
+        meta.note ||
+        meta.description ||
+        meta.body ||
+        meta.details ||
+        "";
+
+      const rawImg =
+        meta.image_url ||
+        meta.imagePath ||
+        meta.path ||
+        null;
+
+      const imgUrl = resolveTaskImage(rawImg);
+
+      const statusLabel = "Status: " + (t.status || "—");
+      const bodyText = notes ? `${statusLabel}\n\n${notes}` : statusLabel;
+
       merged.push({
         type: "task",
-          id: t.id,
-          title: t.title,
-          body: "Status: " + (t.status || "—"),
-          due: t.due_at ? new Date(t.due_at) : null,
-          ts,
+        id: t.id,
+        title: t.title,
+        body: bodyText,
+        due: t.due_at ? new Date(t.due_at) : null,
+        ts,
+        imageUrl: imgUrl
       });
     });
 
@@ -485,6 +561,21 @@ sendBtn?.addEventListener("click", handleSend);
         const key = notifKey(item);
         const unread = !readSet.has(key);
         if (unread) anyUnread = true;
+
+        // small image on the right
+        const hasImg = !!item.imageUrl;
+        const imgHtml = hasImg
+          ? `<div style="flex:0 0 52px; margin-left:8px;">
+               <div style="
+                 width:52px;height:52px;
+                 border-radius:6px;
+                 background:#eef1f8;
+                 background-image:url('${item.imageUrl}');
+                 background-size:cover;
+                 background-position:center;
+               "></div>
+             </div>`
+          : "";
 
         return `
         <div class="fvia-notif-item"
@@ -507,17 +598,22 @@ sendBtn?.addEventListener("click", handleSend);
                 "></div>`
               : ""
           }
-          <div style="font-size:.75rem;color:#666;">
-            ${item.type === "task" ? "Task" : "Announcement"}
-            · ${item.ts.toLocaleString()}
-          </div>
-          <div style="font-size:.9rem;font-weight:600;color:#353468;margin-top:4px;">
-            ${item.title || "(No title)"}
-          </div>
-          <div style="font-size:.8rem;color:#444;margin-top:4px;">
-            ${(item.body || "").slice(0, 120)}${
-              item.body && item.body.length > 120 ? "…" : ""
-            }
+          <div style="display:flex; align-items:flex-start; gap:8px;">
+            <div style="flex:1 1 auto; min-width:0;">
+              <div style="font-size:.75rem;color:#666;">
+                ${item.type === "task" ? "Task" : "Announcement"}
+                · ${item.ts.toLocaleString()}
+              </div>
+              <div style="font-size:.9rem;font-weight:600;color:#353468;margin-top:4px;">
+                ${item.title || "(No title)"}
+              </div>
+              <div style="font-size:.8rem;color:#444;margin-top:4px;">
+                ${(item.body || "").slice(0, 120)}${
+                  item.body && item.body.length > 120 ? "…" : ""
+                }
+              </div>
+            </div>
+            ${imgHtml}
           </div>
         </div>`;
       })
