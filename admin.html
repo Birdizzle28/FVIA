@@ -776,6 +776,65 @@
 	      </div>
 	    </div>
 	  </div>
+	<!-- Task Modal -->
+	  <div id="task-modal" class="overlay" aria-hidden="true">
+	    <div class="overlay-backdrop" data-close></div>
+	    <div class="overlay-panel">
+	      <div class="overlay-header">
+	        <h2>Create Task</h2>
+	        <button class="overlay-close" data-close>&times;</button>
+	      </div>
+	      <div class="overlay-body">
+	        <form id="admin-task-form" class="stacked-form">
+	          <!-- Agent select -->
+	          <div class="float-field">
+	            <select id="task-agent" required>
+	              <option value="">Select agent…</option>
+	              <!-- populated by admin.js -->
+	            </select>
+	            <label for="task-agent">Assign to</label>
+	          </div>
+	
+	          <!-- Task title -->
+	          <div class="float-field">
+	            <input id="task-title" type="text" placeholder=" " required />
+	            <label for="task-title">Task title</label>
+	          </div>
+	
+	          <!-- Task description/body -->
+	          <div class="float-field">
+	            <textarea id="task-body" rows="3" placeholder=" "></textarea>
+	            <label for="task-body">Details / notes (optional)</label>
+	          </div>
+	
+	          <!-- Link URL -->
+	          <div class="float-field">
+	            <input id="task-link" type="url" placeholder=" " />
+	            <label for="task-link">Link URL (optional)</label>
+	          </div>
+	
+	          <!-- Image upload -->
+	          <div class="form-group">
+	            <span>Image (optional)</span>
+	            <input id="task-image" type="file" accept="image/*">
+	            <small>PNG/JPG/GIF. Uploaded to Supabase Storage.</small>
+	          </div>
+	
+	          <!-- Due date/time (optional) -->
+	          <div class="float-field">
+	            <input id="task-due" type="text" placeholder=" " />
+	            <label for="task-due">Due date/time (optional)</label>
+	          </div>
+	
+	          <div style="display:flex; gap:10px; justify-content:flex-end; margin-top: 10px;">
+	            <button type="button" data-close>Cancel</button>
+	            <button type="submit" class="see-all">Save Task</button>
+	          </div>
+	          <p id="task-msg" class="status-line"></p>
+	        </form>
+	      </div>
+	    </div>
+	  </div>
 	
 	  <!-- Add Agent Modal (pre-approval) -->
 	  <div id="agent-modal" class="overlay" aria-hidden="true">
