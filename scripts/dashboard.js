@@ -628,9 +628,20 @@ document.addEventListener('DOMContentLoaded', () => {
     art.className = 'slide task';
     art.tabIndex = 0;
   
-    const meta = task.metadata || {};
+    let meta = {};
+    if (task.metadata) {
+      if (typeof task.metadata === 'string') {
+        try {
+          meta = JSON.parse(task.metadata);
+        } catch (e) {
+          console.warn('Bad task.metadata JSON for task', task.id, task.metadata);
+          meta = {};
+        }
+      } else if (typeof task.metadata === 'object') {
+        meta = task.metadata;
+      }
+    }
   
-    // pick a notes field if it exists
     const notes =
       meta.notes ||
       meta.note ||
@@ -639,13 +650,11 @@ document.addEventListener('DOMContentLoaded', () => {
       meta.details ||
       '';
   
-    // status label
     const statusRaw = (task.status || 'open').toLowerCase();
     let statusLabel = 'Open';
     if (statusRaw === 'completed') statusLabel = 'Completed';
     else if (statusRaw === 'cancelled') statusLabel = 'Cancelled';
   
-    // format dates
     const fmt = (d) => {
       try {
         return d ? new Date(d).toLocaleString() : '';
@@ -666,11 +675,10 @@ document.addEventListener('DOMContentLoaded', () => {
       bodyHtml += '<br><strong>Notes:</strong> ' + escapeHtml(notes);
     }
   
-    // >>> NEW: resolve image from tasks bucket <<<
     const rawImg =
-      meta.image_url ||  // if you saved it as image_url
-      meta.imagePath ||  // or imagePath
-      meta.path ||       // or path
+      meta.image_url ||
+      meta.imagePath ||
+      meta.path ||
       null;
   
     const imgUrl = resolveTaskImage(rawImg);
