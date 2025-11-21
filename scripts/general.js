@@ -499,6 +499,7 @@ sendBtn?.addEventListener("click", handleSend);
             border-radius:8px;
             background-size:contain;
             background-position:center;
+            background-repeat: no-repeat;
             background-color:#f3f3fb;
             ${heroUrl ? `background-image:url('${heroUrl.replace(/'/g,"\\'")}');` : ''}
           "></div>
@@ -561,6 +562,7 @@ sendBtn?.addEventListener("click", handleSend);
             border-radius:8px;
             background-size:contain;
             background-position:center;
+            background-repeat: no-repeat;
             background-color:#f3f3fb;
             ${heroUrl ? `background-image:url('${heroUrl.replace(/'/g,"\\'")}');` : ''}
           "></div>
