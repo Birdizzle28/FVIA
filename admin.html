@@ -515,37 +515,40 @@
 			  </div>
 			</div>
 		  	
-		  	<!-- Assign Tasks -->
-		    <div class="card">
-		      <h3>Assign Tasks</h3>
-		      <p>Create follow-ups, calls, and reminders for your agents.</p>
-		
-		      <form id="admin-task-form" class="stacked-form">
-		        <!-- Agent select -->
-		        <div class="float-field">
-		          <select id="task-agent" required>
-		            <option value="">Select agent…</option>
-		            <!-- populated by admin.js -->
-		          </select>
-		          <label for="task-agent">Assign to</label>
-		        </div>
-		
-		        <!-- Task title -->
-		        <div class="float-field">
-		          <input id="task-title" type="text" placeholder=" " required />
-		          <label for="task-title">Task title</label>
-		        </div>
-		
-		        <!-- Due date/time (optional) -->
-		        <div class="float-field">
-		          <input id="task-due" type="text" placeholder=" " />
-		          <label for="task-due">Due date/time (optional)</label>
-		        </div>
-		
-		        <button type="submit">Create Task</button>
-		        <p id="task-msg" class="status-line"></p>
-		      </form>
-		    </div>
+		  	      <!-- Assign Tasks -->
+      <div class="card">
+        <h3>Assign Tasks</h3>
+        <p>Create follow-ups, calls, and reminders for your agents.</p>
+
+        <!-- Open modal to create a task -->
+        <button id="open-task-modal" class="card-link">Create Task</button>
+
+        <!-- Collapsible manage area (only tasks created from Admin panel) -->
+        <button
+          id="toggle-task-list"
+          type="button"
+          class="see-all"
+          style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;"
+          aria-expanded="false"
+        >
+          <span>Manage my sent tasks</span>
+          <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+        </button>
+
+        <div
+          id="task-list-panel"
+          hidden
+          style="margin-top: 8px;"
+        >
+          <div
+            id="task-list"
+            class="scroll-container"
+            style="max-height: 260px; overflow-y: auto;"
+          >
+            <!-- Populated by admin.js → loadMyTasks() -->
+          </div>
+        </div>
+      </div>
 	
 	    <!-- Agents -->
 	    <div class="card">
