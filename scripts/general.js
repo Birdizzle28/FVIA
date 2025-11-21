@@ -1,17 +1,21 @@
-// scripts/general.js (put this at the very top)
+// scripts/general.js
+
+// --- Shared Supabase config (GLOBAL, used by all IIFEs) ---
+const SUPABASE_URL = 'https://ddlbgkolnayqrxslzsxn.supabase.co';
+const SUPABASE_ANON_KEY =
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho';
+
+// --- Admin-link visibility (only show admin links for admins) ---
 (async () => {
   // Skip if no admin link exists on this page
   if (!document.querySelector('[data-admin-link], .admin-link')) return;
 
   // Load supabase ESM quickly without waiting for the rest of your app
-const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm');
-  // scripts/general.js (shared Supabase config)
-const SUPABASE_URL = 'https://ddlbgkolnayqrxslzsxn.supabase.co';
-const SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho';
+  const { createClient } = await import(
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm'
+  );
 
-  // Reuse your public URL/key already in freequote.html (same project here)
-  const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm');
+  // Create client once, using shared config
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   const { data: { session } } = await supabase.auth.getSession();
@@ -29,33 +33,36 @@ const SUPABASE_ANON_KEY =
   }
 })();
 
+// ======================
+// MENU + HEADER + CHAT
+// ======================
 const menuToggle = document.getElementById('menu-toggle');
 const mobileMenu = document.getElementById('mobile-menu');
 
 // Open/close the slide-out menu on hamburger click
 menuToggle.addEventListener('click', () => {
-    // If opening, position the menu right below the header
-    if (!mobileMenu.classList.contains('open')) {
-        const header = document.querySelector('header.index-grid-header');
-        if (header) {
-            mobileMenu.style.top = header.offsetHeight + 'px';
-        }
+  // If opening, position the menu right below the header
+  if (!mobileMenu.classList.contains('open')) {
+    const header = document.querySelector('header.index-grid-header');
+    if (header) {
+      mobileMenu.style.top = header.offsetHeight + 'px';
     }
-    mobileMenu.classList.toggle('open');
+  }
+  mobileMenu.classList.toggle('open');
 });
 
 // Close the menu when clicking anywhere outside of it
 document.addEventListener('click', (e) => {
-    if (
-        mobileMenu.classList.contains('open') &&                 // menu is open
-        !mobileMenu.contains(e.target) &&                        // click is not inside menu
-        !e.target.closest('#menu-toggle')                        // click is not the toggle button
-    ) {
-        mobileMenu.classList.remove('open');
-    }
+  if (
+    mobileMenu.classList.contains('open') &&                 // menu is open
+    !mobileMenu.contains(e.target) &&                        // click is not inside menu
+    !e.target.closest('#menu-toggle')                        // click is not the toggle button
+  ) {
+    mobileMenu.classList.remove('open');
+  }
 });
 
-  if (window.innerWidth <= 768) {
+if (window.innerWidth <= 768) {
   const header = document.querySelector('.index-grid-header');
 
   window.addEventListener('scroll', () => {
@@ -121,33 +128,35 @@ async function handleSend() {
 chatInput?.addEventListener("keypress", function (e) {
   if (e.key === "Enter") handleSend();
 });
+
 const toggleToolkit = document.getElementById('toolkit-toggle');
-  const submenu = document.getElementById('toolkit-submenu');
+const submenu = document.getElementById('toolkit-submenu');
 
-  if (toggleToolkit && submenu) {
-    const openSubmenu = () => {
-      submenu.hidden = false;
-      submenu.classList.add('open');
-      toggleToolkit.setAttribute('aria-expanded', 'true');
-    };
-    const closeSubmenu = () => {
-      submenu.classList.remove('open');
-      toggleToolkit.setAttribute('aria-expanded', 'false');
-      // hide after animation finishes to keep height animation smooth
-      setTimeout(() => { if (!submenu.classList.contains('open')) submenu.hidden = true; }, 260);
-    };
+if (toggleToolkit && submenu) {
+  const openSubmenu = () => {
+    submenu.hidden = false;
+    submenu.classList.add('open');
+    toggleToolkit.setAttribute('aria-expanded', 'true');
+  };
+  const closeSubmenu = () => {
+    submenu.classList.remove('open');
+    toggleToolkit.setAttribute('aria-expanded', 'false');
+    // hide after animation finishes to keep height animation smooth
+    setTimeout(() => { if (!submenu.classList.contains('open')) submenu.hidden = true; }, 260);
+  };
 
-    toggleToolkit.addEventListener('click', () => {
-      const expanded = toggleToolkit.getAttribute('aria-expanded') === 'true';
-      expanded ? closeSubmenu() : openSubmenu();
-    });
+  toggleToolkit.addEventListener('click', () => {
+    const expanded = toggleToolkit.getAttribute('aria-expanded') === 'true';
+    expanded ? closeSubmenu() : openSubmenu();
+  });
 
-    // Optional: close submenu when clicking outside the mobile menu
-    document.addEventListener('click', (e) => {
-      const mobileMenu = document.getElementById('mobile-menu');
-      if (!mobileMenu?.contains(e.target)) closeSubmenu();
-    });
-  }
+  // Optional: close submenu when clicking outside the mobile menu
+  document.addEventListener('click', (e) => {
+    const mobileMenu = document.getElementById('mobile-menu');
+    if (!mobileMenu?.contains(e.target)) closeSubmenu();
+  });
+}
+
 // Send button click
 sendBtn?.addEventListener("click", handleSend);
 
@@ -161,8 +170,9 @@ sendBtn?.addEventListener("click", handleSend);
   if (!bell) return; // no bell on this page, skip
 
   // --- Supabase init ONLY for this feature ---
-  const { createClient } = await import('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm');
-
+  const { createClient } = await import(
+    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm'
+  );
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   // helper: resolve a tasks image path into a public URL
