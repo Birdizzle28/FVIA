@@ -1,10 +1,10 @@
 // netlify/functions/testCommissionLogic.js
 import { createClient } from '@supabase/supabase-js';
 
-// You already expose this anon key in your frontend, so it's okay to use here for READS.
+// Using your anon key for read-only testing
 const supabase = createClient(
   'https://ddlbgkolnayqrxslzsxn.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQzOb3SXV5TDT5Ho'
 );
 
 export async function handler(event) {
@@ -17,15 +17,15 @@ export async function handler(event) {
 
   const qp = event.queryStringParameters || {};
 
-  // Defaults so you can just hit the URL with no params first
+  // Defaults so you can hit the URL with no params
   const carrier_name = qp.carrier_name || 'Aetna';
   const product_line = qp.product_line || 'Final Expense';
   const policy_type  = qp.policy_type  || 'Standard';
   const agent_level  = qp.agent_level  || 'agent';  // agent | mit | manager | mga | area_manager
-  const ap           = Number(qp.ap || '1000');    // Annualized premium
+  const ap           = Number(qp.ap || '1000');     // Annualized premium
 
   try {
-    // 1) Load the schedule row
+    // 1) Load the commission schedule row
     const { data: schedule, error } = await supabase
       .from('commission_schedules')
       .select('carrier_name, product_line, policy_type, agent_level, base_commission_rate, advance_rate, renewal_trail_rule')
@@ -52,10 +52,12 @@ export async function handler(event) {
     const baseRate = Number(schedule.base_commission_rate) || 0;
     const advRate  = Number(schedule.advance_rate) || 0;
 
+    // === COMMISSION MATH ===
+
     // Advance = AP * baseRate * advanceRate
     const advanceAmount = ap * baseRate * advRate;
 
-    // 2) Parse renewal bands from JSON
+    // Parse renewal bands from JSON
     let trailRule = schedule.renewal_trail_rule || {};
     if (typeof trailRule === 'string') {
       try {
@@ -70,7 +72,7 @@ export async function handler(event) {
 
     const renewalBands = bands.map(band => {
       const rate = Number(band.rate) || 0;
-      const yearlyAmount = ap * rate;
+      const yearlyAmount = ap * rate; // currently % of premium
       return {
         start_year: band.start_year ?? null,
         end_year: band.end_year ?? null,
@@ -80,17 +82,41 @@ export async function handler(event) {
       };
     });
 
-    // Just for fun: sum the first 10 years of renewals (rough estimate)
+    // Approximate renewals in first 10 policy years (just for preview)
     let approxFirst10YearsRenewals = 0;
     renewalBands.forEach(b => {
       const start = b.start_year ?? 1;
       const end   = b.end_year ?? 10;
-      const cappedEnd = Math.min(end, 10);
+      const cappedEnd = Math.min(end ?? 10, 10);
       if (cappedEnd >= start) {
         const years = cappedEnd - start + 1;
         approxFirst10YearsRenewals += years * b.yearly_amount;
       }
     });
+
+    // === DEBT / OVERRIDES / GOOD STANDING PREVIEW ===
+    // For now these are FAKE values so you can see the shape.
+    // Later we will replace with real Supabase queries.
+
+    const fakeLeadBalance       = 320.00;  // what the agent owes for leads
+    const fakeChargebackBalance = 180.00;  // what they owe for chargebacks
+    const fakeOverridesLast30   = 540.00;  // what they made in overrides last 30 days
+
+    const totalDebt = fakeLeadBalance + fakeChargebackBalance;
+
+    // Simple example rule for standing:
+    // - Good if agent's total debt <= $500
+    // - Not in good standing if debt > $500
+    const goodStanding = totalDebt <= 500;
+
+    const standingReasons = [];
+    if (!goodStanding) {
+      standingReasons.push('high_debt');
+    }
+    // In the future we can also push reasons like:
+    // - 'inactive_agent' (if agents.is_active = false)
+    // - 'compliance_hold' (if we add a compliance flag)
+    // - 'stopped_receiving_leads' (if receiving_leads = false)
 
     const result = {
       input: {
@@ -106,10 +132,23 @@ export async function handler(event) {
         renewal_trail_rule: trailRule,
       },
       calculations: {
+        // direct commission preview
         advance_amount: advanceAmount,
         advance_amount_rounded: Math.round(advanceAmount * 100) / 100,
         renewal_bands: renewalBands,
         approx_first_10_years_renewals: Math.round(approxFirst10YearsRenewals * 100) / 100,
+
+        // NEW: debt & overrides preview
+        lead_balance: fakeLeadBalance,
+        chargeback_balance: fakeChargebackBalance,
+        total_balance: totalDebt,
+        overrides_preview_last_30_days: fakeOverridesLast30,
+
+        // NEW: standing logic
+        standing: {
+          good_standing: goodStanding,
+          reasons: standingReasons
+        }
       },
     };
 
