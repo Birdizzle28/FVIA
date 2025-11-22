@@ -36,18 +36,28 @@ export async function handler(event) {
       .single();
 
     if (error || !schedule) {
-      console.error('Error loading commission schedule:', error);
-      return {
-        statusCode: 404,
-        body: JSON.stringify({
+  console.error('Error loading commission schedule:', error);
+
+  // NEW: load all rows so we can see EXACTLY what’s stored in Supabase
+  const { data: allRows, error: allErr } = await supabase
+    .from('commission_schedules')
+    .select('carrier_name, product_line, policy_type, agent_level, base_commission_rate, advance_rate, renewal_trail_rule');
+
+    return {
+      statusCode: 404,
+      body: JSON.stringify(
+        {
           error: 'No commission schedule found for that combo.',
-          carrier_name,
-          product_line,
-          policy_type,
-          agent_level
-        }),
-      };
-    }
+          tried: { carrier_name, product_line, policy_type, agent_level },
+          supabase_error: error,
+          all_rows_sample: allErr ? `Error loading rows: ${allErr.message}` : allRows
+        },
+        null,
+        2
+      ),
+      headers: { 'Content-Type': 'application/json' },
+    };
+  }
 
     const baseRate = Number(schedule.base_commission_rate) || 0;
     const advRate  = Number(schedule.advance_rate) || 0;
