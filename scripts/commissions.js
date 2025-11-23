@@ -76,9 +76,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadAndRenderLeadDebts();
   await loadAndRenderChargebacks();
 
-  // ----- 6. Still use placeholder data for everything else (for now) -----
+  // ----- 6. Load REAL policy commissions for this agent -----
+  await loadAndRenderPolicies();
+
+  // ----- 7. Still use placeholder data for payouts, team, files (for now) -----
   renderPlaceholderPayouts();
-  renderPlaceholderPolicies();
   renderPlaceholderTeam();
   renderPlaceholderFiles();
 });
@@ -411,8 +413,71 @@ async function loadAndRenderChargebacks() {
 }
 
 /* ===============================
+   REAL Policies & Details
+   =============================== */
+
+async function loadAndRenderPolicies() {
+  if (!me) return;
+
+  const tbody = document.querySelector('#policies-table tbody');
+  if (!tbody) return;
+
+  try {
+    const { data, error } = await supabase
+      .from('agent_policy_commissions_view')
+      .select(
+        'policy_id, agent_id, written_at, policyholder_name, carrier_name, product_line, status, ap, advance_amount, renewal_amount, total_commission'
+      )
+      .eq('agent_id', me.id)
+      .order('written_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading agent_policy_commissions_view:', error);
+      renderPlaceholderPolicies(); // fallback if view/policy_commissions not ready yet
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="9">No policy commissions found for you yet.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.map(row => {
+      const writtenDate = row.written_at
+        ? new Date(row.written_at).toLocaleDateString()
+        : '—';
+      const name = row.policyholder_name || '—';
+      const carrier = row.carrier_name || '—';
+      const product = row.product_line || '—';
+      const premium = Number(row.ap || 0);
+      const status = formatStatus(row.status);
+      const adv = Number(row.advance_amount || 0);
+      const paythru = Number(row.renewal_amount || 0);
+      const total = Number(row.total_commission || 0);
+
+      return `
+        <tr>
+          <td>${writtenDate}</td>
+          <td>${escapeHtml(name)}</td>
+          <td>${escapeHtml(carrier)}</td>
+          <td>${escapeHtml(product)}</td>
+          <td>${formatMoney(premium)}</td>
+          <td>${escapeHtml(status)}</td>
+          <td>${formatMoney(adv)}</td>
+          <td>${formatMoney(paythru)}</td>
+          <td>${formatMoney(total)}</td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('Unexpected error in loadAndRenderPolicies:', err);
+    renderPlaceholderPolicies();
+  }
+}
+
+/* ===============================
    Placeholder data generators
-   (still used for payouts, policies, team, files)
+   (still used for payouts, team, files, and fallback)
    =============================== */
 
 function renderPlaceholderSummary() {
