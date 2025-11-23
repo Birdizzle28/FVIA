@@ -22,7 +22,7 @@
 			<p><strong>Family Values Group</strong></p>
 			<button id="menu-toggle" aria-label="Toggle menu">
 		 		<i class="fas fa-bars"></i>
-		        </button>
+		    </button>
 			<hr>
 			<nav class="header-flex-container">
 				<a href="about.html">About</a>
@@ -41,205 +41,62 @@
 		    <a href="login.html">Login</a>
 		</div>
 
-  <div class="auth-container">
-    <h2>Account Confirmed!</h2>
-    <p>Thank you for confirming your email. Your account is now active.</p>
-    <a href="login.html">
-      <button>Log In to Your Account</button>
-    </a>
-	<p id="status">Activating your account…</p>
-  </div>
-	<footer class="index-grid-footer">
-		<img id="footerlogo" src="Pics/img6.png">
-		<hr class="footerhr">
-		<div id="footercontact">
-			<a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
-				<span class="fa fa-envelope"></span>
-				<span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+		<div class="auth-container">
+			<h2>Account Confirmed!</h2>
+			<p>Thank you for confirming your email. Your account is now active.</p>
+			<a href="login.html">
+				<button>Log In to Your Account</button>
 			</a>
-			<p> | </p>
-			<a class="contactcontainer" href="tel:+16292437980">
-				<span class="fa fa-phone"></span>
-				<span class="contactcontcontacts">+1-629-243-7980</span>
-			</a>
+			<p id="status">Activating your account…</p>
 		</div>
-		<hr class="footerhr">
-		<div id="footersocial">
-			<a class="fab fa-facebook-f" href="https://www.facebook.com/familyvaluesgroup"></a>
-			<a class="fab fa-linkedin-in" href="https://www.linkedin.com/in/demisi-johnson-026227391?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"></a>
-			<a class="fab fa-instagram" href="https://www.instagram.com/family.values.group?igsh=OHl3dGdnd3RwMTV0&utm_source=qr"></a>
-			<a class="fab fa-youtube" href="https://youtube.com/@familyvaluesgroup?si=mauqWp5nxyczgCJd"></a>
-			<a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
-		</div>
-		<div id="footerlinks">
-			<a href="faqs.html">FAQs</a>
-			<a href="terms.html">Terms</a>
-			<a href="accessibility.html">Accessibility</a>
-			<a href="privacy.html">Privacy</a>
-		</div>
-		<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+
+		<footer class="index-grid-footer">
+			<img id="footerlogo" src="Pics/img6.png">
+			<hr class="footerhr">
+			<div id="footercontact">
+				<a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
+					<span class="fa fa-envelope"></span>
+					<span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+				</a>
+				<p> | </p>
+				<a class="contactcontainer" href="tel:+16292437980">
+					<span class="fa fa-phone"></span>
+					<span class="contactcontcontacts">+1-629-243-7980</span>
+				</a>
+			</div>
+			<hr class="footerhr">
+			<div id="footersocial">
+				<a class="fab fa-facebook-f" href="https://www.facebook.com/familyvaluesgroup"></a>
+				<a class="fab fa-linkedin-in" href="https://www.linkedin.com/in/demisi-johnson-026227391?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"></a>
+				<a class="fab fa-instagram" href="https://www.instagram.com/family.values.group?igsh=OHl3dGdnd3RwMTV0&utm_source=qr"></a>
+				<a class="fab fa-youtube" href="https://youtube.com/@familyvaluesgroup?si=mauqWp5nxyczgCJd"></a>
+				<a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
+			</div>
+			<div id="footerlinks">
+				<a href="faqs.html">FAQs</a>
+				<a href="terms.html">Terms</a>
+				<a href="accessibility.html">Accessibility</a>
+				<a href="privacy.html">Privacy</a>
+			</div>
+			<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
 		</footer>
-	<script type="module" src="scripts/general.js"></script>
-	<script type="module">
-	  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-	  
-	  document.addEventListener('DOMContentLoaded', async () => {
-	    const supabase = createClient(
-	      'https://ddlbgkolnayqrxslzsxn.supabase.co',
-	      'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
-	    );
-	  
-	    const status = document.getElementById('status');
-	    status.textContent = '⏳ Checking session...';
-	  
-	    const { data, error } = await supabase.auth.getSession();
-	    if (error) {
-	      console.error('getSession error:', error);
-	      status.textContent = '❌ Error checking session. Try logging in again.';
-	      return;
-	    }
-	  
-	    const session = data?.session;
-	    if (!session || !session.user) {
-	      status.textContent = '⚠️ No active session found. Try logging in again.';
-	      return;
-	    }
-	  
-	    const user  = session.user;
-	    const email = user.email;
-	  
-	    status.textContent = '🔑 Session loaded for ' + email;
-	  
-	    // Step 1: If agent already exists, just redirect.
-	    const { data: exists, error: existsErr } = await supabase
-	      .from('agents')
-	      .select('id')
-	      .eq('id', user.id)
-	      .maybeSingle();
-	  
-	    if (existsErr) {
-	      console.error('Error checking agents:', existsErr);
-	      status.textContent = '❌ Error checking agent record.';
-	      return;
-	    }
-	  
-	    if (exists) {
-	      status.textContent = '✅ Agent already exists. Redirecting to login...';
-	      setTimeout(() => window.location.href = 'login.html', 3000);
-	      return;
-	    }
-	  
-	    status.textContent = '🔍 Step 2: Reading metadata...';
-	  
-	    const agentId   = user.user_metadata?.agent_id;
-	    const firstName = user.user_metadata?.first_name;
-	    const lastName  = user.user_metadata?.last_name;
-	    const metaLevel = user.user_metadata?.level || null;
-	    const metaRecruiterId = user.user_metadata?.recruiter_id || null;
-	  
-	    if (!agentId || !firstName || !lastName) {
-	      status.textContent = '❌ Step 2 FAIL: Missing agent metadata. Contact support.';
-	      return;
-	    }
-	  
-	    status.textContent = '🔍 Step 3: Checking approved_agents & ICA status...';
-	  
-	    const { data: approved, error: fetchErr } = await supabase
-	      .from('approved_agents')
-	      .select('agent_id, recruiter_id, level, ica_signed, ica_status, is_registered, first_name, last_name, email')
-	      .eq('agent_id', agentId)
-	      .maybeSingle();
-	  
-	    if (fetchErr) {
-	      console.error('Error fetching approved_agents:', fetchErr);
-	      status.textContent = '❌ Step 3 FAIL: Approved agent not found. Contact support.';
-	      return;
-	    }
-	  
-	    if (!approved) {
-	      status.textContent = '❌ Step 3 FAIL: Approved agent not found. Contact support.';
-	      return;
-	    }
-	  
-	    // Enforce ICA signed before activating agent
-	    const isSigned = approved.ica_signed === true || (approved.ica_status || '').toLowerCase() === 'completed';
-	    if (!isSigned) {
-	      status.textContent = '❌ Step 3 FAIL: Your ICA is not marked as signed yet. Contact your upline or admin.';
-	      return;
-	    }
-	  
-	    if (approved.is_registered) {
-	      status.textContent = '✅ This agent ID is already registered. Redirecting to login...';
-	      setTimeout(() => window.location.href = 'login.html', 3000);
-	      return;
-	    }
-	  
-	    status.textContent = '🔍 Step 4: Inserting into agents...';
-	  
-	    const levelFromApproved   = approved.level || metaLevel || null;
-	    const recruiterFromApproved = approved.recruiter_id || metaRecruiterId || null;
-	  
-	    const payload = {
-	      id: user.id,
-	      agent_id: agentId,
-	      first_name: firstName,
-	      last_name: lastName,
-	      full_name: `${firstName} ${lastName}`,
-	      email: email,
-	      is_active: true,
-	      is_admin: false,
-	      level: levelFromApproved,
-	      recruiter_id: recruiterFromApproved
-	    };
-	  
-	    const { error: insertErr } = await supabase
-	      .from('agents')
-	      .insert(payload, { returning: 'minimal' });
-	  
-	    if (insertErr) {
-	      console.error('Insert agents error:', insertErr);
-	      status.textContent = '❌ Step 4 FAIL: Insert error: ' + insertErr.message;
-	      return;
-	    }
-	  
-	    status.textContent = '✅ Step 5: Inserted agent. Updating approved_agents...';
-	  
-	    const { error: updateErr } = await supabase
-	      .from('approved_agents')
-	      .update({ is_registered: true })
-	      .eq('agent_id', agentId);
-	  
-	    if (updateErr) {
-	      console.error('Update approved_agents error:', updateErr);
-	      status.textContent += '\n⚠️ Step 5 WARNING: Could not update approved_agents: ' + updateErr.message;
-	    } else {
-	      status.textContent += '\n✅ Step 5: approved_agents updated.';
-	    }
-	  
-	    // Step 6: Try to bump any matching recruit to stage = 'Agent'
-	    if (recruiterFromApproved) {
-	      status.textContent += '\n🔁 Step 6: Updating recruits (if any)...';
-	      const { error: recErr } = await supabase
-	        .from('recruits')
-	        .update({
-	          stage: 'Agent',
-	          stage_updated_at: new Date().toISOString()
-	        })
-	        .eq('recruiter_id', recruiterFromApproved)
-	        .ilike('first_name', firstName)
-	        .ilike('last_name', lastName);
-	  
-	      if (recErr) {
-	        console.error('Update recruits error:', recErr);
-	        status.textContent += '\n⚠️ Step 6 WARNING: Could not update recruits: ' + recErr.message;
-	      } else {
-	        status.textContent += '\n✅ Step 6: Updated recruits (if any matched).';
-	      }
-	    }
-	  
-	    status.textContent += '\n🎉 All done! Redirecting to login...';
-	    setTimeout(() => window.location.href = 'login.html', 4000);
-	  });
-	</script>
+
+		<script type="module" src="scripts/general.js"></script>
+
+		<!-- Simple confirm-page logic: no Supabase, no onboarding -->
+		<script>
+		  document.addEventListener('DOMContentLoaded', () => {
+		    const status = document.getElementById('status');
+		    if (status) {
+		      status.textContent = '✅ Your email is confirmed. You can now log in.';
+		    }
+
+		    // Optional: auto-redirect to login after a few seconds
+		    setTimeout(() => {
+		      window.location.href = 'login.html';
+		    }, 4000);
+		  });
+		</script>
+	</div>
 </body>
 </html>
