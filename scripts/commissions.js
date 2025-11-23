@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const { data: profile, error: profErr } = await supabase
       .from('agents')
-      .select('id, full_name, agent_id, is_admin, is_active, level, receiving_leads')
+      .select('id, full_name, agent_id, is_admin, is_active, level')
       .eq('id', me.id)
       .single();
 
@@ -40,28 +40,38 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Unexpected error loading agent profile:', e);
   }
 
-  // ----- 3. Load commission overview from Supabase -----
+  // ----- 3. Load commission overview (lead/chargeback debt, etc.) -----
   const overview = await loadAgentCommissionOverview();
   if (overview) {
-    applyOverviewToUI(overview);
+    // Top snapshot / summary
+    setText('summary-leads-balance', formatMoney(overview.lead_balance));
+    setText('summary-chargeback-balance', formatMoney(overview.chargeback_balance));
+    setText('summary-total-balance', formatMoney(overview.total_debt));
+
+    // Balances & Debt panel
+    setText('balances-leads-amount', formatMoney(overview.lead_balance));
+    setText('balances-chargebacks-amount', formatMoney(overview.chargeback_balance));
+    setText('balances-total-amount', formatMoney(overview.total_debt));
   } else {
     // Fallback to fake data if it fails
     renderPlaceholderSummary();
   }
 
-  // ----- 4. Wire up tabs -----
+  // ----- 4. Load real policy commissions for Policies tab -----
+  await loadPoliciesTableFromSupabase();
+
+  // ----- 5. Wire up tabs -----
   initTabs();
 
-  // ----- 5. Wire up filters + chips + misc UI -----
+  // ----- 6. Wire up filters + chips + misc UI -----
   initPoliciesDateRange();
   initFilesChips();
   initTeamAgentPanelToggle();
 
-  // ----- 6. Render placeholder table data (we’ll replace with Supabase later) -----
+  // ----- 7. Render placeholder data for other areas (for now) -----
   renderPlaceholderPayouts();
   renderPlaceholderLeadDebts();
   renderPlaceholderChargebacks();
-  renderPlaceholderPolicies();
   renderPlaceholderTeam();
   renderPlaceholderFiles();
 });
@@ -79,28 +89,23 @@ function hydrateHeaderFromProfile(profile) {
     nameEl.textContent = profile?.full_name || 'Agent';
   }
 
-  // Use your agents.level column if present; otherwise fall back
+  // Use real level if present; otherwise fall back
   if (levelEl) {
-    let levelLabel = 'Agent';
+    let label = 'Level: Agent';
     if (profile?.level) {
-      // levels: agent | mit | manager | mga | area_manager
-      const map = {
-        agent: 'Agent',
-        mit: 'MIT',
-        manager: 'Manager',
-        mga: 'MGA',
-        area_manager: 'Area Manager'
-      };
-      levelLabel = map[profile.level] || profile.level;
+      // e.g., "agent", "mit", "manager", "mga", "area_manager"
+      const pretty = profile.level
+        .split('_')
+        .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+        .join(' ');
+      label = `Level: ${pretty}`;
     } else if (profile?.is_admin) {
-      levelLabel = 'Admin';
+      label = 'Level: Admin';
     }
-
-    levelEl.textContent = `Level: ${levelLabel}`;
+    levelEl.textContent = label;
   }
 
   if (progressEl) {
-    // We’ll override this later when we have true level rules
     progressEl.textContent = 'Level progress tracking coming soon.';
   }
 }
@@ -122,94 +127,126 @@ async function loadAgentCommissionOverview() {
   return data;
 }
 
-/**
- * Apply the agent_commission_overview row to your UI:
- * - lead / chargeback / total balances
- * - Balances panel mirrors
- * - simple “good standing” indicator
- * - rough upcoming payout preview (for now just using unsettled net)
- */
-function applyOverviewToUI(overview) {
-  const leadBalance       = Number(overview.lead_balance ?? 0);
-  const chargebackBalance = Number(overview.chargeback_balance ?? 0);
-  const totalDebt         = Number(overview.total_debt ?? (leadBalance + chargebackBalance));
-  const apLastMonth       = Number(overview.ap_last_month ?? 0);
-  const withholdingRate   = Number(overview.withholding_rate ?? 0);
-  const netUnsettled      = Number(overview.net_unsettled_commission ?? 0); // depends on your view
-  const goodStanding      = overview.good_standing !== false; // default true if null
-  const standingReasons   = overview.standing_reasons || [];
+/* ===============================
+   Policies table from Supabase
+   =============================== */
 
-  // --- Top summary cards ---
-  setText('summary-leads-balance', formatMoney(leadBalance));
-  setText('summary-chargeback-balance', formatMoney(chargebackBalance));
-  setText('summary-total-balance', formatMoney(totalDebt));
+async function loadPoliciesTableFromSupabase() {
+  const tbody = document.querySelector('#policies-table tbody');
+  if (!tbody || !me) return;
 
-  // If you ever add these spans to the HTML, this will Just Work™
-  setText('summary-ap-last-month', apLastMonth ? formatMoney(apLastMonth) : '');
-  if (!isNaN(withholdingRate) && withholdingRate > 0) {
-    setText('summary-withholding-rate', `${(withholdingRate * 100).toFixed(0)}%`);
+  // Clear while loading
+  tbody.innerHTML = `
+    <tr>
+      <td colspan="9">Loading policies…</td>
+    </tr>
+  `;
+
+  const { data, error } = await supabase
+    .from('policy_commission_preview')
+    .select('*')
+    .eq('agent_id', me.id)
+    .order('policy_created_at', { ascending: false });
+
+  if (error) {
+    console.error('Error loading policy_commission_preview:', error);
+    // fall back to placeholders so the table isn’t empty
+    renderPlaceholderPolicies();
+    return;
   }
 
-  // --- Balances & Debt panel ---
-  setText('balances-leads-amount', formatMoney(leadBalance));
-  setText('balances-chargebacks-amount', formatMoney(chargebackBalance));
-  setText('balances-total-amount', formatMoney(totalDebt));
-  // Simple projection note for now
-  setText('balances-total-note', `Projected after next payouts: ${formatMoney(totalDebt - Math.min(totalDebt, netUnsettled))}`);
+  if (!data || !data.length) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="9">No policies found yet.</td>
+      </tr>
+    `;
+    return;
+  }
 
-  // --- Upcoming payouts (rough preview for now) ---
-  const nextAdvanceDate = formatNextFriday();
-  const nextPaythruDate = formatEndOfMonth();
+  const rowsHtml = data.map((row) => {
+    // Dates: prefer submitted_at as "Written Date"; fall back to created_at
+    const writtenDate = formatDate(row.written_date || row.policy_created_at);
 
-  // We don’t yet split weekly vs monthly in the view,
-  // so we’ll just show netUnsettled as “next advance” starter.
-  setText('summary-next-advance-amount', formatMoney(netUnsettled));
-  setText('summary-next-advance-date', `(${nextAdvanceDate})`);
-  setText('summary-next-paythru-amount', '$0.00'); // we’ll refine once we add trails split
-  setText('summary-next-paythru-date', `(${nextPaythruDate})`);
+    // Premium: show AP as “Premium” for now (could later show both modal + AP)
+    const ap = Number(row.ap) || 0;
 
-  setText('next-advance-amount', formatMoney(netUnsettled));
-  setText('next-advance-date', `Pays on: ${nextAdvanceDate}`);
-  setText('next-paythru-amount', '$0.00');
-  setText('next-paythru-date', `Pays on: ${nextPaythruDate}`);
+    // Advance
+    const advance = Number(row.advance_commission) || 0;
 
-  // --- Good standing indicator ---
-  const progressEl = document.getElementById('comm-level-progress-text');
-  if (progressEl) {
-    if (goodStanding) {
-      progressEl.textContent = 'Status: In good standing.';
-    } else {
-      const reasonText = standingReasons.length
-        ? `Reasons: ${standingReasons.join(', ')}.`
-        : '';
-      progressEl.textContent = `Status: On hold / not in good standing. ${reasonText}`;
+    // Pay-thru: estimate YEAR 2 renewals, then monthly
+    const { monthlyPayThru, yearlyPayThru } = estimatePayThruFromRule(row.ap, row.renewal_trail_rule);
+
+    // Total commission = advance + estimated first-year renewals (simplified)
+    const totalCommission = advance + yearlyPayThru;
+
+    // Policyholder name is not in the view yet; we can pull from contacts later
+    const placeholderName = '—';
+
+    return `
+      <tr>
+        <td>${writtenDate}</td>
+        <td>${placeholderName}</td>
+        <td>${row.carrier_name || ''}</td>
+        <td>${row.product_line || row.policy_type || ''}</td>
+        <td>${formatMoney(ap)}</td>
+        <td>${row.status || ''}</td>
+        <td>${formatMoney(advance)}</td>
+        <td>${formatMoney(monthlyPayThru)}</td>
+        <td>${formatMoney(totalCommission)}</td>
+      </tr>
+    `;
+  }).join('');
+
+  tbody.innerHTML = rowsHtml;
+}
+
+/**
+ * Use the renewal_trail_rule JSON to estimate renewals.
+ * For now:
+ * - Look at bands where year 2 is inside [start_year, end_year]
+ * - Sum AP * rate for those bands = yearlyPayThru
+ * - monthlyPayThru = yearlyPayThru / 12
+ */
+function estimatePayThruFromRule(ap, renewalRule) {
+  const apNum = Number(ap) || 0;
+  if (!apNum || !renewalRule) {
+    return { yearlyPayThru: 0, monthlyPayThru: 0 };
+  }
+
+  let rule = renewalRule;
+  if (typeof rule === 'string') {
+    try {
+      rule = JSON.parse(rule);
+    } catch (e) {
+      console.error('Error parsing renewal_trail_rule:', e);
+      return { yearlyPayThru: 0, monthlyPayThru: 0 };
     }
   }
 
-  // Optionally tweak the level badge color based on standing
-  const levelBadge = document.getElementById('comm-level-label');
-  if (levelBadge) {
-    levelBadge.classList.toggle('comm-badge-bad-standing', !goodStanding);
+  const bands = Array.isArray(rule.bands) ? rule.bands : [];
+  if (!bands.length) {
+    return { yearlyPayThru: 0, monthlyPayThru: 0 };
   }
-}
 
-/* ===============================
-   Date helpers for payout cards
-   =============================== */
+  // Consider YEAR 2 as the first renewal year
+  const targetYear = 2;
+  let yearly = 0;
 
-function formatNextFriday() {
-  const d = new Date();
-  const day = d.getDay(); // 0=Sun ... 5=Fri
-  const diff = (5 - day + 7) % 7 || 7; // days until next Friday (never 0 => next week)
-  d.setDate(d.getDate() + diff);
-  return d.toLocaleDateString();
-}
+  bands.forEach((band) => {
+    const start = band.start_year ?? 1;
+    const end = band.end_year ?? 99;
+    const rate = Number(band.rate) || 0;
+    if (targetYear >= start && targetYear <= end) {
+      yearly += apNum * rate;
+    }
+  });
 
-function formatEndOfMonth() {
-  const d = new Date();
-  // set to last day of this month
-  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
-  return end.toLocaleDateString();
+  const monthly = yearly / 12;
+  return {
+    yearlyPayThru: yearly,
+    monthlyPayThru: monthly
+  };
 }
 
 /* ===============================
@@ -336,11 +373,10 @@ function initTeamAgentPanelToggle() {
 
 /* ===============================
    Placeholder data generators
-   (we’ll replace these later with Supabase queries)
+   (still used for other panels for now)
    =============================== */
 
 function renderPlaceholderSummary() {
-  // Just a soft example so the page doesn’t look dead.
   const leads = 320;
   const chargebacks = 180;
   const total = leads + chargebacks;
@@ -387,10 +423,10 @@ function renderPlaceholderLeadDebts() {
   if (!tbody) return;
 
   const rows = [
-    { date: '2025-11-05', type: 'Facebook Final Expense', source: 'FVG',    cost: 25.00, status: 'Unpaid' },
-    { date: '2025-11-10', type: 'Inbound Call',           source: 'FVG',    cost: 35.00, status: 'In repayment' },
+    { date: '2025-11-05', type: 'Facebook Final Expense', source: 'FVG', cost: 25.00, status: 'Unpaid' },
+    { date: '2025-11-10', type: 'Inbound Call',           source: 'FVG', cost: 35.00, status: 'In repayment' },
     { date: '2025-11-12', type: 'Direct Mail',            source: 'Vendor', cost: 40.00, status: 'Unpaid' },
-    { date: '2025-11-15', type: 'Online Form',            source: 'Website',cost: 20.00, status: 'Paid' }
+    { date: '2025-11-15', type: 'Online Form',            source: 'Website', cost: 20.00, status: 'Paid' }
   ];
 
   tbody.innerHTML = rows.map(r => `
@@ -467,7 +503,6 @@ function renderPlaceholderPolicies() {
 }
 
 function renderPlaceholderTeam() {
-  // Top stat cards
   setText('team-my-ap', '$6,400');
   setText('team-my-ap-period', 'Last 30 days');
   setText('team-direct-ap', '$12,800');
@@ -475,12 +510,11 @@ function renderPlaceholderTeam() {
   setText('team-overrides-amount', '$1,950.00');
   setText('team-overrides-period', 'Last 30 days');
 
-  // Direct team table
   const tbody = document.querySelector('#team-agents-table tbody');
   if (tbody) {
     const rows = [
-      { name: 'Agent Alpha',   level: 'L2', ap: 3200, leads: 150, chargebacks: 80, overrides: 480 },
-      { name: 'Agent Bravo',   level: 'L1', ap: 2200, leads: 90,  chargebacks: 40, overrides: 330 },
+      { name: 'Agent Alpha', level: 'L2', ap: 3200, leads: 150, chargebacks: 80, overrides: 480 },
+      { name: 'Agent Bravo', level: 'L1', ap: 2200, leads: 90,  chargebacks: 40, overrides: 330 },
       { name: 'Agent Charlie', level: 'L1', ap: 3400, leads: 80,  chargebacks: 60, overrides: 520 }
     ];
     tbody.innerHTML = rows.map(r => `
@@ -495,7 +529,6 @@ function renderPlaceholderTeam() {
     `).join('');
   }
 
-  // Populate the "Individual Agent" select with the same placeholder names
   const select = document.getElementById('team-agent-select');
   if (select) {
     const keepFirst = select.querySelector('option:first-child');
@@ -576,4 +609,14 @@ function setText(id, text) {
 function formatMoney(value) {
   const num = Number(value) || 0;
   return `$${num.toFixed(2)}`;
+}
+
+function formatDate(value) {
+  if (!value) return '—';
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
 }
