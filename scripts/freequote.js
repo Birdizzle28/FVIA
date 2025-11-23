@@ -328,13 +328,12 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     
       // Map our normalized line keys to text that appears in LOA names
-      // (these should match what's stored in loa_names, e.g. "Life", "Property", "Casualty")
       const lineTokenMap = {
         life:       'Life',
-        health:     'Accident & Health', // or whatever your LOA text looks like
+        health:     'Accident & Health', // adjust if your LOA text is different
         property:   'Property',
         casualty:   'Casualty',
-        legalshield:'Life',      // doesn't matter now since you're hiding these in HTML
+        legalshield:'Life',      // you’re hiding these choices anyway
         idshield:   'Life'
       };
     
@@ -353,7 +352,7 @@ document.addEventListener('DOMContentLoaded', () => {
       // 1) Pull all NIPR license rows for this state
       const { data: niprRows, error: niprErr } = await supabase
         .from('agent_nipr_licenses')
-        .select('agent_id, state, active, loa_names')
+        .select('agent_id, state, active, loa_names')  // agent_id is your text ID like "19866925"
         .eq('state', state);
     
       if (niprErr) {
@@ -364,13 +363,10 @@ document.addEventListener('DOMContentLoaded', () => {
         return { reason: 'none_fit', agent: null, shouldCall: false };
       }
     
-      // Helper: is this NIPR row active?
       function isRowActive(row) {
-        // we ONLY trust the boolean from NIPR sync
         return row.active === true;
       }
     
-      // Helper: does this row's LOA list contain the token (e.g. "Property", "Casualty")?
       function rowMatchesToken(row, token) {
         if (!Array.isArray(row.loa_names)) return false;
         const lowerToken = token.toLowerCase();
@@ -379,37 +375,38 @@ document.addEventListener('DOMContentLoaded', () => {
         );
       }
     
-      // 2) Group rows by agent_id and see which agents have *all* needed tokens active in this state
-      const byAgentId = new Map();
+      // 2) Group rows by agent_id (your text ID) and see which ones have *all* needed tokens active
+      const byAgentKey = new Map();
       for (const row of niprRows) {
-        if (!row.agent_id) continue;
+        const key = row.agent_id;     // e.g. "19866925"
+        if (!key) continue;
         if (!isRowActive(row)) continue;
     
-        if (!byAgentId.has(row.agent_id)) byAgentId.set(row.agent_id, []);
-        byAgentId.get(row.agent_id).push(row);
+        if (!byAgentKey.has(key)) byAgentKey.set(key, []);
+        byAgentKey.get(key).push(row);
       }
     
-      const eligibleAgentIds = [];
-      for (const [agentId, rows] of byAgentId.entries()) {
+      const eligibleAgentKeys = [];
+      for (const [agentKey, rows] of byAgentKey.entries()) {
         const hasAllTokens = neededTokens.every(token =>
           rows.some(r => rowMatchesToken(r, token))
         );
         if (hasAllTokens) {
-          eligibleAgentIds.push(agentId);
+          eligibleAgentKeys.push(agentKey);
         }
       }
     
-      if (!eligibleAgentIds.length) {
+      if (!eligibleAgentKeys.length) {
         return { reason: 'none_fit', agent: null, shouldCall: false };
       }
     
-      // 3) Now load agents that match those agent_ids and are active + receiving_leads
+      // 3) Now load agents that match those agent_id values and are active + receiving_leads
       const { data: agents, error: agentErr } = await supabase
         .from('agents')
-        .select('id, full_name, phone, is_active, is_available, last_assigned_at')
+        .select('id, agent_id, full_name, phone, is_active, is_available, last_assigned_at')
         .eq('is_active', true)
         .eq('receiving_leads', true)
-        .in('id', eligibleAgentIds);
+        .in('agent_id', eligibleAgentKeys);  // ✅ match on text agent_id, NOT uuid id
     
       if (agentErr) {
         throw new Error(agentErr.message);
