@@ -45,24 +45,16 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ----- 3. Load aggregate commission overview (view) -----
-  const overview = await loadAgentCommissionOverview();
-  if (overview) {
-    // Start from view numbers (if the view has them)
-    leadBalance = Number(overview.lead_balance ?? 0);
-    chargebackBalance = Number(overview.chargeback_balance ?? 0);
+    const overview = await loadAgentCommissionOverview();
+  if (!overview) {
+    // if overview fails, still give placeholders for balances/payouts
+    renderPlaceholderSummary();
+  }
 
-    updateBalancesUI();
-
-    // If you ever add these fields to the view & HTML, this will just start working:
-    setText('summary-ap-last-month', formatMoney(overview.ap_last_month));
-    if (overview.withholding_rate != null) {
-      setText(
-        'summary-withholding-rate',
-        `${(Number(overview.withholding_rate) * 100).toFixed(0)}%`
-      );
-    }
-  } else {
-    // Fallback to fake numbers so page isn't blank
+  // 🔹 NEW: load upcoming payouts (advance + pay-thru)
+  const upcoming = await loadAgentUpcomingPayouts();
+  if (!upcoming && !overview) {
+    // if both fail for some reason, fall back to placeholder again
     renderPlaceholderSummary();
   }
 
@@ -128,6 +120,41 @@ async function loadAgentCommissionOverview() {
     console.error('Error loading agent_commission_overview:', error);
     return null;
   }
+
+  return data;
+}
+
+async function loadAgentUpcomingPayouts() {
+  if (!me) return null;
+
+  const { data, error } = await supabase
+    .from('agent_upcoming_payouts')
+    .select('next_advance_gross, next_paythru_gross')
+    .eq('agent_id', me.id)
+    .single();
+
+  if (error) {
+    console.error('Error loading agent_upcoming_payouts:', error);
+    return null;
+  }
+
+  // Fill the “Upcoming Payouts” snapshot + detail cards
+  const advance = Number(data.next_advance_gross) || 0;
+  const paythru = Number(data.next_paythru_gross) || 0;
+
+  // Top summary card
+  setText('summary-next-advance-amount', formatMoney(advance));
+  setText('summary-next-advance-date', `(${getNextFridayLabel()})`);
+
+  setText('summary-next-paythru-amount', formatMoney(paythru));
+  setText('summary-next-paythru-date', `(${getEndOfMonthLabel()})`);
+
+  // Earnings & Payouts panel cards
+  setText('next-advance-amount', formatMoney(advance));
+  setText('next-advance-date', `Pays on: ${getNextFridayLabel()}`);
+
+  setText('next-paythru-amount', formatMoney(paythru));
+  setText('next-paythru-date', `Pays on: ${getEndOfMonthLabel()}`);
 
   return data;
 }
@@ -711,6 +738,20 @@ function renderPlaceholderFiles() {
 /* ===============================
    Tiny helpers
    =============================== */
+function getNextFridayLabel() {
+  const today = new Date();
+  const day = today.getDay(); // 0 = Sun, 5 = Fri
+  const diff = (5 - day + 7) % 7 || 7; // days until next Friday
+  const next = new Date(today);
+  next.setDate(today.getDate() + diff);
+  return next.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+function getEndOfMonthLabel() {
+  const today = new Date();
+  const last = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  return last.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
 
 function setText(id, text) {
   const el = document.getElementById(id);
