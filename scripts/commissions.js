@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const { data: profile, error: profErr } = await supabase
       .from('agents')
-      .select('id, full_name, agent_id, is_admin, is_active')
+      .select('id, full_name, agent_id, is_admin, is_active, level, receiving_leads')
       .eq('id', me.id)
       .single();
 
@@ -40,37 +40,24 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Unexpected error loading agent profile:', e);
   }
 
-  // 🔹 NEW: load commission overview from Supabase
+  // ----- 3. Load commission overview from Supabase -----
   const overview = await loadAgentCommissionOverview();
   if (overview) {
-    // Map Supabase values to your IDs
-    // Top snapshot / summary
-    setText('summary-leads-balance', formatMoney(overview.lead_balance));
-    setText('summary-chargeback-balance', formatMoney(overview.chargeback_balance));
-    setText('summary-total-balance', formatMoney(overview.total_debt));
-
-    // You can also show AP Last Month and withholding %
-    setText('summary-ap-last-month', formatMoney(overview.ap_last_month));
-    setText('summary-withholding-rate', `${(overview.withholding_rate * 100).toFixed(0)}%`);
-
-    // Balances & Debt panel
-    setText('balances-leads-amount', formatMoney(overview.lead_balance));
-    setText('balances-chargebacks-amount', formatMoney(overview.chargeback_balance));
-    setText('balances-total-amount', formatMoney(overview.total_debt));
+    applyOverviewToUI(overview);
   } else {
     // Fallback to fake data if it fails
     renderPlaceholderSummary();
   }
-  // ----- 3. Wire up tabs -----
+
+  // ----- 4. Wire up tabs -----
   initTabs();
 
-  // ----- 4. Wire up filters + chips + misc UI -----
+  // ----- 5. Wire up filters + chips + misc UI -----
   initPoliciesDateRange();
   initFilesChips();
   initTeamAgentPanelToggle();
 
-  // ----- 5. Render placeholder data (we’ll replace with Supabase later) -----
-
+  // ----- 6. Render placeholder table data (we’ll replace with Supabase later) -----
   renderPlaceholderPayouts();
   renderPlaceholderLeadDebts();
   renderPlaceholderChargebacks();
@@ -92,16 +79,32 @@ function hydrateHeaderFromProfile(profile) {
     nameEl.textContent = profile?.full_name || 'Agent';
   }
 
-  // We don’t have a real "level" column yet; placeholder until schema is ready
+  // Use your agents.level column if present; otherwise fall back
   if (levelEl) {
-    const label = profile?.is_admin ? 'Level: Admin' : 'Level: Agent';
-    levelEl.textContent = label;
+    let levelLabel = 'Agent';
+    if (profile?.level) {
+      // levels: agent | mit | manager | mga | area_manager
+      const map = {
+        agent: 'Agent',
+        mit: 'MIT',
+        manager: 'Manager',
+        mga: 'MGA',
+        area_manager: 'Area Manager'
+      };
+      levelLabel = map[profile.level] || profile.level;
+    } else if (profile?.is_admin) {
+      levelLabel = 'Admin';
+    }
+
+    levelEl.textContent = `Level: ${levelLabel}`;
   }
 
   if (progressEl) {
+    // We’ll override this later when we have true level rules
     progressEl.textContent = 'Level progress tracking coming soon.';
   }
 }
+
 async function loadAgentCommissionOverview() {
   if (!me) return null;
 
@@ -117,6 +120,96 @@ async function loadAgentCommissionOverview() {
   }
 
   return data;
+}
+
+/**
+ * Apply the agent_commission_overview row to your UI:
+ * - lead / chargeback / total balances
+ * - Balances panel mirrors
+ * - simple “good standing” indicator
+ * - rough upcoming payout preview (for now just using unsettled net)
+ */
+function applyOverviewToUI(overview) {
+  const leadBalance       = Number(overview.lead_balance ?? 0);
+  const chargebackBalance = Number(overview.chargeback_balance ?? 0);
+  const totalDebt         = Number(overview.total_debt ?? (leadBalance + chargebackBalance));
+  const apLastMonth       = Number(overview.ap_last_month ?? 0);
+  const withholdingRate   = Number(overview.withholding_rate ?? 0);
+  const netUnsettled      = Number(overview.net_unsettled_commission ?? 0); // depends on your view
+  const goodStanding      = overview.good_standing !== false; // default true if null
+  const standingReasons   = overview.standing_reasons || [];
+
+  // --- Top summary cards ---
+  setText('summary-leads-balance', formatMoney(leadBalance));
+  setText('summary-chargeback-balance', formatMoney(chargebackBalance));
+  setText('summary-total-balance', formatMoney(totalDebt));
+
+  // If you ever add these spans to the HTML, this will Just Work™
+  setText('summary-ap-last-month', apLastMonth ? formatMoney(apLastMonth) : '');
+  if (!isNaN(withholdingRate) && withholdingRate > 0) {
+    setText('summary-withholding-rate', `${(withholdingRate * 100).toFixed(0)}%`);
+  }
+
+  // --- Balances & Debt panel ---
+  setText('balances-leads-amount', formatMoney(leadBalance));
+  setText('balances-chargebacks-amount', formatMoney(chargebackBalance));
+  setText('balances-total-amount', formatMoney(totalDebt));
+  // Simple projection note for now
+  setText('balances-total-note', `Projected after next payouts: ${formatMoney(totalDebt - Math.min(totalDebt, netUnsettled))}`);
+
+  // --- Upcoming payouts (rough preview for now) ---
+  const nextAdvanceDate = formatNextFriday();
+  const nextPaythruDate = formatEndOfMonth();
+
+  // We don’t yet split weekly vs monthly in the view,
+  // so we’ll just show netUnsettled as “next advance” starter.
+  setText('summary-next-advance-amount', formatMoney(netUnsettled));
+  setText('summary-next-advance-date', `(${nextAdvanceDate})`);
+  setText('summary-next-paythru-amount', '$0.00'); // we’ll refine once we add trails split
+  setText('summary-next-paythru-date', `(${nextPaythruDate})`);
+
+  setText('next-advance-amount', formatMoney(netUnsettled));
+  setText('next-advance-date', `Pays on: ${nextAdvanceDate}`);
+  setText('next-paythru-amount', '$0.00');
+  setText('next-paythru-date', `Pays on: ${nextPaythruDate}`);
+
+  // --- Good standing indicator ---
+  const progressEl = document.getElementById('comm-level-progress-text');
+  if (progressEl) {
+    if (goodStanding) {
+      progressEl.textContent = 'Status: In good standing.';
+    } else {
+      const reasonText = standingReasons.length
+        ? `Reasons: ${standingReasons.join(', ')}.`
+        : '';
+      progressEl.textContent = `Status: On hold / not in good standing. ${reasonText}`;
+    }
+  }
+
+  // Optionally tweak the level badge color based on standing
+  const levelBadge = document.getElementById('comm-level-label');
+  if (levelBadge) {
+    levelBadge.classList.toggle('comm-badge-bad-standing', !goodStanding);
+  }
+}
+
+/* ===============================
+   Date helpers for payout cards
+   =============================== */
+
+function formatNextFriday() {
+  const d = new Date();
+  const day = d.getDay(); // 0=Sun ... 5=Fri
+  const diff = (5 - day + 7) % 7 || 7; // days until next Friday (never 0 => next week)
+  d.setDate(d.getDate() + diff);
+  return d.toLocaleDateString();
+}
+
+function formatEndOfMonth() {
+  const d = new Date();
+  // set to last day of this month
+  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
+  return end.toLocaleDateString();
 }
 
 /* ===============================
@@ -289,24 +382,15 @@ function renderPlaceholderPayouts() {
   `).join('');
 }
 
-function renderPlaceholderBalances() {
-  setText('balances-leads-amount', '$320.00');
-  setText('balances-leads-count', '4 open items');
-  setText('balances-chargebacks-amount', '$180.00');
-  setText('balances-chargebacks-count', '2 open items');
-  setText('balances-total-amount', '$500.00');
-  setText('balances-total-note', 'Projected after next payouts: $120.00');
-}
-
 function renderPlaceholderLeadDebts() {
   const tbody = document.querySelector('#lead-debts-table tbody');
   if (!tbody) return;
 
   const rows = [
-    { date: '2025-11-05', type: 'Facebook Final Expense', source: 'FVG', cost: 25.00, status: 'Unpaid' },
-    { date: '2025-11-10', type: 'Inbound Call',           source: 'FVG', cost: 35.00, status: 'In repayment' },
+    { date: '2025-11-05', type: 'Facebook Final Expense', source: 'FVG',    cost: 25.00, status: 'Unpaid' },
+    { date: '2025-11-10', type: 'Inbound Call',           source: 'FVG',    cost: 35.00, status: 'In repayment' },
     { date: '2025-11-12', type: 'Direct Mail',            source: 'Vendor', cost: 40.00, status: 'Unpaid' },
-    { date: '2025-11-15', type: 'Online Form',            source: 'Website', cost: 20.00, status: 'Paid' }
+    { date: '2025-11-15', type: 'Online Form',            source: 'Website',cost: 20.00, status: 'Paid' }
   ];
 
   tbody.innerHTML = rows.map(r => `
@@ -395,8 +479,8 @@ function renderPlaceholderTeam() {
   const tbody = document.querySelector('#team-agents-table tbody');
   if (tbody) {
     const rows = [
-      { name: 'Agent Alpha', level: 'L2', ap: 3200, leads: 150, chargebacks: 80, overrides: 480 },
-      { name: 'Agent Bravo', level: 'L1', ap: 2200, leads: 90,  chargebacks: 40, overrides: 330 },
+      { name: 'Agent Alpha',   level: 'L2', ap: 3200, leads: 150, chargebacks: 80, overrides: 480 },
+      { name: 'Agent Bravo',   level: 'L1', ap: 2200, leads: 90,  chargebacks: 40, overrides: 330 },
       { name: 'Agent Charlie', level: 'L1', ap: 3400, leads: 80,  chargebacks: 60, overrides: 520 }
     ];
     tbody.innerHTML = rows.map(r => `
@@ -414,7 +498,6 @@ function renderPlaceholderTeam() {
   // Populate the "Individual Agent" select with the same placeholder names
   const select = document.getElementById('team-agent-select');
   if (select) {
-    // Clear any existing (keep the first "Select agent…" option)
     const keepFirst = select.querySelector('option:first-child');
     select.innerHTML = '';
     if (keepFirst) select.appendChild(keepFirst);
@@ -482,13 +565,14 @@ function renderPlaceholderFiles() {
 }
 
 /* ===============================
-   Tiny helper
+   Tiny helpers
    =============================== */
 
 function setText(id, text) {
   const el = document.getElementById(id);
   if (el) el.textContent = text;
 }
+
 function formatMoney(value) {
   const num = Number(value) || 0;
   return `$${num.toFixed(2)}`;
