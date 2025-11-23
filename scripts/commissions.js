@@ -10,6 +10,10 @@ const supabase = createClient(
 let me = null;        // supabase auth user
 let myProfile = null; // row from agents table
 
+// We'll keep these in sync with Supabase so all UI uses the same numbers
+let leadBalance = 0;
+let chargebackBalance = 0;
+
 document.addEventListener('DOMContentLoaded', async () => {
   // ----- 1. Require login -----
   const { data: { session }, error: sessErr } = await supabase.auth.getSession();
@@ -40,15 +44,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.error('Unexpected error loading agent profile:', e);
   }
 
-  // ----- 3. Load commission overview (view) -----
+  // ----- 3. Load aggregate commission overview (view) -----
   const overview = await loadAgentCommissionOverview();
   if (overview) {
-    // Top snapshot / summary (balances)
-    setText('summary-leads-balance', formatMoney(overview.lead_balance));
-    setText('summary-chargeback-balance', formatMoney(overview.chargeback_balance));
-    setText('summary-total-balance', formatMoney(overview.total_debt));
+    // Start from view numbers (if the view has them)
+    leadBalance = Number(overview.lead_balance ?? 0);
+    chargebackBalance = Number(overview.chargeback_balance ?? 0);
 
-    // Optional extras if you later add these elements
+    updateBalancesUI();
+
+    // If you ever add these fields to the view & HTML, this will just start working:
     setText('summary-ap-last-month', formatMoney(overview.ap_last_month));
     if (overview.withholding_rate != null) {
       setText(
@@ -56,33 +61,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         `${(Number(overview.withholding_rate) * 100).toFixed(0)}%`
       );
     }
-
-    // Balances & Debt panel amounts
-    setText('balances-leads-amount', formatMoney(overview.lead_balance));
-    setText('balances-chargebacks-amount', formatMoney(overview.chargeback_balance));
-    setText('balances-total-amount', formatMoney(overview.total_debt));
   } else {
-    // Fallback to soft placeholder if the view fails
+    // Fallback to fake numbers so page isn't blank
     renderPlaceholderSummary();
   }
 
-  // ----- 4. Load lead debts from Supabase (replaces placeholder for that table) -----
-  await loadLeadDebtsFromSupabase();
-
-  // (Chargebacks, payouts, team, etc. we’ll wire to Supabase in later steps)
-  // For now, keep placeholders for those other sections:
-
-  renderPlaceholderPayouts();
-  renderPlaceholderChargebacks();
-  renderPlaceholderPolicies();
-  renderPlaceholderTeam();
-  renderPlaceholderFiles();
-
-  // ----- 5. Wire up tabs + filters + misc UI -----
+  // ----- 4. Wire up tabs & basic UI -----
   initTabs();
   initPoliciesDateRange();
   initFilesChips();
   initTeamAgentPanelToggle();
+
+  // ----- 5. Load REAL lead debts + chargebacks -----
+  await loadAndRenderLeadDebts();
+  await loadAndRenderChargebacks();
+
+  // ----- 6. Still use placeholder data for everything else (for now) -----
+  renderPlaceholderPayouts();
+  renderPlaceholderPolicies();
+  renderPlaceholderTeam();
+  renderPlaceholderFiles();
 });
 
 /* ===============================
@@ -98,17 +96,15 @@ function hydrateHeaderFromProfile(profile) {
     nameEl.textContent = profile?.full_name || 'Agent';
   }
 
-  // Use your level column if present, else fallback
+  // Use your agents.level column if present, else Admin/Agent label
   if (levelEl) {
-    const lvl = profile?.level;
     let label = 'Level: Agent';
-
-    if (lvl === 'mit') label = 'Level: MIT';
-    else if (lvl === 'manager') label = 'Level: Manager';
-    else if (lvl === 'mga') label = 'Level: MGA';
-    else if (lvl === 'area_manager') label = 'Level: Area Manager';
-    else if (profile?.is_admin) label = 'Level: Admin';
-
+    if (profile?.level) {
+      // level is one of: agent | mit | manager | mga | area_manager
+      label = `Level: ${String(profile.level).replace('_', ' ')}`;
+    } else if (profile?.is_admin) {
+      label = 'Level: Admin';
+    }
     levelEl.textContent = label;
   }
 
@@ -135,88 +131,21 @@ async function loadAgentCommissionOverview() {
 }
 
 /* ===============================
-   Lead debts -> Balances & Debt panel
+   Shared balances UI helper
    =============================== */
 
-async function loadLeadDebtsFromSupabase() {
-  const tbody = document.querySelector('#lead-debts-table tbody');
-  if (!tbody || !myProfile) {
-    return;
-  }
+function updateBalancesUI() {
+  const totalDebt = leadBalance + chargebackBalance;
 
-  try {
-    const { data, error } = await supabase
-      .from('lead_debts')
-      .select('id, created_at, description, source, amount, status')
-      .eq('agent_id', myProfile.id)
-      .order('created_at', { ascending: false });
+  // Top summary
+  setText('summary-leads-balance', formatMoney(leadBalance));
+  setText('summary-chargeback-balance', formatMoney(chargebackBalance));
+  setText('summary-total-balance', formatMoney(totalDebt));
 
-    if (error) {
-      console.error('Error loading lead_debts:', error);
-      renderPlaceholderLeadDebts(); // fallback
-      renderPlaceholderBalances();
-      return;
-    }
-
-    if (!data || !data.length) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="5">No lead debt found.</td>
-        </tr>
-      `;
-      // Zero items
-      setText('balances-leads-count', '0 open items');
-      return;
-    }
-
-    let openCount = 0;
-
-    const rowsHtml = data.map(row => {
-      const created = row.created_at
-        ? new Date(row.created_at).toISOString().slice(0, 10)
-        : '—';
-
-      const desc = row.description || 'Lead';
-      const src = row.source || 'Unknown';
-      const amt = formatMoney(row.amount);
-
-      const statusLabel = formatLeadDebtStatus(row.status);
-
-      if (row.status !== 'paid') {
-        openCount += 1;
-      }
-
-      return `
-        <tr>
-          <td>${created}</td>
-          <td>${escapeHtml(desc)}</td>
-          <td>${escapeHtml(src)}</td>
-          <td>${amt}</td>
-          <td>${statusLabel}</td>
-        </tr>
-      `;
-    }).join('');
-
-    tbody.innerHTML = rowsHtml;
-
-    // Update "X open items" under Leads Balance
-    setText('balances-leads-count', `${openCount} open item${openCount === 1 ? '' : 's'}`);
-
-  } catch (err) {
-    console.error('Unexpected error loading lead_debts:', err);
-    renderPlaceholderLeadDebts();
-    renderPlaceholderBalances();
-  }
-}
-
-function formatLeadDebtStatus(status) {
-  if (!status) return 'Unknown';
-
-  const s = String(status).toLowerCase();
-  if (s === 'open') return 'Unpaid';
-  if (s === 'in_repayment') return 'In repayment';
-  if (s === 'paid') return 'Paid';
-  return status;
+  // Balances tab
+  setText('balances-leads-amount', formatMoney(leadBalance));
+  setText('balances-chargebacks-amount', formatMoney(chargebackBalance));
+  setText('balances-total-amount', formatMoney(totalDebt));
 }
 
 /* ===============================
@@ -342,18 +271,158 @@ function initTeamAgentPanelToggle() {
 }
 
 /* ===============================
+   REAL lead debts + chargebacks
+   =============================== */
+
+async function loadAndRenderLeadDebts() {
+  if (!me) return;
+
+  const tbody = document.querySelector('#lead-debts-table tbody');
+  if (!tbody) return;
+
+  try {
+    const { data, error } = await supabase
+      .from('lead_debts')
+      .select('id, created_at, description, source, amount, status')
+      .eq('agent_id', me.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading lead_debts:', error);
+      renderPlaceholderLeadDebts();
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5">No lead debt records found.</td></tr>`;
+    } else {
+      tbody.innerHTML = data.map(row => {
+        const date = row.created_at
+          ? new Date(row.created_at).toLocaleDateString()
+          : '—';
+        const type = row.description || 'Lead';
+        const source = row.source || 'FVG';
+        const amount = Number(row.amount || 0);
+        const status = formatStatus(row.status);
+
+        return `
+          <tr>
+            <td>${date}</td>
+            <td>${escapeHtml(type)}</td>
+            <td>${escapeHtml(source)}</td>
+            <td>${formatMoney(amount)}</td>
+            <td>${escapeHtml(status)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Compute open balances/count from the same data
+    let openCount = 0;
+    let openTotal = 0;
+    data.forEach(row => {
+      const status = (row.status || '').toLowerCase();
+      if (status === 'open' || status === 'in_repayment') {
+        openCount += 1;
+        openTotal += Number(row.amount || 0);
+      }
+    });
+
+    leadBalance = openTotal;
+    setText(
+      'balances-leads-count',
+      `${openCount} open item${openCount === 1 ? '' : 's'}`
+    );
+
+    // Re-sync summary + balances with new number
+    updateBalancesUI();
+  } catch (err) {
+    console.error('Unexpected error in loadAndRenderLeadDebts:', err);
+    renderPlaceholderLeadDebts();
+  }
+}
+
+async function loadAndRenderChargebacks() {
+  if (!me) return;
+
+  const tbody = document.querySelector('#chargebacks-table tbody');
+  if (!tbody) return;
+
+  try {
+    const { data, error } = await supabase
+      .from('policy_chargebacks')
+      .select('id, created_at, carrier_name, policyholder_name, amount, status')
+      .eq('agent_id', me.id)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading policy_chargebacks:', error);
+      renderPlaceholderChargebacks();
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5">No chargebacks found.</td></tr>`;
+    } else {
+      tbody.innerHTML = data.map(row => {
+        const date = row.created_at
+          ? new Date(row.created_at).toLocaleDateString()
+          : '—';
+        const carrier = row.carrier_name || '—';
+        const name = row.policyholder_name || '—';
+        const amount = Number(row.amount || 0);
+        const status = formatStatus(row.status);
+
+        return `
+          <tr>
+            <td>${date}</td>
+            <td>${escapeHtml(carrier)}</td>
+            <td>${escapeHtml(name)}</td>
+            <td>${formatMoney(amount)}</td>
+            <td>${escapeHtml(status)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    // Compute open chargeback balance + count
+    let openCount = 0;
+    let openTotal = 0;
+    data.forEach(row => {
+      const status = (row.status || '').toLowerCase();
+      if (status === 'open' || status === 'in_repayment') {
+        openCount += 1;
+        openTotal += Number(row.amount || 0);
+      }
+    });
+
+    chargebackBalance = openTotal;
+    setText(
+      'balances-chargebacks-count',
+      `${openCount} open item${openCount === 1 ? '' : 's'}`
+    );
+
+    // Re-sync summary + balances with new number
+    updateBalancesUI();
+  } catch (err) {
+    console.error('Unexpected error in loadAndRenderChargebacks:', err);
+    renderPlaceholderChargebacks();
+  }
+}
+
+/* ===============================
    Placeholder data generators
-   (still used for parts we haven't wired yet)
+   (still used for payouts, policies, team, files)
    =============================== */
 
 function renderPlaceholderSummary() {
+  // Just a soft example so the page doesn’t look dead.
   const leads = 320;
   const chargebacks = 180;
-  const total = leads + chargebacks;
+  leadBalance = leads;
+  chargebackBalance = chargebacks;
 
-  setText('summary-leads-balance', `$${leads.toFixed(2)}`);
-  setText('summary-chargeback-balance', `$${chargebacks.toFixed(2)}`);
-  setText('summary-total-balance', `$${total.toFixed(2)}`);
+  updateBalancesUI();
 
   setText('summary-next-advance-amount', '$1,250.00');
   setText('summary-next-advance-date', '(Next Friday)');
@@ -364,37 +433,10 @@ function renderPlaceholderSummary() {
   setText('next-advance-date', 'Pays on: Next Friday');
   setText('next-paythru-amount', '$780.00');
   setText('next-paythru-date', 'Pays on: End of month');
-}
 
-function renderPlaceholderBalances() {
-  setText('balances-leads-amount', '$320.00');
   setText('balances-leads-count', '4 open items');
-  setText('balances-chargebacks-amount', '$180.00');
   setText('balances-chargebacks-count', '2 open items');
-  setText('balances-total-amount', '$500.00');
   setText('balances-total-note', 'Projected after next payouts: $120.00');
-}
-
-function renderPlaceholderLeadDebts() {
-  const tbody = document.querySelector('#lead-debts-table tbody');
-  if (!tbody) return;
-
-  const rows = [
-    { date: '2025-11-05', type: 'Facebook Final Expense', source: 'FVG', cost: 25.00, status: 'Unpaid' },
-    { date: '2025-11-10', type: 'Inbound Call',           source: 'FVG', cost: 35.00, status: 'In repayment' },
-    { date: '2025-11-12', type: 'Direct Mail',            source: 'Vendor', cost: 40.00, status: 'Unpaid' },
-    { date: '2025-11-15', type: 'Online Form',            source: 'Website', cost: 20.00, status: 'Paid' }
-  ];
-
-  tbody.innerHTML = rows.map(r => `
-    <tr>
-      <td>${r.date}</td>
-      <td>${r.type}</td>
-      <td>${r.source}</td>
-      <td>$${r.cost.toFixed(2)}</td>
-      <td>${r.status}</td>
-    </tr>
-  `).join('');
 }
 
 function renderPlaceholderPayouts() {
@@ -402,9 +444,9 @@ function renderPlaceholderPayouts() {
   if (!tbody) return;
 
   const rows = [
-    { date: '2025-11-21', type: 'Advance',  period: 'Weekly',   amount: 1250.00, source: 'FVG', details: '3 issued policies' },
-    { date: '2025-10-31', type: 'Pay-Thru', period: 'Monthly',  amount: 780.00,  source: 'FVG', details: 'Trails + renewals' },
-    { date: '2025-10-15', type: 'Bonus',    period: 'Quarterly',amount: 500.00,  source: 'Carrier', details: 'Production bonus' }
+    { date: '2025-11-21', type: 'Advance',  period: 'Weekly',   amount: 1250.00, source: 'FVG',    details: '3 issued policies' },
+    { date: '2025-10-31', type: 'Pay-Thru', period: 'Monthly',  amount: 780.00,  source: 'FVG',    details: 'Trails + renewals' },
+    { date: '2025-10-15', type: 'Bonus',    period: 'Quarterly',amount: 500.00,  source: 'Carrier',details: 'Production bonus' }
   ];
 
   tbody.innerHTML = rows.map(r => `
@@ -415,6 +457,28 @@ function renderPlaceholderPayouts() {
       <td>$${r.amount.toFixed(2)}</td>
       <td>${r.source}</td>
       <td>${r.details}</td>
+    </tr>
+  `).join('');
+}
+
+function renderPlaceholderLeadDebts() {
+  const tbody = document.querySelector('#lead-debts-table tbody');
+  if (!tbody) return;
+
+  const rows = [
+    { date: '2025-11-05', type: 'Facebook Final Expense', source: 'FVG',    cost: 25.00, status: 'Unpaid' },
+    { date: '2025-11-10', type: 'Inbound Call',           source: 'FVG',    cost: 35.00, status: 'In repayment' },
+    { date: '2025-11-12', type: 'Direct Mail',            source: 'Vendor', cost: 40.00, status: 'Unpaid' },
+    { date: '2025-11-15', type: 'Online Form',            source: 'Website',cost: 20.00, status: 'Paid' }
+  ];
+
+  tbody.innerHTML = rows.map(r => `
+    <tr>
+      <td>${r.date}</td>
+      <td>${r.type}</td>
+      <td>${r.source}</td>
+      <td>$${r.cost.toFixed(2)}</td>
+      <td>${r.status}</td>
     </tr>
   `).join('');
 }
@@ -593,12 +657,16 @@ function formatMoney(value) {
   return `$${num.toFixed(2)}`;
 }
 
+function formatStatus(status) {
+  if (!status) return '—';
+  const s = String(status).replace(/_/g, ' ');
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+
 function escapeHtml(str) {
   if (str == null) return '';
   return String(str)
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(/>/g, '&gt;');
 }
