@@ -20,7 +20,11 @@ export async function handler(event) {
 
     const { agentId, agentNumber, prospectNumber, leadId } = JSON.parse(event.body || "{}");
     if (!agentId || !agentNumber || !prospectNumber) {
-      return { statusCode: 400, headers: cors(), body: JSON.stringify({ error: "Missing agentId/agentNumber/prospectNumber" }) };
+      return {
+        statusCode: 400,
+        headers: cors(),
+        body: JSON.stringify({ error: "Missing agentId/agentNumber/prospectNumber" })
+      };
     }
 
     const {
@@ -32,33 +36,45 @@ export async function handler(event) {
     } = process.env;
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
-      return { statusCode: 500, headers: cors(), body: JSON.stringify({ error: "Supabase env vars not set" }) };
+      return {
+        statusCode: 500,
+        headers: cors(),
+        body: JSON.stringify({ error: "Supabase env vars not set" })
+      };
     }
     if (!TELNYX_API_KEY || !TELNYX_CONNECTION_ID || !TELNYX_FROM_NUMBER) {
-      return { statusCode: 500, headers: cors(), body: JSON.stringify({ error: "Telnyx env vars not set" }) };
+      return {
+        statusCode: 500,
+        headers: cors(),
+        body: JSON.stringify({ error: "Telnyx env vars not set" })
+      };
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Sanity: re-check agent
+    // Re-check agent in Supabase (active + available)
     const { data: agent, error: eAgent } = await supabase
       .from("agents")
-      .select("id, is_active")
+      .select("id, is_active, is_available")
       .eq("id", agentId)
       .maybeSingle();
+
     if (eAgent) throw eAgent;
+
     if (!agent?.is_active) {
-      return { statusCode: 409, headers: cors(), body: JSON.stringify({ ok:false, reason:"AGENT_INACTIVE" }) };
+      return {
+        statusCode: 409,
+        headers: cors(),
+        body: JSON.stringify({ ok: false, reason: "AGENT_INACTIVE" })
+      };
     }
 
-    const { data: avail, error: eAvail } = await supabase
-      .from("agent_availability")
-      .select("available")
-      .eq("agent_id", agentId)
-      .maybeSingle();
-    if (eAvail) throw eAvail;
-    if (!avail?.available) {
-      return { statusCode: 409, headers: cors(), body: JSON.stringify({ ok:false, reason:"AGENT_OFFLINE" }) };
+    if (!agent?.is_available) {
+      return {
+        statusCode: 409,
+        headers: cors(),
+        body: JSON.stringify({ ok: false, reason: "AGENT_OFFLINE" })
+      };
     }
 
     // Create the agent leg with Telnyx
@@ -72,7 +88,7 @@ export async function handler(event) {
     const telnyxRes = await fetch("https://api.telnyx.com/v2/calls", {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${TELNYX_API_KEY}`,
+        Authorization: `Bearer ${TELNYX_API_KEY}`,
         "Content-Type": "application/json"
       },
       body: JSON.stringify(createPayload)
@@ -80,20 +96,32 @@ export async function handler(event) {
 
     const telnyxText = await telnyxRes.text();
     let telnyxJson;
-    try { telnyxJson = JSON.parse(telnyxText); } catch { telnyxJson = { raw: telnyxText }; }
+    try {
+      telnyxJson = JSON.parse(telnyxText);
+    } catch {
+      telnyxJson = { raw: telnyxText };
+    }
 
     console.log("Telnyx response", { status: telnyxRes.status, body: telnyxJson });
 
     if (!telnyxRes.ok) {
-      return { statusCode: telnyxRes.status, headers: cors(), body: JSON.stringify(telnyxJson) };
+      return {
+        statusCode: telnyxRes.status,
+        headers: cors(),
+        body: JSON.stringify(telnyxJson)
+      };
     }
 
-    const telnyx_call_id = telnyxJson?.data?.id || telnyxJson?.data?.call_control_id;
+    const telnyx_call_id =
+      telnyxJson?.data?.id || telnyxJson?.data?.call_control_id;
     if (!telnyx_call_id) {
       return {
         statusCode: 502,
         headers: cors(),
-        body: JSON.stringify({ error: "No Telnyx call id in response", telnyxJson })
+        body: JSON.stringify({
+          error: "No Telnyx call id in response",
+          telnyxJson
+        })
       };
     }
 
@@ -114,15 +142,33 @@ export async function handler(event) {
 
     if (iErr) {
       console.error("call_sessions insert error", iErr);
-      return { statusCode: 500, headers: cors(), body: JSON.stringify({ error: "DB insert failed", details: iErr.message }) };
+      return {
+        statusCode: 500,
+        headers: cors(),
+        body: JSON.stringify({
+          error: "DB insert failed",
+          details: iErr.message
+        })
+      };
     }
 
     console.log("call_sessions inserted", inserted);
 
-    return { statusCode: 200, headers: cors(), body: JSON.stringify({ ok:true, telnyx_call_id, session_id: inserted.id }) };
-
+    return {
+      statusCode: 200,
+      headers: cors(),
+      body: JSON.stringify({
+        ok: true,
+        telnyx_call_id,
+        session_id: inserted.id
+      })
+    };
   } catch (error) {
     console.error("makeCall fatal", error);
-    return { statusCode: 500, headers: cors(), body: JSON.stringify({ error: error.message }) };
+    return {
+      statusCode: 500,
+      headers: cors(),
+      body: JSON.stringify({ error: error.message })
+    };
   }
 }
