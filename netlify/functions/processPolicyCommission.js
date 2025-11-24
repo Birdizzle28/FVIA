@@ -101,7 +101,7 @@ export async function handler(event) {
     }
 
     const baseRateAgent = Number(scheduleAgent.base_commission_rate) || 0;
-    const advanceRate   = Number(scheduleAgent.advance_rate) || 0; // used for both agent & upline in this simple override model
+    const advanceRate   = Number(scheduleAgent.advance_rate) || 0; // used for both agent & uplines
     const ap            = Number(policy.premium_annual) || 0;
 
     if (ap <= 0) {
@@ -119,44 +119,80 @@ export async function handler(event) {
     const advanceAmount  = ap * baseRateAgent * advanceRate;
     const advanceRounded = Math.round(advanceAmount * 100) / 100;
 
-    // 5) (SIMPLIFIED) Lead charge logic:
-    // We are NOT creating lead_charge rows here anymore.
-    // Lead costs are handled via lead_debts + weekly advance runs.
+    // 5) Lead charge is handled by lead_debts + weekly advance (not here)
     const leadChargeAmount = 0;
 
-    // 6) Override logic for direct upline (recruiter)
-    let overrideAmount = 0;
-    let uplineInfo = null;
+    // 6) Multi-level override logic
+    let overrideRows = [];
+    let overrideSummaries = [];
+    let visited = new Set(); // prevent infinite loops
+    let currentDownline = agent; // start with writing agent
+    let currentDownlineRate = baseRateAgent;
 
-    if (agent.recruiter_id) {
-      const { data: upline, error: uplineErr } = await supabase
+    while (currentDownline.recruiter_id && !visited.has(currentDownline.recruiter_id)) {
+      visited.add(currentDownline.recruiter_id);
+
+      // Load the next upline
+      const { data: up, error: upErr } = await supabase
         .from('agents')
-        .select('id, full_name, level')
-        .eq('id', agent.recruiter_id)
+        .select('id, full_name, level, recruiter_id')
+        .eq('id', currentDownline.recruiter_id)
         .single();
 
-      if (!uplineErr && upline) {
-        uplineInfo = upline;
-        const upline_level = upline.level || 'agent';
+      if (upErr || !up) break;
 
-        const { data: scheduleUpline, error: scheduleErrUpline } = await supabase
-          .from('commission_schedules')
-          .select('base_commission_rate')
-          .eq('carrier_name', policy.carrier_name)
-          .eq('product_line', policy.product_line)
-          .eq('policy_type', policy.policy_type)
-          .eq('agent_level', upline_level)
-          .single();
+      // Load the upline commission schedule
+      const { data: upSchedule, error: upSchedErr } = await supabase
+        .from('commission_schedules')
+        .select('base_commission_rate')
+        .eq('carrier_name', policy.carrier_name)
+        .eq('product_line', policy.product_line)
+        .eq('policy_type', policy.policy_type)
+        .eq('agent_level', up.level || 'agent')
+        .single();
 
-        if (!scheduleErrUpline && scheduleUpline) {
-          const baseRateUpline = Number(scheduleUpline.base_commission_rate) || 0;
-          const spread = baseRateUpline - baseRateAgent;
+      if (!upSchedErr && upSchedule) {
+        const uplineRate = Number(upSchedule.base_commission_rate) || 0;
+        const spread = uplineRate - currentDownlineRate;
 
-          if (spread > 0) {
-            const rawOverride = ap * spread * advanceRate;
-            overrideAmount = Math.round(rawOverride * 100) / 100;
-          }
+        if (spread > 0) {
+          const rawOverride = ap * spread * advanceRate;
+          const overrideAmount = Math.round(rawOverride * 100) / 100;
+
+          // Ledger row
+          overrideRows.push({
+            agent_id: up.id,
+            policy_id: policy.id,
+            amount: overrideAmount,
+            currency: 'USD',
+            entry_type: 'override',
+            description: `Override on downline policy (${currentDownline.full_name})`,
+            meta: {
+              downline_agent_id: currentDownline.id,
+              downline_agent_name: currentDownline.full_name,
+              carrier_name: policy.carrier_name,
+              product_line: policy.product_line,
+              policy_type: policy.policy_type,
+              ap
+            }
+          });
+
+          // Summary for the API response
+          overrideSummaries.push({
+            upline_id: up.id,
+            upline_name: up.full_name,
+            upline_level: up.level || null,
+            amount: overrideAmount,
+            downline_id: currentDownline.id,
+            downline_name: currentDownline.full_name
+          });
         }
+
+        // Move up the tree
+        currentDownline = up;
+        currentDownlineRate = uplineRate;
+      } else {
+        break; // missing schedule stops the recursion
       }
     }
 
@@ -182,27 +218,8 @@ export async function handler(event) {
       }
     });
 
-    // (Lead charge rows removed for now)
-
-    // Override credit for upline (if any)
-    if (overrideAmount > 0 && uplineInfo) {
-      ledgerRows.push({
-        agent_id: uplineInfo.id,
-        policy_id: policy.id,
-        amount: overrideAmount,
-        currency: 'USD',
-        entry_type: 'override',
-        description: `Override on downline policy (${agent.full_name})`,
-        meta: {
-          downline_agent_id: agent.id,
-          downline_agent_name: agent.full_name,
-          carrier_name: policy.carrier_name,
-          product_line: policy.product_line,
-          policy_type: policy.policy_type,
-          ap
-        }
-      });
-    }
+    // Insert ALL override rows (could be 1, 2, 10...)
+    overrideRows.forEach(orow => ledgerRows.push(orow));
 
     // 8) Insert into commission_ledger
     const { data: inserted, error: insErr } = await supabase
@@ -242,6 +259,8 @@ export async function handler(event) {
       console.error('Error inserting policy_commissions row:', pcErr);
     }
 
+    const overrideTotal = overrideSummaries.reduce((sum, o) => sum + o.amount, 0);
+
     return {
       statusCode: 200,
       body: JSON.stringify(
@@ -251,12 +270,8 @@ export async function handler(event) {
           agent: { id: agent.id, full_name: agent.full_name, level: agent_level },
           advance: advanceRounded,
           lead_charge: leadChargeAmount,
-          override: {
-            amount: overrideAmount,
-            upline: uplineInfo
-              ? { id: uplineInfo.id, full_name: uplineInfo.full_name, level: uplineInfo.level || null }
-              : null
-          },
+          override_total: overrideTotal,
+          overrides: overrideSummaries, // array of all upline overrides
           ledger_rows_created: inserted,
         },
         null,
