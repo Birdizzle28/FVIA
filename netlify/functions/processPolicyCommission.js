@@ -1,14 +1,12 @@
 // netlify/functions/processPolicyCommission.js
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = process.env.SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.warn('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY for processPolicyCommission');
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
+// You’re currently using the anon key here.
+// Later we can swap this to SUPABASE_SERVICE_ROLE_KEY env vars like runWeeklyAdvance.js
+const supabase = createClient(
+  'https://ddlbgkolnayqrxslzsxn.supabase.co',
+  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
+);
 
 export async function handler(event) {
   if (event.httpMethod !== 'POST') {
@@ -101,7 +99,7 @@ export async function handler(event) {
     }
 
     const baseRateAgent = Number(scheduleAgent.base_commission_rate) || 0;
-    const advanceRate   = Number(scheduleAgent.advance_rate) || 0;
+    const advanceRate   = Number(scheduleAgent.advance_rate) || 0; // used for both agent & upline in this simple override model
     const ap            = Number(policy.premium_annual) || 0;
 
     if (ap <= 0) {
@@ -124,7 +122,43 @@ export async function handler(event) {
     // Lead costs are handled via lead_debts + weekly advance runs.
     const leadChargeAmount = 0;
 
-    // 6) Multi-level override logic up the recruiter chain
+    // 6) Override logic for direct upline (recruiter)
+    let overrideAmount = 0;
+    let uplineInfo = null;
+
+    if (agent.recruiter_id) {
+      const { data: upline, error: uplineErr } = await supabase
+        .from('agents')
+        .select('id, full_name, level')
+        .eq('id', agent.recruiter_id)
+        .single();
+
+      if (!uplineErr && upline) {
+        uplineInfo = upline;
+        const upline_level = upline.level || 'agent';
+
+        const { data: scheduleUpline, error: scheduleErrUpline } = await supabase
+          .from('commission_schedules')
+          .select('base_commission_rate')
+          .eq('carrier_name', policy.carrier_name)
+          .eq('product_line', policy.product_line)
+          .eq('policy_type', policy.policy_type)
+          .eq('agent_level', upline_level)
+          .single();
+
+        if (!scheduleErrUpline && scheduleUpline) {
+          const baseRateUpline = Number(scheduleUpline.base_commission_rate) || 0;
+          const spread = baseRateUpline - baseRateAgent;
+
+          if (spread > 0) {
+            const rawOverride = ap * spread * advanceRate;
+            overrideAmount = Math.round(rawOverride * 100) / 100;
+          }
+        }
+      }
+    }
+
+    // 7) Build ledger rows array
     const ledgerRows = [];
 
     // Advance credit for writing agent
@@ -146,97 +180,29 @@ export async function handler(event) {
       }
     });
 
-    // Multi-level overrides using the SAME spread formula for each level
-    let childAgent       = agent;           // start at writing agent
-    let childBaseRate    = baseRateAgent;   // their base commission rate
-    let totalOverrides   = 0;
-    const overrideChain  = [];
+    // (Lead charge rows removed for now)
 
-    while (childAgent && childAgent.recruiter_id) {
-      // Load the upline
-      const { data: upline, error: uplineErr } = await supabase
-        .from('agents')
-        .select('id, full_name, level, recruiter_id')
-        .eq('id', childAgent.recruiter_id)
-        .single();
-
-      if (uplineErr || !upline) {
-        console.warn('No further upline found for agent', childAgent.id, uplineErr);
-        break;
-      }
-
-      const uplineLevel = upline.level || 'agent';
-
-      // Load upline schedule to get THEIR base rate
-      const { data: scheduleUpline, error: scheduleErrUpline } = await supabase
-        .from('commission_schedules')
-        .select('base_commission_rate')
-        .eq('carrier_name', policy.carrier_name)
-        .eq('product_line', policy.product_line)
-        .eq('policy_type', policy.policy_type)
-        .eq('agent_level', uplineLevel)
-        .single();
-
-      if (scheduleErrUpline || !scheduleUpline) {
-        console.warn(
-          'No commission schedule found for upline level',
-          { upline_id: upline.id, uplineLevel },
-          scheduleErrUpline
-        );
-        // Move up anyway (prevents infinite loop if data is messy)
-        childAgent = upline;
-        childBaseRate = childBaseRate; // unchanged
-        continue;
-      }
-
-      const baseRateUpline = Number(scheduleUpline.base_commission_rate) || 0;
-      const spread         = baseRateUpline - childBaseRate;
-
-      if (spread > 0) {
-        const rawOverride = ap * spread * advanceRate;
-        const overrideAmt = Math.round(rawOverride * 100) / 100;
-
-        totalOverrides += overrideAmt;
-        overrideChain.push({
-          upline_id: upline.id,
-          upline_name: upline.full_name,
-          upline_level: uplineLevel,
-          child_id: childAgent.id,
-          child_name: childAgent.full_name,
-          child_level: childAgent.level || 'agent',
-          spread,
-          override_amount: overrideAmt
-        });
-
-        ledgerRows.push({
-          agent_id: upline.id,
-          policy_id: policy.id,
-          amount: overrideAmt,
-          currency: 'USD',
-          entry_type: 'override',
-          description: `Override on downline policy (${childAgent.full_name})`,
-          meta: {
-            downline_agent_id: childAgent.id,
-            downline_agent_name: childAgent.full_name,
-            downline_level: childAgent.level || 'agent',
-            carrier_name: policy.carrier_name,
-            product_line: policy.product_line,
-            policy_type: policy.policy_type,
-            ap,
-            spread,
-            upline_level: uplineLevel,
-            base_commission_rate_child: childBaseRate,
-            base_commission_rate_upline: baseRateUpline
-          }
-        });
-      }
-
-      // Move one level up the tree
-      childAgent    = upline;
-      childBaseRate = baseRateUpline;
+    // Override credit for upline (if any)
+    if (overrideAmount > 0 && uplineInfo) {
+      ledgerRows.push({
+        agent_id: uplineInfo.id,
+        policy_id: policy.id,
+        amount: overrideAmount,
+        currency: 'USD',
+        entry_type: 'override',
+        description: `Override on downline policy (${agent.full_name})`,
+        meta: {
+          downline_agent_id: agent.id,
+          downline_agent_name: agent.full_name,
+          carrier_name: policy.carrier_name,
+          product_line: policy.product_line,
+          policy_type: policy.policy_type,
+          ap
+        }
+      });
     }
 
-    // 7) Insert into commission_ledger
+    // 8) Insert into commission_ledger
     const { data: inserted, error: insErr } = await supabase
       .from('commission_ledger')
       .insert(ledgerRows)
@@ -250,22 +216,44 @@ export async function handler(event) {
       };
     }
 
+    // 9) ALSO store a summary row for the writing agent in policy_commissions
+    // This is what feeds agent_policy_commissions_view -> commissions.js Policies tab.
+    const renewalAmount   = 0; // we’ll wire real renewal math later
+    const totalCommission = advanceRounded + renewalAmount;
+
+    const { error: pcErr } = await supabase
+      .from('policy_commissions')
+      .insert({
+        policy_id: policy.id,
+        agent_id: agent.id,
+        ap: ap,
+        base_commission_rate: baseRateAgent,
+        advance_rate: advanceRate,
+        advance_amount: advanceRounded,
+        renewal_amount: renewalAmount,
+        total_commission: totalCommission,
+        renewal_details: scheduleAgent.renewal_trail_rule || null
+      });
+
+    if (pcErr) {
+      // Don’t blow up the whole request if this fails; ledger is the source of truth.
+      console.error('Error inserting policy_commissions row:', pcErr);
+    }
+
     return {
       statusCode: 200,
       body: JSON.stringify(
         {
-          message: 'Commission processed and ledger rows created (multi-level overrides).',
+          message: 'Commission processed and ledger + policy_commissions rows created.',
           policy_id,
-          agent: {
-            id: agent.id,
-            full_name: agent.full_name,
-            level: agent_level
-          },
+          agent: { id: agent.id, full_name: agent.full_name, level: agent_level },
           advance: advanceRounded,
           lead_charge: leadChargeAmount,
-          overrides: {
-            total: totalOverrides,
-            chain: overrideChain
+          override: {
+            amount: overrideAmount,
+            upline: uplineInfo
+              ? { id: uplineInfo.id, full_name: uplineInfo.full_name, level: uplineInfo.level || null }
+              : null
           },
           ledger_rows_created: inserted,
         },
@@ -281,4 +269,4 @@ export async function handler(event) {
       body: JSON.stringify({ error: 'Unexpected error', details: String(err) }),
     };
   }
-}
+} // 🔥 THIS closes the handler
