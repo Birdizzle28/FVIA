@@ -42,19 +42,15 @@ function jsonResponse(statusCode, data) {
 /**
  * Actually create a SignWell document from the ICA template.
  * payload = { email, firstName, lastName, level, agentId, approvedAgentId }
- *//**
- * Actually create a SignWell document from the ICA template.
- * payload = { email, firstName, lastName, level, agentId, approvedAgentId }
  */
 async function createEnvelopeWithEsignProvider(payload) {
   if (!ESIGN_API_KEY || !ESIGN_ICA_TEMPLATE_ID) {
     throw new Error('SignWell API not fully configured');
   }
 
-  // Match docs exactly
   const url = `${ESIGN_API_BASE_URL}/document_templates/documents/`;
 
-    // Prefill specific template fields by API ID
+  // Prefill specific template fields by API ID
   const templateFields = [
     {
       api_id: 'Name_1',              // Document Sender printed name
@@ -65,7 +61,7 @@ async function createEnvelopeWithEsignProvider(payload) {
       value: 'Operations Manager'
     }
   ];
-  
+
   const body = {
     // use test_mode: true until you're happy
     test_mode: true,
@@ -80,7 +76,6 @@ async function createEnvelopeWithEsignProvider(payload) {
     message:
       'Please review and sign the Independent Contractor Agreement to get started with Family Values Group.',
 
-    // 👇 THIS is what the endpoint actually expects
     recipients: [
       {
         id: 1,
@@ -91,13 +86,12 @@ async function createEnvelopeWithEsignProvider(payload) {
       {
         id: 2,
         name: 'Chancellor Timothy Johnson',
-        email: 'info@familyvaluesgroup.com',    // or whatever email should sign
+        email: 'info@familyvaluesgroup.com',
         placeholder_name: 'Document Sender'     // must match template role
       }
     ],
     template_fields: templateFields,
 
-    // optional extra data
     metadata: {
       agent_id: payload.agentId,
       level: payload.level,
@@ -182,7 +176,7 @@ exports.handler = async (event, context) => {
       });
     }
 
-    // 1) Fetch the approved_agents row
+    // 1) Try to fetch approved_agents row (OPTIONAL now)
     let approvedAgentRow = null;
 
     if (approved_agent_id) {
@@ -194,9 +188,9 @@ exports.handler = async (event, context) => {
 
       if (error) {
         console.error('Error loading approved_agents by id:', error);
-        return jsonResponse(500, { error: 'Failed to load approved agent (by id)' });
+        // not fatal anymore, just log
       }
-      approvedAgentRow = data;
+      approvedAgentRow = data || null;
     } else {
       const { data, error } = await supabase
         .from('approved_agents')
@@ -206,20 +200,15 @@ exports.handler = async (event, context) => {
 
       if (error) {
         console.error('Error loading approved_agents by agent_id:', error);
-        return jsonResponse(500, {
-          error: 'Failed to load approved agent (by agent_id)'
-        });
+        // not fatal
       }
-      approvedAgentRow = data;
+      approvedAgentRow = data || null;
     }
 
-    if (!approvedAgentRow) {
-      return jsonResponse(404, {
-        error: 'No approved_agents row found. Pre-approve the agent first.'
-      });
-    }
-
-    const approvedId = approvedAgentRow.id;
+    // NOTE:
+    // If there is STILL no approvedAgents row, that's OK in the new flow.
+    // We will send the ICA anyway and record approved_agent_id = null.
+    const approvedId = approvedAgentRow ? approvedAgentRow.id : null;
 
     // 2) Call SignWell
     const envelope = await createEnvelopeWithEsignProvider({
@@ -241,11 +230,11 @@ exports.handler = async (event, context) => {
     const envelopeId = envelope.envelopeId;
     const envelopeStatus = envelope.status || 'sent';
 
-    // 3) Insert into ica_envelopes
+    // 3) Insert into ica_envelopes (approved_agent_id may be null now)
     const { error: insertEnvErr } = await supabase
       .from('ica_envelopes')
       .insert({
-        approved_agent_id: approvedId,
+        approved_agent_id: approvedId || null,
         agent_id,
         envelope_id: envelopeId,
         status: envelopeStatus,
@@ -258,25 +247,29 @@ exports.handler = async (event, context) => {
       // not fatal
     }
 
-    // 4) Update approved_agents with ICA info
-    const { error: updateApprErr } = await supabase
-      .from('approved_agents')
-      .update({
-        level,
-        email,
-        first_name,
-        last_name,
-        ica_envelope_id: envelopeId,
-        ica_status: envelopeStatus,
-        ica_signed: envelopeStatus === 'completed'
-      })
-      .eq('id', approvedId);
+    // 4) Update approved_agents with ICA info ONLY if we found one
+    if (approvedId) {
+      const { error: updateApprErr } = await supabase
+        .from('approved_agents')
+        .update({
+          level,
+          email,
+          first_name,
+          last_name,
+          ica_envelope_id: envelopeId,
+          ica_status: envelopeStatus,
+          ica_signed: envelopeStatus === 'completed'
+        })
+        .eq('id', approvedId);
 
-    if (updateApprErr) {
-      console.error('Error updating approved_agents:', updateApprErr);
-      return jsonResponse(500, {
-        error: 'Failed to update approved_agents with ICA info'
-      });
+      if (updateApprErr) {
+        console.error('Error updating approved_agents:', updateApprErr);
+        // not fatal to ICA sending
+      }
+    } else {
+      console.log(
+        'No approved_agents row found for this agent yet; ICA sent and tracked with approved_agent_id = null.'
+      );
     }
 
     return jsonResponse(200, {
