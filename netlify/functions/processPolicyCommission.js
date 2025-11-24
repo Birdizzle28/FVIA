@@ -1,6 +1,8 @@
 // netlify/functions/processPolicyCommission.js
 import { createClient } from '@supabase/supabase-js';
 
+// You’re currently using the anon key here.
+// Later we can swap this to SUPABASE_SERVICE_ROLE_KEY env vars like runWeeklyAdvance.js
 const supabase = createClient(
   'https://ddlbgkolnayqrxslzsxn.supabase.co',
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
@@ -96,9 +98,9 @@ export async function handler(event) {
       };
     }
 
-    const baseRateAgent   = Number(scheduleAgent.base_commission_rate) || 0;
-    const advanceRate     = Number(scheduleAgent.advance_rate) || 0; // used for both agent & upline in this simple override model
-    const ap              = Number(policy.premium_annual) || 0;
+    const baseRateAgent = Number(scheduleAgent.base_commission_rate) || 0;
+    const advanceRate   = Number(scheduleAgent.advance_rate) || 0; // used for both agent & upline in this simple override model
+    const ap            = Number(policy.premium_annual) || 0;
 
     if (ap <= 0) {
       return {
@@ -112,23 +114,13 @@ export async function handler(event) {
     }
 
     // 4) Calculate writing agent advance
-    const advanceAmount = ap * baseRateAgent * advanceRate;
+    const advanceAmount  = ap * baseRateAgent * advanceRate;
     const advanceRounded = Math.round(advanceAmount * 100) / 100;
 
-    // 5) Optional: look up lead cost for lead_charge row
-    let leadChargeAmount = 0;
-    if (policy.lead_id) {
-      const { data: lead, error: leadErr } = await supabase
-        .from('leads')
-        .select('id, cost')
-        .eq('id', policy.lead_id)
-        .single();
-
-      if (!leadErr && lead && lead.cost != null) {
-        // Convention: negative amount for debits
-        leadChargeAmount = -Math.abs(Number(lead.cost) || 0);
-      }
-    }
+    // 5) (SIMPLIFIED) Lead charge logic:
+    // We are NOT creating lead_charge rows here anymore.
+    // Lead costs are handled via lead_debts + weekly advance runs.
+    const leadChargeAmount = 0;
 
     // 6) Override logic for direct upline (recruiter)
     let overrideAmount = 0;
@@ -188,20 +180,7 @@ export async function handler(event) {
       }
     });
 
-    // Lead charge (if any)
-    if (leadChargeAmount !== 0) {
-      ledgerRows.push({
-        agent_id: policy.agent_id,
-        policy_id: policy.id,
-        amount: leadChargeAmount,
-        currency: 'USD',
-        entry_type: 'lead_charge',
-        description: 'Lead cost for this policy',
-        meta: {
-          lead_id: policy.lead_id
-        }
-      });
-    }
+    // (Lead charge rows removed for now)
 
     // Override credit for upline (if any)
     if (overrideAmount > 0 && uplineInfo) {
@@ -266,4 +245,4 @@ export async function handler(event) {
       body: JSON.stringify({ error: 'Unexpected error', details: String(err) }),
     };
   }
-}
+} // 🔥 THIS closes the handler
