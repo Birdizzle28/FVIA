@@ -93,9 +93,9 @@ async function createEnvelopeWithEsignProvider(payload) {
     template_fields: templateFields,
 
     metadata: {
-      agent_id: payload.agentId,
-      level: payload.level,
-      approved_agent_id: payload.approvedAgentId || null
+      agent_id: String(payload.agentId),
+      level: String(payload.level),
+      approved_agent_id: payload.approvedAgentId ? String(payload.approvedAgentId) : ""
     }
   };
 
@@ -217,7 +217,7 @@ exports.handler = async (event, context) => {
       lastName: last_name,
       level,
       agentId: agent_id,
-      approvedAgentId: approvedId
+      approvedAgentId: approvedId ? String(approvedId) : ""
     });
 
     if (!envelope || !envelope.envelopeId) {
