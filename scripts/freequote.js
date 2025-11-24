@@ -318,120 +318,207 @@ document.addEventListener('DOMContentLoaded', () => {
     return byType;
   }
 
-    // --- Use agent_nipr_licenses as source of truth; require all needed lines in that state; prefer is_available ---
-    async function pickAgentForAll(requiredLines, state2) {
-      const supabase = window.supabase;
-      const state = (state2 || '').toUpperCase();
+      // --- Use agent_nipr_licenses as source of truth; require all needed lines in that state;
+      // --- ALSO require that every human upline in the chain has those same LOAs.
+      // --- Family Values Group (id == FVG_ID) is neutral: it does NOT need matching LOAs.
+      async function pickAgentForAll(requiredLines, state2) {
+        const supabase = window.supabase;
+        const state = (state2 || '').toUpperCase();
+        const FVG_ID = '906a707c-69bb-4e6e-be1d-1415f45561c4';
     
-      if (!state || !/^[A-Z]{2}$/.test(state)) {
-        return { reason: 'none_fit', agent: null, shouldCall: false };
-      }
-    
-      // Map our normalized line keys to text that appears in LOA names
-      const lineTokenMap = {
-        life:       'Life',
-        health:     'Accident & Health', // adjust if your LOA text is different
-        property:   'Property',
-        casualty:   'Casualty',
-        legalshield:'Life',      // you’re hiding these choices anyway
-        idshield:   'Life'
-      };
-    
-      const neededTokens = Array.from(
-        new Set(
-          (requiredLines || [])
-            .map(lineKey => lineTokenMap[lineKey])
-            .filter(Boolean)
-        )
-      );
-    
-      if (!neededTokens.length) {
-        return { reason: 'none_fit', agent: null, shouldCall: false };
-      }
-    
-      // 1) Pull all NIPR license rows for this state
-      const { data: niprRows, error: niprErr } = await supabase
-        .from('agent_nipr_licenses')
-        .select('agent_id, state, active, loa_names')  // agent_id is your text ID like "19866925"
-        .eq('state', state);
-    
-      if (niprErr) {
-        throw new Error(niprErr.message);
-      }
-    
-      if (!niprRows || !niprRows.length) {
-        return { reason: 'none_fit', agent: null, shouldCall: false };
-      }
-    
-      function isRowActive(row) {
-        return row.active === true;
-      }
-    
-      function rowMatchesToken(row, token) {
-        if (!Array.isArray(row.loa_names)) return false;
-        const lowerToken = token.toLowerCase();
-        return row.loa_names.some(name =>
-          (name || '').toString().toLowerCase().includes(lowerToken)
-        );
-      }
-    
-      // 2) Group rows by agent_id (your text ID) and see which ones have *all* needed tokens active
-      const byAgentKey = new Map();
-      for (const row of niprRows) {
-        const key = row.agent_id;     // e.g. "19866925"
-        if (!key) continue;
-        if (!isRowActive(row)) continue;
-    
-        if (!byAgentKey.has(key)) byAgentKey.set(key, []);
-        byAgentKey.get(key).push(row);
-      }
-    
-      const eligibleAgentKeys = [];
-      for (const [agentKey, rows] of byAgentKey.entries()) {
-        const hasAllTokens = neededTokens.every(token =>
-          rows.some(r => rowMatchesToken(r, token))
-        );
-        if (hasAllTokens) {
-          eligibleAgentKeys.push(agentKey);
+        if (!state || !/^[A-Z]{2}$/.test(state)) {
+          return { reason: 'none_fit', agent: null, shouldCall: false };
         }
+    
+        // Map normalized line keys to text tokens that appear in LOA names
+        const lineTokenMap = {
+          life:       'Life',
+          health:     'Accident & Health', // adjust if your LOA text is different
+          property:   'Property',
+          casualty:   'Casualty',
+          legalshield:'Life',      // you’re hiding these choices anyway
+          idshield:   'Life'
+        };
+    
+        const neededTokens = Array.from(
+          new Set(
+            (requiredLines || [])
+              .map(lineKey => lineTokenMap[lineKey])
+              .filter(Boolean)
+          )
+        );
+    
+        if (!neededTokens.length) {
+          return { reason: 'none_fit', agent: null, shouldCall: false };
+        }
+    
+        // 1) Pull all NIPR license rows for this state
+        const { data: niprRows, error: niprErr } = await supabase
+          .from('agent_nipr_licenses')
+          .select('agent_id, state, active, loa_names')
+          .eq('state', state);
+    
+        if (niprErr) {
+          throw new Error(niprErr.message);
+        }
+    
+        if (!niprRows || !niprRows.length) {
+          return { reason: 'none_fit', agent: null, shouldCall: false };
+        }
+    
+        function rowMatchesToken(row, token) {
+          if (!Array.isArray(row.loa_names)) return false;
+          const lowerToken = token.toLowerCase();
+          return row.loa_names.some(name =>
+            (name || '').toString().toLowerCase().includes(lowerToken)
+          );
+        }
+    
+        // Group rows by agent_id (text) and see which ones have *all* needed tokens active
+        const byAgentKey = new Map();
+        for (const row of niprRows) {
+          if (!row.active) continue;
+          const key = row.agent_id;  // text agent_id from NIPR table
+          if (!key) continue;
+          if (!byAgentKey.has(key)) byAgentKey.set(key, []);
+          byAgentKey.get(key).push(row);
+        }
+    
+        function hasAllTokensForKey(agentKey) {
+          const rows = byAgentKey.get(agentKey) || [];
+          if (!rows.length) return false;
+          return neededTokens.every(token =>
+            rows.some(r => rowMatchesToken(r, token))
+          );
+        }
+    
+        const eligibleAgentKeys = [];
+        for (const [agentKey, rows] of byAgentKey.entries()) {
+          if (!rows.length) continue;
+          if (hasAllTokensForKey(agentKey)) {
+            eligibleAgentKeys.push(agentKey);
+          }
+        }
+    
+        if (!eligibleAgentKeys.length) {
+          return { reason: 'none_fit', agent: null, shouldCall: false };
+        }
+    
+        // 2) Load agents that:
+        //   - match those agent_id values
+        //   - are active + receiving_leads
+        const { data: agents, error: agentErr } = await supabase
+          .from('agents')
+          .select('id, agent_id, full_name, phone, is_active, is_available, last_assigned_at')
+          .eq('is_active', true)
+          .eq('receiving_leads', true)
+          .in('agent_id', eligibleAgentKeys);
+    
+        if (agentErr) {
+          throw new Error(agentErr.message);
+        }
+    
+        const baseEligibleAgents = (agents || []);
+        if (!baseEligibleAgents.length) {
+          return { reason: 'none_fit', agent: null, shouldCall: false };
+        }
+    
+        // --- helper: check upline chain licensing for a single agent ---
+        async function hasLicensedUplineChain(agentRow) {
+          let currentId = agentRow.id;
+          const visited = new Set();
+    
+          while (true) {
+            if (!currentId) {
+              // reached the top (no more uplines) → OK
+              return true;
+            }
+            if (visited.has(currentId)) {
+              // cycle safety: if the graph is messed up, fail-safe
+              console.warn('Cycle detected in uplines for agent', currentId);
+              return false;
+            }
+            visited.add(currentId);
+    
+            // Look up direct upline relationship
+            const { data: upRel, error: upErr } = await supabase
+              .from('uplines')
+              .select('upline_id')
+              .eq('agent_id', currentId)
+              .maybeSingle();
+    
+            if (upErr) {
+              throw new Error(upErr.message);
+            }
+    
+            const upId = upRel?.upline_id;
+            if (!upId) {
+              // no more uplines → OK
+              return true;
+            }
+    
+            if (upId === FVG_ID) {
+              // Family Values Group is NEUTRAL:
+              // It does NOT need matching LOAs and does NOT break the chain.
+              // If the only upline is FVG, the agent is still eligible.
+              return true;
+            }
+    
+            // Load upline agent
+            const { data: upAgent, error: upAgentErr } = await supabase
+              .from('agents')
+              .select('id, agent_id')
+              .eq('id', upId)
+              .maybeSingle();
+    
+            if (upAgentErr) {
+              throw new Error(upAgentErr.message);
+            }
+    
+            if (!upAgent || !upAgent.agent_id) {
+              // No valid upline agent record → treat as not licensed
+              return false;
+            }
+    
+            // Check if THIS upline has all needed tokens in this state
+            if (!hasAllTokensForKey(upAgent.agent_id)) {
+              // ❌ Human upline missing a required LOA → agent is NOT eligible
+              return false;
+            }
+    
+            // Move up the chain and repeat
+            currentId = upAgent.id;
+          }
+        }
+    
+        // 3) Filter base-eligible agents by upline licensing chain
+        const fullyEligible = [];
+        for (const ag of baseEligibleAgents) {
+          const okChain = await hasLicensedUplineChain(ag);
+          if (okChain) {
+            fullyEligible.push(ag);
+          }
+        }
+    
+        if (!fullyEligible.length) {
+          return { reason: 'none_fit', agent: null, shouldCall: false };
+        }
+    
+        // Same queue logic as before: prefer online, rotate by oldest last_assigned_at
+        const byOldest = (arr) =>
+          arr.slice().sort((a, b) => {
+            const ax = a.last_assigned_at ? new Date(a.last_assigned_at).getTime() : 0;
+            const bx = b.last_assigned_at ? new Date(b.last_assigned_at).getTime() : 0;
+            return ax - bx;
+          });
+    
+        const online = fullyEligible.filter(a => !!a.is_available);
+        if (online.length) {
+          return { reason: 'online', agent: byOldest(online)[0], shouldCall: true };
+        }
+    
+        return { reason: 'offline_only', agent: byOldest(fullyEligible)[0], shouldCall: false };
       }
-    
-      if (!eligibleAgentKeys.length) {
-        return { reason: 'none_fit', agent: null, shouldCall: false };
-      }
-    
-      // 3) Now load agents that match those agent_id values and are active + receiving_leads
-      const { data: agents, error: agentErr } = await supabase
-        .from('agents')
-        .select('id, agent_id, full_name, phone, is_active, is_available, last_assigned_at')
-        .eq('is_active', true)
-        .eq('receiving_leads', true)
-        .in('agent_id', eligibleAgentKeys);  // ✅ match on text agent_id, NOT uuid id
-    
-      if (agentErr) {
-        throw new Error(agentErr.message);
-      }
-    
-      const eligibleAgents = (agents || []);
-      if (!eligibleAgents.length) {
-        return { reason: 'none_fit', agent: null, shouldCall: false };
-      }
-    
-      // Same queue logic as before: prefer online, rotate by oldest last_assigned_at
-      const byOldest = (arr) =>
-        arr.slice().sort((a, b) => {
-          const ax = a.last_assigned_at ? new Date(a.last_assigned_at).getTime() : 0;
-          const bx = b.last_assigned_at ? new Date(b.last_assigned_at).getTime() : 0;
-          return ax - bx;
-        });
-    
-      const online = eligibleAgents.filter(a => !!a.is_available);
-      if (online.length) {
-        return { reason: 'online', agent: byOldest(online)[0], shouldCall: true };
-      }
-    
-      return { reason: 'offline_only', agent: byOldest(eligibleAgents)[0], shouldCall: false };
-    }
 
   // ----- STEP NAV -----
   btnStep1.addEventListener('click', async () => {
