@@ -1,12 +1,14 @@
 // netlify/functions/processPolicyCommission.js
 import { createClient } from '@supabase/supabase-js';
 
-// You’re currently using the anon key here.
-// Later we can swap this to SUPABASE_SERVICE_ROLE_KEY env vars like runWeeklyAdvance.js
-const supabase = createClient(
-  'https://ddlbgkolnayqrxslzsxn.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiIsImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
-);
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+if (!supabaseUrl || !supabaseKey) {
+  console.warn('Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY for processPolicyCommission');
+}
+
+const supabase = createClient(supabaseUrl, supabaseKey);
 
 export async function handler(event) {
   if (event.httpMethod !== 'POST') {
