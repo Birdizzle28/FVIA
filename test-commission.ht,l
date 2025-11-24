@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Test processPolicyCommission</title>
+</head>
+<body>
+  <h1>Test processPolicyCommission</h1>
+
+  <label>
+    Policy ID:
+    <input id="policy-id" type="text" style="width: 320px;">
+  </label>
+  <button id="run-btn">Run</button>
+
+  <pre id="output" style="white-space: pre-wrap; background:#111; color:#0f0; padding:10px; margin-top:20px;"></pre>
+
+  <script>
+    document.getElementById('run-btn').addEventListener('click', async () => {
+      const policyId = document.getElementById('policy-id').value.trim();
+      const out = document.getElementById('output');
+      out.textContent = 'Running...';
+
+      if (!policyId) {
+        out.textContent = 'Please enter a policy_id first.';
+        return;
+      }
+
+      try {
+        const res = await fetch('/.netlify/functions/processPolicyCommission', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ policy_id: policyId })
+        });
+
+        const text = await res.text();
+        out.textContent = `Status: ${res.status}\n\n${text}`;
+      } catch (err) {
+        out.textContent = 'Error: ' + err.message;
+      }
+    });
+  </script>
+</body>
+</html>
