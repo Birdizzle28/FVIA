@@ -2,7 +2,7 @@
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !serviceKey) {
   console.warn('[runWeeklyAdvance] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars');
@@ -22,11 +22,11 @@ function getPayDate(event) {
     }
   }
 
-  // Default: today → next Friday (or today if already Friday)
+  // Default: today → next Friday (always upcoming, not today)
   const today = new Date();
   const day = today.getDay(); // 0=Sun, 5=Fri
   let diff = (5 - day + 7) % 7;
-  if (diff === 0) diff = 7; // always "upcoming" Friday, not today
+  if (diff === 0) diff = 7;
   const nextFriday = new Date(today);
   nextFriday.setDate(today.getDate() + diff);
   return nextFriday;
@@ -41,10 +41,10 @@ export async function handler(event) {
   }
 
   try {
-    const payDate = getPayDate(event); // a JS Date object
+    const payDate = getPayDate(event);              // JS Date
     const payDateStr = payDate.toISOString().slice(0, 10); // YYYY-MM-DD
 
-    // 1) Compute cutoff date = pay_date - 14 days
+    // 1) cutoff = pay_date - 14 days
     const cutoff = new Date(payDate);
     cutoff.setDate(cutoff.getDate() - 14);
     const cutoffIso = cutoff.toISOString();
@@ -54,9 +54,10 @@ export async function handler(event) {
     // 2) Find all eligible ledger rows
     const { data: ledgerRows, error: ledgerErr } = await supabase
       .from('commission_ledger')
-      .select('id, agent_id, amount, entry_type, created_at')
+      .select('id, agent_id, amount, entry_type, created_at, is_settled')
       .in('entry_type', ['advance', 'override'])
-      .eq('is_settled', false)
+      // treat NULL as not settled too
+      .or('is_settled.is.null,is_settled.eq.false')
       .lte('created_at', cutoffIso);
 
     if (ledgerErr) {
@@ -66,6 +67,8 @@ export async function handler(event) {
         body: JSON.stringify({ error: 'Failed to load ledger rows', details: ledgerErr }),
       };
     }
+
+    console.log('[runWeeklyAdvance] eligible ledger rows =', ledgerRows.length);
 
     if (!ledgerRows || ledgerRows.length === 0) {
       return {
@@ -95,11 +98,10 @@ export async function handler(event) {
       agentTotals[aid].gross += amt;
     }
 
-    // 4) (Option B skeleton) – for now, no automatic debt/chargeback withholding.
-    //    Net = Gross. Later we’ll adjust here to subtract lead_debts and chargebacks.
+    // 4) Option B: no automatic debt/chargeback withholding yet
     const payoutSummary = Object.entries(agentTotals).map(([agent_id, t]) => {
       const gross = t.gross;
-      const net = gross; // TODO later: net = gross - leadRepayment - chargebackRepayment
+      const net = gross; // TODO later: subtract lead & chargeback repayments
 
       return {
         agent_id,
@@ -112,11 +114,12 @@ export async function handler(event) {
       };
     });
 
-    // 5) Create a payout batch row
+    // Calculate batch totals
     const totalGross = payoutSummary.reduce((sum, p) => sum + p.gross_payout, 0);
-    const totalNet   = payoutSummary.reduce((sum, p) => sum + p.net_payout, 0);
-    const totalDebits = 0; // we’ll use this later when we add lead/chargeback repayment logic
-    
+    const totalDebits = 0; // once we withhold debts this will be >0
+    const totalNet = totalGross - totalDebits;
+
+    // 5) Create a payout batch row in payout_batches
     const { data: batchRows, error: batchErr } = await supabase
       .from('payout_batches')
       .insert({
@@ -126,7 +129,7 @@ export async function handler(event) {
         total_gross: Number(totalGross.toFixed(2)),
         total_debits: Number(totalDebits.toFixed(2)),
         total_net: Number(totalNet.toFixed(2)),
-        note: `Weekly advance run. Cutoff: ${cutoffIso}`
+        note: 'Weekly advance run',
       })
       .select('*');
 
@@ -148,7 +151,7 @@ export async function handler(event) {
       .update({
         is_settled: true,
         payout_batch_id: batch.id,
-        period_start: cutoffIso,     // optional: mark statement period
+        period_start: cutoffIso,
         period_end: payDate.toISOString(),
       })
       .in('id', ledgerIds);
@@ -161,7 +164,7 @@ export async function handler(event) {
       };
     }
 
-    // 7) Return a clean summary for you to eyeball
+    // 7) Return a clean summary
     return {
       statusCode: 200,
       body: JSON.stringify(
