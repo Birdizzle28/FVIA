@@ -27,7 +27,7 @@
   <h2>Run Weekly Advance Payout</h2>
 
   <label>
-    **Optional:** Test Pay Date (YYYY-MM-DD)<br>
+    <strong>Optional:</strong> Test Pay Date (YYYY-MM-DD)<br>
     <input id="pay-date" type="text" style="width: 200px;" placeholder="(leave blank for automatic)">
   </label>
   <button id="run-weekly-btn">Run Weekly Advance</button>
@@ -72,13 +72,18 @@ document.getElementById('run-weekly-btn').addEventListener('click', async () => 
   const out = document.getElementById('weekly-output');
   out.textContent = 'Running weekly advance...';
 
+  // Handler said: "Use POST and optionally ?pay_date=YYYY-MM-DD"
   let url = '/.netlify/functions/runWeeklyAdvance';
   if (payDate) {
     url += `?pay_date=${encodeURIComponent(payDate)}`;
   }
 
   try {
-    const res = await fetch(url);
+    const res = await fetch(url, {
+      method: 'POST'
+      // no body needed unless your function expects JSON too
+    });
+
     const text = await res.text();
     out.textContent = `Status: ${res.status}\n\n${text}`;
   } catch (err) {
