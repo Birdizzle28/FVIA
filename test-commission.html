@@ -35,6 +35,20 @@
   <pre id="weekly-output" style="white-space: pre-wrap; background:#111; color:#0af; padding:10px; margin-top:20px; min-height:120px;"></pre>
 
 
+  <!-- -------------------------- -->
+  <!--  RUN MONTHLY PAY-THRU     -->
+  <!-- -------------------------- -->
+  <h2>Run Monthly Pay-Thru Payout</h2>
+
+  <label>
+    <strong>Optional:</strong> Pay Date (YYYY-MM-DD)<br>
+    <input id="paythru-date" type="text" style="width: 200px;" placeholder="2025-12-31">
+  </label>
+  <button id="run-paythru-btn">Run Monthly Pay-Thru</button>
+
+  <pre id="paythru-output" style="white-space: pre-wrap; background:#111; color:#0f0; padding:10px; margin-top:20px; min-height:120px;"></pre>
+
+
 <script>
 /* =======================================================
    RUN processPolicyCommission
@@ -72,7 +86,6 @@ document.getElementById('run-weekly-btn').addEventListener('click', async () => 
   const out = document.getElementById('weekly-output');
   out.textContent = 'Running weekly advance...';
 
-  // Handler said: "Use POST and optionally ?pay_date=YYYY-MM-DD"
   let url = '/.netlify/functions/runWeeklyAdvance';
   if (payDate) {
     url += `?pay_date=${encodeURIComponent(payDate)}`;
@@ -81,7 +94,32 @@ document.getElementById('run-weekly-btn').addEventListener('click', async () => 
   try {
     const res = await fetch(url, {
       method: 'POST'
-      // no body needed unless your function expects JSON too
+    });
+
+    const text = await res.text();
+    out.textContent = `Status: ${res.status}\n\n${text}`;
+  } catch (err) {
+    out.textContent = 'Error: ' + err.message;
+  }
+});
+
+
+/* =======================================================
+   RUN runMonthlyPayThru.js
+   ======================================================= */
+document.getElementById('run-paythru-btn').addEventListener('click', async () => {
+  const date = document.getElementById('paythru-date').value.trim();
+  const out = document.getElementById('paythru-output');
+  out.textContent = 'Running monthly pay-thru...';
+
+  let url = '/.netlify/functions/runMonthlyPayThru';
+  if (date) {
+    url += `?pay_date=${encodeURIComponent(date)}`;
+  }
+
+  try {
+    const res = await fetch(url, {
+      method: 'POST'
     });
 
     const text = await res.text();
