@@ -2,43 +2,90 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Test processPolicyCommission</title>
+  <title>Commission System Tester</title>
 </head>
 <body>
-  <h1>Test processPolicyCommission</h1>
+  <h1>Commission System Tester</h1>
+
+  <!-- --------------------- -->
+  <!--  PROCESS COMMISSION   -->
+  <!-- --------------------- -->
+  <h2>Run processPolicyCommission</h2>
 
   <label>
-    Policy ID:
-    <input id="policy-id" type="text" style="width: 320px;">
+    Policy ID:<br>
+    <input id="policy-id" type="text" style="width: 340px;">
   </label>
-  <button id="run-btn">Run</button>
+  <button id="run-commission-btn">Run Commission</button>
 
-  <pre id="output" style="white-space: pre-wrap; background:#111; color:#0f0; padding:10px; margin-top:20px;"></pre>
+  <pre id="commission-output" style="white-space: pre-wrap; background:#111; color:#0f0; padding:10px; margin-top:20px; min-height:120px;"></pre>
 
-  <script>
-    document.getElementById('run-btn').addEventListener('click', async () => {
-      const policyId = document.getElementById('policy-id').value.trim();
-      const out = document.getElementById('output');
-      out.textContent = 'Running...';
 
-      if (!policyId) {
-        out.textContent = 'Please enter a policy_id first.';
-        return;
-      }
+  <!-- --------------------- -->
+  <!--  RUN WEEKLY ADVANCE   -->
+  <!-- --------------------- -->
+  <h2>Run Weekly Advance Payout</h2>
 
-      try {
-        const res = await fetch('/.netlify/functions/processPolicyCommission', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ policy_id: policyId })
-        });
+  <label>
+    **Optional:** Test Pay Date (YYYY-MM-DD)<br>
+    <input id="pay-date" type="text" style="width: 200px;" placeholder="(leave blank for automatic)">
+  </label>
+  <button id="run-weekly-btn">Run Weekly Advance</button>
 
-        const text = await res.text();
-        out.textContent = `Status: ${res.status}\n\n${text}`;
-      } catch (err) {
-        out.textContent = 'Error: ' + err.message;
-      }
+  <pre id="weekly-output" style="white-space: pre-wrap; background:#111; color:#0af; padding:10px; margin-top:20px; min-height:120px;"></pre>
+
+
+<script>
+/* =======================================================
+   RUN processPolicyCommission
+   ======================================================= */
+document.getElementById('run-commission-btn').addEventListener('click', async () => {
+  const policyId = document.getElementById('policy-id').value.trim();
+  const out = document.getElementById('commission-output');
+  out.textContent = 'Running...';
+
+  if (!policyId) {
+    out.textContent = 'Please enter a policy_id first.';
+    return;
+  }
+
+  try {
+    const res = await fetch('/.netlify/functions/processPolicyCommission', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ policy_id: policyId })
     });
-  </script>
+
+    const text = await res.text();
+    out.textContent = `Status: ${res.status}\n\n${text}`;
+  } catch (err) {
+    out.textContent = 'Error: ' + err.message;
+  }
+});
+
+
+/* =======================================================
+   RUN runWeeklyAdvance.js
+   ======================================================= */
+document.getElementById('run-weekly-btn').addEventListener('click', async () => {
+  const payDate = document.getElementById('pay-date').value.trim();
+  const out = document.getElementById('weekly-output');
+  out.textContent = 'Running weekly advance...';
+
+  let url = '/.netlify/functions/runWeeklyAdvance';
+  if (payDate) {
+    url += `?pay_date=${encodeURIComponent(payDate)}`;
+  }
+
+  try {
+    const res = await fetch(url);
+    const text = await res.text();
+    out.textContent = `Status: ${res.status}\n\n${text}`;
+  } catch (err) {
+    out.textContent = 'Error: ' + err.message;
+  }
+});
+</script>
+
 </body>
 </html>
