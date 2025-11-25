@@ -5,326 +5,217 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 if (!supabaseUrl || !serviceKey) {
-  console.warn('[runMonthlyPayThru] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars');
+  console.warn('[runMonthlyPayThru] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY');
 }
 
 const supabase = createClient(supabaseUrl, serviceKey);
 
-/**
- * Helper: get the pay_date (end-of-month by default) or from ?pay_date=YYYY-MM-DD
- */
+/* -----------------------------------------
+   1) PAY DATE = 5th OF THE MONTH
+   ----------------------------------------- */
 function getPayDate(event) {
   const qs = event.queryStringParameters || {};
 
+  // Allow manual override for testing
   if (qs.pay_date) {
     const d = new Date(qs.pay_date);
-    if (!isNaN(d.getTime())) {
-      return d;
-    }
+    if (!isNaN(d.getTime())) return d;
   }
 
-  // Default: last day of the current month
   const today = new Date();
-  const lastDay = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  return lastDay;
+  let y = today.getFullYear();
+  let m = today.getMonth(); // 0-11
+
+  // If today is past the 5th → next month
+  if (today.getDate() > 5) {
+    m += 1;
+    if (m > 11) { m = 0; y += 1; }
+  }
+
+  return new Date(y, m, 5);
 }
 
-/**
- * Helper: first + last day of a month from a given pay_date.
- */
+/* -----------------------------------------
+   2) GET FIRST + LAST DAY OF PAY MONTH
+   ----------------------------------------- */
 function getMonthBounds(payDate) {
-  const year = payDate.getFullYear();
-  const month = payDate.getMonth(); // 0-based
+  const y = payDate.getFullYear();
+  const m = payDate.getMonth();
 
-  const start = new Date(year, month, 1);
-  const end   = new Date(year, month + 1, 0); // last day of month
-
-  return { start, end };
+  return {
+    start: new Date(y, m, 1),
+    end:   new Date(y, m + 1, 0)
+  };
 }
 
 export async function handler(event) {
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: 'Use POST and optionally ?pay_date=YYYY-MM-DD',
-    };
+    return { statusCode: 405, body: 'Use POST' };
   }
 
   try {
+    /* -----------------------------------------
+       CALCULATE PAY DATE + PAY MONTH
+       ----------------------------------------- */
     const payDate = getPayDate(event);
-    const payDateStr = payDate.toISOString().slice(0, 10); // YYYY-MM-DD
-    const payMonthKey = payDateStr.slice(0, 7);            // YYYY-MM
+    const payDateStr = payDate.toISOString().slice(0,10);
+    const payMonthKey = payDateStr.slice(0,7);
 
     const { start: monthStart, end: monthEnd } = getMonthBounds(payDate);
     const monthStartIso = monthStart.toISOString();
     const monthEndIso   = monthEnd.toISOString();
 
-    console.log('[runMonthlyPayThru] pay_date =', payDateStr, 'pay_month =', payMonthKey);
+    /* -----------------------------------------
+       3) 28-DAY RULE
+       ----------------------------------------- */
+    const cutoff = new Date(payDate);
+    cutoff.setDate(cutoff.getDate() - 28);
+    const cutoffIso = cutoff.toISOString();
 
-    // -------------------------------------------------
-    // 1) Find any pay-thru rows already created for this month,
-    //    so we don’t double-pay the same policy/agent twice.
-    // -------------------------------------------------
-    const { data: existingPayThru, error: existingErr } = await supabase
+    /* -----------------------------------------
+       4) PREVENT DOUBLE-PAY FOR THIS MONTH
+       ----------------------------------------- */
+    const { data: existingPay, error: exErr } = await supabase
       .from('commission_ledger')
-      .select('policy_id, agent_id, meta')
+      .select('policy_id, agent_id')
       .eq('entry_type', 'paythru')
       .eq('meta->>pay_month', payMonthKey);
 
-    if (existingErr) {
-      console.error('[runMonthlyPayThru] Error loading existing paythru rows:', existingErr);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to load existing paythru rows', details: existingErr }),
-      };
+    if (exErr) {
+      console.error(exErr);
+      return { statusCode: 500, body: JSON.stringify({ error: 'Failed loading existing' }) };
     }
 
     const alreadyPaid = new Set(
-      (existingPayThru || []).map(r => `${r.policy_id}:${r.agent_id}`)
+      (existingPay || []).map(r => `${r.policy_id}:${r.agent_id}`)
     );
 
-    // -------------------------------------------------
-    // 2) Load candidate policies for trails.
-    //    For now: any policy with premium_annual > 0 and agent_id set.
-    //    We also enforce created_at <= end-of-month so we don’t pay trails
-    //    on future policies.
-    // -------------------------------------------------
-    const { data: policies, error: polErr } = await supabase
-      .from('policies')
-      .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, created_at')
-      .lte('created_at', monthEndIso);
+    /* -----------------------------------------
+       5) LOAD POLICY COMMISSIONS
+          (we never do trails from raw policies)
+       ----------------------------------------- */
+    const { data: pcRows, error: pcErr } = await supabase
+      .from('policy_commissions')
+      .select('id, policy_id, agent_id, ap, base_commission_rate, advance_rate, created_at')
+      .lte('created_at', cutoffIso);
 
-    if (polErr) {
-      console.error('[runMonthlyPayThru] Error loading policies:', polErr);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to load policies', details: polErr }),
-      };
+    if (pcErr) {
+      console.error(pcErr);
+      return { statusCode: 500, body: JSON.stringify({ error: 'Failed loading policy_commissions' }) };
     }
 
-    if (!policies || policies.length === 0) {
+    if (!pcRows.length) {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: 'No policies eligible for monthly pay-thru this run.',
-          pay_date: payDateStr,
-          pay_month: payMonthKey,
-        }),
+          message: 'No policy_commissions older than 28 days',
+          pay_date: payDateStr
+        })
       };
     }
 
-    // -------------------------------------------------
-    // 3) Small in-memory caches so we don’t spam Supabase
-    //    for the same agent / schedule repeatedly
-    // -------------------------------------------------
-    const agentCache = new Map();    // agent_id -> { id, full_name, level, recruiter_id }
-    const schedCache = new Map();    // key = carrier|product_line|policy_type|level -> { base_commission_rate, advance_rate }
+    /* -----------------------------------------
+       6) ENFORCE 12-MONTH CAP PER POLICY
+       ----------------------------------------- */
+    async function countPayThru(policy_id) {
+      const { count, error } = await supabase
+        .from('commission_ledger')
+        .select('id', { count: 'exact', head: true })
+        .eq('entry_type', 'paythru')
+        .eq('policy_id', policy_id);
 
-    async function getAgent(agentId) {
-      if (!agentId) return null;
-      if (agentCache.has(agentId)) return agentCache.get(agentId);
-
-      const { data, error } = await supabase
-        .from('agents')
-        .select('id, full_name, level, recruiter_id')
-        .eq('id', agentId)
-        .single();
-
-      if (error || !data) {
-        console.warn('[runMonthlyPayThru] Missing agent record for id:', agentId, error);
-        agentCache.set(agentId, null);
-        return null;
-      }
-      agentCache.set(agentId, data);
-      return data;
+      if (error) return 999; // treat as full to avoid mistakes
+      return count ?? 0;
     }
 
-    async function getSchedule(policy, level) {
-      const key = [
-        policy.carrier_name || '',
-        policy.product_line || '',
-        policy.policy_type || '',
-        level || 'agent',
-      ].join('|');
-
-      if (schedCache.has(key)) return schedCache.get(key);
-
-      const { data, error } = await supabase
-        .from('commission_schedules')
-        .select('base_commission_rate, advance_rate')
-        .eq('carrier_name', policy.carrier_name)
-        .eq('product_line', policy.product_line)
-        .eq('policy_type', policy.policy_type)
-        .eq('agent_level', level || 'agent')
-        .single();
-
-      if (error || !data) {
-        console.warn('[runMonthlyPayThru] No schedule for', key, error);
-        schedCache.set(key, null);
-        return null;
-      }
-
-      schedCache.set(key, data);
-      return data;
-    }
-
-    // -------------------------------------------------
-    // 4) Build pay-thru ledger rows:
-    //    - Walk the agent->recruiter chain for each policy
-    //    - Use your formula: monthly trail = (AP * effective_rate * (1 - advance_rate)) / 12
-    //    - effective_rate is:
-    //         writing: baseRateWriting
-    //         direct upline: baseRateUpline - baseRateWriting
-    //         next upline:   baseRateAreaManager - baseRateUpline
-    //         ...
-    // -------------------------------------------------
+    /* -----------------------------------------
+       7) BUILD PAYTHRU ROWS
+       ----------------------------------------- */
     const ledgerRows = [];
-    let totalGross = 0;
+    const totals = {}; // agent totals
 
-    for (const policy of policies) {
-      const ap = Number(policy.premium_annual || 0);
-      if (!policy.agent_id || ap <= 0) continue;
+    for (const pc of pcRows) {
+      const paidCount = await countPayThru(pc.policy_id);
+      if (paidCount >= 12) continue;   // STOP after 12 payments
 
-      // 4a) Build the chain: writing agent → recruiter → recruiter → ...
-      const chain = [];
-      let current = await getAgent(policy.agent_id);
-      const visitedAgents = new Set();
-      let globalAdvanceRate = null; // we’ll take it from the writing agent schedule
+      const ap = Number(pc.ap || 0);
+      const base = Number(pc.base_commission_rate || 0);
+      const adv = Number(pc.advance_rate || 0);
 
-      // Limit to, say, 10 levels so a bad loop doesn’t lock everything
-      for (let depth = 0; depth < 10 && current; depth++) {
-        if (visitedAgents.has(current.id)) break;
-        visitedAgents.add(current.id);
+      if (ap <= 0 || base <= 0) continue;
 
-        const level = current.level || 'agent';
-        const schedule = await getSchedule(policy, level);
-        if (!schedule) break; // no schedule = can’t calc this level, stop chain
+      /* -----------------------------------------
+         YOUR FORMULA:
+         ((1 - adv%) * (ap * base%)) / 12
+         ----------------------------------------- */
+      const annualResidual = ap * base * (1 - adv);
+      const monthlyResidual = Math.round((annualResidual / 12) * 100) / 100;
+      if (monthlyResidual <= 0) continue;
 
-        const baseRate = Number(schedule.base_commission_rate) || 0;
-        const advRate  = Number(schedule.advance_rate) || 0;
+      const key = `${pc.policy_id}:${pc.agent_id}`;
+      if (alreadyPaid.has(key)) continue;
 
-        if (globalAdvanceRate == null) {
-          // Use the writing agent’s advance_rate as the overall advance %.
-          globalAdvanceRate = advRate;
+      ledgerRows.push({
+        agent_id: pc.agent_id,
+        policy_id: pc.policy_id,
+        amount: monthlyResidual,
+        currency: 'USD',
+        entry_type: 'paythru',
+        description: `Monthly trail for ${payMonthKey}`,
+        period_start: monthStartIso,
+        period_end: monthEndIso,
+        is_settled: true,
+        payout_batch_id: null,
+        meta: {
+          pay_month: payMonthKey,
+          ap,
+          base_commission_rate: base,
+          advance_rate: adv
         }
+      });
 
-        chain.push({
-          agent: current,
-          baseRate
-        });
-
-        if (!current.recruiter_id) break;
-        current = await getAgent(current.recruiter_id);
-      }
-
-      if (!chain.length || globalAdvanceRate == null) continue;
-
-      // 4b) For each level, compute effective_rate and monthly residual
-      let prevBaseRate = 0;
-
-      for (const node of chain) {
-        const effectiveRate = node.baseRate - prevBaseRate;
-        prevBaseRate = node.baseRate;
-
-        if (effectiveRate <= 0) continue;
-
-        // annual residual for this level
-        const annualResidual = ap * effectiveRate * (1 - globalAdvanceRate);
-        const monthlyResidualRaw = annualResidual / 12;
-        const monthlyResidual = Math.round(monthlyResidualRaw * 100) / 100;
-
-        if (monthlyResidual <= 0) continue;
-
-        const key = `${policy.id}:${node.agent.id}`;
-        if (alreadyPaid.has(key)) {
-          // We’ve already created a pay-thru for this policy/agent for this month
-          continue;
-        }
-
-        totalGross += monthlyResidual;
-
-        ledgerRows.push({
-          agent_id: node.agent.id,
-          policy_id: policy.id,
-          amount: monthlyResidual,
-          currency: 'USD',
-          entry_type: 'paythru',
-          description: `Monthly trail on ${policy.carrier_name} ${policy.product_line} (${policy.policy_type}) for ${payMonthKey}`,
-          period_start: monthStartIso,
-          period_end: monthEndIso,
-          is_settled: true,         // we consider this run as PAYING them
-          payout_batch_id: null,    // we’ll fill after we create batch
-          meta: {
-            pay_month: payMonthKey,
-            carrier_name: policy.carrier_name,
-            product_line: policy.product_line,
-            policy_type: policy.policy_type,
-            ap,
-            base_rate_portion: effectiveRate
-          }
-        });
-      }
+      totals[pc.agent_id] = (totals[pc.agent_id] || 0) + monthlyResidual;
     }
 
     if (!ledgerRows.length) {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: 'No new monthly trails to pay for this run (nothing eligible or already paid for this month).',
-          pay_date: payDateStr,
-          pay_month: payMonthKey,
-        }),
+          message: 'Nothing new to pay this month',
+          pay_date: payDateStr
+        })
       };
     }
 
-    // -------------------------------------------------
-    // 5) Aggregate per agent (so you can see what each person is getting)
-    // -------------------------------------------------
-    const agentTotals = {};
-    for (const row of ledgerRows) {
-      const aid = row.agent_id;
-      if (!agentTotals[aid]) {
-        agentTotals[aid] = 0;
-      }
-      agentTotals[aid] += row.amount;
-    }
+    /* -----------------------------------------
+       8) CREATE payout_batches ROW
+       ----------------------------------------- */
+    const totalGross = Object.values(totals)
+      .reduce((s,v)=>s+v,0);
 
-    const agentPayouts = Object.entries(agentTotals).map(([agent_id, amt]) => ({
-      agent_id,
-      monthly_trail: Number(amt.toFixed(2))
-    }));
-
-    totalGross = Number(totalGross.toFixed(2));
-
-    // -------------------------------------------------
-    // 6) Create a payout_batches row for this monthly pay-thru
-    // -------------------------------------------------
     const { data: batchRows, error: batchErr } = await supabase
       .from('payout_batches')
       .insert({
         pay_date: payDateStr,
         batch_type: 'paythru',
-        status: 'pending',          // you can flip to 'sent' or 'paid' after Stripe payout
+        status: 'pending',
         total_gross: totalGross,
         total_debits: 0,
         total_net: totalGross,
-        note: `Monthly pay-thru run for ${payMonthKey}`,
+        note: `Monthly pay-thru ${payMonthKey}`
       })
       .select('*');
 
     if (batchErr) {
-      console.error('[runMonthlyPayThru] Error inserting payout batch:', batchErr);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to create payout batch', details: batchErr }),
-      };
+      console.error(batchErr);
+      return { statusCode: 500, body: JSON.stringify({ error: 'Failed creating batch' }) };
     }
 
-    const batch = batchRows && batchRows[0];
+    const batch = batchRows[0];
 
-    // -------------------------------------------------
-    // 7) Insert pay-thru ledger rows, tying them to the batch
-    // -------------------------------------------------
+    /* -----------------------------------------
+       9) INSERT LEDGER ROWS WITH BATCH ID
+       ----------------------------------------- */
     const rowsToInsert = ledgerRows.map(r => ({
       ...r,
       payout_batch_id: batch.id
@@ -336,34 +227,25 @@ export async function handler(event) {
       .select('*');
 
     if (insErr) {
-      console.error('[runMonthlyPayThru] Error inserting paythru ledger rows:', insErr);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to insert paythru ledger rows', details: insErr }),
-      };
+      console.error(insErr);
+      return { statusCode: 500, body: JSON.stringify({ error: 'Failed inserting ledger' }) };
     }
 
     return {
       statusCode: 200,
-      body: JSON.stringify(
-        {
-          message: 'Monthly pay-thru run completed.',
-          pay_date: payDateStr,
-          pay_month: payMonthKey,
-          batch_id: batch.id,
-          agent_payouts: agentPayouts,
-          ledger_row_count: inserted.length
-        },
-        null,
-        2
-      ),
-      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: 'Monthly pay-thru completed.',
+        pay_date: payDateStr,
+        pay_month: payMonthKey,
+        batch_id: batch.id,
+        agent_payouts: totals,
+        ledger_row_count: inserted.length
+      }, null, 2),
+      headers: { 'Content-Type': 'application/json' }
     };
+
   } catch (err) {
-    console.error('[runMonthlyPayThru] Unexpected error:', err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Unexpected error', details: String(err) }),
-    };
+    console.error(err);
+    return { statusCode: 500, body: JSON.stringify({ error: 'Unexpected error', details: err.toString() }) };
   }
 }
