@@ -114,11 +114,11 @@ export async function handler(event) {
 
     // 5) Create a payout batch row
     const { data: batchRows, error: batchErr } = await supabase
-      .from('commission_payout_batches')
+      .from('payout_batches')
       .insert({
         pay_date: payDateStr,
         batch_type: 'advance',
-        notes: 'Weekly advance run',
+        note: 'Weekly advance run',
         meta: {
           cutoff_date: cutoffIso,
           agent_count: payoutSummary.length,
