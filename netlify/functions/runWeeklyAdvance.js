@@ -113,17 +113,20 @@ export async function handler(event) {
     });
 
     // 5) Create a payout batch row
+    const totalGross = payoutSummary.reduce((sum, p) => sum + p.gross_payout, 0);
+    const totalNet   = payoutSummary.reduce((sum, p) => sum + p.net_payout, 0);
+    const totalDebits = 0; // we’ll use this later when we add lead/chargeback repayment logic
+    
     const { data: batchRows, error: batchErr } = await supabase
       .from('payout_batches')
       .insert({
         pay_date: payDateStr,
         batch_type: 'advance',
-        note: 'Weekly advance run',
-        meta: {
-          cutoff_date: cutoffIso,
-          agent_count: payoutSummary.length,
-          ledger_row_count: ledgerRows.length,
-        },
+        status: 'pending',
+        total_gross: Number(totalGross.toFixed(2)),
+        total_debits: Number(totalDebits.toFixed(2)),
+        total_net: Number(totalNet.toFixed(2)),
+        note: `Weekly advance run. Cutoff: ${cutoffIso}`
       })
       .select('*');
 
