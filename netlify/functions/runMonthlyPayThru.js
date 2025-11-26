@@ -52,11 +52,11 @@ export async function handler(event) {
   }
 
   try {
-    const payDate    = getPayDate(event);
-    const payDateStr = payDate.toISOString().slice(0, 10); // YYYY-MM-DD
-    const payMonthKey = payDateStr.slice(0, 7);            // YYYY-MM
+    const payDate     = getPayDate(event);
+    const payDateStr  = payDate.toISOString().slice(0, 10); // YYYY-MM-DD
+    const payMonthKey = payDateStr.slice(0, 7);             // YYYY-MM
 
-    // Month bounds (not strictly required for math, but nice for metadata)
+    // Month bounds (for metadata)
     const { start: monthStart, end: monthEnd } = getMonthBounds(payDate);
     const monthStartIso = monthStart.toISOString();
     const monthEndIso   = monthEnd.toISOString();
@@ -66,7 +66,14 @@ export async function handler(event) {
     cutoff.setDate(cutoff.getDate() - 28);
     const cutoffIso = cutoff.toISOString();
 
-    console.log('[runMonthlyPayThru] pay_date =', payDateStr, 'pay_month =', payMonthKey, 'cutoff =', cutoffIso);
+    console.log(
+      '[runMonthlyPayThru] pay_date =',
+      payDateStr,
+      'pay_month =',
+      payMonthKey,
+      'cutoff =',
+      cutoffIso
+    );
 
     // -------------------------------------------------
     // 1) Already-paid this month (so we don't double-pay)
@@ -92,26 +99,26 @@ export async function handler(event) {
     // -------------------------------------------------
     // 2) Count how many pay-thru payments already exist
     //    per (policy_id, agent_id) to enforce 12-month cap
+    //    (NO .group() – we aggregate in JS)
     // -------------------------------------------------
-    const { data: payThruCounts, error: countErr } = await supabase
+    const { data: payThruPrior, error: priorErr } = await supabase
       .from('commission_ledger')
-      .select('policy_id, agent_id, count(*)')
-      .eq('entry_type', 'paythru')
-      .group('policy_id, agent_id');
+      .select('policy_id, agent_id')
+      .eq('entry_type', 'paythru');
 
-    if (countErr) {
-      console.error('[runMonthlyPayThru] Error loading paythru counts:', countErr);
+    if (priorErr) {
+      console.error('[runMonthlyPayThru] Error loading prior paythru rows:', priorErr);
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to load paythru counts', details: countErr }),
+        body: JSON.stringify({ error: 'Failed to load paythru counts', details: priorErr }),
       };
     }
 
     const payThruCountMap = new Map();
-    (payThruCounts || []).forEach(row => {
+    (payThruPrior || []).forEach(row => {
       const key = `${row.policy_id}:${row.agent_id}`;
-      // supabase returns count as string sometimes
-      payThruCountMap.set(key, Number(row.count) || 0);
+      const prev = payThruCountMap.get(key) || 0;
+      payThruCountMap.set(key, prev + 1);
     });
 
     // -------------------------------------------------
@@ -197,18 +204,6 @@ export async function handler(event) {
 
     // -------------------------------------------------
     // 5) Build NEW pay-thru ledger rows (multi-level)
-    //    For each policy:
-    //      - build chain: writing → recruiter → recruiter → ...
-    //      - get base_rate for each level
-    //      - global advance_rate = writing agent's advance_rate
-    //      - effective_rate for each level:
-    //            writing: baseRateWriting
-    //            direct upline: baseRateUpline - baseRateWriting
-    //            next upline:   baseRateAreaMgr - baseRateUpline
-    //      - monthly trail = (AP * effective_rate * (1 - advance_rate)) / 12
-    //      - enforce:
-    //           * not already paid this month
-    //           * total paythru rows < 12 for that (policy, agent)
     // -------------------------------------------------
     const newLedgerRows = [];
     let totalNewGross = 0;
@@ -223,12 +218,11 @@ export async function handler(event) {
       const visitedAgents = new Set();
       let globalAdvanceRate = null; // from writing agent
 
-      // Limit depth to avoid crazy loops
       for (let depth = 0; depth < 10 && current; depth++) {
         if (visitedAgents.has(current.id)) break;
         visitedAgents.add(current.id);
 
-        const level = current.level || 'agent';
+        const level    = current.level || 'agent';
         const schedule = await getSchedule(policy, level);
         if (!schedule) break;
 
@@ -260,7 +254,6 @@ export async function handler(event) {
 
         if (effectiveRate <= 0) continue;
 
-        // Check 12-month cap & "already paid this month"
         const policyAgentKey = `${policy.id}:${node.agent.id}`;
 
         // Already paid this month?
@@ -268,21 +261,20 @@ export async function handler(event) {
           continue;
         }
 
-        // Existing paythru count (all months)
+        // Existing paythru count (all months) – enforce 12-month cap
         const priorCount = payThruCountMap.get(policyAgentKey) || 0;
         if (priorCount >= 12) {
           continue;
         }
 
-        // Compute monthly residual using your formula:
-        //   monthly trail = (AP * effective_rate * (1 - advance_rate)) / 12
-        const annualResidual = ap * effectiveRate * (1 - globalAdvanceRate);
-        const monthlyResidualRaw = annualResidual / 12;
-        const monthlyResidual = Math.round(monthlyResidualRaw * 100) / 100;
+        // monthly trail = (AP * effective_rate * (1 - advance_rate)) / 12
+        const annualResidual      = ap * effectiveRate * (1 - globalAdvanceRate);
+        const monthlyResidualRaw  = annualResidual / 12;
+        const monthlyResidual     = Math.round(monthlyResidualRaw * 100) / 100;
 
         if (monthlyResidual <= 0) continue;
 
-        // We're about to add one more month for this policy/agent
+        // We’re about to add one more month for this policy/agent
         payThruCountMap.set(policyAgentKey, priorCount + 1);
 
         totalNewGross += monthlyResidual;
@@ -296,8 +288,8 @@ export async function handler(event) {
           description: `Monthly trail on ${policy.carrier_name} ${policy.product_line} (${policy.policy_type}) for ${payMonthKey}`,
           period_start: monthStartIso,
           period_end: monthEndIso,
-          is_settled: false,         // <-- NEW rows start as *unpaid* accrual
-          payout_batch_id: null,     // will be filled when threshold is met
+          is_settled: false,      // new rows start as unpaid accrual
+          payout_batch_id: null,  // will be filled when threshold is met
           meta: {
             pay_month: payMonthKey,
             carrier_name: policy.carrier_name,
@@ -310,12 +302,7 @@ export async function handler(event) {
       }
     }
 
-    // If we didn't generate any new residuals, we still might have prior accruals
-    // to check against the $100 threshold. So no early return here.
-
-    // -------------------------------------------------
     // 6) Insert NEW accrual rows (if any)
-    // -------------------------------------------------
     if (newLedgerRows.length > 0) {
       const { error: insErr } = await supabase
         .from('commission_ledger')
@@ -332,19 +319,6 @@ export async function handler(event) {
 
     // -------------------------------------------------
     // 7) $100 THRESHOLD LOGIC
-    //
-    // At this point, all monthly trails (new + older months that never
-    // cleared $100) sit in commission_ledger as:
-    //   entry_type = 'paythru'
-    //   is_settled = false
-    //
-    // We:
-    //   - load all unsettled paythru rows
-    //   - group by agent
-    //   - if an agent's total >= 100, we pay them NOW:
-    //       * create a payout_batches row
-    //       * mark their rows is_settled = true, set payout_batch_id
-    //   - if < 100, we leave rows as-is (they roll forward to future months)
     // -------------------------------------------------
     const { data: unpaidTrails, error: unpaidErr } = await supabase
       .from('commission_ledger')
@@ -373,7 +347,6 @@ export async function handler(event) {
       };
     }
 
-    // Group unpaid trails per agent
     const agentTotals = {};   // agent_id -> total amount
     const agentRowIds = {};   // agent_id -> [rowIds]
 
@@ -388,23 +361,22 @@ export async function handler(event) {
       agentRowIds[aid].push(row.id);
     }
 
-    // Determine which agents meet the $100 minimum
     const threshold = 100;
     const payableAgents = [];
     let batchTotalGross = 0;
 
     for (const [aid, sum] of Object.entries(agentTotals)) {
       if (sum >= threshold) {
+        const rounded = Number(sum.toFixed(2));
         payableAgents.push({
           agent_id: aid,
-          amount: Number(sum.toFixed(2))
+          monthly_trail: rounded,
         });
-        batchTotalGross += sum;
+        batchTotalGross += rounded;
       }
     }
 
     if (payableAgents.length === 0) {
-      // No one crossed $100 yet; everything stays as accrual
       return {
         statusCode: 200,
         body: JSON.stringify({
@@ -419,15 +391,13 @@ export async function handler(event) {
 
     batchTotalGross = Number(batchTotalGross.toFixed(2));
 
-    // -------------------------------------------------
     // 8) Create a payout_batches row
-    // -------------------------------------------------
     const { data: batchRows, error: batchErr } = await supabase
       .from('payout_batches')
       .insert({
         pay_date: payDateStr,
         batch_type: 'paythru',
-        status: 'pending',          // flip to 'paid' after Stripe etc.
+        status: 'pending',
         total_gross: batchTotalGross,
         total_debits: 0,
         total_net: batchTotalGross,
@@ -452,9 +422,7 @@ export async function handler(event) {
       rowsForAgent.forEach(id => idsToSettle.push(id));
     }
 
-    // -------------------------------------------------
     // 9) Mark those pay-thru rows as settled + attach batch
-    // -------------------------------------------------
     const { error: updErr } = await supabase
       .from('commission_ledger')
       .update({
