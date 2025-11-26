@@ -32,6 +32,13 @@ function getPayDate(event) {
   return nextFriday;
 }
 
+// For now: single-stage 30% repayment cap.
+// Later we can turn this into your 30/40/50 system using totalDebt.
+function getRepaymentRate(totalDebt) {
+  // totalDebt is available if we want tiers later
+  return 0.30; // 30% of this week’s gross max
+}
+
 export async function handler(event) {
   if (event.httpMethod !== 'POST') {
     return {
@@ -41,8 +48,8 @@ export async function handler(event) {
   }
 
   try {
-    const payDate = getPayDate(event);              // JS Date
-    const payDateStr = payDate.toISOString().slice(0, 10); // YYYY-MM-DD
+    const payDate    = getPayDate(event);                    // JS Date
+    const payDateStr = payDate.toISOString().slice(0, 10);   // YYYY-MM-DD
 
     // 1) cutoff = pay_date - 14 days
     const cutoff = new Date(payDate);
@@ -51,7 +58,7 @@ export async function handler(event) {
 
     console.log('[runWeeklyAdvance] pay_date =', payDateStr, 'cutoff =', cutoffIso);
 
-    // 2) Find all eligible ledger rows
+    // 2) Find all eligible ledger rows (advances + overrides not yet settled)
     const { data: ledgerRows, error: ledgerErr } = await supabase
       .from('commission_ledger')
       .select('id, agent_id, amount, entry_type, created_at, is_settled')
@@ -98,38 +105,108 @@ export async function handler(event) {
       agentTotals[aid].gross += amt;
     }
 
-    // 4) Option B: no automatic debt/chargeback withholding yet
-    const payoutSummary = Object.entries(agentTotals).map(([agent_id, t]) => {
-      const gross = t.gross;
-      const net = gross; // TODO later: subtract lead & chargeback repayments
-
+    const agentIds = Object.keys(agentTotals);
+    if (agentIds.length === 0) {
       return {
+        statusCode: 200,
+        body: JSON.stringify({
+          message: 'No agents with eligible rows for this run (after grouping).',
+          pay_date: payDateStr,
+          cutoff_date: cutoffIso,
+        }),
+      };
+    }
+
+    // 4) Load each agent's current debt (lead + chargeback)
+    const { data: debtRows, error: debtErr } = await supabase
+      .from('agent_total_debt')
+      .select('agent_id, lead_debt_total, chargeback_total, total_debt')
+      .in('agent_id', agentIds);
+
+    if (debtErr) {
+      console.error('[runWeeklyAdvance] Error loading agent_total_debt:', debtErr);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Failed to load agent_total_debt', details: debtErr }),
+      };
+    }
+
+    const debtMap = new Map();
+    (debtRows || []).forEach(r => {
+      debtMap.set(r.agent_id, {
+        lead: Number(r.lead_debt_total || 0),
+        chargeback: Number(r.chargeback_total || 0),
+        total: Number(r.total_debt || 0),
+      });
+    });
+
+    // 5) Build payout summary with capped repayment (30% max, but never more than outstanding)
+    const payoutSummary = [];
+    let totalGross  = 0;
+    let totalDebits = 0;
+
+    for (const [agent_id, t] of Object.entries(agentTotals)) {
+      const gross = Number(t.gross.toFixed(2));
+      totalGross += gross;
+
+      const debtInfo = debtMap.get(agent_id) || { lead: 0, chargeback: 0, total: 0 };
+      const totalDebt = debtInfo.total;
+
+      let leadRepay = 0;
+      let chargebackRepay = 0;
+      let net = gross;
+
+      if (gross > 0 && totalDebt > 0) {
+        const rate       = getRepaymentRate(totalDebt);
+        const maxRepay   = Number((gross * rate).toFixed(2));   // 30% of this check
+        const toRepay    = Math.min(maxRepay, totalDebt);       // but never more than they owe
+
+        // PRIORITY: chargebacks first, then leads
+        let remaining = toRepay;
+
+        const chargebackOutstanding = debtInfo.chargeback;
+        if (chargebackOutstanding > 0 && remaining > 0) {
+          chargebackRepay = Math.min(remaining, chargebackOutstanding);
+          remaining -= chargebackRepay;
+        }
+
+        const leadOutstanding = debtInfo.lead;
+        if (leadOutstanding > 0 && remaining > 0) {
+          leadRepay = Math.min(remaining, leadOutstanding);
+          remaining -= leadRepay;
+        }
+
+        const actualRepay = chargebackRepay + leadRepay;
+        net = Number((gross - actualRepay).toFixed(2));
+        totalDebits += actualRepay;
+      }
+
+      payoutSummary.push({
         agent_id,
         advance_gross: Number(t.advance.toFixed(2)),
         override_gross: Number(t.override.toFixed(2)),
-        gross_payout: Number(gross.toFixed(2)),
-        net_payout: Number(net.toFixed(2)),
-        lead_repayment: 0,
-        chargeback_repayment: 0,
-      };
-    });
+        gross_payout: gross,
+        net_payout: net,
+        lead_repayment: Number(leadRepay.toFixed(2)),
+        chargeback_repayment: Number(chargebackRepay.toFixed(2)),
+      });
+    }
 
-    // Calculate batch totals
-    const totalGross = payoutSummary.reduce((sum, p) => sum + p.gross_payout, 0);
-    const totalDebits = 0; // once we withhold debts this will be >0
-    const totalNet = totalGross - totalDebits;
+    totalGross  = Number(totalGross.toFixed(2));
+    totalDebits = Number(totalDebits.toFixed(2));
+    const totalNet = Number((totalGross - totalDebits).toFixed(2));
 
-    // 5) Create a payout batch row in payout_batches
+    // 6) Create a payout batch row in payout_batches
     const { data: batchRows, error: batchErr } = await supabase
       .from('payout_batches')
       .insert({
         pay_date: payDateStr,
         batch_type: 'advance',
         status: 'pending',
-        total_gross: Number(totalGross.toFixed(2)),
-        total_debits: Number(totalDebits.toFixed(2)),
-        total_net: Number(totalNet.toFixed(2)),
-        note: 'Weekly advance run',
+        total_gross: totalGross,
+        total_debits: totalDebits,
+        total_net: totalNet,
+        note: 'Weekly advance run with 30% debt withholding (capped at outstanding)',
       })
       .select('*');
 
@@ -143,7 +220,7 @@ export async function handler(event) {
 
     const batch = batchRows && batchRows[0];
 
-    // 6) Mark all those ledger rows as settled + attach batch_id
+    // 7) Mark all those ledger rows as settled + attach batch_id
     const ledgerIds = ledgerRows.map(r => r.id);
 
     const { error: updErr } = await supabase
@@ -164,15 +241,18 @@ export async function handler(event) {
       };
     }
 
-    // 7) Return a clean summary
+    // 8) Return a clean summary
     return {
       statusCode: 200,
       body: JSON.stringify(
         {
-          message: 'Weekly advance run completed.',
+          message: 'Weekly advance run completed (with capped debt withholding).',
           pay_date: payDateStr,
           cutoff_date: cutoffIso,
           batch_id: batch.id,
+          total_gross: totalGross,
+          total_debits: totalDebits,
+          total_net: totalNet,
           agent_payouts: payoutSummary,
           ledger_row_count: ledgerRows.length,
         },
