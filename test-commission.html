@@ -47,6 +47,21 @@
   <button id="run-paythru-btn">Run Monthly Pay-Thru</button>
 
   <pre id="paythru-output" style="white-space: pre-wrap; background:#111; color:#0f0; padding:10px; margin-top:20px; min-height:120px;"></pre>
+  <button id="send-batch-btn">Preview Stripe Payouts</button>
+<input id="batch-id" placeholder="Paste payout_batches.id">
+
+<script>
+document.getElementById('send-batch-btn').addEventListener('click', async () => {
+  const batchId = document.getElementById('batch-id').value.trim();
+  if (!batchId) return alert('Paste a batch id');
+  const res = await fetch('/.netlify/functions/sendPayoutBatch', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ batch_id: batchId })
+  });
+  console.log(await res.text());
+});
+</script>
 
 
 <script>
