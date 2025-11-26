@@ -72,7 +72,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadAndRenderPolicies();
 
   // ----- 7. Still use placeholder data for payouts, team, files (for now) -----
-  renderPlaceholderPayouts();
+  await loadAndRenderPayouts();
   renderPlaceholderTeam();
   renderPlaceholderFiles();
 });
@@ -501,7 +501,74 @@ async function loadAndRenderPolicies() {
     renderPlaceholderPolicies();
   }
 }
+/* ===============================
+   REAL Payouts (advance + pay-thru)
+   =============================== */
 
+async function loadAndRenderPayouts() {
+  if (!me) return;
+
+  const tbody = document.querySelector('#payouts-table tbody');
+  if (!tbody) return;
+
+  try {
+    const { data, error } = await supabase
+      .from('agent_payouts_view')
+      .select('*')
+      .eq('agent_id', me.id)
+      .order('pay_date', { ascending: false });
+
+    if (error) {
+      console.error('Error loading agent_payouts_view:', error);
+      renderPlaceholderPayouts();
+      return;
+    }
+
+    if (!data || data.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="6">No payouts found for you yet.</td></tr>`;
+      return;
+    }
+
+    tbody.innerHTML = data.map(row => {
+      const date = row.pay_date
+        ? new Date(row.pay_date).toLocaleDateString()
+        : '—';
+
+      const typeLabel =
+        row.batch_type === 'advance'
+          ? 'Advance'
+          : row.batch_type === 'paythru'
+          ? 'Pay-Thru'
+          : (row.batch_type || 'Other');
+
+      const periodLabel =
+        row.batch_type === 'advance'
+          ? 'Weekly'
+          : row.batch_type === 'paythru'
+          ? 'Monthly'
+          : '';
+
+      const amount = Number(row.net_amount || row.gross_amount || 0);
+      const source = 'FVG';
+
+      const details = `Batch #${String(row.payout_batch_id).slice(0, 8)}… (status: ${row.status})`;
+
+      return `
+        <tr>
+          <td>${date}</td>
+          <td>${typeLabel}</td>
+          <td>${periodLabel}</td>
+          <td>${formatMoney(amount)}</td>
+          <td>${escapeHtml(source)}</td>
+          <td>${escapeHtml(details)}</td>
+        </tr>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('Unexpected error in loadAndRenderPayouts:', err);
+    renderPlaceholderPayouts();
+  }
+}
 /* ===============================
    Placeholder data generators
    (still used for payouts, team, files, and fallback)
