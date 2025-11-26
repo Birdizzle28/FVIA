@@ -261,6 +261,93 @@ export async function handler(event) {
       ),
       headers: { 'Content-Type': 'application/json' },
     };
+    // NEW — record actual repayment events into DB
+    async function applyRepayments(agent_id, chargebackRepay, leadRepay, batchId) {
+    
+      /* ------------------------------
+         1. Apply chargeback repayments
+         ------------------------------ */
+      if (chargebackRepay > 0) {
+        let remaining = chargebackRepay;
+    
+        // Load open chargebacks oldest → newest
+        const { data: cbRows } = await supabase
+          .from('policy_chargebacks')
+          .select('id, amount, status')
+          .eq('agent_id', agent_id)
+          .in('status', ['open', 'in_repayment'])
+          .order('created_at', { ascending: true });
+    
+        for (const cb of cbRows || []) {
+          if (remaining <= 0) break;
+    
+          const outstanding = Number(cb.amount);
+    
+          const pay = Math.min(outstanding, remaining);
+          remaining -= pay;
+    
+          // insert a payment row
+          await supabase.from('chargeback_payments').insert({
+            agent_id,
+            chargeback_id: cb.id,
+            amount: pay,
+            run_id: batchId
+          });
+    
+          // update chargeback status
+          if (pay === outstanding) {
+            await supabase.from('policy_chargebacks')
+              .update({ status: 'paid' })
+              .eq('id', cb.id);
+          } else {
+            await supabase.from('policy_chargebacks')
+              .update({ status: 'in_repayment', amount: outstanding - pay })
+              .eq('id', cb.id);
+          }
+        }
+      }
+    
+      /* ------------------------------
+         2. Apply lead debt repayments
+         ------------------------------ */
+      if (leadRepay > 0) {
+        let remaining = leadRepay;
+    
+        const { data: ldRows } = await supabase
+          .from('lead_debts')
+          .select('id, amount, status')
+          .eq('agent_id', agent_id)
+          .in('status', ['open', 'in_repayment'])
+          .order('created_at', { ascending: true });
+    
+        for (const ld of ldRows || []) {
+          if (remaining <= 0) break;
+    
+          const outstanding = Number(ld.amount);
+          const pay = Math.min(outstanding, remaining);
+          remaining -= pay;
+    
+          // insert a payment row
+          await supabase.from('lead_debt_payments').insert({
+            lead_debt_id: ld.id,
+            agent_id,
+            amount: pay,
+            run_id: batchId
+          });
+    
+          // update lead debt status
+          if (pay === outstanding) {
+            await supabase.from('lead_debts')
+              .update({ status: 'paid' })
+              .eq('id', ld.id);
+          } else {
+            await supabase.from('lead_debts')
+              .update({ status: 'in_repayment', amount: outstanding - pay })
+              .eq('id', ld.id);
+          }
+        }
+      }
+    }
   } catch (err) {
     console.error('[runWeeklyAdvance] Unexpected error:', err);
     return {
