@@ -61,7 +61,7 @@ function getPolicyYear(policyCreatedAt, runDate) {
  * renewal_commission_rate + start/end years.
  */
 function getBaseRenewalRate(schedule, renewalYear) {
-  if (!renewalYear || renewalYear < 2) return 0;
+  if (!renewalYear || renewalYear < 1) return 0;
 
   let rule = schedule.renewal_trail_rule;
   if (rule && typeof rule === 'string') {
@@ -72,30 +72,33 @@ function getBaseRenewalRate(schedule, renewalYear) {
     }
   }
 
-  // 1) JSON bands
+  // 1) JSON bands (preferred)
   if (rule && Array.isArray(rule.bands)) {
     for (const band of rule.bands) {
-      const start = band.start_year ?? 2;
-      const end   = band.end_year; // null = no upper cap
+      // if band.start_year is missing, fall back to schedule.renewal_start_year or 2
+      const start = band.start_year ?? (schedule.renewal_start_year ?? 2);
+      const end   = band.end_year; // null = open-ended
+
       const withinLower = renewalYear >= start;
-      const withinUpper = (end == null) ? true : (renewalYear <= end);
+      const withinUpper = end == null ? true : renewalYear <= end;
+
       if (withinLower && withinUpper) {
         return Number(band.rate || 0);
       }
     }
-    // if bands exist but none match, fall through to 0
+    // bands exist but no match
     return 0;
   }
 
-  // 2) Simple flat renewal_commission_rate with start/end bounds
+  // 2) Flat renewal_commission_rate with start/end year bounds
   const flatRate = Number(schedule.renewal_commission_rate || 0);
   if (!flatRate) return 0;
 
-  const startYear = schedule.renewal_start_year ?? 2;
-  const endYear   = schedule.renewal_end_year; // can be null
+  const startYear = schedule.renewal_start_year ?? 2; // you can set this to 1 in DB for P&C
+  const endYear   = schedule.renewal_end_year;        // null = open-ended
 
   const withinLower = renewalYear >= startYear;
-  const withinUpper = (endYear == null) ? true : (renewalYear <= endYear);
+  const withinUpper = endYear == null ? true : renewalYear <= endYear;
 
   if (withinLower && withinUpper) {
     return flatRate;
