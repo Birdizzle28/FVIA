@@ -43,6 +43,118 @@ function getMonthBounds(payDate) {
   return { start, end };
 }
 
+/**
+ * Same tiers as weekly:
+ *   - if agent inactive => 100% of this check (up to remaining debt)
+ *   - if active:
+ *        < 1000         => 30%
+ *        1000–1999.99   => 40%
+ *        >= 2000        => 50%
+ */
+function getRepaymentRate(totalDebt, isActive) {
+  if (!isActive) return 1.0;
+  if (totalDebt <= 0) return 0;
+  if (totalDebt < 1000) return 0.30;
+  if (totalDebt < 2000) return 0.40;
+  return 0.50;
+}
+
+/**
+ * Apply repayments to chargebacks + lead_debts, oldest first.
+ * NOTE: same pattern as in runWeeklyAdvance, no run_id set for now.
+ */
+async function applyRepayments(agent_id, chargebackRepay, leadRepay) {
+  // 1) Chargebacks first
+  if (chargebackRepay > 0) {
+    let remaining = chargebackRepay;
+
+    const { data: cbRows, error: cbErr } = await supabase
+      .from('policy_chargebacks')
+      .select('id, amount, status')
+      .eq('agent_id', agent_id)
+      .in('status', ['open', 'in_repayment'])
+      .order('created_at', { ascending: true });
+
+    if (!cbErr) {
+      for (const cb of cbRows || []) {
+        if (remaining <= 0) break;
+
+        const outstanding = Number(cb.amount);
+        if (outstanding <= 0) continue;
+
+        const pay = Math.min(outstanding, remaining);
+        remaining -= pay;
+
+        await supabase.from('chargeback_payments').insert({
+          agent_id,
+          chargeback_id: cb.id,
+          amount: pay
+        });
+
+        if (pay === outstanding) {
+          await supabase
+            .from('policy_chargebacks')
+            .update({ status: 'paid', amount: 0 })
+            .eq('id', cb.id);
+        } else {
+          await supabase
+            .from('policy_chargebacks')
+            .update({
+              status: 'in_repayment',
+              amount: outstanding - pay
+            })
+            .eq('id', cb.id);
+        }
+      }
+    }
+  }
+
+  // 2) Leads second
+  if (leadRepay > 0) {
+    let remaining = leadRepay;
+
+    const { data: ldRows, error: ldErr } = await supabase
+      .from('lead_debts')
+      .select('id, amount, status')
+      .eq('agent_id', agent_id)
+      .in('status', ['open', 'in_repayment'])
+      .order('created_at', { ascending: true });
+
+    if (!ldErr) {
+      for (const ld of ldRows || []) {
+        if (remaining <= 0) break;
+
+        const outstanding = Number(ld.amount);
+        if (outstanding <= 0) continue;
+
+        const pay = Math.min(outstanding, remaining);
+        remaining -= pay;
+
+        await supabase.from('lead_debt_payments').insert({
+          lead_debt_id: ld.id,
+          agent_id,
+          amount: pay
+        });
+
+        if (pay === outstanding) {
+          await supabase
+            .from('lead_debts')
+            .update({ status: 'paid', amount: 0 })
+            .eq('id', ld.id);
+        } else {
+          await supabase
+            .from('lead_debts')
+            .update({
+              status: 'in_repayment',
+              amount: outstanding - pay
+            })
+            .eq('id', ld.id);
+        }
+      }
+    }
+  }
+}
+
 export async function handler(event) {
   if (event.httpMethod !== 'POST') {
     return {
@@ -56,7 +168,6 @@ export async function handler(event) {
     const payDateStr  = payDate.toISOString().slice(0, 10); // YYYY-MM-DD
     const payMonthKey = payDateStr.slice(0, 7);             // YYYY-MM
 
-    // Month bounds (for metadata)
     const { start: monthStart, end: monthEnd } = getMonthBounds(payDate);
     const monthStartIso = monthStart.toISOString();
     const monthEndIso   = monthEnd.toISOString();
@@ -75,9 +186,7 @@ export async function handler(event) {
       cutoffIso
     );
 
-    // -------------------------------------------------
-    // 1) Already-paid this month (so we don't double-pay)
-    // -------------------------------------------------
+    // 1) Already-paid this month
     const { data: existingPayThru, error: existingErr } = await supabase
       .from('commission_ledger')
       .select('policy_id, agent_id, meta')
@@ -96,11 +205,7 @@ export async function handler(event) {
       (existingPayThru || []).map(r => `${r.policy_id}:${r.agent_id}`)
     );
 
-    // -------------------------------------------------
-    // 2) Count how many pay-thru payments already exist
-    //    per (policy_id, agent_id) to enforce 12-month cap
-    //    (NO .group() – we aggregate in JS)
-    // -------------------------------------------------
+    // 2) Count prior paythru per policy/agent (for 12-month cap)
     const { data: payThruPrior, error: priorErr } = await supabase
       .from('commission_ledger')
       .select('policy_id, agent_id')
@@ -121,13 +226,11 @@ export async function handler(event) {
       payThruCountMap.set(key, prev + 1);
     });
 
-    // -------------------------------------------------
-    // 3) Load candidate policies for trails
-    // -------------------------------------------------
+    // 3) Eligible policies
     const { data: policies, error: polErr } = await supabase
       .from('policies')
       .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, created_at')
-      .lte('created_at', cutoffIso); // 28-day wait
+      .lte('created_at', cutoffIso);
 
     if (polErr) {
       console.error('[runMonthlyPayThru] Error loading policies:', polErr);
@@ -148,11 +251,9 @@ export async function handler(event) {
       };
     }
 
-    // -------------------------------------------------
-    // 4) Small caches so we don't spam Supabase
-    // -------------------------------------------------
-    const agentCache = new Map();    // agent_id -> { id, full_name, level, recruiter_id }
-    const schedCache = new Map();    // key = carrier|product_line|policy_type|level -> { base_commission_rate, advance_rate }
+    // 4) Caches
+    const agentCache = new Map();
+    const schedCache = new Map();
 
     async function getAgent(agentId) {
       if (!agentId) return null;
@@ -202,9 +303,7 @@ export async function handler(event) {
       return data;
     }
 
-    // -------------------------------------------------
-    // 5) Build NEW pay-thru ledger rows (multi-level)
-    // -------------------------------------------------
+    // 5) Build NEW pay-thru accrual rows
     const newLedgerRows = [];
     let totalNewGross = 0;
 
@@ -212,11 +311,10 @@ export async function handler(event) {
       const ap = Number(policy.premium_annual || 0);
       if (!policy.agent_id || ap <= 0) continue;
 
-      // Build the chain
       const chain = [];
       let current = await getAgent(policy.agent_id);
       const visitedAgents = new Set();
-      let globalAdvanceRate = null; // from writing agent
+      let globalAdvanceRate = null;
 
       for (let depth = 0; depth < 10 && current; depth++) {
         if (visitedAgents.has(current.id)) break;
@@ -230,7 +328,6 @@ export async function handler(event) {
         const advRate  = Number(schedule.advance_rate) || 0;
 
         if (globalAdvanceRate == null) {
-          // Use writing agent's advance rate as your global advance%
           globalAdvanceRate = advRate;
         }
 
@@ -245,7 +342,6 @@ export async function handler(event) {
 
       if (!chain.length || globalAdvanceRate == null) continue;
 
-      // For each level in chain, compute its effective portion & residual
       let prevBaseRate = 0;
 
       for (const node of chain) {
@@ -256,25 +352,17 @@ export async function handler(event) {
 
         const policyAgentKey = `${policy.id}:${node.agent.id}`;
 
-        // Already paid this month?
-        if (alreadyPaidThisMonth.has(policyAgentKey)) {
-          continue;
-        }
+        if (alreadyPaidThisMonth.has(policyAgentKey)) continue;
 
-        // Existing paythru count (all months) – enforce 12-month cap
         const priorCount = payThruCountMap.get(policyAgentKey) || 0;
-        if (priorCount >= 12) {
-          continue;
-        }
+        if (priorCount >= 12) continue;
 
-        // monthly trail = (AP * effective_rate * (1 - advance_rate)) / 12
         const annualResidual      = ap * effectiveRate * (1 - globalAdvanceRate);
         const monthlyResidualRaw  = annualResidual / 12;
         const monthlyResidual     = Math.round(monthlyResidualRaw * 100) / 100;
 
         if (monthlyResidual <= 0) continue;
 
-        // We’re about to add one more month for this policy/agent
         payThruCountMap.set(policyAgentKey, priorCount + 1);
 
         totalNewGross += monthlyResidual;
@@ -288,8 +376,8 @@ export async function handler(event) {
           description: `Monthly trail on ${policy.carrier_name} ${policy.product_line} (${policy.policy_type}) for ${payMonthKey}`,
           period_start: monthStartIso,
           period_end: monthEndIso,
-          is_settled: false,      // new rows start as unpaid accrual
-          payout_batch_id: null,  // will be filled when threshold is met
+          is_settled: false,
+          payout_batch_id: null,
           meta: {
             pay_month: payMonthKey,
             carrier_name: policy.carrier_name,
@@ -302,7 +390,6 @@ export async function handler(event) {
       }
     }
 
-    // 6) Insert NEW accrual rows (if any)
     if (newLedgerRows.length > 0) {
       const { error: insErr } = await supabase
         .from('commission_ledger')
@@ -317,9 +404,7 @@ export async function handler(event) {
       }
     }
 
-    // -------------------------------------------------
-    // 7) $100 THRESHOLD LOGIC
-    // -------------------------------------------------
+    // 7) Threshold + debt logic
     const { data: unpaidTrails, error: unpaidErr } = await supabase
       .from('commission_ledger')
       .select('id, agent_id, amount')
@@ -347,8 +432,8 @@ export async function handler(event) {
       };
     }
 
-    const agentTotals = {};   // agent_id -> total amount
-    const agentRowIds = {};   // agent_id -> [rowIds]
+    const agentTotals = {};
+    const agentRowIds = {};
 
     for (const row of unpaidTrails) {
       const aid = row.agent_id;
@@ -362,21 +447,19 @@ export async function handler(event) {
     }
 
     const threshold = 100;
-    const payableAgents = [];
-    let batchTotalGross = 0;
+    const basePayableAgents = []; // before debt withholding
 
     for (const [aid, sum] of Object.entries(agentTotals)) {
       if (sum >= threshold) {
         const rounded = Number(sum.toFixed(2));
-        payableAgents.push({
+        basePayableAgents.push({
           agent_id: aid,
-          monthly_trail: rounded,
+          gross_monthly_trail: rounded,
         });
-        batchTotalGross += rounded;
       }
     }
 
-    if (payableAgents.length === 0) {
+    if (basePayableAgents.length === 0) {
       return {
         statusCode: 200,
         body: JSON.stringify({
@@ -389,9 +472,105 @@ export async function handler(event) {
       };
     }
 
-    batchTotalGross = Number(batchTotalGross.toFixed(2));
+    // 8) Load debts + is_active
+    const payableAgentIds = basePayableAgents.map(a => a.agent_id);
 
-    // 8) Create a payout_batches row
+    const { data: debtRows, error: debtErr } = await supabase
+      .from('agent_total_debt')
+      .select('agent_id, lead_debt_total, chargeback_total, total_debt')
+      .in('agent_id', payableAgentIds);
+
+    if (debtErr) {
+      console.error('[runMonthlyPayThru] Error loading agent_total_debt:', debtErr);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Failed to load agent_total_debt', details: debtErr }),
+      };
+    }
+
+    const debtMap = new Map();
+    (debtRows || []).forEach(r => {
+      debtMap.set(r.agent_id, {
+        lead: Number(r.lead_debt_total || 0),
+        chargeback: Number(r.chargeback_total || 0),
+        total: Number(r.total_debt || 0),
+      });
+    });
+
+    const { data: agentRows, error: agentErr } = await supabase
+      .from('agents')
+      .select('id, is_active')
+      .in('id', payableAgentIds);
+
+    if (agentErr) {
+      console.error('[runMonthlyPayThru] Error loading agents.is_active:', agentErr);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Failed to load agent active flags', details: agentErr }),
+      };
+    }
+
+    const activeMap = new Map();
+    (agentRows || []).forEach(a => {
+      activeMap.set(a.id, a.is_active !== false);
+    });
+
+    // 9) Apply tiers to these monthly trails
+    const finalPayouts = [];
+    let batchTotalGross = 0;
+    let batchTotalDebits = 0;
+
+    for (const pa of basePayableAgents) {
+      const agent_id = pa.agent_id;
+      const gross    = Number(pa.gross_monthly_trail.toFixed(2));
+      batchTotalGross += gross;
+
+      const debtInfo = debtMap.get(agent_id) || { lead: 0, chargeback: 0, total: 0 };
+      const totalDebt = debtInfo.total;
+      const isActive  = activeMap.has(agent_id) ? activeMap.get(agent_id) : true;
+
+      let leadRepay = 0;
+      let chargebackRepay = 0;
+      let net = gross;
+
+      if (gross > 0 && totalDebt > 0) {
+        const rate     = getRepaymentRate(totalDebt, isActive);
+        const maxRepay = Number((gross * rate).toFixed(2));
+        const toRepay  = Math.min(maxRepay, totalDebt);
+
+        let remaining = toRepay;
+
+        const cbOutstanding = debtInfo.chargeback;
+        if (cbOutstanding > 0 && remaining > 0) {
+          chargebackRepay = Math.min(remaining, cbOutstanding);
+          remaining -= chargebackRepay;
+        }
+
+        const leadOutstanding = debtInfo.lead;
+        if (leadOutstanding > 0 && remaining > 0) {
+          leadRepay = Math.min(remaining, leadOutstanding);
+          remaining -= leadRepay;
+        }
+
+        const actualRepay = chargebackRepay + leadRepay;
+        net = Number((gross - actualRepay).toFixed(2));
+        batchTotalDebits += actualRepay;
+      }
+
+      finalPayouts.push({
+        agent_id,
+        gross_monthly_trail: gross,
+        net_payout: net,
+        lead_repayment: Number(leadRepay.toFixed(2)),
+        chargeback_repayment: Number(chargebackRepay.toFixed(2)),
+      });
+    }
+
+    batchTotalGross  = Number(batchTotalGross.toFixed(2));
+    batchTotalDebits = Number(batchTotalDebits.toFixed(2));
+    const batchTotalNet = Number((batchTotalGross - batchTotalDebits).toFixed(2));
+
+    // 10) Create payout_batches row
     const { data: batchRows, error: batchErr } = await supabase
       .from('payout_batches')
       .insert({
@@ -399,9 +578,9 @@ export async function handler(event) {
         batch_type: 'paythru',
         status: 'pending',
         total_gross: batchTotalGross,
-        total_debits: 0,
-        total_net: batchTotalGross,
-        note: `Monthly pay-thru payout run for ${payMonthKey} (threshold $${threshold})`,
+        total_debits: batchTotalDebits,
+        total_net: batchTotalNet,
+        note: `Monthly pay-thru payout run for ${payMonthKey} (threshold $${threshold}, 30/40/50 tiers)`,
       })
       .select('*');
 
@@ -415,14 +594,13 @@ export async function handler(event) {
 
     const batch = batchRows && batchRows[0];
 
-    // Collect all ledger row IDs that should be marked as paid
+    // 11) Mark those pay-thru rows as settled + attach batch
     const idsToSettle = [];
-    for (const pa of payableAgents) {
+    for (const pa of basePayableAgents) {
       const rowsForAgent = agentRowIds[pa.agent_id] || [];
       rowsForAgent.forEach(id => idsToSettle.push(id));
     }
 
-    // 9) Mark those pay-thru rows as settled + attach batch
     const { error: updErr } = await supabase
       .from('commission_ledger')
       .update({
@@ -440,17 +618,29 @@ export async function handler(event) {
       };
     }
 
+    // 12) Apply repayments to debt tables
+    for (const fp of finalPayouts) {
+      const cbRepay = fp.chargeback_repayment || 0;
+      const ldRepay = fp.lead_repayment || 0;
+      if (cbRepay > 0 || ldRepay > 0) {
+        await applyRepayments(fp.agent_id, cbRepay, ldRepay);
+      }
+    }
+
     return {
       statusCode: 200,
       body: JSON.stringify(
         {
-          message: 'Monthly pay-thru run completed with $100 minimum threshold.',
+          message: 'Monthly pay-thru run completed with $100 minimum + tiered debt withholding.',
           pay_date: payDateStr,
           pay_month: payMonthKey,
           new_trails_created: newLedgerRows.length,
           batch_id: batch.id,
-          agents_paid: payableAgents.length,
-          agent_payouts: payableAgents,
+          agents_paid: finalPayouts.length,
+          total_gross: batchTotalGross,
+          total_debits: batchTotalDebits,
+          total_net: batchTotalNet,
+          agent_payouts: finalPayouts,
         },
         null,
         2
