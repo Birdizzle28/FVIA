@@ -7,12 +7,12 @@
 	    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
 	    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
 	    <link rel="manifest" href="/site.webmanifest">
-		<title>Admin | Family Values Group</title>
-		<link rel="stylesheet" href="styles/agentstyle.css" />
-		<link rel="stylesheet" href="styles/admin.css" />
-		<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+			<title>Admin | Family Values Group</title>
+			<link rel="stylesheet" href="styles/agentstyle.css" />
+			<link rel="stylesheet" href="styles/admin.css" />
+			<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
   		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
 		<!-- admin.html (inside <head>, very top) -->
 		<style>html{visibility:hidden}</style>
@@ -947,6 +947,113 @@
 	    </div>
 	  </div>
 	</section>
+	
+	<!-- Add Policy Modal -->
+	<div id="policy-modal" class="modal-backdrop" style="display:none;">
+	  <div class="modal">
+	    <h3>Add Policy</h3>
+	    <form id="policy-form">
+	      <label>
+	        Agent
+	        <select id="policy-agent" required></select>
+	      </label>
+	
+	      <label>
+	        Carrier
+	        <input id="policy-carrier" type="text" required>
+	      </label>
+	
+	      <label>
+	        Product
+	        <input id="policy-product" type="text" required>
+	      </label>
+	
+	      <label>
+	        Policy #
+	        <input id="policy-number" type="text" required>
+	      </label>
+	
+	      <label>
+	        Annual Premium
+	        <input id="policy-annual-premium" type="number" step="0.01" min="0" required>
+	      </label>
+	
+	      <label>
+	        Issue Date
+	        <input id="policy-issue-date" type="date" required>
+	      </label>
+	
+	      <label>
+	        Status
+	        <select id="policy-status">
+	          <option value="active">Active</option>
+	          <option value="pending">Pending</option>
+	          <option value="lapsed">Lapsed</option>
+	        </select>
+	      </label>
+	
+	      <div class="modal-actions">
+	        <button type="button" id="policy-cancel">Cancel</button>
+	        <button type="submit">Save Policy</button>
+	      </div>
+	
+	      <p id="policy-error" class="modal-error"></p>
+	    </form>
+	  </div>
+	</div>
+	
+	<!-- Add Debit / Credit Modal -->
+	<div id="adjustment-modal" class="modal-backdrop" style="display:none;">
+	  <div class="modal">
+	    <h3>Add Debit / Credit</h3>
+	    <form id="adjustment-form">
+	      <label>
+	        Agent
+	        <select id="adjustment-agent" required></select>
+	      </label>
+	
+	      <label>
+	        Type
+	        <select id="adjustment-type" required>
+	          <option value="debit">Debit (chargeback / lead debt)</option>
+	          <option value="credit">Credit</option>
+	        </select>
+	      </label>
+	
+	      <label>
+	        Category
+	        <select id="adjustment-category" required>
+	          <option value="chargeback">Chargeback</option>
+	          <option value="lead_debt">Lead Debt</option>
+	          <option value="manual_credit">Manual Credit</option>
+	          <option value="other">Other</option>
+	        </select>
+	      </label>
+	
+	      <label>
+	        Amount
+	        <input id="adjustment-amount" type="number" step="0.01" min="0" required>
+	      </label>
+	
+	      <label>
+	        Effective Date
+	        <input id="adjustment-date" type="date" required>
+	      </label>
+	
+	      <label>
+	        Description
+	        <textarea id="adjustment-description" rows="2" placeholder="Optional notes"></textarea>
+	      </label>
+	
+	      <div class="modal-actions">
+	        <button type="button" id="adjustment-cancel">Cancel</button>
+	        <button type="submit">Save</button>
+	      </div>
+	
+	      <p id="adjustment-error" class="modal-error"></p>
+	    </form>
+	  </div>
+	</div>
   </main>
     <!-- Reassignment Warning Modal -->
     <div id="reassign-warning-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
