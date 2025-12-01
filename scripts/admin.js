@@ -75,6 +75,171 @@ async function loadAgentsForCommissions(force = false) {
 
   commissionAgentsLoaded = true;
 }
+openPolicyBtn?.addEventListener('click', async () => {
+  await loadAgentsForCommissions();
+  openModal(policyModal);
+});
+
+openAdjustmentBtn?.addEventListener('click', async () => {
+  await loadAgentsForCommissions();
+  openModal(adjustmentModal);
+});
+
+policyCancelBtn?.addEventListener('click', () => closeModal(policyModal));
+adjustmentCancelBtn?.addEventListener('click', () => closeModal(adjustmentModal));
+
+async function loadPoliciesIntoList() {
+  const container = document.getElementById('policy-list');
+  if (!container) return;
+  container.textContent = 'Loading...';
+
+  const { data, error } = await supabase
+    .from('policies')
+    .select('id, policy_number, carrier, product, annual_premium, issue_date')
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.error('Error loading policies', error);
+    container.textContent = 'Error loading policies.';
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    container.textContent = 'No policies yet.';
+    return;
+  }
+
+  container.innerHTML = '';
+  data.forEach(row => {
+    const div = document.createElement('div');
+    div.className = 'mini-row';
+    const prem = typeof row.annual_premium === 'number'
+      ? row.annual_premium.toFixed(2)
+      : row.annual_premium;
+    div.textContent = `${row.policy_number} – ${row.carrier} (${row.product}) – $${prem} – ${row.issue_date}`;
+    container.appendChild(div);
+  });
+}
+
+const policyForm = document.getElementById('policy-form');
+policyForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('policy-error');
+  if (errorEl) errorEl.textContent = '';
+
+  const agent_id = document.getElementById('policy-agent').value || null;
+  const carrier = document.getElementById('policy-carrier').value.trim();
+  const product = document.getElementById('policy-product').value.trim();
+  const policy_number = document.getElementById('policy-number').value.trim();
+  const annual_premium = parseFloat(
+    document.getElementById('policy-annual-premium').value || '0'
+  );
+  const issue_date = document.getElementById('policy-issue-date').value;
+  const status = document.getElementById('policy-status').value;
+
+  if (!agent_id || !carrier || !product || !policy_number || !issue_date || !annual_premium) {
+    if (errorEl) errorEl.textContent = 'Please fill in all required fields.';
+    return;
+  }
+
+  const { error } = await supabase
+    .from('policies')
+    .insert([{
+      agent_id,
+      carrier,
+      product,
+      policy_number,
+      annual_premium,
+      issue_date,
+      status,
+    }]);
+
+  if (error) {
+    console.error('Error inserting policy', error);
+    if (errorEl) errorEl.textContent = 'Error saving policy.';
+    return;
+  }
+
+  policyForm.reset();
+  closeModal(policyModal);
+  loadPoliciesIntoList();
+});
+
+async function loadAdjustmentsIntoList() {
+  const container = document.getElementById('debit-credit-list');
+  if (!container) return;
+  container.textContent = 'Loading...';
+
+  const { data, error } = await supabase
+    .from('agent_adjustments')
+    .select('id, type, category, amount, effective_date')
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.error('Error loading debits/credits', error);
+    container.textContent = 'Error loading debits / credits.';
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    container.textContent = 'No debits or credits yet.';
+    return;
+  }
+
+  container.innerHTML = '';
+  data.forEach(row => {
+    const div = document.createElement('div');
+    div.className = 'mini-row';
+    const sign = row.type === 'credit' ? '+' : '-';
+    const amt = typeof row.amount === 'number' ? row.amount.toFixed(2) : row.amount;
+    div.textContent = `${sign}$${amt} — ${row.category} (${row.effective_date})`;
+    container.appendChild(div);
+  });
+}
+
+const adjustmentForm = document.getElementById('adjustment-form');
+adjustmentForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('adjustment-error');
+  if (errorEl) errorEl.textContent = '';
+
+  const agent_id = document.getElementById('adjustment-agent').value || null;
+  const type = document.getElementById('adjustment-type').value;
+  const category = document.getElementById('adjustment-category').value;
+  const amount = parseFloat(
+    document.getElementById('adjustment-amount').value || '0'
+  );
+  const effective_date = document.getElementById('adjustment-date').value;
+  const description = document.getElementById('adjustment-description').value.trim();
+
+  if (!agent_id || !type || !category || !effective_date || !amount) {
+    if (errorEl) errorEl.textContent = 'Please fill in all required fields.';
+    return;
+  }
+
+  const { error } = await supabase
+    .from('agent_adjustments')
+    .insert([{
+      agent_id,
+      type,
+      category,
+      amount,
+      effective_date,
+      description,
+    }]);
+
+  if (error) {
+    console.error('Error inserting adjustment', error);
+    if (errorEl) errorEl.textContent = 'Error saving debit/credit.';
+    return;
+  }
+
+  adjustmentForm.reset();
+  closeModal(adjustmentModal);
+  loadAdjustmentsIntoList();
+});
 
 // NEW: interpret task metadata/title as contact / quote / close
 function getTaskStage(task) {
