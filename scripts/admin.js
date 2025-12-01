@@ -683,8 +683,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       loadWaitlist();
     }
     if (name === 'commissions') {
-      // we'll load policies / debits / batches here in steps 2–3
-      // e.g. loadPolicies(); loadDebitsCredits(); loadPayoutBatches();
+      loadAgentsForCommissions();
+      loadPoliciesIntoList();
+      loadAdjustmentsIntoList();
+      // loadPayoutBatchesIntoList(); // when we build this in step 3
     }
   }
 
