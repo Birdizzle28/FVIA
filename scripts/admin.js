@@ -421,43 +421,67 @@ document.addEventListener('DOMContentLoaded', async () => {
     logoImg.onerror = () => alert('❌ Failed to load logo for PDF.');
   });
 
-  const navButtons = {
+    const navButtons = {
     all: document.getElementById('nav-all'),
     requests: document.getElementById('nav-requests'),
     history: document.getElementById('nav-history'),
     stats: document.getElementById('nav-stats'),
+    commissions: document.getElementById('nav-commissions'),
     content: document.getElementById('nav-content'),
   };
+
   const sections = {
     all: document.getElementById('admin-all-section'),
     requests: document.getElementById('admin-requests-section'),
     history: document.getElementById('admin-history-section'),
     stats: document.getElementById('admin-stats-section'),
+    commissions: document.getElementById('admin-commissions-section'),
     content: document.getElementById('admin-content-section'),
   };
-  function hideAllAdminSections(){
-    Object.values(sections).forEach(sec => sec.style.display='none');
-    Object.values(navButtons).forEach(btn => btn.classList.remove('active'));
+  
+    function hideAllAdminSections() {
+    Object.values(sections).forEach(sec => {
+      if (sec) sec.style.display = 'none';
+    });
+    Object.values(navButtons).forEach(btn => {
+      if (btn) btn.classList.remove('active');
+    });
   }
-  function showAdminSection(name){
+
+  function showAdminSection(name) {
     hideAllAdminSections();
-    sections[name].style.display='block';
-    navButtons[name].classList.add('active');
-    if (name === 'history') loadAssignmentHistory();
-    if (name === 'stats') loadAgentStats();
+    if (sections[name]) {
+      sections[name].style.display = 'block';
+    }
+    if (navButtons[name]) {
+      navButtons[name].classList.add('active');
+    }
+
+    if (name === 'history') {
+      loadAssignmentHistory();
+    }
+    if (name === 'stats') {
+      loadAgentStats();
+    }
     if (name === 'content') {
       loadAnnouncements();
       loadTrainingMaterials();
-      loadMarketingAssets();    // 🔹 now also loads marketing assets
+      loadMarketingAssets();
       loadWaitlist();
     }
+    if (name === 'commissions') {
+      // we'll load policies / debits / batches here in steps 2–3
+      // e.g. loadPolicies(); loadDebitsCredits(); loadPayoutBatches();
+    }
   }
+
   showAdminSection('all');
-  navButtons.all.addEventListener('click', () => showAdminSection('all'));
-  navButtons.requests.addEventListener('click', () => showAdminSection('requests'));
-  navButtons.history.addEventListener('click', () => showAdminSection('history'));
-  navButtons.stats.addEventListener('click', () => showAdminSection('stats'));
-  navButtons.content.addEventListener('click', () => showAdminSection('content'));
+  navButtons.all?.addEventListener('click', () => showAdminSection('all'));
+  navButtons.requests?.addEventListener('click', () => showAdminSection('requests'));
+  navButtons.history?.addEventListener('click', () => showAdminSection('history'));
+  navButtons.stats?.addEventListener('click', () => showAdminSection('stats'));
+  navButtons.commissions?.addEventListener('click', () => showAdminSection('commissions'));
+  navButtons.content?.addEventListener('click', () => showAdminSection('content'));
 
   // Overlays
   document.getElementById('open-annc-modal')?.addEventListener('click', () => openOverlay('annc-modal'));
@@ -465,7 +489,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('open-mkt-modal')?.addEventListener('click', () => openOverlay('mkt-modal'));
   document.getElementById('open-agent-modal')?.addEventListener('click', () => openOverlay('agent-modal'));
   document.getElementById('open-remove-agent-modal')?.addEventListener('click', () => openOverlay('remove-agent-modal'));
-    document.getElementById('open-task-modal')?.addEventListener('click', () => openOverlay('task-modal'));
+  document.getElementById('open-task-modal')?.addEventListener('click', () => openOverlay('task-modal'));
   function openOverlay(id){
     const el = document.getElementById(id);
     if (!el) return;
