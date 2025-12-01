@@ -95,7 +95,7 @@ async function loadPoliciesIntoList() {
 
   const { data, error } = await supabase
     .from('policies')
-    .select('id, policy_number, carrier, product, annual_premium, issue_date')
+    .select('id, policy_number, carrier_name, policy_type, product_line, premium_annual, issued_at, status')
     .order('created_at', { ascending: false })
     .limit(20);
 
@@ -114,10 +114,18 @@ async function loadPoliciesIntoList() {
   data.forEach(row => {
     const div = document.createElement('div');
     div.className = 'mini-row';
-    const prem = typeof row.annual_premium === 'number'
-      ? row.annual_premium.toFixed(2)
-      : row.annual_premium;
-    div.textContent = `${row.policy_number} – ${row.carrier} (${row.product}) – $${prem} – ${row.issue_date}`;
+
+    const productLabel = row.product_line || row.policy_type || 'Unknown';
+    const prem = typeof row.premium_annual === 'number'
+      ? row.premium_annual.toFixed(2)
+      : (row.premium_annual ?? '');
+    const issued = row.issued_at
+      ? new Date(row.issued_at).toLocaleDateString()
+      : 'Not issued';
+
+    div.textContent =
+      `${row.policy_number} – ${row.carrier_name} (${productLabel}) – $${prem} – ${issued} – ${row.status || ''}`;
+
     container.appendChild(div);
   });
 }
