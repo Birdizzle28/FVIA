@@ -59,7 +59,6 @@ async function loadAgentsForCommissions(force = false) {
 
   const selects = [
     document.getElementById('policy-agent'),
-    document.getElementById('adjustment-agent'),
   ];
 
   selects.forEach(sel => {
@@ -131,41 +130,52 @@ async function loadPoliciesIntoList() {
 }
 
 const policyForm = document.getElementById('policy-form');
+
 policyForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const errorEl = document.getElementById('policy-error');
   if (errorEl) errorEl.textContent = '';
 
+  // For now: you MUST provide a contact_id because the DB requires it
+  // Add a <select id="policy-contact"> in your modal that holds contacts.id values
+  const contact_id = document.getElementById('policy-contact')?.value || null;
+
   const agent_id = document.getElementById('policy-agent').value || null;
   const carrier = document.getElementById('policy-carrier').value.trim();
   const product = document.getElementById('policy-product').value.trim();
   const policy_number = document.getElementById('policy-number').value.trim();
-  const annual_premium = parseFloat(
+  const premium_annual = parseFloat(
     document.getElementById('policy-annual-premium').value || '0'
   );
-  const issue_date = document.getElementById('policy-issue-date').value;
-  const status = document.getElementById('policy-status').value;
+  const issue_date_raw = document.getElementById('policy-issue-date').value;
+  const status = document.getElementById('policy-status').value || 'pending';
 
-  if (!agent_id || !carrier || !product || !policy_number || !issue_date || !annual_premium) {
-    if (errorEl) errorEl.textContent = 'Please fill in all required fields.';
+  if (!contact_id || !agent_id || !carrier || !product || !policy_number || !issue_date_raw || !premium_annual) {
+    if (errorEl) errorEl.textContent = 'Please fill in all required fields (including contact).';
     return;
   }
 
+  const issued_at = new Date(issue_date_raw).toISOString();
+
+  const payload = {
+    contact_id,
+    agent_id,
+    carrier_name: carrier,
+    policy_number,
+    policy_type: product,
+    product_line: product,
+    premium_annual,
+    issued_at,
+    status
+  };
+
   const { error } = await supabase
     .from('policies')
-    .insert([{
-      agent_id,
-      carrier,
-      product,
-      policy_number,
-      annual_premium,
-      issue_date,
-      status,
-    }]);
+    .insert([payload]);
 
   if (error) {
     console.error('Error inserting policy', error);
-    if (errorEl) errorEl.textContent = 'Error saving policy.';
+    if (errorEl) errorEl.textContent = 'Error saving policy: ' + error.message;
     return;
   }
 
