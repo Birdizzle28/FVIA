@@ -27,6 +27,54 @@ const isQuoted = l => !!l.quote_at || ['quoted','closed'].includes(getStage(l));
 const isClosed = l => !!(l.issued_at || l.closed_at) || ['closed','issued','policy'].includes(getStage(l));
 const issuedAt = l => l.issued_at ? new Date(l.issued_at) : (l.closed_at ? new Date(l.closed_at) : null);
 const inRange = (d, start, end) => { if (!d) return false; const t = +d; return (!start || t >= +start) && (!end || t <= +end); };
+const policyModal = document.getElementById('policy-modal');
+const adjustmentModal = document.getElementById('adjustment-modal');
+const openPolicyBtn = document.getElementById('open-policy-modal');
+const openAdjustmentBtn = document.getElementById('open-debit-credit-modal');
+const policyCancelBtn = document.getElementById('policy-cancel');
+const adjustmentCancelBtn = document.getElementById('adjustment-cancel');
+
+function openModal(el) {
+  if (el) el.style.display = 'flex';
+}
+
+function closeModal(el) {
+  if (el) el.style.display = 'none';
+}
+let commissionAgentsLoaded = false;
+
+async function loadAgentsForCommissions(force = false) {
+  if (commissionAgentsLoaded && !force) return;
+
+  const { data, error } = await supabase
+    .from('agents')
+    .select('id, full_name')
+    .eq('is_active', true)
+    .order('full_name', { ascending: true });
+
+  if (error) {
+    console.error('Error loading agents for commissions', error);
+    return;
+  }
+
+  const selects = [
+    document.getElementById('policy-agent'),
+    document.getElementById('adjustment-agent'),
+  ];
+
+  selects.forEach(sel => {
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Select agent…</option>';
+    data.forEach(agent => {
+      const opt = document.createElement('option');
+      opt.value = agent.id;
+      opt.textContent = agent.full_name || agent.id;
+      sel.appendChild(opt);
+    });
+  });
+
+  commissionAgentsLoaded = true;
+}
 
 // NEW: interpret task metadata/title as contact / quote / close
 function getTaskStage(task) {
