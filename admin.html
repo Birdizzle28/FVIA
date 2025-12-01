@@ -96,12 +96,13 @@
     
     <!-- Admin page navigation -->
     <nav id="admin-page-nav">
-      <button id="nav-all" class="active">All Leads</button>
-      <button id="nav-requests">Lead Requests</button>
-      <button id="nav-history">Assignment History</button>
-      <button id="nav-stats">Agent Stats</button>
-			<button id="nav-content" class="admin-nav-btn">Content</button>
-    </nav>
+		  <button id="nav-all" class="active">All Leads</button>
+		  <button id="nav-requests">Lead Requests</button>
+		  <button id="nav-history">Assignment History</button>
+		  <button id="nav-stats">Agent Stats</button>
+		  <button id="nav-commissions">Commissions</button>
+		  <button id="nav-content" class="admin-nav-btn">Content</button>
+		</nav>
     <!-- Lead Requests Section -->
     <section id="admin-requests-section" class="admin-section" style="display:none;">
       <h3>Lead Requests</h3>
@@ -395,7 +396,48 @@
 	    </div>
 	  </div>
 	</section>
+	
+	<!-- Agent Stats Section -->
+	<section id="admin-stats-section" class="admin-section" style="display:none;">
+		<!-- ... existing Agent Stats content ... -->
+	</section>
 
+	<!-- Commissions Section -->
+	<section id="admin-commissions-section" class="admin-section" style="display:none;">
+		<h3>Commissions</h3>
+
+		<div class="comm-grid">
+			<!-- Left: Policies -->
+			<div class="card">
+				<h3>Policies</h3>
+				<p>Add new policies and view recent ones.</p>
+				<button id="open-policy-modal" class="card-link">Add Policy</button>
+				<div id="policy-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
+					<!-- policies will load here later -->
+				</div>
+			</div>
+
+			<!-- Middle: Debits / Credits -->
+			<div class="card">
+				<h3>Debits & Credits</h3>
+				<p>Add chargebacks, lead debt, or credits to agents.</p>
+				<button id="open-debit-credit-modal" class="card-link">Add Debit / Credit</button>
+				<div id="debit-credit-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
+					<!-- debits/credits will load here later -->
+				</div>
+			</div>
+
+			<!-- Right: Payout Batches -->
+			<div class="card">
+				<h3>Payout Batches</h3>
+				<p>Review upcoming payout batches before they run.</p>
+				<div id="batch-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
+					<!-- payout batches will load here later -->
+				</div>
+			</div>
+		</div>
+	</section>
+				
 	<section id="admin-content-section" class="panel" style="display:none;">
 	  <h3>Content & Roster</h3>
 	
