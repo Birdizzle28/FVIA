@@ -129,6 +129,105 @@ async function loadPoliciesIntoList() {
   });
 }
 
+// Load last few manual debits/credits from the commission_ledger
+async function loadAdjustmentsIntoList() {
+  const container = document.getElementById('debit-credit-list');
+  if (!container) return;
+  container.textContent = 'Loading...';
+
+  const { data, error } = await supabase
+    .from('commission_ledger')
+    .select('id, agent_id, type, category, amount, effective_date')
+    .order('effective_date', { ascending: false })
+    .limit(50);
+
+  if (error) {
+    console.error('Error loading debits/credits', error);
+    container.textContent = 'Error loading debits / credits.';
+    return;
+  }
+
+  if (!data || data.length === 0) {
+    container.textContent = 'No debits or credits yet.';
+    return;
+  }
+
+  container.innerHTML = '';
+  data.forEach(row => {
+    const div = document.createElement('div');
+    div.className = 'mini-row';
+
+    const sign =
+      (row.type || '').toLowerCase() === 'credit'
+        ? '+'
+        : '-';
+
+    const amt = typeof row.amount === 'number'
+      ? row.amount.toFixed(2)
+      : (row.amount ?? '');
+
+    const cat  = row.category || 'Adjustment';
+    const date = row.effective_date || '';
+
+    div.textContent = `${sign}$${amt} — ${cat} (${date})`;
+    container.appendChild(div);
+  });
+}
+
+const adjustmentForm = document.getElementById('adjustment-form');
+
+adjustmentForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const errorEl = document.getElementById('adjustment-error');
+  if (errorEl) errorEl.textContent = '';
+
+  const agent_id   = document.getElementById('adjustment-agent').value || null;
+  const type       = document.getElementById('adjustment-type').value;        // 'debit' or 'credit'
+  const category   = document.getElementById('adjustment-category').value;
+  const rawAmount  = parseFloat(
+    document.getElementById('adjustment-amount').value || '0'
+  );
+  const effective_date = document.getElementById('adjustment-date').value;
+  const description    = document.getElementById('adjustment-description').value.trim();
+
+  if (!agent_id || !type || !category || !effective_date || !rawAmount) {
+    if (errorEl) errorEl.textContent = 'Please fill in all required fields.';
+    return;
+  }
+
+  // Store as a signed amount in the ledger:
+  //   debit  => negative
+  //   credit => positive
+  const normType = type.toLowerCase();
+  const signedAmount =
+    normType === 'debit'
+      ? -Math.abs(rawAmount)
+      : Math.abs(rawAmount);
+
+  const payload = {
+    agent_id,
+    type: normType,         // keep 'debit' or 'credit' for filtering later
+    category,
+    description,
+    effective_date,
+    amount: signedAmount
+  };
+
+  const { error } = await supabase
+    .from('commission_ledger')
+    .insert([payload]);
+
+  if (error) {
+    console.error('Error inserting ledger adjustment', error);
+    if (errorEl) errorEl.textContent = 'Error saving debit/credit: ' + error.message;
+    return;
+  }
+
+  adjustmentForm.reset();
+  closeModal(adjustmentModal);
+  loadAdjustmentsIntoList();
+});
+
 const policyForm = document.getElementById('policy-form');
 
 policyForm?.addEventListener('submit', async (e) => {
