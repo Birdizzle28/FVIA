@@ -158,18 +158,13 @@ async function loadAdjustmentsIntoList() {
     const div = document.createElement('div');
     div.className = 'mini-row';
 
+    const amtNumber = Number(row.amount || 0);
     const sign =
       (row.type || '').toLowerCase() === 'credit'
         ? '+'
         : '-';
-
-    const amt = typeof row.amount === 'number'
-      ? row.amount.toFixed(2)
-      : (row.amount ?? '');
-
-    const cat  = row.category || 'Adjustment';
-    const date = row.effective_date || '';
-
+    const amt = Math.abs(amtNumber).toFixed(2);
+    
     div.textContent = `${sign}$${amt} — ${cat} (${date})`;
     container.appendChild(div);
   });
