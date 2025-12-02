@@ -262,17 +262,16 @@ adjustmentForm?.addEventListener('submit', async (e) => {
   const errorEl = document.getElementById('adjustment-error');
   if (errorEl) errorEl.textContent = '';
 
-  const agent_id = document.getElementById('adjustment-agent').value || null;
-  const type = document.getElementById('adjustment-type').value;          // Debit / Credit
-  const category = document.getElementById('adjustment-category').value;  // lead_debt / chargeback / other
-  const rawAmount = parseFloat(
-    document.getElementById('adjustment-amount').value || '0'
-  );
-  const effective_date = document.getElementById('adjustment-date').value; // YYYY-MM-DD
-  const description = document.getElementById('adjustment-description').value.trim();
-    // Only relevant when category === 'chargeback'
-  const policyIdRaw = document.getElementById('adjustment-policy')?.value || '';
-  const policy_id = policyIdRaw ? policyIdRaw : null;
+  const agent_id     = document.getElementById('adjustment-agent').value || null;
+  const type         = document.getElementById('adjustment-type').value;          // Debit / Credit
+  const category     = document.getElementById('adjustment-category').value;      // lead_debt / chargeback / other
+  const rawAmount    = parseFloat(document.getElementById('adjustment-amount').value || '0');
+  const effective_date = document.getElementById('adjustment-date').value;        // YYYY-MM-DD
+  const description  = document.getElementById('adjustment-description').value.trim();
+
+  // Only relevant for chargebacks
+  const policyIdRaw  = document.getElementById('adjustment-policy')?.value || '';
+  const policy_id    = policyIdRaw || null;
 
   if (!agent_id || !type || !category || !effective_date || !rawAmount) {
     if (errorEl) errorEl.textContent = 'Please fill in all required fields.';
@@ -282,24 +281,16 @@ adjustmentForm?.addEventListener('submit', async (e) => {
   const normType = type.toLowerCase(); // 'debit' or 'credit'
 
   // Signed amount: debits are negative, credits are positive
-  const signedAmount =
-    normType === 'debit'
-      ? -Math.abs(rawAmount)
-      : Math.abs(rawAmount);
+  const signedAmount = normType === 'debit'
+    ? -Math.abs(rawAmount)
+    :  Math.abs(rawAmount);
 
-  // Map UI choice → commission_ledger.entry_type
-  // entry_type CHECK constraint allows:
+  // entry_type must match commission_ledger CHECK constraint:
   // 'advance', 'override', 'paythru', 'lead_charge', 'chargeback'
   let entry_type;
   if (normType === 'debit') {
-    if (category === 'chargeback') {
-      entry_type = 'chargeback';
-    } else {
-      // default for manual debits / lead debts
-      entry_type = 'lead_charge';
-    }
+    entry_type = (category === 'chargeback') ? 'chargeback' : 'lead_charge';
   } else {
-    // credits show as money to the agent
     entry_type = 'override';
   }
 
@@ -309,12 +300,12 @@ adjustmentForm?.addEventListener('submit', async (e) => {
     entry_type,
     category,
     description: description || null,
-    period_start: effective_date, // date column
+    period_start: effective_date,
     period_end: effective_date,
-    // keep the UI type/category inside meta for future reporting
     meta: {
       ui_type: normType,
-      ui_category: category
+      ui_category: category,
+      policy_id      // keep for reporting even if null
     }
   };
 
@@ -347,38 +338,32 @@ adjustmentForm?.addEventListener('submit', async (e) => {
 
     if (ldErr) {
       console.error('Error inserting lead_debt', ldErr);
-      if (errorEl) errorEl.textContent = 'Saved to ledger, but lead debt failed: ' + ldErr.message;
+      if (errorEl) errorEl.textContent =
+        'Saved to ledger, but lead debt failed: ' + ldErr.message;
       return;
     }
   }
 
-    // If it's a DEBIT + chargeback, also create a policy_chargebacks row
-    if (normType === 'debit' && category === 'chargeback') {
-      const { error: cbErr } = await supabase.from('policy_chargebacks').insert([{
-        agent_id,
-        policy_id: policy_id || null,   // 🔗 link to policies.id
-        carrier_name: null,             // you can auto-fill later if you want
-        policyholder_name: null,        // can be filled from contacts table later
-        amount: rawAmount,
-        status: 'open',
-        reason: description || null,
-        metadata: {
-          effective_date,
-          commission_ledger_id: ledgerRow.id
-        }
-      }]);
-  
-      if (cbErr) {
-        console.error('Error inserting policy_chargeback', cbErr);
-        if (errorEl) errorEl.textContent =
-          'Saved to ledger, but chargeback record failed: ' + cbErr.message;
-        return;
+  // If it's a DEBIT + chargeback, also create a policy_chargebacks row
+  if (normType === 'debit' && category === 'chargeback') {
+    const { error: cbErr } = await supabase.from('policy_chargebacks').insert([{
+      agent_id,
+      policy_id: policy_id || null,   // link to policies.id
+      carrier_name: null,             // can auto-fill later
+      policyholder_name: null,        // can auto-fill later
+      amount: rawAmount,
+      status: 'open',
+      reason: description || null,
+      metadata: {
+        effective_date,
+        commission_ledger_id: ledgerRow.id
       }
-    }
+    }]);
 
     if (cbErr) {
       console.error('Error inserting policy_chargeback', cbErr);
-      if (errorEl) errorEl.textContent = 'Saved to ledger, but chargeback failed: ' + cbErr.message;
+      if (errorEl) errorEl.textContent =
+        'Saved to ledger, but chargeback record failed: ' + cbErr.message;
       return;
     }
   }
