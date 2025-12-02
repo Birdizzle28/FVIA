@@ -164,7 +164,11 @@ async function loadAdjustmentsIntoList() {
         ? '+'
         : '-';
     const amt = Math.abs(amtNumber).toFixed(2);
-    
+    const cat = row.category || '';
+    const date = row.effective_date
+      ? new Date(row.effective_date).toLocaleDateString()
+      : '';
+
     div.textContent = `${sign}$${amt} — ${cat} (${date})`;
     container.appendChild(div);
   });
@@ -177,23 +181,20 @@ adjustmentForm?.addEventListener('submit', async (e) => {
   const errorEl = document.getElementById('adjustment-error');
   if (errorEl) errorEl.textContent = '';
 
-  const agent_id   = document.getElementById('adjustment-agent').value || null;
-  const type       = document.getElementById('adjustment-type').value;        // 'debit' or 'credit'
-  const category   = document.getElementById('adjustment-category').value;
-  const rawAmount  = parseFloat(
+  const agent_id = document.getElementById('adjustment-agent').value || null;
+  const type = document.getElementById('adjustment-type').value;
+  const category = document.getElementById('adjustment-category').value;
+  const rawAmount = parseFloat(
     document.getElementById('adjustment-amount').value || '0'
   );
   const effective_date = document.getElementById('adjustment-date').value;
-  const description    = document.getElementById('adjustment-description').value.trim();
+  const description = document.getElementById('adjustment-description').value.trim();
 
   if (!agent_id || !type || !category || !effective_date || !rawAmount) {
     if (errorEl) errorEl.textContent = 'Please fill in all required fields.';
     return;
   }
 
-  // Store as a signed amount in the ledger:
-  //   debit  => negative
-  //   credit => positive
   const normType = type.toLowerCase();
   const signedAmount =
     normType === 'debit'
@@ -202,21 +203,66 @@ adjustmentForm?.addEventListener('submit', async (e) => {
 
   const payload = {
     agent_id,
-    type: normType,         // keep 'debit' or 'credit' for filtering later
+    type: normType,
     category,
     description,
     effective_date,
     amount: signedAmount
   };
 
-  const { error } = await supabase
+  const { data: ledgerRow, error: ledgerErr } = await supabase
     .from('commission_ledger')
-    .insert([payload]);
+    .insert([payload])
+    .select()
+    .single();
 
-  if (error) {
-    console.error('Error inserting ledger adjustment', error);
-    if (errorEl) errorEl.textContent = 'Error saving debit/credit: ' + error.message;
+  if (ledgerErr) {
+    console.error('Error inserting ledger adjustment', ledgerErr);
+    if (errorEl) errorEl.textContent = 'Error saving debit/credit: ' + ledgerErr.message;
     return;
+  }
+
+  if (normType === 'debit' && category === 'lead_debt') {
+    const { error: ldErr } = await supabase.from('lead_debts').insert([{
+      agent_id,
+      lead_id: null,
+      description: description || null,
+      source: 'manual_adjustment',
+      amount: rawAmount,
+      status: 'open',
+      metadata: {
+        effective_date,
+        commission_ledger_id: ledgerRow.id
+      }
+    }]);
+
+    if (ldErr) {
+      console.error('Error inserting lead_debt', ldErr);
+      if (errorEl) errorEl.textContent = 'Saved to ledger, but lead debt failed: ' + ldErr.message;
+      return;
+    }
+  }
+
+  if (normType === 'debit' && category === 'chargeback') {
+    const { error: cbErr } = await supabase.from('policy_chargebacks').insert([{
+      agent_id,
+      policy_id: null,
+      carrier_name: null,
+      policyholder_name: null,
+      amount: rawAmount,
+      status: 'open',
+      reason: description || null,
+      metadata: {
+        effective_date,
+        commission_ledger_id: ledgerRow.id
+      }
+    }]);
+
+    if (cbErr) {
+      console.error('Error inserting policy_chargeback', cbErr);
+      if (errorEl) errorEl.textContent = 'Saved to ledger, but chargeback failed: ' + cbErr.message;
+      return;
+    }
   }
 
   adjustmentForm.reset();
