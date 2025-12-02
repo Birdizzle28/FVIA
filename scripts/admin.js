@@ -138,8 +138,8 @@ async function loadAdjustmentsIntoList() {
 
   const { data, error } = await supabase
     .from('commission_ledger')
-    .select('id, agent_id, type, category, amount, effective_date')
-    .order('effective_date', { ascending: false })
+    .select('id, agent_id, amount, category, period_start')
+    .order('period_start', { ascending: false })
     .limit(50);
 
   if (error) {
@@ -159,14 +159,13 @@ async function loadAdjustmentsIntoList() {
     div.className = 'mini-row';
 
     const amtNumber = Number(row.amount || 0);
-    const sign =
-      (row.type || '').toLowerCase() === 'credit'
-        ? '+'
-        : '-';
+
+    // Determine sign just from the stored amount
+    const sign = amtNumber >= 0 ? '+' : '-';
     const amt = Math.abs(amtNumber).toFixed(2);
     const cat = row.category || '';
-    const date = row.effective_date
-      ? new Date(row.effective_date).toLocaleDateString()
+    const date = row.period_start
+      ? new Date(row.period_start).toLocaleDateString()
       : '';
 
     div.textContent = `${sign}$${amt} — ${cat} (${date})`;
@@ -182,12 +181,12 @@ adjustmentForm?.addEventListener('submit', async (e) => {
   if (errorEl) errorEl.textContent = '';
 
   const agent_id = document.getElementById('adjustment-agent').value || null;
-  const type = document.getElementById('adjustment-type').value;
-  const category = document.getElementById('adjustment-category').value;
+  const type = document.getElementById('adjustment-type').value;          // Debit / Credit
+  const category = document.getElementById('adjustment-category').value;  // lead_debt / chargeback / other
   const rawAmount = parseFloat(
     document.getElementById('adjustment-amount').value || '0'
   );
-  const effective_date = document.getElementById('adjustment-date').value;
+  const effective_date = document.getElementById('adjustment-date').value; // YYYY-MM-DD
   const description = document.getElementById('adjustment-description').value.trim();
 
   if (!agent_id || !type || !category || !effective_date || !rawAmount) {
@@ -195,19 +194,43 @@ adjustmentForm?.addEventListener('submit', async (e) => {
     return;
   }
 
-  const normType = type.toLowerCase();
+  const normType = type.toLowerCase(); // 'debit' or 'credit'
+
+  // Signed amount: debits are negative, credits are positive
   const signedAmount =
     normType === 'debit'
       ? -Math.abs(rawAmount)
       : Math.abs(rawAmount);
 
+  // Map UI choice → commission_ledger.entry_type
+  // entry_type CHECK constraint allows:
+  // 'advance', 'override', 'paythru', 'lead_charge', 'chargeback'
+  let entry_type;
+  if (normType === 'debit') {
+    if (category === 'chargeback') {
+      entry_type = 'chargeback';
+    } else {
+      // default for manual debits / lead debts
+      entry_type = 'lead_charge';
+    }
+  } else {
+    // credits show as money to the agent
+    entry_type = 'override';
+  }
+
   const payload = {
     agent_id,
-    type: normType,
+    amount: signedAmount,
+    entry_type,
     category,
-    description,
-    effective_date,
-    amount: signedAmount
+    description: description || null,
+    period_start: effective_date, // date column
+    period_end: effective_date,
+    // keep the UI type/category inside meta for future reporting
+    meta: {
+      ui_type: normType,
+      ui_category: category
+    }
   };
 
   const { data: ledgerRow, error: ledgerErr } = await supabase
@@ -222,6 +245,7 @@ adjustmentForm?.addEventListener('submit', async (e) => {
     return;
   }
 
+  // If it's a DEBIT + lead_debt, also create a lead_debts row
   if (normType === 'debit' && category === 'lead_debt') {
     const { error: ldErr } = await supabase.from('lead_debts').insert([{
       agent_id,
@@ -243,6 +267,7 @@ adjustmentForm?.addEventListener('submit', async (e) => {
     }
   }
 
+  // If it's a DEBIT + chargeback, also create a policy_chargebacks row
   if (normType === 'debit' && category === 'chargeback') {
     const { error: cbErr } = await supabase.from('policy_chargebacks').insert([{
       agent_id,
