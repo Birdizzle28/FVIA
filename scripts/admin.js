@@ -270,6 +270,9 @@ adjustmentForm?.addEventListener('submit', async (e) => {
   );
   const effective_date = document.getElementById('adjustment-date').value; // YYYY-MM-DD
   const description = document.getElementById('adjustment-description').value.trim();
+    // Only relevant when category === 'chargeback'
+  const policyIdRaw = document.getElementById('adjustment-policy')?.value || '';
+  const policy_id = policyIdRaw ? policyIdRaw : null;
 
   if (!agent_id || !type || !category || !effective_date || !rawAmount) {
     if (errorEl) errorEl.textContent = 'Please fill in all required fields.';
@@ -349,21 +352,29 @@ adjustmentForm?.addEventListener('submit', async (e) => {
     }
   }
 
-  // If it's a DEBIT + chargeback, also create a policy_chargebacks row
-  if (normType === 'debit' && category === 'chargeback') {
-    const { error: cbErr } = await supabase.from('policy_chargebacks').insert([{
-      agent_id,
-      policy_id: null,
-      carrier_name: null,
-      policyholder_name: null,
-      amount: rawAmount,
-      status: 'open',
-      reason: description || null,
-      metadata: {
-        effective_date,
-        commission_ledger_id: ledgerRow.id
+    // If it's a DEBIT + chargeback, also create a policy_chargebacks row
+    if (normType === 'debit' && category === 'chargeback') {
+      const { error: cbErr } = await supabase.from('policy_chargebacks').insert([{
+        agent_id,
+        policy_id: policy_id || null,   // 🔗 link to policies.id
+        carrier_name: null,             // you can auto-fill later if you want
+        policyholder_name: null,        // can be filled from contacts table later
+        amount: rawAmount,
+        status: 'open',
+        reason: description || null,
+        metadata: {
+          effective_date,
+          commission_ledger_id: ledgerRow.id
+        }
+      }]);
+  
+      if (cbErr) {
+        console.error('Error inserting policy_chargeback', cbErr);
+        if (errorEl) errorEl.textContent =
+          'Saved to ledger, but chargeback record failed: ' + cbErr.message;
+        return;
       }
-    }]);
+    }
 
     if (cbErr) {
       console.error('Error inserting policy_chargeback', cbErr);
