@@ -14,6 +14,8 @@ const PAGE_SIZE = 25;
 let rangeStart = null;
 let rangeEnd = null;
 let allowedProductsFilter = null;
+let adjustmentPolicyChoices = null;
+
 // ---- KPI helpers ----
 const DAY_MS = 864e5;
 const PERSISTENCY_DAYS = 90;
