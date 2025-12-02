@@ -59,6 +59,7 @@ async function loadAgentsForCommissions(force = false) {
 
   const selects = [
     document.getElementById('policy-agent'),
+    document.getElementById('adjustment-agent'),
   ];
 
   selects.forEach(sel => {
