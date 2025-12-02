@@ -1030,6 +1030,17 @@
 	        </select>
 	      </label>
 	
+	      <!-- NEW: Only visible when Category = chargeback -->
+	      <label id="chargeback-policy-wrapper" style="display:none;">
+	        Policy (for chargeback)
+	        <select id="adjustment-policy">
+	          <option value="">Search or select policy…</option>
+	        </select>
+	        <small style="font-size:11px; color:#666;">
+	          Only policies written by the selected agent are listed.
+	        </small>
+	      </label>
+	
 	      <label>
 	        Amount
 	        <input id="adjustment-amount" type="number" step="0.01" min="0" required>
