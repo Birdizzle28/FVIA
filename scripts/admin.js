@@ -131,7 +131,87 @@ async function loadPoliciesIntoList() {
     container.appendChild(div);
   });
 }
+async function loadPoliciesForChargeback(agentId) {
+  const sel = document.getElementById('adjustment-policy');
+  if (!sel) return;
 
+  // Basic loading state
+  sel.disabled = true;
+  sel.innerHTML = '<option value="">Loading policies…</option>';
+
+  const { data, error } = await supabase
+    .from('policies')
+    .select('id, policy_number, carrier_name, premium_annual, issued_at, status')
+    .eq('agent_id', agentId)
+    .order('issued_at', { ascending: false })
+    .limit(200);
+
+  if (error) {
+    console.error('Error loading policies for chargeback:', error);
+    sel.innerHTML = '<option value="">Error loading policies</option>';
+    return;
+  }
+
+  // Reset options
+  sel.innerHTML = '';
+
+  if (!data || !data.length) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'No policies found for this agent';
+    sel.appendChild(opt);
+    sel.disabled = true;
+    return;
+  }
+
+  // Placeholder
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Search or select policy…';
+  sel.appendChild(placeholder);
+
+  // Build nice labels like: "123456 – Carrier – $600.00 – 02/01/25 – active"
+  data.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+
+    const premium = typeof p.premium_annual === 'number'
+      ? `$${p.premium_annual.toFixed(2)}`
+      : '';
+    const issued = p.issued_at
+      ? new Date(p.issued_at).toLocaleDateString()
+      : '';
+    const status = p.status || '';
+
+    const parts = [
+      p.policy_number || `Policy #${p.id}`,
+      p.carrier_name || '',
+      premium,
+      issued,
+      status
+    ].filter(Boolean);
+
+    opt.textContent = parts.join(' · ');
+    sel.appendChild(opt);
+  });
+
+  sel.disabled = false;
+
+  // Enhance with Choices.js for search
+  try {
+    if (adjustmentPolicyChoices) {
+      adjustmentPolicyChoices.destroy();
+      adjustmentPolicyChoices = null;
+    }
+    adjustmentPolicyChoices = new Choices(sel, {
+      searchEnabled: true,
+      shouldSort: false,
+      itemSelectText: ''
+    });
+  } catch (e) {
+    console.warn('Choices init failed for adjustment-policy:', e);
+  }
+}
 // Load last few manual debits/credits from the commission_ledger
 async function loadAdjustmentsIntoList() {
   const container = document.getElementById('debit-credit-list');
@@ -1344,9 +1424,40 @@ document.addEventListener('DOMContentLoaded', async () => {
       document.querySelector('#agent-modal [data-close]')?.click();
     }, 900);
   });
+    // ===== Chargeback policy selector logic =====
+  const adjustmentAgentSel     = document.getElementById('adjustment-agent');
+  const adjustmentCategorySel  = document.getElementById('adjustment-category');
+  const chargebackPolicyWrap   = document.getElementById('chargeback-policy-wrapper');
+  const adjustmentPolicySelect = document.getElementById('adjustment-policy');
+
+  async function refreshChargebackPolicyUI() {
+    if (!chargebackPolicyWrap || !adjustmentPolicySelect) return;
+
+    const agentId  = adjustmentAgentSel?.value || '';
+    const category = adjustmentCategorySel?.value || '';
+
+    if (category === 'chargeback' && agentId) {
+      chargebackPolicyWrap.style.display = 'block';
+      await loadPoliciesForChargeback(agentId);
+    } else {
+      chargebackPolicyWrap.style.display = 'none';
+
+      // Reset select + destroy Choices
+      if (adjustmentPolicyChoices) {
+        try { adjustmentPolicyChoices.destroy(); } catch (_) {}
+        adjustmentPolicyChoices = null;
+      }
+      adjustmentPolicySelect.innerHTML =
+        '<option value="">Search or select policy…</option>';
+      adjustmentPolicySelect.disabled = false;
+    }
+  }
+
+  adjustmentAgentSel?.addEventListener('change', refreshChargebackPolicyUI);
+  adjustmentCategorySel?.addEventListener('change', refreshChargebackPolicyUI);
 }); // end DOMContentLoaded
 
-// Load active agents
+
 // Load active agents
 async function loadAgentsForAdmin() {
   let { data, error } = await supabase
