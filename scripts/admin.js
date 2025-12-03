@@ -466,6 +466,65 @@ adjustmentForm?.addEventListener('submit', async (e) => {
   closeModal(adjustmentModal);
   loadAdjustmentsIntoList();
 });
+async function loadContactsForPolicy() {
+  const sel = document.getElementById('policy-contact');
+  if (!sel) return;
+
+  sel.disabled = true;
+  sel.innerHTML = '<option value="">Loading contacts…</option>';
+
+  const { data, error } = await supabase
+    .from('contacts')
+    .select('id, first_name, last_name, phone, email, city, state')
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (error) {
+    console.error('Error loading contacts for policy:', error);
+    sel.innerHTML = '<option value="">Error loading contacts</option>';
+    return;
+  }
+
+  // Rebuild options
+  sel.innerHTML = '';
+
+  // Placeholder
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Select contact…';
+  sel.appendChild(placeholder);
+
+  // Existing contacts
+  if (data && data.length) {
+    data.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+
+      const name = [c.first_name, c.last_name].filter(Boolean).join(' ');
+      const cityState = [c.city, c.state].filter(Boolean).join(', ');
+      const phone = c.phone || '';
+      const email = c.email || '';
+
+      const parts = [
+        name || `Contact ${String(c.id).slice(0, 8)}`,
+        cityState,
+        phone,
+        email
+      ].filter(Boolean);
+
+      opt.textContent = parts.join(' · ');
+      sel.appendChild(opt);
+    });
+  }
+
+  // Always add the "New contact" option at the bottom
+  const newOpt = document.createElement('option');
+  newOpt.value = '__new__';
+  newOpt.textContent = '➕ New contact (enter below)';
+  sel.appendChild(newOpt);
+
+  sel.disabled = false;
+}
 
 const policyForm = document.getElementById('policy-form');
 
