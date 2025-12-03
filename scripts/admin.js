@@ -654,6 +654,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     location.replace('dashboard.html'); // no alert, no history entry
     return;
   }
+    // Toggle "new contact" fields when selecting in policy-contact
+  const policyContactSel = document.getElementById('policy-contact');
+  const newContactWrap   = document.getElementById('policy-new-contact-wrap');
+
+  if (policyContactSel && newContactWrap) {
+    policyContactSel.addEventListener('change', () => {
+      if (policyContactSel.value === '__new__') {
+        newContactWrap.style.display = 'block';
+      } else {
+        newContactWrap.style.display = 'none';
+      }
+    });
+  }
   userRole = 'admin';
 
   flatpickr('#date-range', { mode:'range', dateFormat:'Y-m-d',
