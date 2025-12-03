@@ -1022,10 +1022,15 @@
 	      <label>
 	        Status
 	        <select id="policy-status">
-	          <option value="active">Active</option>
-	          <option value="pending">Pending</option>
-	          <option value="lapsed">Lapsed</option>
-	        </select>
+					  <!-- Display label on the right, actual value on the left -->
+					  <option value="in_force">Active</option>
+					  <option value="pending">Pending</option>
+					  <option value="issued">Issued</option>
+					  <option value="lapsed">Lapsed</option>
+					  <option value="cancelled">Cancelled</option>
+					  <option value="reinstated">Reinstated</option>
+					  <option value="renewed">Renewed</option>
+					</select>
 	      </label>
 	
 	      <div class="modal-actions">
