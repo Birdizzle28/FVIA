@@ -82,6 +82,40 @@ async function loadAgentsForCommissions(force = false) {
   commissionAgentsLoaded = true;
 }
 
+openPolicyBtn?.addEventListener('click', async () => {
+  await loadAgentsForCommissions();
+
+  const agentSel = document.getElementById('policy-agent');
+  const agentId  = agentSel?.value || null;
+
+  // Contacts filtered by agent
+  await loadContactsForPolicy(agentId);
+
+  // All carriers
+  await loadCarriersForPolicy();
+
+  // Reset product dropdown
+  const prodSel = document.getElementById('policy-product');
+  if (prodSel) {
+    prodSel.innerHTML = '<option value="">Select carrier first…</option>';
+    prodSel.disabled = true;
+  }
+
+  // Reset contact selection + new-contact fields
+  const contactSel = document.getElementById('policy-contact');
+  const newWrap    = document.getElementById('policy-new-contact-wrap');
+  if (contactSel) contactSel.value = '';
+  if (newWrap) newWrap.style.display = 'none';
+
+  ['policy-contact-first','policy-contact-last','policy-contact-phone','policy-contact-email']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+
+  openModal(policyModal);
+});
+
 openAdjustmentBtn?.addEventListener('click', async () => {
   await loadAgentsForCommissions();
   openModal(adjustmentModal);
