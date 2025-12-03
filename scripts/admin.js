@@ -510,13 +510,15 @@ async function loadContactsForPolicy(agentId = null) {
   // Base query
   let query = supabase
     .from('contacts')
-    .select('id, first_name, last_name, phones, email, city, state')
+    .select(
+      'id, first_name, last_name, phones, emails, email, city, state, zip, address_line1, owning_agent_id'
+    )
     .order('created_at', { ascending: false })
     .limit(200);
 
-  // Optional: filter by agent if your contacts table has agent_id
+  // ✅ filter by owning_agent_id (NOT agent_id)
   if (agentId) {
-    query = query.eq('agent_id', agentId);
+    query = query.eq('owning_agent_id', agentId);
   }
 
   const { data, error } = await query;
@@ -544,13 +546,16 @@ async function loadContactsForPolicy(agentId = null) {
 
       const name = [c.first_name, c.last_name].filter(Boolean).join(' ');
       const cityState = [c.city, c.state].filter(Boolean).join(', ');
-      const phone = Array.isArray(c.phones) && c.phones.length ? c.phones[0] : '';
+      const addr = c.address_line1 || '';
+      const phone =
+        Array.isArray(c.phones) && c.phones.length ? c.phones[0] : '';
       const email =
         c.email ||
         (Array.isArray(c.emails) && c.emails.length ? c.emails[0] : '');
 
       const parts = [
         name || `Contact ${String(c.id).slice(0, 8)}`,
+        addr,
         cityState,
         phone,
         email
