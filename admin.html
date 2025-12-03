@@ -952,12 +952,48 @@
 	<div id="policy-modal" class="modal-backdrop" style="display:none;">
 	  <div class="modal">
 	    <h3>Add Policy</h3>
+	
 	    <form id="policy-form">
+	      
+	      <!-- Agent -->
 	      <label>
 	        Agent
 	        <select id="policy-agent" required></select>
 	      </label>
 	
+	      <!-- Contact -->
+	      <label>
+	        Contact
+	        <select id="policy-contact" required>
+	          <option value="">Select contact…</option>
+	          <option value="__new__">➕ New contact (enter below)</option>
+	        </select>
+	      </label>
+	
+	      <!-- New Contact Fields (hidden unless "__new__" selected) -->
+	      <div id="policy-new-contact-wrap" style="display:none; margin-bottom:10px;">
+	        <label>
+	          First Name
+	          <input id="policy-contact-first" type="text">
+	        </label>
+	
+	        <label>
+	          Last Name
+	          <input id="policy-contact-last" type="text">
+	        </label>
+	
+	        <label>
+	          Phone
+	          <input id="policy-contact-phone" type="text">
+	        </label>
+	
+	        <label>
+	          Email
+	          <input id="policy-contact-email" type="email">
+	        </label>
+	      </div>
+	
+	      <!-- Existing Old Fields (unchanged) -->
 	      <label>
 	        Carrier
 	        <input id="policy-carrier" type="text" required>
@@ -999,6 +1035,7 @@
 	
 	      <p id="policy-error" class="modal-error"></p>
 	    </form>
+	
 	  </div>
 	</div>
 	
