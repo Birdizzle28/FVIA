@@ -78,8 +78,23 @@ async function loadAgentsForCommissions(force = false) {
 
   commissionAgentsLoaded = true;
 }
+
 openPolicyBtn?.addEventListener('click', async () => {
   await loadAgentsForCommissions();
+  await loadContactsForPolicy(); // 🔹 fill the Contact dropdown
+
+  // Reset contact selection + new-contact fields
+  const contactSel = document.getElementById('policy-contact');
+  const newWrap    = document.getElementById('policy-new-contact-wrap');
+  if (contactSel) contactSel.value = '';
+  if (newWrap) newWrap.style.display = 'none';
+
+  ['policy-contact-first','policy-contact-last','policy-contact-phone','policy-contact-email']
+    .forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+
   openModal(policyModal);
 });
 
@@ -533,20 +548,57 @@ policyForm?.addEventListener('submit', async (e) => {
   const errorEl = document.getElementById('policy-error');
   if (errorEl) errorEl.textContent = '';
 
-  // For now: you MUST provide a contact_id because the DB requires it
-  // Add a <select id="policy-contact"> in your modal that holds contacts.id values
-  const contact_id = document.getElementById('policy-contact')?.value || null;
-
   const agent_id = document.getElementById('policy-agent').value || null;
-  const carrier = document.getElementById('policy-carrier').value.trim();
-  const product = document.getElementById('policy-product').value.trim();
+  const carrier  = document.getElementById('policy-carrier').value.trim();
+  const product  = document.getElementById('policy-product').value.trim();
   const policy_number = document.getElementById('policy-number').value.trim();
   const premium_annual = parseFloat(
     document.getElementById('policy-annual-premium').value || '0'
   );
   const issue_date_raw = document.getElementById('policy-issue-date').value;
-  const status = document.getElementById('policy-status').value || 'pending';
+  const status   = document.getElementById('policy-status').value || 'pending';
 
+  const contactSel = document.getElementById('policy-contact');
+  const contactVal = contactSel?.value || '';
+  let contact_id   = null;
+
+  // 🔹 If they choose "New contact", create it first
+  if (contactVal === '__new__') {
+    const first = document.getElementById('policy-contact-first')?.value.trim() || '';
+    const last  = document.getElementById('policy-contact-last')?.value.trim() || '';
+    const phone = document.getElementById('policy-contact-phone')?.value.trim() || '';
+    const email = document.getElementById('policy-contact-email')?.value.trim() || '';
+
+    if (!first || !last) {
+      if (errorEl) errorEl.textContent = 'Please enter at least first and last name for the new contact.';
+      return;
+    }
+
+    // Insert new contact
+    const { data: newContact, error: cErr } = await supabase
+      .from('contacts')
+      .insert([{
+        first_name: first,
+        last_name: last,
+        phone,
+        email
+      }])
+      .select()
+      .single();
+
+    if (cErr) {
+      console.error('Error creating contact for policy:', cErr);
+      if (errorEl) errorEl.textContent = 'Error creating contact: ' + cErr.message;
+      return;
+    }
+
+    contact_id = newContact.id;
+  } else {
+    // Existing contact selected
+    contact_id = contactVal || null;
+  }
+
+  // Final validation
   if (!contact_id || !agent_id || !carrier || !product || !policy_number || !issue_date_raw || !premium_annual) {
     if (errorEl) errorEl.textContent = 'Please fill in all required fields (including contact).';
     return;
