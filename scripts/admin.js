@@ -499,19 +499,28 @@ adjustmentForm?.addEventListener('submit', async (e) => {
   closeModal(adjustmentModal);
   loadAdjustmentsIntoList();
 });
-async function loadContactsForPolicy() {
+// ===== Policy helpers: contacts / carriers / products =====
+async function loadContactsForPolicy(agentId = null) {
   const sel = document.getElementById('policy-contact');
   if (!sel) return;
 
   sel.disabled = true;
   sel.innerHTML = '<option value="">Loading contacts…</option>';
 
-  const { data, error } = await supabase
+  // Base query
+  let query = supabase
     .from('contacts')
     .select('id, first_name, last_name, phones, email, city, state')
     .order('created_at', { ascending: false })
     .limit(200);
-  
+
+  // Optional: filter by agent if your contacts table has agent_id
+  if (agentId) {
+    query = query.eq('agent_id', agentId);
+  }
+
+  const { data, error } = await query;
+
   if (error) {
     console.error('Error loading contacts for policy:', error);
     sel.innerHTML = '<option value="">Error loading contacts</option>';
@@ -536,8 +545,10 @@ async function loadContactsForPolicy() {
       const name = [c.first_name, c.last_name].filter(Boolean).join(' ');
       const cityState = [c.city, c.state].filter(Boolean).join(', ');
       const phone = Array.isArray(c.phones) && c.phones.length ? c.phones[0] : '';
-      const email = c.email || (Array.isArray(c.emails) && c.emails.length ? c.emails[0] : '');
-      
+      const email =
+        c.email ||
+        (Array.isArray(c.emails) && c.emails.length ? c.emails[0] : '');
+
       const parts = [
         name || `Contact ${String(c.id).slice(0, 8)}`,
         cityState,
@@ -557,6 +568,179 @@ async function loadContactsForPolicy() {
   sel.appendChild(newOpt);
 
   sel.disabled = false;
+}
+
+async function loadCarriersForPolicy() {
+  const sel = document.getElementById('policy-carrier');
+  if (!sel) return;
+
+  sel.disabled = true;
+  sel.innerHTML = '<option value="">Loading carriers…</option>';
+
+  let carriers = [];
+
+  // Try to load from Supabase first
+  try {
+    const { data, error } = await supabase
+      .from('carrier_configs')        // 🔹 change this table name if yours is different
+      .select('id, carrier_name, alias, is_active')
+      .eq('is_active', true)
+      .order('carrier_name', { ascending: true });
+
+    if (!error && data && data.length) {
+      carriers = data.map(c => ({
+        id: c.id,
+        name: c.carrier_name || c.alias || `Carrier ${c.id}`
+      }));
+    }
+  } catch (err) {
+    console.warn('Carrier Supabase lookup failed, falling back to static list:', err);
+  }
+
+  // Fallback: static list if DB table not ready yet
+  if (!carriers.length) {
+    carriers = [
+      { id: 'lincoln_heritage', name: 'Lincoln Heritage' },
+      { id: 'americo',          name: 'Americo' },
+      { id: 'aetna',            name: 'Aetna' },
+      { id: 'mool',             name: 'Mutual of Omaha' }
+    ];
+  }
+
+  // Reset options
+  sel.innerHTML = '';
+
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Select carrier…';
+  sel.appendChild(placeholder);
+
+  carriers.forEach(c => {
+    const opt = document.createElement('option');
+    // Store the *name* as the value so your policyForm submit still works
+    opt.value = c.name;
+    opt.textContent = c.name;
+    opt.dataset.carrierId = c.id; // for future use if you want IDs
+    sel.appendChild(opt);
+  });
+
+  sel.disabled = false;
+
+  // Enhance with Choices.js
+  try {
+    if (policyCarrierChoices) {
+      policyCarrierChoices.destroy();
+      policyCarrierChoices = null;
+    }
+    policyCarrierChoices = new Choices(sel, {
+      searchEnabled: true,
+      shouldSort: false,
+      itemSelectText: ''
+    });
+  } catch (e) {
+    console.warn('Choices init failed for policy-carrier:', e);
+  }
+}
+
+async function loadProductsForCarrier(carrierName) {
+  const sel = document.getElementById('policy-product');
+  if (!sel) return;
+
+  // No carrier picked yet
+  if (!carrierName) {
+    sel.innerHTML = '<option value="">Select carrier first…</option>';
+    sel.disabled = true;
+
+    if (policyProductChoices) {
+      try { policyProductChoices.destroy(); } catch (_) {}
+      policyProductChoices = null;
+    }
+    return;
+  }
+
+  sel.disabled = true;
+  sel.innerHTML = '<option value="">Loading products…</option>';
+
+  let products = [];
+
+  // Try Supabase first
+  try {
+    const { data, error } = await supabase
+      .from('carrier_products')   // 🔹 change this if your table name/columns differ
+      .select('id, product_name, product_line, carrier_name')
+      .eq('carrier_name', carrierName)
+      .order('product_name', { ascending: true });
+
+    if (!error && data && data.length) {
+      products = data.map(p => ({
+        id: p.id,
+        name: p.product_name || p.product_line || `Product ${p.id}`
+      }));
+    }
+  } catch (err) {
+    console.warn('Product Supabase lookup failed, falling back to static list:', err);
+  }
+
+  // Fallback: simple static mapping by carrier name
+  if (!products.length) {
+    const lower = carrierName.toLowerCase();
+    if (lower.includes('lincoln')) {
+      products = [
+        { id: 'sff', name: 'Funeral Advantage' },
+        { id: 'sff_plus', name: 'Funeral Advantage Plus' }
+      ];
+    } else if (lower.includes('americo')) {
+      products = [
+        { id: 'eagle', name: 'Eagle Premier' },
+        { id: 'ul',    name: 'Indexed UL' }
+      ];
+    } else if (lower.includes('aetna')) {
+      products = [
+        { id: 'medsup', name: 'Medicare Supplement' },
+        { id: 'final',  name: 'Final Expense' }
+      ];
+    } else {
+      products = [
+        { id: 'life_basic',  name: 'Life – Basic' },
+        { id: 'life_plus',   name: 'Life – Level' },
+        { id: 'life_graded', name: 'Life – Graded' }
+      ];
+    }
+  }
+
+  // Rebuild product options
+  sel.innerHTML = '';
+
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Select product…';
+  sel.appendChild(placeholder);
+
+  products.forEach(p => {
+    const opt = document.createElement('option');
+    // Again, store the *name* as the value so policyForm payload stays the same
+    opt.value = p.name;
+    opt.textContent = p.name;
+    opt.dataset.productId = p.id;
+    sel.appendChild(opt);
+  });
+
+  sel.disabled = false;
+
+  // Enhance with Choices.js
+  try {
+    if (policyProductChoices) {
+      policyProductChoices.destroy();
+      policyProductChoices = null;
+    }
+    policyProductChoices = new Choices(sel, {
+      searchEnabled: true,
+      shouldSort: false,
+      itemSelectText: ''
+    });
+  } catch (e) {
+    console.warn('Choices init failed for policy-product:', e);
+  }
 }
 
 const policyForm = document.getElementById('policy-form');
