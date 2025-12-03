@@ -517,9 +517,9 @@ async function loadContactsForPolicy() {
 
       const name = [c.first_name, c.last_name].filter(Boolean).join(' ');
       const cityState = [c.city, c.state].filter(Boolean).join(', ');
-      const phone = c.phone || '';
-      const email = c.email || '';
-
+      const phone = Array.isArray(c.phones) && c.phones.length ? c.phones[0] : '';
+      const email = c.email || (Array.isArray(c.emails) && c.emails.length ? c.emails[0] : '');
+      
       const parts = [
         name || `Contact ${String(c.id).slice(0, 8)}`,
         cityState,
