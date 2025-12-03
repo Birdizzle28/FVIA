@@ -15,6 +15,7 @@ let rangeStart = null;
 let rangeEnd = null;
 let allowedProductsFilter = null;
 let adjustmentPolicyChoices = null;
+let adjustmentLeadChoices = null;
 
 // ---- KPI helpers ----
 const DAY_MS = 864e5;
@@ -212,6 +213,87 @@ async function loadPoliciesForChargeback(agentId) {
     console.warn('Choices init failed for adjustment-policy:', e);
   }
 }
+
+async function loadLeadsForLeadDebt(agentId) {
+  const sel = document.getElementById('adjustment-lead');
+  if (!sel) return;
+
+  // Loading state
+  sel.disabled = true;
+  sel.innerHTML = '<option value="">Loading leads…</option>';
+
+  const { data, error } = await supabase
+    .from('leads')
+    .select('id, first_name, last_name, city, state, product_type, created_at')
+    .eq('assigned_to', agentId)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (error) {
+    console.error('Error loading leads for lead debt:', error);
+    sel.innerHTML = '<option value="">Error loading leads</option>';
+    return;
+  }
+
+  // Reset options
+  sel.innerHTML = '';
+
+  if (!data || !data.length) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'No leads found for this agent';
+    sel.appendChild(opt);
+    sel.disabled = true;
+    return;
+  }
+
+  // Placeholder
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Search or select lead…';
+  sel.appendChild(placeholder);
+
+  // Build nice labels like: "Jane Doe – Nashville, TN – Life – 02/01/25"
+  data.forEach(l => {
+    const opt = document.createElement('option');
+    opt.value = l.id;
+
+    const name = [l.first_name, l.last_name].filter(Boolean).join(' ');
+    const cityState = [l.city, l.state].filter(Boolean).join(', ');
+    const prod = l.product_type || '';
+    const date = l.created_at
+      ? new Date(l.created_at).toLocaleDateString()
+      : '';
+
+    const parts = [
+      name || `Lead ${l.id.slice(0, 8)}`,
+      cityState,
+      prod,
+      date
+    ].filter(Boolean);
+
+    opt.textContent = parts.join(' · ');
+    sel.appendChild(opt);
+  });
+
+  sel.disabled = false;
+
+  // Enhance with Choices.js for search
+  try {
+    if (adjustmentLeadChoices) {
+      adjustmentLeadChoices.destroy();
+      adjustmentLeadChoices = null;
+    }
+    adjustmentLeadChoices = new Choices(sel, {
+      searchEnabled: true,
+      shouldSort: false,
+      itemSelectText: ''
+    });
+  } catch (e) {
+    console.warn('Choices init failed for adjustment-lead:', e);
+  }
+}
+
 // Load last few manual debits/credits from the commission_ledger
 async function loadAdjustmentsIntoList() {
   const container = document.getElementById('debit-credit-list');
@@ -272,6 +354,9 @@ adjustmentForm?.addEventListener('submit', async (e) => {
   // Only relevant for chargebacks
   const policyIdRaw  = document.getElementById('adjustment-policy')?.value || '';
   const policy_id    = policyIdRaw || null;
+  // Only relevant for lead debts
+  const leadIdRaw = document.getElementById('adjustment-lead')?.value || '';
+  const lead_id   = leadIdRaw || null;
 
   if (!agent_id || !type || !category || !effective_date || !rawAmount) {
     if (errorEl) errorEl.textContent = 'Please fill in all required fields.';
@@ -321,20 +406,37 @@ adjustmentForm?.addEventListener('submit', async (e) => {
     return;
   }
 
-  // If it's a DEBIT + lead_debt, also create a lead_debts row
+    // If it's a DEBIT + lead_debt, also create a lead_debts row
   if (normType === 'debit' && category === 'lead_debt') {
+    // Require a lead to be selected for lead debt
+    if (!lead_id) {
+      if (errorEl) {
+        errorEl.textContent = 'Please choose a lead for this lead debt.';
+      }
+      return;
+    }
+
     const { error: ldErr } = await supabase.from('lead_debts').insert([{
       agent_id,
-      lead_id: null,
+      lead_id,
       description: description || null,
       source: 'manual_adjustment',
       amount: rawAmount,
       status: 'open',
       metadata: {
         effective_date,
-        commission_ledger_id: ledgerRow.id
+        commission_ledger_id: ledgerRow.id,
+        lead_id
       }
     }]);
+
+    if (ldErr) {
+      console.error('Error inserting lead_debt', ldErr);
+      if (errorEl) errorEl.textContent =
+        'Saved to ledger, but lead debt record failed: ' + ldErr.message;
+      return;
+    }
+  }
 
     if (ldErr) {
       console.error('Error inserting lead_debt', ldErr);
