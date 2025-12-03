@@ -773,22 +773,49 @@ policyForm?.addEventListener('submit', async (e) => {
   if (contactVal === '__new__') {
     const first = document.getElementById('policy-contact-first')?.value.trim() || '';
     const last  = document.getElementById('policy-contact-last')?.value.trim() || '';
-    const phone = document.getElementById('policy-contact-phone')?.value.trim() || '';
-    const email = document.getElementById('policy-contact-email')?.value.trim() || '';
+
+    const phone1 = document.getElementById('policy-contact-phone')?.value.trim() || '';
+    const phone2 = document.getElementById('policy-contact-phone2')?.value.trim() || '';
+
+    const email1 = document.getElementById('policy-contact-email')?.value.trim() || '';
+    const email2 = document.getElementById('policy-contact-email2')?.value.trim() || '';
+
+    const addr1  = document.getElementById('policy-contact-address1')?.value.trim() || '';
+    const addr2  = document.getElementById('policy-contact-address2')?.value.trim() || '';
+    const city   = document.getElementById('policy-contact-city')?.value.trim() || '';
+    const state  = document.getElementById('policy-contact-state')?.value.trim() || '';
+    const zip    = document.getElementById('policy-contact-zip')?.value.trim() || '';
 
     if (!first || !last) {
-      if (errorEl) errorEl.textContent = 'Please enter at least first and last name for the new contact.';
+      if (errorEl) {
+        errorEl.textContent =
+          'Please enter at least first and last name for the new contact.';
+      }
       return;
     }
 
-    // Insert new contact
+    const phonesArr = [phone1, phone2].filter(Boolean);
+    const emailsArr = [email1, email2].filter(Boolean);
+
+    // Insert new contact (matches contacts schema)
     const { data: newContact, error: cErr } = await supabase
       .from('contacts')
       .insert([{
+        owning_agent_id: agent_id || null,   // ✅ who owns this contact
         first_name: first,
         last_name: last,
-        phones: phone ? [phone] : [],
-        email
+        phones: phonesArr,
+        emails: emailsArr,
+        // single-value convenience column if you use it
+        email: email1 || email2 || null,
+        address_line1: addr1 || null,
+        address_line2: addr2 || null,
+        city: city || null,
+        state: state || null,
+        zip: zip || null,
+        metadata: {
+          created_via: 'admin_policies_modal'
+        }
       }])
       .select()
       .single();
