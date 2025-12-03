@@ -971,7 +971,11 @@
 	      </label>
 	
 	      <!-- New Contact Fields (hidden unless "__new__" selected) -->
-	      <div id="policy-new-contact-wrap" style="display:none; margin-bottom:10px;">
+	      <div id="policy-new-contact-wrap"
+	           style="display:none; margin-bottom:10px; padding:10px; border:1px solid #ddd; border-radius:8px;">
+	        <h4 style="margin-top:0; margin-bottom:8px;">New Contact Details</h4>
+	
+	        <!-- Name -->
 	        <label>
 	          First Name
 	          <input id="policy-contact-first" type="text">
@@ -982,14 +986,52 @@
 	          <input id="policy-contact-last" type="text">
 	        </label>
 	
+	        <!-- Phones -->
 	        <label>
-	          Phone
-	          <input id="policy-contact-phone" type="text">
+	          Phone 1
+	          <input id="policy-contact-phone" type="text" placeholder="Primary phone">
 	        </label>
 	
 	        <label>
-	          Email
-	          <input id="policy-contact-email" type="email">
+	          Phone 2 (optional)
+	          <input id="policy-contact-phone2" type="text" placeholder="Secondary phone">
+	        </label>
+	
+	        <!-- Emails -->
+	        <label>
+	          Email 1
+	          <input id="policy-contact-email" type="email" placeholder="Primary email">
+	        </label>
+	
+	        <label>
+	          Email 2 (optional)
+	          <input id="policy-contact-email2" type="email" placeholder="Secondary email">
+	        </label>
+	
+	        <!-- Address -->
+	        <label>
+	          Address Line 1
+	          <input id="policy-contact-address1" type="text">
+	        </label>
+	
+	        <label>
+	          Address Line 2 (optional)
+	          <input id="policy-contact-address2" type="text">
+	        </label>
+	
+	        <label>
+	          City
+	          <input id="policy-contact-city" type="text">
+	        </label>
+	
+	        <label>
+	          State
+	          <input id="policy-contact-state" type="text" maxlength="2" placeholder="TN">
+	        </label>
+	
+	        <label>
+	          ZIP
+	          <input id="policy-contact-zip" type="text" maxlength="10">
 	        </label>
 	      </div>
 	
