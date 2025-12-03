@@ -580,7 +580,7 @@ policyForm?.addEventListener('submit', async (e) => {
       .insert([{
         first_name: first,
         last_name: last,
-        phone,
+        phones: phone ? [phone] : [],
         email
       }])
       .select()
