@@ -344,12 +344,12 @@ adjustmentForm?.addEventListener('submit', async (e) => {
   const errorEl = document.getElementById('adjustment-error');
   if (errorEl) errorEl.textContent = '';
 
-  const agent_id     = document.getElementById('adjustment-agent').value || null;
-  const type         = document.getElementById('adjustment-type').value;          // Debit / Credit
-  const category     = document.getElementById('adjustment-category').value;      // lead_debt / chargeback / other
-  const rawAmount    = parseFloat(document.getElementById('adjustment-amount').value || '0');
-  const effective_date = document.getElementById('adjustment-date').value;        // YYYY-MM-DD
-  const description  = document.getElementById('adjustment-description').value.trim();
+  const agent_id       = document.getElementById('adjustment-agent').value || null;
+  const type           = document.getElementById('adjustment-type').value;          // Debit / Credit
+  const category       = document.getElementById('adjustment-category').value;      // lead_debt / chargeback / other
+  const rawAmount      = parseFloat(document.getElementById('adjustment-amount').value || '0');
+  const effective_date = document.getElementById('adjustment-date').value;          // YYYY-MM-DD
+  const description    = document.getElementById('adjustment-description').value.trim();
 
   // Only relevant for chargebacks
   const policyIdRaw  = document.getElementById('adjustment-policy')?.value || '';
@@ -406,7 +406,7 @@ adjustmentForm?.addEventListener('submit', async (e) => {
     return;
   }
 
-    // If it's a DEBIT + lead_debt, also create a lead_debts row
+  // If it's a DEBIT + lead_debt, also create a lead_debts row
   if (normType === 'debit' && category === 'lead_debt') {
     // Require a lead to be selected for lead debt
     if (!lead_id) {
@@ -434,14 +434,6 @@ adjustmentForm?.addEventListener('submit', async (e) => {
       console.error('Error inserting lead_debt', ldErr);
       if (errorEl) errorEl.textContent =
         'Saved to ledger, but lead debt record failed: ' + ldErr.message;
-      return;
-    }
-  }
-
-    if (ldErr) {
-      console.error('Error inserting lead_debt', ldErr);
-      if (errorEl) errorEl.textContent =
-        'Saved to ledger, but lead debt failed: ' + ldErr.message;
       return;
     }
   }
