@@ -16,6 +16,9 @@ let rangeEnd = null;
 let allowedProductsFilter = null;
 let adjustmentPolicyChoices = null;
 let adjustmentLeadChoices = null;
+let policyContactChoices = null;
+let policyCarrierChoices = null;
+let policyProductChoices = null;
 
 // ---- KPI helpers ----
 const DAY_MS = 864e5;
@@ -81,7 +84,22 @@ async function loadAgentsForCommissions(force = false) {
 
 openPolicyBtn?.addEventListener('click', async () => {
   await loadAgentsForCommissions();
-  await loadContactsForPolicy(); // 🔹 fill the Contact dropdown
+
+  const agentSel = document.getElementById('policy-agent');
+  const agentId  = agentSel?.value || null;
+
+  // Contacts filtered by agent
+  await loadContactsForPolicy(agentId);
+
+  // All carriers
+  await loadCarriersForPolicy();
+
+  // Reset product dropdown
+  const prodSel = document.getElementById('policy-product');
+  if (prodSel) {
+    prodSel.innerHTML = '<option value="">Select carrier first…</option>';
+    prodSel.disabled = true;
+  }
 
   // Reset contact selection + new-contact fields
   const contactSel = document.getElementById('policy-contact');
@@ -765,7 +783,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     location.replace('dashboard.html'); // no alert, no history entry
     return;
   }
-    // Toggle "new contact" fields when selecting in policy-contact
+  
+  // Toggle "new contact" fields when selecting in policy-contact
   const policyContactSel = document.getElementById('policy-contact');
   const newContactWrap   = document.getElementById('policy-new-contact-wrap');
 
@@ -776,6 +795,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       } else {
         newContactWrap.style.display = 'none';
       }
+    });
+  }
+    // When agent selection changes, reload that agent's contacts
+  const policyAgentSel = document.getElementById('policy-agent');
+  if (policyAgentSel) {
+    policyAgentSel.addEventListener('change', () => {
+      const agentId = policyAgentSel.value || null;
+      loadContactsForPolicy(agentId);
+    });
+  }
+
+  // When carrier selection changes, load that carrier's products
+  const policyCarrierSel = document.getElementById('policy-carrier');
+  if (policyCarrierSel) {
+    policyCarrierSel.addEventListener('change', () => {
+      const carrierId = policyCarrierSel.value || null;
+      loadProductsForCarrier(carrierId);
     });
   }
   userRole = 'admin';
