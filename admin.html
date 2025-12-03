@@ -993,16 +993,21 @@
 	        </label>
 	      </div>
 	
-	      <!-- Existing Old Fields (unchanged) -->
-	      <label>
-	        Carrier
-	        <input id="policy-carrier" type="text" required>
-	      </label>
-	
-	      <label>
-	        Product
-	        <input id="policy-product" type="text" required>
-	      </label>
+	      <!-- Carrier (NEW dropdown) -->
+				<label>
+				  Carrier
+				  <select id="policy-carrier" required>
+				    <option value="">Select carrier…</option>
+				  </select>
+				</label>
+				
+				<!-- Product (NEW dropdown, depends on carrier) -->
+				<label>
+				  Product
+				  <select id="policy-product" required disabled>
+				    <option value="">Select carrier first…</option>
+				  </select>
+				</label>
 	
 	      <label>
 	        Policy #
