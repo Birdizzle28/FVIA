@@ -490,10 +490,10 @@ async function loadContactsForPolicy() {
 
   const { data, error } = await supabase
     .from('contacts')
-    .select('id, first_name, last_name, phone, email, city, state')
+    .select('id, first_name, last_name, phones, email, city, state')
     .order('created_at', { ascending: false })
     .limit(200);
-
+  
   if (error) {
     console.error('Error loading contacts for policy:', error);
     sel.innerHTML = '<option value="">Error loading contacts</option>';
