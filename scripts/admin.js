@@ -1521,33 +1521,56 @@ document.addEventListener('DOMContentLoaded', async () => {
     setTimeout(() => {
       document.querySelector('#agent-modal [data-close]')?.click();
     }, 900);
-  });
-    // ===== Chargeback policy selector logic =====
-  const adjustmentAgentSel     = document.getElementById('adjustment-agent');
-  const adjustmentCategorySel  = document.getElementById('adjustment-category');
-  const chargebackPolicyWrap   = document.getElementById('chargeback-policy-wrapper');
-  const adjustmentPolicySelect = document.getElementById('adjustment-policy');
+  });  // ===== Chargeback & Lead Debt selector logic =====
+  const adjustmentAgentSel       = document.getElementById('adjustment-agent');
+  const adjustmentCategorySel    = document.getElementById('adjustment-category');
+  const chargebackPolicyWrap     = document.getElementById('chargeback-policy-wrapper');
+  const adjustmentPolicySelect   = document.getElementById('adjustment-policy');
+  const leadDebtLeadWrap         = document.getElementById('lead-debt-lead-wrapper');
+  const adjustmentLeadSelect     = document.getElementById('adjustment-lead');
 
   async function refreshChargebackPolicyUI() {
-    if (!chargebackPolicyWrap || !adjustmentPolicySelect) return;
+    if (!adjustmentAgentSel || !adjustmentCategorySel) return;
 
-    const agentId  = adjustmentAgentSel?.value || '';
-    const category = adjustmentCategorySel?.value || '';
+    const agentId  = adjustmentAgentSel.value || '';
+    const category = adjustmentCategorySel.value || '';
 
-    if (category === 'chargeback' && agentId) {
-      chargebackPolicyWrap.style.display = 'block';
-      await loadPoliciesForChargeback(agentId);
-    } else {
-      chargebackPolicyWrap.style.display = 'none';
+    // --- Policies (chargeback) ---
+    if (chargebackPolicyWrap && adjustmentPolicySelect) {
+      if (category === 'chargeback' && agentId) {
+        chargebackPolicyWrap.style.display = 'block';
+        await loadPoliciesForChargeback(agentId);
+      } else {
+        chargebackPolicyWrap.style.display = 'none';
 
-      // Reset select + destroy Choices
-      if (adjustmentPolicyChoices) {
-        try { adjustmentPolicyChoices.destroy(); } catch (_) {}
-        adjustmentPolicyChoices = null;
+        // Reset select + destroy Choices
+        if (adjustmentPolicyChoices) {
+          try { adjustmentPolicyChoices.destroy(); } catch (_) {}
+          adjustmentPolicyChoices = null;
+        }
+        adjustmentPolicySelect.innerHTML =
+          '<option value="">Search or select policy…</option>';
+        adjustmentPolicySelect.disabled = false;
       }
-      adjustmentPolicySelect.innerHTML =
-        '<option value="">Search or select policy…</option>';
-      adjustmentPolicySelect.disabled = false;
+    }
+
+    // --- Leads (lead_debt) ---
+    if (leadDebtLeadWrap && adjustmentLeadSelect) {
+      if (category === 'lead_debt' && agentId) {
+        leadDebtLeadWrap.style.display = 'block';
+        await loadLeadsForLeadDebt(agentId);
+      } else {
+        leadDebtLeadWrap.style.display = 'none';
+
+        // Reset select + destroy Choices
+        if (adjustmentLeadChoices) {
+          try { adjustmentLeadChoices.destroy(); } catch (_) {}
+          adjustmentLeadChoices = null;
+        }
+        adjustmentLeadSelect.innerHTML =
+          '<option value="">Search or select lead…</option>';
+        adjustmentLeadSelect.disabled = false;
+      }
     }
   }
 
