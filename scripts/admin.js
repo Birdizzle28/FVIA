@@ -603,35 +603,28 @@ async function loadCarriersForPolicy() {
 
   let carriers = [];
 
-  // Try to load from Supabase first
   try {
+    // 🔹 Pull from carriers table so we can match commission_schedules.carrier_id
     const { data, error } = await supabase
-      .from('carrier_configs')        // 🔹 change this table name if yours is different
-      .select('id, carrier_name, alias, is_active')
-      .eq('is_active', true)
-      .order('carrier_name', { ascending: true });
+      .from('carriers')
+      .select('id, name')
+      .order('name', { ascending: true });
 
-    if (!error && data && data.length) {
-      carriers = data.map(c => ({
-        id: c.id,
-        name: c.carrier_name || c.alias || `Carrier ${c.id}`
-      }));
+    if (error) {
+      console.error('Error loading carriers:', error);
+    } else {
+      carriers = data || [];
     }
   } catch (err) {
-    console.warn('Carrier Supabase lookup failed, falling back to static list:', err);
+    console.error('Carrier Supabase lookup failed:', err);
   }
 
-  // Fallback: static list if DB table not ready yet
   if (!carriers.length) {
-    carriers = [
-      { id: 'lincoln_heritage', name: 'Lincoln Heritage' },
-      { id: 'americo',          name: 'Americo' },
-      { id: 'aetna',            name: 'Aetna' },
-      { id: 'mool',             name: 'Mutual of Omaha' }
-    ];
+    sel.innerHTML = '<option value="">No carriers found</option>';
+    sel.disabled = true;
+    return;
   }
 
-  // Reset options
   sel.innerHTML = '';
 
   const placeholder = document.createElement('option');
@@ -641,16 +634,15 @@ async function loadCarriersForPolicy() {
 
   carriers.forEach(c => {
     const opt = document.createElement('option');
-    // Store the *name* as the value so your policyForm submit still works
-    opt.value = c.name;
-    opt.textContent = c.name;
-    opt.dataset.carrierId = c.id; // for future use if you want IDs
+    // value = carriers.id so it matches commission_schedules.carrier_id
+    opt.value = c.id;
+    opt.textContent = c.name || 'Carrier';
     sel.appendChild(opt);
   });
 
   sel.disabled = false;
 
-  // Enhance with Choices.js
+  // Enhance with Choices.js for search
   try {
     if (policyCarrierChoices) {
       policyCarrierChoices.destroy();
