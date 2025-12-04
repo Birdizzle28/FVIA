@@ -793,8 +793,22 @@ policyForm?.addEventListener('submit', async (e) => {
   if (errorEl) errorEl.textContent = '';
 
   const agent_id = document.getElementById('policy-agent').value || null;
-  const carrier  = document.getElementById('policy-carrier').value.trim();
-  const product  = document.getElementById('policy-product').value.trim();
+
+  // Carrier: value = carriers.id, label = carrier name
+  const carrierSel = document.getElementById('policy-carrier');
+  const carrier_id = carrierSel?.value || '';
+  const carrier_name = carrierSel?.selectedOptions[0]?.textContent.trim() || '';
+
+  const product_line = document
+    .getElementById('policy-product-line')
+    .value
+    .trim();
+
+  const policy_type = document
+    .getElementById('policy-policy-type')
+    .value
+    .trim();
+
   const policy_number = document.getElementById('policy-number').value.trim();
   const premium_annual = parseFloat(
     document.getElementById('policy-annual-premium').value || '0'
@@ -838,12 +852,11 @@ policyForm?.addEventListener('submit', async (e) => {
     const { data: newContact, error: cErr } = await supabase
       .from('contacts')
       .insert([{
-        owning_agent_id: agent_id || null,   // ✅ who owns this contact
+        owning_agent_id: agent_id || null,
         first_name: first,
         last_name: last,
         phones: phonesArr,
         emails: emailsArr,
-        // single-value convenience column if you use it
         email: email1 || email2 || null,
         address_line1: addr1 || null,
         address_line2: addr2 || null,
@@ -870,8 +883,21 @@ policyForm?.addEventListener('submit', async (e) => {
   }
 
   // Final validation
-  if (!contact_id || !agent_id || !carrier || !product || !policy_number || !issue_date_raw || !premium_annual) {
-    if (errorEl) errorEl.textContent = 'Please fill in all required fields (including contact).';
+  if (
+    !contact_id ||
+    !agent_id ||
+    !carrier_id ||
+    !carrier_name ||
+    !product_line ||
+    !policy_type ||
+    !policy_number ||
+    !issue_date_raw ||
+    !premium_annual
+  ) {
+    if (errorEl) {
+      errorEl.textContent =
+        'Please fill in all required fields (including carrier, product line, policy type, and contact).';
+    }
     return;
   }
 
@@ -880,13 +906,14 @@ policyForm?.addEventListener('submit', async (e) => {
   const payload = {
     contact_id,
     agent_id,
-    carrier_name: carrier,
+    carrier_name,           // human-readable
     policy_number,
-    policy_type: product,
-    product_line: product,
+    policy_type,            // from commission_schedules.policy_type
+    product_line,           // from commission_schedules.product_line
     premium_annual,
     issued_at,
     status
+    // (You can add carrier_id into metadata later if you add that column)
   };
 
   const { error } = await supabase
