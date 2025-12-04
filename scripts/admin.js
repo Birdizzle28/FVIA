@@ -604,11 +604,12 @@ async function loadCarriersForPolicy() {
   let carriers = [];
 
   try {
-    // 🔹 Pull from carriers table so we can match commission_schedules.carrier_id
     const { data, error } = await supabase
       .from('carriers')
-      .select('id, name')
-      .order('name', { ascending: true });
+      .select('id, carrier_name')
+      .order('carrier_name', { ascending: true });
+
+    console.log('Carrier data result:', data, error);
 
     if (error) {
       console.error('Error loading carriers:', error);
@@ -625,37 +626,16 @@ async function loadCarriersForPolicy() {
     return;
   }
 
+  // Populate
   sel.innerHTML = '';
-
-  const placeholder = document.createElement('option');
-  placeholder.value = '';
-  placeholder.textContent = 'Select carrier…';
-  sel.appendChild(placeholder);
-
   carriers.forEach(c => {
     const opt = document.createElement('option');
-    // value = carriers.id so it matches commission_schedules.carrier_id
     opt.value = c.id;
-    opt.textContent = c.name || 'Carrier';
+    opt.textContent = c.carrier_name;
     sel.appendChild(opt);
   });
 
   sel.disabled = false;
-
-  // Enhance with Choices.js for search
-  try {
-    if (policyCarrierChoices) {
-      policyCarrierChoices.destroy();
-      policyCarrierChoices = null;
-    }
-    policyCarrierChoices = new Choices(sel, {
-      searchEnabled: true,
-      shouldSort: false,
-      itemSelectText: ''
-    });
-  } catch (e) {
-    console.warn('Choices init failed for policy-carrier:', e);
-  }
 }
 
 async function loadProductLinesAndTypesForCarrier(carrierId) {
