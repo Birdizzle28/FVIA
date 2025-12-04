@@ -1059,12 +1059,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
-  // When carrier selection changes, load that carrier's products
+  // When carrier selection changes, load that carrier's product lines & policy types
   const policyCarrierSel = document.getElementById('policy-carrier');
   if (policyCarrierSel) {
     policyCarrierSel.addEventListener('change', () => {
       const carrierId = policyCarrierSel.value || null;
-      loadProductsForCarrier(carrierId);
+      loadProductLinesAndTypesForCarrier(carrierId);
     });
   }
   userRole = 'admin';
