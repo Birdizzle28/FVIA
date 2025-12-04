@@ -542,3 +542,34 @@ hr{ border:0; height:1px; background:#ececf5; }
   padding: 4px 0;
   border-bottom: 1px solid #eee;
 }
+
+/* Fullscreen overlay backdrop */
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: none;            /* you toggle this to .open or style="display:flex" */
+  justify-content: center;
+  align-items: flex-start;  /* so content starts at top, not perfectly centered */
+  background: rgba(0,0,0,0.45);
+  padding: 20px 12px;       /* some breathing room around the box */
+  overflow-y: auto;         /* <— makes the whole overlay scroll if needed */
+}
+
+/* When you add .open via JS */
+.overlay.open {
+  display: flex;
+}
+
+/* The actual white box inside */
+.overlay .overlay-dialog,
+.overlay .overlay-content,
+.overlay .overlay-panel {
+  background: #fff;
+  border-radius: 10px;
+  max-width: 900px;
+  width: 100%;
+  max-height: calc(100vh - 40px); /* never taller than the viewport */
+  overflow-y: auto;               /* <— the box itself scrolls internally */
+  padding: 20px;
+}
