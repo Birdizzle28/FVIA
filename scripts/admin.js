@@ -18,7 +18,8 @@ let adjustmentPolicyChoices = null;
 let adjustmentLeadChoices = null;
 let policyContactChoices = null;
 let policyCarrierChoices = null;
-let policyProductChoices = null;
+let policyProductLineChoices = null;
+let policyPolicyTypeChoices = null;
 
 // ---- KPI helpers ----
 const DAY_MS = 864e5;
@@ -91,15 +92,33 @@ openPolicyBtn?.addEventListener('click', async () => {
   // Contacts filtered by agent
   await loadContactsForPolicy(agentId);
 
-  // All carriers
+  // Carriers
   await loadCarriersForPolicy();
 
-  // Reset product dropdown
-  const prodSel = document.getElementById('policy-product');
-  if (prodSel) {
-    prodSel.innerHTML = '<option value="">Select carrier first…</option>';
-    prodSel.disabled = true;
+  // Reset product line & policy type dropdowns
+  const lineSel = document.getElementById('policy-product-line');
+  const typeSel = document.getElementById('policy-policy-type');
+
+  if (lineSel) {
+    lineSel.innerHTML = '<option value="">Select carrier first…</option>';
+    lineSel.disabled = true;
   }
+  if (typeSel) {
+    typeSel.innerHTML = '<option value="">Select carrier first…</option>';
+    typeSel.disabled = true;
+  }
+
+  // Destroy previous Choices instances if any
+  try {
+    if (policyProductLineChoices) {
+      policyProductLineChoices.destroy();
+      policyProductLineChoices = null;
+    }
+    if (policyPolicyTypeChoices) {
+      policyPolicyTypeChoices.destroy();
+      policyPolicyTypeChoices = null;
+    }
+  } catch (_) {}
 
   // Reset contact selection + new-contact fields
   const contactSel = document.getElementById('policy-contact');
