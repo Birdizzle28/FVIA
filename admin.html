@@ -1035,21 +1035,29 @@
 	        </label>
 	      </div>
 	
-	      <!-- Carrier (NEW dropdown) -->
-				<label>
-				  Carrier
-				  <select id="policy-carrier" required>
-				    <option value="">Select carrier…</option>
-				  </select>
-				</label>
-				
-				<!-- Product (NEW dropdown, depends on carrier) -->
-				<label>
-				  Product
-				  <select id="policy-product" required disabled>
-				    <option value="">Select carrier first…</option>
-				  </select>
-				</label>
+	            <!-- Carrier -->
+      <label>
+        Carrier
+        <select id="policy-carrier" required>
+          <option value="">Select carrier…</option>
+        </select>
+      </label>
+
+      <!-- Product Line (from commission_schedules.product_line) -->
+      <label>
+        Product Line
+        <select id="policy-product-line" required disabled>
+          <option value="">Select carrier first…</option>
+        </select>
+      </label>
+
+      <!-- Policy Type (from commission_schedules.policy_type) -->
+      <label>
+        Policy Type
+        <select id="policy-policy-type" required disabled>
+          <option value="">Select carrier first…</option>
+        </select>
+      </label>
 	
 	      <label>
 	        Policy #
