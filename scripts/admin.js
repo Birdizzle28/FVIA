@@ -896,14 +896,24 @@ policyForm?.addEventListener('submit', async (e) => {
     // (You can add carrier_id into metadata later if you add that column)
   };
 
-  const { error } = await supabase
+    const { data: newPolicy, error } = await supabase
     .from('policies')
-    .insert([payload]);
+    .insert([payload])
+    .select()
+    .single();
 
   if (error) {
     console.error('Error inserting policy', error);
     if (errorEl) errorEl.textContent = 'Error saving policy: ' + error.message;
     return;
+  }
+
+  // 🔹 Call your commission logic with the new policy id
+  try {
+    await runPolicyCommissionFlow(newPolicy.id);
+  } catch (e) {
+    console.error('Error running commission flow for policy', e);
+    // optional: show a soft warning somewhere, but don't block the policy save
   }
 
   policyForm.reset();
