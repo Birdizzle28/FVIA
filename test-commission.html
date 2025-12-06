@@ -52,16 +52,15 @@
 <!-- -------------------------- -->
 <!--  CREATE STRIPE ACCOUNT    -->
 <!-- -------------------------- -->
-<h2>Create Stripe Account for Agent</h2>
+<h2>Create Stripe Account for Pre-Approved Agent</h2>
 
 <label>
-  Agent ID (agents.id UUID):<br>
-  <input id="agent-id" type="text" style="width: 340px;" placeholder="paste agents.id here">
+  NPN:<br>
+  <input id="npn-input" type="text" style="width: 200px;" placeholder="Agent NPN">
 </label>
 <button id="create-stripe-btn">Create Stripe Account + Get Onboarding Link</button>
 
 <pre id="stripe-output" style="white-space: pre-wrap; background:#111; color:#ff0; padding:10px; margin-top:20px; min-height:120px;"></pre>
-<script>
 document.getElementById('send-batch-btn').addEventListener('click', async () => {
   const batchId = document.getElementById('batch-id').value.trim();
   if (!batchId) return alert('Paste a batch id');
@@ -155,15 +154,14 @@ document.getElementById('run-paythru-btn').addEventListener('click', async () =>
   }
 });
 /* =======================================================
-   CREATE STRIPE CONNECT ACCOUNT FOR AGENT
+   CREATE STRIPE CONNECT ACCOUNT USING NPN
    ======================================================= */
 document.getElementById('create-stripe-btn').addEventListener('click', async () => {
-  const agentIdInput = document.getElementById('agent-id');
+  const npn = document.getElementById('npn-input').value.trim();
   const out = document.getElementById('stripe-output');
 
-  const agent_id = agentIdInput.value.trim();
-  if (!agent_id) {
-    out.textContent = 'Please paste an agents.id (UUID) from Supabase.';
+  if (!npn) {
+    out.textContent = 'Please enter an NPN.';
     return;
   }
 
@@ -173,26 +171,23 @@ document.getElementById('create-stripe-btn').addEventListener('click', async () 
     const res = await fetch('/.netlify/functions/createStripeAccount', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ agent_id })
+      body: JSON.stringify({ npn })
     });
 
     const text = await res.text();
 
-    // Try to pretty print JSON if possible
     try {
       const json = JSON.parse(text);
       out.textContent =
         'Status: ' + res.status + '\n\n' +
         JSON.stringify(json, null, 2);
 
-      // If we got an onboarding URL, show it nicely
       if (json.onboarding_url) {
         out.textContent +=
-          '\n\nOpen this URL to complete onboarding:\n' +
+          '\n\nOnboarding URL:\n' +
           json.onboarding_url;
       }
     } catch {
-      // Not JSON, just show raw text
       out.textContent = 'Status: ' + res.status + '\n\n' + text;
     }
   } catch (err) {
