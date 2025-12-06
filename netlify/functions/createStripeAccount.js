@@ -21,35 +21,44 @@ export async function handler(event) {
     return { statusCode: 400, body: 'Invalid JSON' };
   }
 
-  const { agent_id } = body;
-  if (!agent_id) {
-    return { statusCode: 400, body: 'agent_id is required' };
-  }
-
-  // 1) Load agent info (email + name)
-  const { data: agent, error: agentErr } = await supabase
-    .from('agents')
-    .select('id, email, full_name, stripe_account_id')
-    .eq('id', agent_id)
-    .single();
-
-  if (agentErr || !agent) {
+  const { npn } = body;
+  if (!npn) {
     return {
-      statusCode: 404,
-      body: JSON.stringify({ error: 'Agent not found', details: agentErr })
+      statusCode: 400,
+      body: JSON.stringify({ error: 'npn is required' })
     };
   }
 
-  // If they already have an account, just make a new onboarding link
-  let stripeAccountId = agent.stripe_account_id;
+  // 1) Look up pre-approved agent by NPN
+  // Assumes table: approved_agents with columns: id, npn, email, first_name, last_name, stripe_account_id
+  const { data: approved, error: approvedErr } = await supabase
+    .from('approved_agents')
+    .select('id, npn, email, first_name, last_name, stripe_account_id')
+    .eq('npn', npn)
+    .single();
 
+  if (approvedErr || !approved) {
+    return {
+      statusCode: 404,
+      body: JSON.stringify({
+        error: 'Pre-approved agent not found for this NPN',
+        details: approvedErr
+      })
+    };
+  }
+
+  let stripeAccountId = approved.stripe_account_id || null;
+
+  // 2) Create Stripe Express account if not already created
   if (!stripeAccountId) {
-    // 2) Create Stripe connected account for this agent
     const account = await stripe.accounts.create({
       type: 'express',
-      email: agent.email || undefined,
+      email: approved.email || undefined,
       business_type: 'individual',
-      metadata: { agent_id: agent.id },
+      metadata: {
+        npn: approved.npn,
+        approved_agent_id: approved.id
+      },
       capabilities: {
         transfers: { requested: true }
       }
@@ -57,23 +66,26 @@ export async function handler(event) {
 
     stripeAccountId = account.id;
 
-    // 3) Save it on the agent row
+    // Save account ID back to approved_agents
     const { error: updErr } = await supabase
-      .from('agents')
+      .from('approved_agents')
       .update({ stripe_account_id: stripeAccountId })
-      .eq('id', agent.id);
+      .eq('id', approved.id);
 
     if (updErr) {
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to save stripe_account_id', details: updErr })
+        body: JSON.stringify({
+          error: 'Failed to save stripe_account_id',
+          details: updErr
+        })
       };
     }
   }
 
-  // 4) Create onboarding link for Amanda to finish setup
-  const refreshUrl = 'https://familyvaluesgroup.com/agent/stripe-error';   // change these
-  const returnUrl  = 'https://familyvaluesgroup.com/agent/stripe-complete';
+  // 3) Create onboarding link for them to finish setup
+  const refreshUrl = 'https://familyvaluesgroup.com/agent/stripe-error';    // tweak later
+  const returnUrl  = 'https://familyvaluesgroup.com/agent/stripe-complete'; // tweak later
 
   const link = await stripe.accountLinks.create({
     account: stripeAccountId,
@@ -85,7 +97,8 @@ export async function handler(event) {
   return {
     statusCode: 200,
     body: JSON.stringify({
-      agent_id: agent.id,
+      npn,
+      approved_agent_id: approved.id,
       stripe_account_id: stripeAccountId,
       onboarding_url: link.url
     })
