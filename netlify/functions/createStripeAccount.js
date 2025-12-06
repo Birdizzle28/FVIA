@@ -34,7 +34,8 @@ export async function handler(event) {
         npn
       },
       capabilities: {
-        transfers: { requested: true }   // so you can send them money
+        card_payments: { requested: true },
+        transfers: { requested: true }
       }
     });
 
