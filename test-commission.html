@@ -61,7 +61,8 @@
 <button id="create-stripe-btn">Create Stripe Account + Get Onboarding Link</button>
 
 <pre id="stripe-output" style="white-space: pre-wrap; background:#111; color:#ff0; padding:10px; margin-top:20px; min-height:120px;"></pre>
-document.getElementById('send-batch-btn').addEventListener('click', async () => {
+<script>
+  document.getElementById('send-batch-btn').addEventListener('click', async () => {
   const batchId = document.getElementById('batch-id').value.trim();
   if (!batchId) return alert('Paste a batch id');
   const res = await fetch('/.netlify/functions/sendPayoutBatch', {
