@@ -135,6 +135,136 @@ openPolicyBtn?.addEventListener('click', async () => {
   openModal(policyModal);
 });
 
+// ===== Helpers for date logic =====
+
+// Format Date -> 'YYYY-MM-DD'
+function toIsoDate(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+// Days difference (today - target) in whole days
+function diffInDays(a, b) {
+  const msPerDay = 24 * 60 * 60 * 1000;
+  const aMid = new Date(a.getFullYear(), a.getMonth(), a.getDate());
+  const bMid = new Date(b.getFullYear(), b.getMonth(), b.getDate());
+  return Math.round((aMid - bMid) / msPerDay);
+}
+
+/**
+ * Weekly advance run day:
+ *   - Scheduled pay date = Friday of that week
+ *   - Allow button click on Thursday, Friday, or Saturday
+ *     -> always run with the FRIDAY as pay_date
+ *
+ * Returns a Date for that Friday, or null if today is not in the Thu–Sat window.
+ */
+function getWeeklyScheduledDateIfAllowed(today) {
+  // Look in a 3-day window around today for a Friday
+  for (let offset = -1; offset <= 1; offset++) {
+    const candidate = new Date(today);
+    candidate.setDate(today.getDate() + offset);
+    if (candidate.getDay() === 5) { // 5 = Friday
+      return candidate;
+    }
+  }
+  return null;
+}
+
+/**
+ * Monthly pay-thru run day:
+ *   - Scheduled pay date = 5th of this month
+ *   - Allow button click on 4th, 5th, or 6th
+ *     -> always run with the 5TH as pay_date
+ *
+ * Returns a Date for the 5th, or null if today is not within ±1 day.
+ */
+function getMonthlyScheduledDateIfAllowed(today) {
+  const scheduled = new Date(today.getFullYear(), today.getMonth(), 5);
+  const diff = diffInDays(today, scheduled); // positive if today after 5th
+  if (Math.abs(diff) <= 1) {
+    return scheduled;
+  }
+  return null;
+}
+
+// ===== Hook up the "Run Scheduled Payouts" button =====
+
+const runPayoutsBtn = document.getElementById('run-payouts-btn');
+const runPayoutsStatus = document.getElementById('run-payouts-status');
+
+if (runPayoutsBtn && runPayoutsStatus) {
+  runPayoutsBtn.addEventListener('click', async () => {
+    const today = new Date();
+
+    const weeklyDate  = getWeeklyScheduledDateIfAllowed(today);
+    const monthlyDate = getMonthlyScheduledDateIfAllowed(today);
+
+    const tasks = [];
+    let statusText = '';
+
+    runPayoutsBtn.disabled = true;
+    runPayoutsStatus.textContent = 'Running payouts...';
+
+    try {
+      // Weekly advance (Thu/Fri/Sat)
+      if (weeklyDate) {
+        const payDateStr = toIsoDate(weeklyDate);
+        tasks.push(
+          fetch(`/.netlify/functions/runWeeklyAdvance?pay_date=${payDateStr}`, {
+            method: 'POST'
+          })
+            .then(res => res.json())
+            .then(data => {
+              statusText += `Weekly advance run for ${payDateStr}: ${data.message || 'OK'}\n`;
+              return { type: 'weekly', data };
+            })
+            .catch(err => {
+              statusText += `Weekly advance error: ${err.message}\n`;
+              return { type: 'weekly', error: err };
+            })
+        );
+      }
+
+      // Monthly pay-thru (4th/5th/6th)
+      if (monthlyDate) {
+        const payDateStr = toIsoDate(monthlyDate);
+        tasks.push(
+          fetch(`/.netlify/functions/runMonthlyPayThru?pay_date=${payDateStr}`, {
+            method: 'POST'
+          })
+            .then(res => res.json())
+            .then(data => {
+              statusText += `Monthly pay-thru run for ${payDateStr}: ${data.message || 'OK'}\n`;
+              return { type: 'monthly', data };
+            })
+            .catch(err => {
+              statusText += `Monthly pay-thru error: ${err.message}\n`;
+              return { type: 'monthly', error: err };
+            })
+        );
+      }
+
+      if (tasks.length === 0) {
+        runPayoutsStatus.textContent =
+          'Not in the allowed window: ' +
+          'Weekly (Thu–Sat around Friday) or Monthly (4th–6th around the 5th).';
+        return;
+      }
+
+      await Promise.all(tasks);
+
+      runPayoutsStatus.textContent = statusText.trim();
+      // Optionally: after success, you could refresh payout batch list here.
+
+    } catch (err) {
+      console.error('Error running payouts:', err);
+      runPayoutsStatus.textContent = `Unexpected error: ${err.message}`;
+    } finally {
+      runPayoutsBtn.disabled = false;
+    }
+  });
+}
+
 openAdjustmentBtn?.addEventListener('click', async () => {
   await loadAgentsForCommissions();
   openModal(adjustmentModal);
