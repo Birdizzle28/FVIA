@@ -1,4 +1,11 @@
+const supabase = window.supabaseClient;
+
 document.addEventListener("DOMContentLoaded", () => {
+  if (!supabase) {
+    console.error('Supabase client missing on this page');
+    return;
+  }
+  
   const form = document.getElementById("contactForm");
   if (!form) return;
 
