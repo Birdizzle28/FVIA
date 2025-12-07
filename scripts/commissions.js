@@ -1,11 +1,7 @@
 // scripts/commissions.js
 import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
 
-// Same Supabase project as the rest of your CRM
-const supabase = createClient(
-  'https://ddlbgkolnayqrxslzsxn.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
-);
+const supabase = window.supabaseClient;
 
 let me = null;        // supabase auth user
 let myProfile = null; // row from agents table
@@ -15,6 +11,10 @@ let leadBalance = 0;
 let chargebackBalance = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
+   (!supabase) {
+    console.error('Supabase client missing on this page');
+    return;
+  }
   // ----- 1. Require login -----
   const { data: { session }, error: sessErr } = await supabase.auth.getSession();
   if (sessErr) {
