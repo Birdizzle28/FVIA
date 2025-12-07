@@ -1,1185 +1,1082 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-		<link rel="apple-touch-icon" href="/apple-touch-icon.png">
-	    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
-	    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
-	    <link rel="manifest" href="/site.webmanifest">
-			<title>Admin | Family Values Group</title>
-			<link rel="stylesheet" href="styles/agentstyle.css" />
-			<link rel="stylesheet" href="styles/admin.css" />
-			<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
-			<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-			<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
-  		<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
-		<!-- admin.html (inside <head>, very top) -->
-		<style>html{visibility:hidden}</style>
-		<script type="module">
-		  import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm';
-		
-		  const supabase = createClient(
-		    'https://ddlbgkolnayqrxslzsxn.supabase.co',
-		    'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
-		  );
-		
-		  const { data: { session } } = await supabase.auth.getSession();
-		  if (!session) {
-		    location.replace('login.html'); // never show admin page
-		  } else {
-		    const { data: profile } = await supabase
-		      .from('agents')
-		      .select('is_admin')
-		      .eq('id', session.user.id)
-		      .maybeSingle();
-		
-		    if (profile?.is_admin === true) {
-		      document.documentElement.style.visibility = 'visible'; // show for admins
-		    } else {
-		      location.replace('dashboard.html'); // non-admins never see content
-		    }
-		  }
-		</script>
-		<noscript><meta http-equiv="refresh" content="0; url=dashboard.html"></noscript>
-	</head>
-	
-	<body id="dashboardbody">
-		
-		<!-- Header -->
-		<header class="index-grid-header">
-			<div id="logofvcontainer">
-				<div id="logodiv">
-					<a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
-				</div>
-				<div id="fvdiv">
-					<p><strong>Family Values Group</strong></p>
-				</div>
-			</div>
-			<div id="navcontainer">
-				<nav class="header-flex-container">
-					<a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
-					<a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
-					<div id="menu-toggle">
-						<i class="fa-solid fa-bars"></i>
-					</div>
-				</nav>
-			</div>
-		</header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <title>Admin | Family Values Group</title>
+    <link rel="stylesheet" href="styles/agentstyle.css" />
+    <link rel="stylesheet" href="styles/admin.css" />
+    <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
 
-		<!-- Mobile Menu -->
-		<div id="mobile-menu">
-			<a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
-			
-			<!-- Toolkit parent (acts like a toggle, not a link) -->
-			<button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
-				<i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
-				<i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
-			</button>
-			
-			<!-- Submenu that expands between Toolkit and Commissions -->
-			<div id="toolkit-submenu" class="submenu" hidden>
-				<a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
+    <!-- Lock visual display until we confirm admin in script at bottom -->
+    <style>
+      html { visibility: hidden; }
+    </style>
+
+    <noscript>
+      <meta http-equiv="refresh" content="0; url=dashboard.html">
+    </noscript>
+  </head>
+  
+  <body id="dashboardbody">
+    
+    <!-- Header -->
+    <header class="index-grid-header">
+      <div id="logofvcontainer">
+        <div id="logodiv">
+          <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+        </div>
+        <div id="fvdiv">
+          <p><strong>Family Values Group</strong></p>
+        </div>
+      </div>
+      <div id="navcontainer">
+        <nav class="header-flex-container">
+          <a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
+          <a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
+          <div id="menu-toggle">
+            <i class="fa-solid fa-bars"></i>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu">
+      <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
+      
+      <!-- Toolkit parent (acts like a toggle, not a link) -->
+      <button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
+        <i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
+        <i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
+      </button>
+      
+      <!-- Submenu that expands between Toolkit and Commissions -->
+      <div id="toolkit-submenu" class="submenu" hidden>
+        <a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
         <a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
         <a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
         <a href="calculator.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
         <a href="marketing.html"><i class="fa-solid fa-handshake"></i><span>Marketing</span></a>
-			</div>
-			<a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
-			<a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
-			<a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
-			<a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
-			<a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
-		</div>
-    
-  <main class="auth-container">
-    
-    <!-- Admin page navigation -->
-    <nav id="admin-page-nav">
-		  <button id="nav-all" class="active">All Leads</button>
-		  <button id="nav-requests">Lead Requests</button>
-		  <button id="nav-history">Assignment History</button>
-		  <button id="nav-stats">Agent Stats</button>
-		  <button id="nav-commissions">Commissions</button>
-		  <button id="nav-content" class="admin-nav-btn">Content</button>
-		</nav>
-    <!-- Lead Requests Section -->
-    <section id="admin-requests-section" class="admin-section" style="display:none;">
-      <h3>Lead Requests</h3>
-      <div id="requested-leads-container" class="scroll-container"></div>
-      <hr />
-    </section>
-    <!-- Leads Table -->
-    <section id="admin-all-section" class="admin-section">
-      <h3>All Leads</h3>
-      <!-- Filters -->
-      <div id="admin-all-container">
-        <div id="admin-filters" class="filter-wrapper">
-          <div class="filter-group">
-            <label for="date-range">Date Range</label>
-            <input id="date-range" placeholder="Select date range" readonly />
-          </div>
-          <div class="filter-group">
-            <label for="date-order">Order</label>
-            <select id="date-order">
-              <option value="desc">Most Recent</option>
-              <option value="asc">Oldest</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label for="agent-filter">Agent</label>
-            <select id="agent-filter">
-              <option value="">All Agents</option>
-              <!-- options populated by script -->
-            </select>
-          </div>
-          <div class="filter-group">
-            <label for="assigned-filter">Assigned</label>
-            <select id="assigned-filter">
-              <option value="">Assigned &amp; Unassigned</option>
-              <option value="true">Assigned</option>
-              <option value="false">Unassigned</option>
-            </select>
-          </div>
-          <div class="filter-group">
-            <label for="zip-filter">ZIP</label>
-            <input type="text" id="zip-filter" placeholder="ZIP" />
-          </div>
-          <div class="filter-group">
-            <label for="city-filter">City</label>
-            <input type="text" id="city-filter" placeholder="City" />
-          </div>
-          <div class="filter-group">
-            <label for="state-filter">State</label>
-            <select id="state-filter">
-              <option value="">All States</option>
-              <option value="AL">Alabama</option>
-              <option value="AK">Alaska</option>
-              <option value="AZ">Arizona</option>
-              <option value="AR">Arkansas</option>
-              <option value="CA">California</option>
-              <option value="CO">Colorado</option>
-              <option value="CT">Connecticut</option>
-              <option value="DE">Delaware</option>
-              <option value="FL">Florida</option>
-              <option value="GA">Georgia</option>
-              <option value="HI">Hawaii</option>
-              <option value="ID">Idaho</option>
-              <option value="IL">Illinois</option>
-              <option value="IN">Indiana</option>
-              <option value="IA">Iowa</option>
-              <option value="KS">Kansas</option>
-              <option value="KY">Kentucky</option>
-              <option value="LA">Louisiana</option>
-              <option value="ME">Maine</option>
-              <option value="MD">Maryland</option>
-              <option value="MA">Massachusetts</option>
-              <option value="MI">Michigan</option>
-              <option value="MN">Minnesota</option>
-              <option value="MS">Mississippi</option>
-              <option value="MO">Missouri</option>
-              <option value="MT">Montana</option>
-              <option value="NE">Nebraska</option>
-              <option value="NV">Nevada</option>
-              <option value="NH">New Hampshire</option>
-              <option value="NJ">New Jersey</option>
-              <option value="NM">New Mexico</option>
-              <option value="NY">New York</option>
-              <option value="NC">North Carolina</option>
-              <option value="ND">North Dakota</option>
-              <option value="OH">Ohio</option>
-              <option value="OK">Oklahoma</option>
-              <option value="OR">Oregon</option>
-              <option value="PA">Pennsylvania</option>
-              <option value="RI">Rhode Island</option>
-              <option value="SC">South Carolina</option>
-              <option value="SD">South Dakota</option>
-              <option value="TN">Tennessee</option>
-              <option value="TX">Texas</option>
-              <option value="UT">Utah</option>
-              <option value="VT">Vermont</option>
-              <option value="VA">Virginia</option>
-              <option value="WA">Washington</option>
-              <option value="WV">West Virginia</option>
-              <option value="WI">Wisconsin</option>
-              <option value="WY">Wyoming</option>
-            </select>
-        </div>
-        <div class="filter-group">
-          <label for="first-name-filter">First Name</label>
-          <input type="text" id="first-name-filter" placeholder="First Name" />
-        </div>
-        <div class="filter-group">
-          <label for="last-name-filter">Last Name</label>
-          <input type="text" id="last-name-filter" placeholder="Last Name" />
-        </div>
-        <div class="filter-group">
-          <label for="lead-type-filter">Product Type</label>
-          <select id="lead-type-filter">
-            <option value="">All Product Types</option>
-            <option value="Auto">Life Insurance</option>
-            <option value="Home">Health Insurance</option>
-            <option value="Life">Property & Casualty Insurance</option>
-            <option value="Health">LegalShield/IDShield</option>
-            <option value="Other">Realty</option>
-          </select>
-        </div>
-
-        <div class="filter-buttons">
-          <button id="apply-filters">Apply Filters</button>
-          <button id="reset-filters">Reset Filters</button>
-        </div>
       </div>
-        <select id="sort-by" style="display: none;">
-          <option value="first_name">first_name</option>
-          <option value="last_name">last_name</option>
-          <option value="age">age</option>
-          <option value="phone">phone</option>
-          <option value="address">address</option>
-          <option value="city">city</option>
-          <option value="state">state</option>
-          <option value="zip">zip</option>
-          <option value="lead_type">lead_type</option>
-          <option value="submitted_by_name">submitted_by_name</option>
-          <option value="notes">notes</option>
-          <option value="created_at">created_at</option>
-        </select>
-        <div id="leads-table-container">
-          <table id="leads-table">
-            <thead>
-              <tr>
-                <th><input type="checkbox" id="select-all"></th>
-                <th data-column="created_at">Submitted</th>
-                <th data-column="submitted_by_name">Agent</th>
-                <th data-column="first_name">First Name</th>
-                <th data-column="last_name">Last Name</th>
-                <th data-column="age">Age</th>
-                <th data-column="phone">Phone(s)</th>
-                <th data-column="address">Address</th>
-                <th data-column="city">City</th>
-                <th data-column="state">State</th>
-                <th data-column="zip">ZIP</th>
-                <th data-column="lead_type">Type</th>
-                <th data-column="notes">Notes</th>
-                <th data-column="product_type">Product</th>
-              </tr>
-            </thead>
-            <tbody>
-              <!-- Leads load here -->
-            </tbody>
-          </table>
-          <div id="pagination-controls" style="margin-top: 10px;">
-            <button id="prev-page">Previous</button>
-            <span id="current-page">Page 1</span>
-            <button id="next-page">Next</button>
-          </div>
-        </div>
-        <!-- Bulk Assign Controls -->
-        <div id="bulk-export-invisible-container">
-          <div id="bulk-export-container">
-            <div id="bulk-assign-controls" style="margin-top: 10px;">
-              <label for="bulk-assign-agent">Assign <span id="selected-count">0</span> lead(s) to:</label>
-              <select id="bulk-assign-agent">
-                <!-- populated by script -->
-              </select>
-              <button id="bulk-assign-btn">Assign</button>
+      <a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
+      <a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
+      <a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
+      <a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
+      <a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
+    </div>
+    
+    <main class="auth-container">
+      
+      <!-- Admin page navigation -->
+      <nav id="admin-page-nav">
+        <button id="nav-all" class="active">All Leads</button>
+        <button id="nav-requests">Lead Requests</button>
+        <button id="nav-history">Assignment History</button>
+        <button id="nav-stats">Agent Stats</button>
+        <button id="nav-commissions">Commissions</button>
+        <button id="nav-content" class="admin-nav-btn">Content</button>
+      </nav>
+
+      <!-- Lead Requests Section -->
+      <section id="admin-requests-section" class="admin-section" style="display:none;">
+        <h3>Lead Requests</h3>
+        <div id="requested-leads-container" class="scroll-container"></div>
+        <hr />
+      </section>
+
+      <!-- Leads Table -->
+      <section id="admin-all-section" class="admin-section">
+        <h3>All Leads</h3>
+        <!-- Filters -->
+        <div id="admin-all-container">
+          <div id="admin-filters" class="filter-wrapper">
+            <div class="filter-group">
+              <label for="date-range">Date Range</label>
+              <input id="date-range" placeholder="Select date range" readonly />
             </div>
-            <div id="export-controls" style="position: relative;">
-              <button id="export-btn" style="margin: auto">Export</button>
-              <div id="export-options" style="display: none; position: absolute; background: white; border: 1px solid #ccc; padding: 5px;">
-                <button id="export-pdf">PDF</button>
-                <button id="export-csv">CSV</button>
-                <button id="export-print">Print</button>
+            <div class="filter-group">
+              <label for="date-order">Order</label>
+              <select id="date-order">
+                <option value="desc">Most Recent</option>
+                <option value="asc">Oldest</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="agent-filter">Agent</label>
+              <select id="agent-filter">
+                <option value="">All Agents</option>
+                <!-- options populated by script -->
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="assigned-filter">Assigned</label>
+              <select id="assigned-filter">
+                <option value="">Assigned &amp; Unassigned</option>
+                <option value="true">Assigned</option>
+                <option value="false">Unassigned</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="zip-filter">ZIP</label>
+              <input type="text" id="zip-filter" placeholder="ZIP" />
+            </div>
+            <div class="filter-group">
+              <label for="city-filter">City</label>
+              <input type="text" id="city-filter" placeholder="City" />
+            </div>
+            <div class="filter-group">
+              <label for="state-filter">State</label>
+              <select id="state-filter">
+                <option value="">All States</option>
+                <option value="AL">Alabama</option>
+                <option value="AK">Alaska</option>
+                <option value="AZ">Arizona</option>
+                <option value="AR">Arkansas</option>
+                <option value="CA">California</option>
+                <option value="CO">Colorado</option>
+                <option value="CT">Connecticut</option>
+                <option value="DE">Delaware</option>
+                <option value="FL">Florida</option>
+                <option value="GA">Georgia</option>
+                <option value="HI">Hawaii</option>
+                <option value="ID">Idaho</option>
+                <option value="IL">Illinois</option>
+                <option value="IN">Indiana</option>
+                <option value="IA">Iowa</option>
+                <option value="KS">Kansas</option>
+                <option value="KY">Kentucky</option>
+                <option value="LA">Louisiana</option>
+                <option value="ME">Maine</option>
+                <option value="MD">Maryland</option>
+                <option value="MA">Massachusetts</option>
+                <option value="MI">Michigan</option>
+                <option value="MN">Minnesota</option>
+                <option value="MS">Mississippi</option>
+                <option value="MO">Missouri</option>
+                <option value="MT">Montana</option>
+                <option value="NE">Nebraska</option>
+                <option value="NV">Nevada</option>
+                <option value="NH">New Hampshire</option>
+                <option value="NJ">New Jersey</option>
+                <option value="NM">New Mexico</option>
+                <option value="NY">New York</option>
+                <option value="NC">North Carolina</option>
+                <option value="ND">North Dakota</option>
+                <option value="OH">Ohio</option>
+                <option value="OK">Oklahoma</option>
+                <option value="OR">Oregon</option>
+                <option value="PA">Pennsylvania</option>
+                <option value="RI">Rhode Island</option>
+                <option value="SC">South Carolina</option>
+                <option value="SD">South Dakota</option>
+                <option value="TN">Tennessee</option>
+                <option value="TX">Texas</option>
+                <option value="UT">Utah</option>
+                <option value="VT">Vermont</option>
+                <option value="VA">Virginia</option>
+                <option value="WA">Washington</option>
+                <option value="WV">West Virginia</option>
+                <option value="WI">Wisconsin</option>
+                <option value="WY">Wyoming</option>
+              </select>
+            </div>
+            <div class="filter-group">
+              <label for="first-name-filter">First Name</label>
+              <input type="text" id="first-name-filter" placeholder="First Name" />
+            </div>
+            <div class="filter-group">
+              <label for="last-name-filter">Last Name</label>
+              <input type="text" id="last-name-filter" placeholder="Last Name" />
+            </div>
+            <div class="filter-group">
+              <label for="lead-type-filter">Product Type</label>
+              <select id="lead-type-filter">
+                <option value="">All Product Types</option>
+                <option value="Life">Life Insurance</option>
+                <option value="Health">Health Insurance</option>
+                <option value="P&C">Property & Casualty Insurance</option>
+                <option value="Legal">LegalShield/IDShield</option>
+                <option value="Realty">Realty</option>
+              </select>
+            </div>
+
+            <div class="filter-buttons">
+              <button id="apply-filters">Apply Filters</button>
+              <button id="reset-filters">Reset Filters</button>
+            </div>
+          </div>
+
+          <select id="sort-by" style="display: none;">
+            <option value="first_name">first_name</option>
+            <option value="last_name">last_name</option>
+            <option value="age">age</option>
+            <option value="phone">phone</option>
+            <option value="address">address</option>
+            <option value="city">city</option>
+            <option value="state">state</option>
+            <option value="zip">zip</option>
+            <option value="lead_type">lead_type</option>
+            <option value="submitted_by_name">submitted_by_name</option>
+            <option value="notes">notes</option>
+            <option value="created_at">created_at</option>
+          </select>
+
+          <div id="leads-table-container">
+            <table id="leads-table">
+              <thead>
+                <tr>
+                  <th><input type="checkbox" id="select-all"></th>
+                  <th data-column="created_at">Submitted</th>
+                  <th data-column="submitted_by_name">Agent</th>
+                  <th data-column="first_name">First Name</th>
+                  <th data-column="last_name">Last Name</th>
+                  <th data-column="age">Age</th>
+                  <th data-column="phone">Phone(s)</th>
+                  <th data-column="address">Address</th>
+                  <th data-column="city">City</th>
+                  <th data-column="state">State</th>
+                  <th data-column="zip">ZIP</th>
+                  <th data-column="lead_type">Type</th>
+                  <th data-column="notes">Notes</th>
+                  <th data-column="product_type">Product</th>
+                </tr>
+              </thead>
+              <tbody>
+                <!-- Leads load here -->
+              </tbody>
+            </table>
+            <div id="pagination-controls" style="margin-top: 10px;">
+              <button id="prev-page">Previous</button>
+              <span id="current-page">Page 1</span>
+              <button id="next-page">Next</button>
+            </div>
+          </div>
+
+          <!-- Bulk Assign + Export -->
+          <div id="bulk-export-invisible-container">
+            <div id="bulk-export-container">
+              <div id="bulk-assign-controls" style="margin-top: 10px;">
+                <label for="bulk-assign-agent">Assign <span id="selected-count">0</span> lead(s) to:</label>
+                <select id="bulk-assign-agent">
+                  <!-- populated by script -->
+                </select>
+                <button id="bulk-assign-btn">Assign</button>
+              </div>
+              <div id="export-controls" style="position: relative;">
+                <button id="export-btn" style="margin: auto">Export</button>
+                <div id="export-options" style="display: none; position: absolute; background: white; border: 1px solid #ccc; padding: 5px;">
+                  <button id="export-pdf">PDF</button>
+                  <button id="export-csv">CSV</button>
+                  <button id="export-print">Print</button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <!-- Assignment History Section -->
-    <section id="admin-history-section" class="admin-section" style="display:none;">
-      <h3 style="margin-top: 30px;">Assignment History</h3>
-      <table id="assignment-history-table">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Lead ID</th>
-            <th>Assigned To</th>
-            <th>Assigned By</th>
-          </tr>
-        </thead>
-        <tbody>
-          <!-- History entries load here -->
-        </tbody>
-      </table>
-    </section>
-    <!-- Agent Stats Section -->
-    <section id="admin-stats-section" class="admin-section" style="display:none;">
-	  <h3>Agent Stats</h3>
-	
-	  <div class="stats-toolbar">
-	    <div class="scope">
-		  <label for="stat-agent">Agent</label>
-		  <select id="stat-agent">
-			<option value="">All agents</option>
-			<!-- options filled by JS -->
-		  </select>
-		</div>
-	    <div class="range" style="display:flex; align-items:center; gap:10px;">
-		  <!-- flatpickr wrap lets the icon open the calendar -->
-		  <div id="stat-range-wrap" class="flatpickr-range" data-wrap="true">
-		    <input id="stat-range" type="text" placeholder="Select date range" data-input readonly />
-		    <button class="calendar-btn" type="button" title="Choose dates" data-toggle>
-		      <i class="fa-solid fa-calendar"></i>
-		    </button>
-		  </div>
-		  <label style="display:flex; align-items:center; gap:6px; white-space:nowrap;">
-		    <input type="checkbox" id="stat-all-time"> All time
-		  </label>
-		</div>
-	  </div>
-	
-	  <div class="kpi-grid">
-		<!-- Add these inside your existing KPI grid/cards -->
-		<div class="kpi-card">
-		  <div class="kpi-label">Contact rate</div>
-		  <div class="kpi-value" id="kpi-contact">—</div>
-		</div>
-		
-		<div class="kpi-card">
-		  <div class="kpi-label">Quote rate</div>
-		  <div class="kpi-value" id="kpi-quote">—</div>
-		</div>
-		
-		<div class="kpi-card">
-		  <div class="kpi-label">Close rate</div>
-		  <div class="kpi-value" id="kpi-close">—</div>
-		</div>
-		
-		<div class="kpi-card">
-		  <div class="kpi-label">
-		    Persistency <small>(90-day)</small>
-		  </div>
-		  <div class="kpi-value" id="kpi-persistency">—</div>
-		</div>
-	    <article class="kpi-card">
-	      <div class="kpi-label">New Leads</div>
-	      <div class="kpi-value" id="kpi-new">0</div>
-	    </article>
-	    <article class="kpi-card">
-	      <div class="kpi-label">Assigned</div>
-	      <div class="kpi-value" id="kpi-assigned">0</div>
-	    </article>
-	    <article class="kpi-card">
-	      <div class="kpi-label">Avg Age</div>
-	      <div class="kpi-value" id="kpi-avg-age">—</div>
-	    </article>
-	    <article class="kpi-card">
-	      <div class="kpi-label">Agents Assigned</div>
-	      <div class="kpi-value" id="kpi-agents">0</div>
-	    </article>
-	  </div>
-	
-	  <div class="chart-grid">
-	    <div class="chart-card">
-	      <h4>Weekly New Leads</h4>
-	      <canvas id="chart-weekly"></canvas>
-	    </div>
-	    <div class="chart-card">
-	      <h4>Product Mix</h4>
-	      <canvas id="chart-products"></canvas>
-	    </div>
-	    <div class="chart-card">
-	      <h4>Assignments by Agent</h4>
-	      <canvas id="chart-assignments"></canvas>
-	    </div>
-	  </div>
-	</section>
-	
-	<!-- Agent Stats Section -->
-	<section id="admin-stats-section" class="admin-section" style="display:none;">
-		<!-- ... existing Agent Stats content ... -->
-	</section>
+      <!-- Assignment History Section -->
+      <section id="admin-history-section" class="admin-section" style="display:none;">
+        <h3 style="margin-top: 30px;">Assignment History</h3>
+        <table id="assignment-history-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Lead ID</th>
+              <th>Assigned To</th>
+              <th>Assigned By</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- History entries load here -->
+          </tbody>
+        </table>
+      </section>
 
-	<!-- Commissions Section -->
-	<section id="admin-commissions-section" class="admin-section" style="display:none;">
-		<h3>Commissions</h3>
-
-		<div class="comm-grid">
-			<!-- Left: Policies -->
-			<div class="card">
-				<h3>Policies</h3>
-				<p>Add new policies and view recent ones.</p>
-				<button id="open-policy-modal" class="card-link">Add Policy</button>
-				<div id="policy-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
-					<!-- policies will load here later -->
-				</div>
-			</div>
-
-			<!-- Middle: Debits / Credits -->
-			<div class="card">
-				<h3>Debits & Credits</h3>
-				<p>Add chargebacks, lead debt, or credits to agents.</p>
-				<button id="open-debit-credit-modal" class="card-link">Add Debit / Credit</button>
-				<div id="debit-credit-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
-					<!-- debits/credits will load here later -->
-				</div>
-			</div>
-
-			<!-- Right: Payout Batches -->
-			<!-- Run Payouts Button (place above payout batches table/list) -->
-			<div class="payout-run-controls">
-			  <button id="run-payouts-btn" type="button">
-			    Run Scheduled Payouts
-			  </button>
-			  <small id="run-payouts-status" style="display:block;margin-top:4px;"></small>
-			</div>
-			<div class="card">
-				<h3>Payout Batches</h3>
-				<p>Review upcoming payout batches before they run.</p>
-				<div id="batch-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
-					<!-- payout batches will load here later -->
-				</div>
-			</div>
-		</div>
-	</section>
-				
-	<section id="admin-content-section" class="panel" style="display:none;">
-	  <h3>Content & Roster</h3>
-	
-	  <div class="card-grid">
-	    <!-- Announcements -->
-	    <div class="card">
-	      <h3>Announcements</h3>
-	      <p>Send a message to specific agents or everyone. Appears on the dashboard.</p>
-	
-	      <button id="open-annc-modal" class="card-link">Create Announcement</button>
-	
-	      <!-- Collapsible manage area -->
-	      <button
-	        id="toggle-annc-list"
-	        type="button"
-	        class="see-all"
-	        style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;"
-	        aria-expanded="false"
-	      >
-	        <span>Manage announcements</span>
-	        <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-	      </button>
-	
-	      <div
-	        id="annc-list"
-	        class="scroll-container"
-	        hidden
-	        style="margin-top: 8px; max-height: 260px; overflow-y: auto;"
-	      ></div>
-	    </div>
-	
-	    <!-- Training -->
-			<div class="card">
-			  <h3>Add Training Material</h3>
-			  <p>Publish a new item to the training hub.</p>
-			  <button id="open-train-modal" class="card-link">Add Training</button>
-			
-			  <!-- NEW: Collapsible manage area (like Announcements) -->
-			  <button
-			    id="toggle-training-list"
-			    type="button"
-			    class="see-all"
-			    style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;"
-			    aria-expanded="false"
-			  >
-			    <span>Manage training library</span>
-			    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-			  </button>
-			
-			  <div
-			    id="training-manage-panel"
-			    hidden
-			    style="margin-top: 8px;"
-			  >
-			    <!-- Search bar -->
-			    <div style="margin-bottom: 8px;">
-			      <input
-			        id="training-search"
-			        type="text"
-			        placeholder="Search by title, description, or tags…"
-			        style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;"
-			      />
-			    </div>
-			
-			    <!-- Scrollable list -->
-			    <div
-			      id="training-list"
-			      class="scroll-container"
-			      style="max-height: 260px; overflow-y: auto;"
-			    >
-			      <!-- Populated by admin.js → loadTrainingMaterials() -->
-			    </div>
-			  </div>
-			</div>
-	
-	    <!-- Marketing -->
-			<div class="card">
-			  <h3>Add Marketing Asset</h3>
-			  <p>Publish a new download/link to the marketing hub.</p>
-			  <button id="open-mkt-modal" class="card-link">Add Asset</button>
-			
-			  <!-- NEW: Collapsible manage area (like Announcements / Training) -->
-			  <button
-			    id="toggle-mkt-list"
-			    type="button"
-			    class="see-all"
-			    style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;"
-			    aria-expanded="false"
-			  >
-			    <span>Manage marketing library</span>
-			    <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-			  </button>
-			
-			  <div
-			    id="mkt-manage-panel"
-			    hidden
-			    style="margin-top: 8px;"
-			  >
-			    <!-- Search bar -->
-			    <div style="margin-bottom: 8px;">
-			      <input
-			        id="mkt-search"
-			        type="text"
-			        placeholder="Search by title, description, or tags…"
-			        style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;"
-			      />
-			    </div>
-			
-			    <!-- Scrollable list -->
-			    <div
-			      id="mkt-list"
-			      class="scroll-container"
-			      style="max-height: 260px; overflow-y: auto;"
-			    >
-			      <!-- Populated by admin.js → loadMarketingAssets() -->
-			    </div>
-			  </div>
-			</div>
-		  	
-		  	      <!-- Assign Tasks -->
-      <div class="card">
-        <h3>Assign Tasks</h3>
-        <p>Create follow-ups, calls, and reminders for your agents.</p>
-
-        <!-- Open modal to create a task -->
-        <button id="open-task-modal" class="card-link">Create Task</button>
-
-        <!-- Collapsible manage area (only tasks created from Admin panel) -->
-        <button
-          id="toggle-task-list"
-          type="button"
-          class="see-all"
-          style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;"
-          aria-expanded="false"
-        >
-          <span>Manage my sent tasks</span>
-          <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
-        </button>
-
-        <div
-          id="task-list-panel"
-          hidden
-          style="margin-top: 8px;"
-        >
-          <div
-            id="task-list"
-            class="scroll-container"
-            style="max-height: 260px; overflow-y: auto;"
-          >
-            <!-- Populated by admin.js → loadMyTasks() -->
+      <!-- Agent Stats Section (single, non-duplicated) -->
+      <section id="admin-stats-section" class="admin-section" style="display:none;">
+        <h3>Agent Stats</h3>
+      
+        <div class="stats-toolbar">
+          <div class="scope">
+            <label for="stat-agent">Agent</label>
+            <select id="stat-agent">
+              <option value="">All agents</option>
+              <!-- options filled by JS -->
+            </select>
+          </div>
+          <div class="range" style="display:flex; align-items:center; gap:10px;">
+            <div id="stat-range-wrap" class="flatpickr-range" data-wrap="true">
+              <input id="stat-range" type="text" placeholder="Select date range" data-input readonly />
+              <button class="calendar-btn" type="button" title="Choose dates" data-toggle>
+                <i class="fa-solid fa-calendar"></i>
+              </button>
+            </div>
+            <label style="display:flex; align-items:center; gap:6px; white-space:nowrap;">
+              <input type="checkbox" id="stat-all-time"> All time
+            </label>
           </div>
         </div>
-      </div>
-	
-	    <!-- Agents -->
-	    <div class="card">
-	      <h3>Pre-approve New Agent</h3>
-	      <p>Issue an agent ID + invite so they can sign up.</p>
-	      <button id="open-agent-modal" class="card-link">Add Agent</button>
-	    </div>
-			
-		<!-- Pre-Approval Waitlist -->
-	    <div class="card">
-	      <h3>Pre-Approval Waitlist</h3>
-	      <p>Agents you’ve started onboarding who are waiting for you to review ICA, licenses, and Stripe.</p>
-	
-	      <div id="waitlist-container"
-	           class="scroll-container"
-	           style="max-height: 260px; overflow-y: auto;">
-	        <!-- Filled by admin.js → loadWaitlist() -->
-	      </div>
-	    </div>
-			<button id="open-remove-agent-modal" class="content-btn">
-			  Remove Agent
-			</button>
-			
-			<div id="remove-agent-modal" class="overlay" aria-hidden="true">
-			  <div class="overlay-backdrop" data-close></div>
-			  <div class="overlay-panel" role="dialog" aria-modal="true">
-			    <button class="overlay-close" type="button" data-close>&times;</button>
-			    <h2>Remove Agent</h2>
-			    <p style="font-size: 13px; color:#555;">
-			      Search by NPN (Agent ID) or name. Removing an agent will delete their NIPR
-			      records, approved agent record, CRM agent record, matching recruit row,
-			      and their login account.
-			    </p>
-			
-			    <div style="margin-top:10px; display:flex; gap:8px;">
-			      <input
-			        id="remove-agent-search"
-			        type="text"
-			        placeholder="Search by NPN or name…"
-			        style="flex:1; padding:6px 8px;"
-			      />
-			      <button id="remove-agent-search-btn" type="button">
-			        Search
-			      </button>
-			    </div>
-			
-			    <p id="remove-agent-msg" style="font-size:13px; color:#555; margin-top:8px;"></p>
-			
-			    <div id="remove-agent-results"
-			         style="margin-top:10px; max-height:260px; overflow-y:auto; font-size:13px;">
-			      <!-- results injected here -->
-			    </div>
-			  </div>
-			</div>
-		</div>
-		
-	  <!-- ===== Modals ===== -->
-	
-	  <!-- Announcement Modal -->
-	  <div id="annc-modal" class="overlay" aria-hidden="true">
-	    <div class="overlay-backdrop" data-close></div>
-	    <div class="overlay-panel">
-	      <div class="overlay-header">
-	        <h2>Create Announcement</h2>
-	        <button class="overlay-close" data-close>&times;</button>
-	      </div>
-	      <div class="overlay-body">
-	        <form id="annc-form">
-	          <label class="form-group">
-	            <span>Title</span>
-	            <input id="annc-title" type="text" required />
-	          </label>
-	
-	          <label class="form-group">
-	            <span>Message</span>
-	            <textarea id="annc-body" rows="4" required></textarea>
-	          </label>
+      
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Contact rate</div>
+            <div class="kpi-value" id="kpi-contact">—</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Quote rate</div>
+            <div class="kpi-value" id="kpi-quote">—</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">Close rate</div>
+            <div class="kpi-value" id="kpi-close">—</div>
+          </div>
+          <div class="kpi-card">
+            <div class="kpi-label">
+              Persistency <small>(90-day)</small>
+            </div>
+            <div class="kpi-value" id="kpi-persistency">—</div>
+          </div>
+          <article class="kpi-card">
+            <div class="kpi-label">New Leads</div>
+            <div class="kpi-value" id="kpi-new">0</div>
+          </article>
+          <article class="kpi-card">
+            <div class="kpi-label">Assigned</div>
+            <div class="kpi-value" id="kpi-assigned">0</div>
+          </article>
+          <article class="kpi-card">
+            <div class="kpi-label">Avg Age</div>
+            <div class="kpi-value" id="kpi-avg-age">—</div>
+          </article>
+          <article class="kpi-card">
+            <div class="kpi-label">Agents Assigned</div>
+            <div class="kpi-value" id="kpi-agents">0</div>
+          </article>
+        </div>
+      
+        <div class="chart-grid">
+          <div class="chart-card">
+            <h4>Weekly New Leads</h4>
+            <canvas id="chart-weekly"></canvas>
+          </div>
+          <div class="chart-card">
+            <h4>Product Mix</h4>
+            <canvas id="chart-products"></canvas>
+          </div>
+          <div class="chart-card">
+            <h4>Assignments by Agent</h4>
+            <canvas id="chart-assignments"></canvas>
+          </div>
+        </div>
+      </section>
 
-	          <!-- NEW: Optional URL -->
-	          <label class="form-group">
-	            <span>Link URL (optional)</span>
-	            <input id="annc-link" type="url" placeholder="https://example.com">
-	          </label>
+      <!-- Commissions Section -->
+      <section id="admin-commissions-section" class="admin-section" style="display:none;">
+        <h3>Commissions</h3>
 
-	          <!-- NEW: Optional Image -->
-	          <label class="form-group">
-	            <span>Image (optional)</span>
-	            <input id="annc-image" type="file" accept="image/*">
-	            <small>PNG/JPG/GIF. Uploaded to Supabase Storage.</small>
-	          </label>
-	
-	          <div class="form-row" style="display:flex; gap:12px; align-items:flex-end;">
-				  <label class="form-group" style="flex:1;">
-				    <span>Audience</span>
-				    <select id="annc-scope">
-				      <option value="all">All users</option>
-				      <option value="admins">Admins only</option>
-				      <option value="by_level">By level</option>
-				      <option value="by_product">By product type</option>
-				      <option value="by_state">By state</option>
-				      <option value="by_product_state">By product &amp; state</option>
-				      <option value="custom_agents">Choose agents…</option>
-				    </select>
-				  </label>
-				
-				  <!-- Levels -->
-				  <label class="form-group" style="flex:1; display:none;" id="annc-levels-wrap">
-				    <span>Levels</span>
-				    <select id="annc-levels" multiple></select>
-				  </label>
-				
-				  <!-- Products -->
-				  <label class="form-group" style="flex:1; display:none;" id="annc-products-wrap">
-				    <span>Product types</span>
-				    <select id="annc-products" multiple></select>
-				  </label>
-				
-				  <!-- States -->
-				  <label class="form-group" style="flex:1; display:none;" id="annc-states-wrap">
-				    <span>States</span>
-				    <select id="annc-states" multiple>
-				      <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
-				      <option>CA</option><option>CO</option><option>CT</option><option>DC</option>
-				      <option>DE</option><option>FL</option><option>GA</option><option>HI</option>
-				      <option>IA</option><option>ID</option><option>IL</option><option>IN</option>
-				      <option>KS</option><option>KY</option><option>LA</option><option>MA</option>
-				      <option>MD</option><option>ME</option><option>MI</option><option>MN</option>
-				      <option>MO</option><option>MS</option><option>MT</option><option>NC</option>
-				      <option>ND</option><option>NE</option><option>NH</option><option>NJ</option>
-				      <option>NM</option><option>NV</option><option>NY</option><option>OH</option>
-				      <option>OK</option><option>OR</option><option>PA</option><option>RI</option>
-				      <option>SC</option><option>SD</option><option>TN</option><option>TX</option>
-				      <option>UT</option><option>VA</option><option>VT</option><option>WA</option>
-				      <option>WI</option><option>WV</option><option>WY</option>
-				    </select>
-				  </label>
-				
-				  <!-- Agents -->
-				  <label class="form-group" style="flex:1; display:none;" id="annc-agents-wrap">
-				    <span>Agents</span>
-				    <select id="annc-agent-ids" multiple></select>
-				  </label>
-				</div>
-	
-	          <div class="form-row" style="display:flex; gap:12px;">
-	            <label class="form-group" style="flex:1;">
-	              <span>Publish at (optional)</span>
-	              <input id="annc-publish" type="text" placeholder="Now if empty" />
-	            </label>
-	            <label class="form-group" style="flex:1;">
-	              <span>Expires at (optional)</span>
-	              <input id="annc-expires" type="text" />
-	            </label>
-	          </div>
-			<div class="form-row" style="display:flex; gap:12px;">
-	            <label class="form-group" style="flex:1;">
-	              <span>Repeat</span>
-	              <select id="annc-repeat">
-	                <option value="none">Does not repeat</option>
-	                <option value="daily">Daily</option>
-	                <option value="weekly">Weekly</option>
-	                <option value="monthly">Monthly</option>
-	                <option value="yearly">Yearly</option>
-	              </select>
-	            </label>
-	            <label class="form-group" style="flex:1;">
-	              <span>Repeat until (optional)</span>
-	              <input id="annc-repeat-end" type="text" placeholder="No end date" />
-	            </label>
-	          </div>
-	          <div style="display:flex; gap:10px; justify-content:flex-end;">
-	            <button type="button" data-close>Cancel</button>
-	            <button type="submit" class="see-all">Save</button>
-	          </div>
-	          <p id="annc-msg"></p>
-	        </form>
-	      </div>
-	    </div>
-	  </div>
-	
-	  <!-- Training Modal -->
-	  <div id="train-modal" class="overlay" aria-hidden="true">
-	    <div class="overlay-backdrop" data-close></div>
-	    <div class="overlay-panel">
-	      <div class="overlay-header">
-	        <h2>Add Training Material</h2>
-	        <button class="overlay-close" data-close>&times;</button>
-	      </div>
-	      <div class="overlay-body">
-	        <form id="train-form">
-	          <label class="form-group"><span>Title</span><input id="train-title" required></label>
-	          <label class="form-group"><span>Description</span><textarea id="train-desc" rows="3"></textarea></label>
-	          <label class="form-group"><span>Link (URL)</span><input id="train-url" type="url" placeholder="https://…"></label>
-	          <label class="form-group"><span>Tags (comma-separated)</span><input id="train-tags" placeholder="Life,P&C,Basics"></label>
-	          <div style="display:flex; gap:10px; justify-content:flex-end;">
-	            <button type="button" data-close>Cancel</button>
-	            <button type="submit" class="see-all">Publish</button>
-	          </div>
-	          <p id="train-msg"></p>
-	        </form>
-	      </div>
-	    </div>
-	  </div>
-	
-	  <!-- Marketing Modal -->
-	  <div id="mkt-modal" class="overlay" aria-hidden="true">
-	    <div class="overlay-backdrop" data-close></div>
-	    <div class="overlay-panel">
-	      <div class="overlay-header">
-	        <h2>Add Marketing Asset</h2>
-	        <button class="overlay-close" data-close>&times;</button>
-	      </div>
-	      <div class="overlay-body">
-	        <form id="mkt-form">
-	          <label class="form-group"><span>Title</span><input id="mkt-title" required></label>
-	          <label class="form-group"><span>Description</span><textarea id="mkt-desc" rows="3"></textarea></label>
-	          <label class="form-group"><span>Link (URL)</span><input id="mkt-url" type="url" placeholder="https://…"></label>
-	          <label class="form-group"><span>Tags (comma-separated)</span><input id="mkt-tags" placeholder="Flyer,Facebook,Brand"></label>
-	          <div style="display:flex; gap:10px; justify-content:flex-end;">
-	            <button type="button" data-close>Cancel</button>
-	            <button type="submit" class="see-all">Publish</button>
-	          </div>
-	          <p id="mkt-msg"></p>
-	        </form>
-	      </div>
-	    </div>
-	  </div>
-	<!-- Task Modal -->
-	  <div id="task-modal" class="overlay" aria-hidden="true">
-	    <div class="overlay-backdrop" data-close></div>
-	    <div class="overlay-panel">
-	      <div class="overlay-header">
-	        <h2>Create Task</h2>
-	        <button class="overlay-close" data-close>&times;</button>
-	      </div>
-	      <div class="overlay-body">
-	        <form id="admin-task-form" class="stacked-form">
-	          <!-- Agent select -->
-	          <div class="float-field">
-	            <select id="task-agent" required>
-	              <option value="">Select agent…</option>
-	              <!-- populated by admin.js -->
-	            </select>
-	            <label for="task-agent">Assign to</label>
-	          </div>
-	
-	          <!-- Task title -->
-	          <div class="float-field">
-	            <input id="task-title" type="text" placeholder=" " required />
-	            <label for="task-title">Task title</label>
-	          </div>
-	
-	          <!-- Task description/body -->
-	          <div class="float-field">
-	            <textarea id="task-body" rows="3" placeholder=" "></textarea>
-	            <label for="task-body">Details / notes (optional)</label>
-	          </div>
-	
-	          <!-- Link URL -->
-	          <div class="float-field">
-	            <input id="task-link" type="url" placeholder=" " />
-	            <label for="task-link">Link URL (optional)</label>
-	          </div>
-	
-	          <!-- Image upload -->
-	          <div class="form-group">
-	            <span>Image (optional)</span>
-	            <input id="task-image" type="file" accept="image/*">
-	            <small>PNG/JPG/GIF. Uploaded to Supabase Storage.</small>
-	          </div>
-	
-	          <!-- Due date/time (optional) -->
-	          <div class="float-field">
-	            <input id="task-due" type="text" placeholder=" " />
-	            <label for="task-due">Due date/time (optional)</label>
-	          </div>
-	
-	          <div style="display:flex; gap:10px; justify-content:flex-end; margin-top: 10px;">
-	            <button type="button" data-close>Cancel</button>
-	            <button type="submit" class="see-all">Save Task</button>
-	          </div>
-	          <p id="task-msg" class="status-line"></p>
-	        </form>
-	      </div>
-	    </div>
-	  </div>
-	
-	  <!-- Add Agent Modal (pre-approval) -->
-	  <div id="agent-modal" class="overlay" aria-hidden="true">
-	    <div class="overlay-backdrop" data-close></div>
-	    <div class="overlay-panel">
-	      <div class="overlay-header">
-	        <h2>Pre-approve Agent</h2>
-	        <button class="overlay-close" data-close>&times;</button>
-	      </div>
-	      <div class="overlay-body">
-	        <form id="agent-form" class="stacked-form">
-					  <!-- NPN / Agent ID -->
-					  <div class="float-field">
-					    <input id="agent-id" type="text" placeholder=" " required>
-					    <label for="agent-id">Agent ID (NPN)</label>
-					  </div>
-					
-					  <!-- First Name -->
-					  <div class="float-field">
-					    <input id="agent-first-name" type="text" placeholder=" " required>
-					    <label for="agent-first-name">First Name</label>
-					  </div>
-					
-					  <!-- Last Name -->
-					  <div class="float-field">
-					    <input id="agent-last-name" type="text" placeholder=" " required>
-					    <label for="agent-last-name">Last Name</label>
-					  </div>
-					
-					  <!-- Phone Number -->
-					  <div class="float-field">
-					    <input id="agent-phone" type="tel" placeholder=" " required>
-					    <label for="agent-phone">Phone Number</label>
-					  </div>
-					
-					  <!-- Email (for sending ICA) -->
-					  <div class="float-field">
-					    <input id="agent-email" type="email" placeholder=" " required>
-					    <label for="agent-email">Email (for ICA & login)</label>
-					  </div>
-					
-					  <!-- Upline / Recruiter -->
-					  <div class="float-field">
-					    <select id="agent-recruiter" required>
-					      <option value="">Select recruiter…</option>
-					      <!-- populated by populateRecruiterSelect() in admin.js -->
-					    </select>
-					    <label for="agent-recruiter">Recruiter / Upline</label>
-					  </div>
-					
-					  <!-- Level -->
-					  <div class="float-field">
-					    <select id="agent-level" required>
-					      <option value="">Select level…</option>
-					      <option value="agent">Agent</option>
-					      <option value="mit">MIT</option>
-					      <option value="manager">Manager</option>
-					      <option value="mga">MGA</option>
-					      <option value="area_manager">Area Manager</option>
-					    </select>
-					    <label for="agent-level">Starting Level</label>
-					  </div>
-					
-					  <button type="submit">Pre-Approve Agent</button>
-					</form>
-					<p id="agent-msg" class="status-line"></p>
-	      </div>
-	    </div>
-	  </div>
-	</section>
-	
-	<!-- Add Policy Modal -->
-	<div id="policy-modal" class="modal-backdrop" style="display:none;">
-	  <div class="modal">
-	    <h3>Add Policy</h3>
-	
-	    <form id="policy-form">
-	      
-	      <!-- Agent -->
-	      <label>
-	        Agent
-	        <select id="policy-agent" required></select>
-	      </label>
-	
-	      <!-- Contact -->
-	      <label>
-	        Contact
-	        <select id="policy-contact" required>
-	          <option value="">Select contact…</option>
-	          <option value="__new__">➕ New contact (enter below)</option>
-	        </select>
-	      </label>
-	
-	      <!-- New Contact Fields (hidden unless "__new__" selected) -->
-	      <div id="policy-new-contact-wrap"
-	           style="display:none; margin-bottom:10px; padding:10px; border:1px solid #ddd; border-radius:8px;">
-	        <h4 style="margin-top:0; margin-bottom:8px;">New Contact Details</h4>
-	
-	        <!-- Name -->
-	        <label>
-	          First Name
-	          <input id="policy-contact-first" type="text">
-	        </label>
-	
-	        <label>
-	          Last Name
-	          <input id="policy-contact-last" type="text">
-	        </label>
-	
-	        <!-- Phones -->
-	        <label>
-	          Phone 1
-	          <input id="policy-contact-phone" type="text" placeholder="Primary phone">
-	        </label>
-	
-	        <label>
-	          Phone 2 (optional)
-	          <input id="policy-contact-phone2" type="text" placeholder="Secondary phone">
-	        </label>
-	
-	        <!-- Emails -->
-	        <label>
-	          Email 1
-	          <input id="policy-contact-email" type="email" placeholder="Primary email">
-	        </label>
-	
-	        <label>
-	          Email 2 (optional)
-	          <input id="policy-contact-email2" type="email" placeholder="Secondary email">
-	        </label>
-	
-	        <!-- Address -->
-	        <label>
-	          Address Line 1
-	          <input id="policy-contact-address1" type="text">
-	        </label>
-	
-	        <label>
-	          Address Line 2 (optional)
-	          <input id="policy-contact-address2" type="text">
-	        </label>
-	
-	        <label>
-	          City
-	          <input id="policy-contact-city" type="text">
-	        </label>
-	
-	        <label>
-	          State
-	          <input id="policy-contact-state" type="text" maxlength="2" placeholder="TN">
-	        </label>
-	
-	        <label>
-	          ZIP
-	          <input id="policy-contact-zip" type="text" maxlength="10">
-	        </label>
-	      </div>
-	
-	            <!-- Carrier -->
-      <label>
-        Carrier
-        <select id="policy-carrier" required>
-          <option value="">Select carrier…</option>
-        </select>
-      </label>
+        <div class="comm-grid">
+          <!-- Left: Policies -->
+          <div class="card">
+            <h3>Policies</h3>
+            <p>Add new policies and view recent ones.</p>
+            <button id="open-policy-modal" class="card-link">Add Policy</button>
+            <div id="policy-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
+              <!-- policies will load here later -->
+            </div>
+          </div>
 
-      <!-- Product Line (from commission_schedules.product_line) -->
-      <label>
-        Product Line
-        <select id="policy-product-line" required disabled>
-          <option value="">Select carrier first…</option>
-        </select>
-      </label>
+          <!-- Middle: Debits / Credits -->
+          <div class="card">
+            <h3>Debits & Credits</h3>
+            <p>Add chargebacks, lead debt, or credits to agents.</p>
+            <button id="open-debit-credit-modal" class="card-link">Add Debit / Credit</button>
+            <div id="debit-credit-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
+              <!-- debits/credits will load here later -->
+            </div>
+          </div>
 
-      <!-- Policy Type (from commission_schedules.policy_type) -->
-      <label>
-        Policy Type
-        <select id="policy-policy-type" required disabled>
-          <option value="">Select carrier first…</option>
-        </select>
-      </label>
-	
-	      <label>
-	        Policy #
-	        <input id="policy-number" type="text" required>
-	      </label>
-	
-	      <label>
-	        Annual Premium
-	        <input id="policy-annual-premium" type="number" step="0.01" min="0" required>
-	      </label>
-	
-	      <label>
-	        Issue Date
-	        <input id="policy-issue-date" type="date" required>
-	      </label>
-	
-	      <label>
-	        Status
-	        <select id="policy-status">
-					  <!-- Display label on the right, actual value on the left -->
-					  <option value="in_force">Active</option>
-					  <option value="pending">Pending</option>
-					  <option value="issued">Issued</option>
-					  <option value="lapsed">Lapsed</option>
-					  <option value="cancelled">Cancelled</option>
-					  <option value="reinstated">Reinstated</option>
-					  <option value="renewed">Renewed</option>
-					</select>
-	      </label>
-	
-	      <div class="modal-actions">
-	        <button type="button" id="policy-cancel">Cancel</button>
-	        <button type="submit">Save Policy</button>
-	      </div>
-	
-	      <p id="policy-error" class="modal-error"></p>
-	    </form>
-	
-	  </div>
-	</div>
-	
-	<!-- Add Debit / Credit Modal -->
-	<div id="adjustment-modal" class="modal-backdrop" style="display:none;">
-	  <div class="modal">
-	    <h3>Add Debit / Credit</h3>
-	    <form id="adjustment-form">
-	      <label>
-	        Agent
-	        <select id="adjustment-agent" required></select>
-	      </label>
-	
-	      <label>
-	        Type
-	        <select id="adjustment-type" required>
-	          <option value="debit">Debit (chargeback / lead debt)</option>
-	          <option value="credit">Credit</option>
-	        </select>
-	      </label>
-	
-	      <label>
-	        Category
-	        <select id="adjustment-category" required>
-	          <option value="chargeback">Chargeback</option>
-	          <option value="lead_debt">Lead Debt</option>
-	          <option value="manual_credit">Manual Credit</option>
-	          <option value="other">Other</option>
-	        </select>
-	      </label>
-	
-	      <!-- NEW: Only visible when Category = chargeback -->
-	      <label id="chargeback-policy-wrapper" style="display:none;">
-	        Policy (for chargeback)
-	        <select id="adjustment-policy">
-	          <option value="">Search or select policy…</option>
-	        </select>
-	        <small style="font-size:11px; color:#666;">
-	          Only policies written by the selected agent are listed.
-	        </small>
-	      </label>
-				<!-- NEW: Only visible when Category = lead_debt -->
-	      <label id="lead-debt-lead-wrapper" style="display:none;">
-	        Lead (for lead debt)
-	        <select id="adjustment-lead">
-	          <option value="">Search or select lead…</option>
-	        </select>
-	        <small style="font-size:11px; color:#666;">
-	          Only leads assigned to the selected agent are listed.
-	        </small>
-	      </label>
-	
-	      <label>
-	        Amount
-	        <input id="adjustment-amount" type="number" step="0.01" min="0" required>
-	      </label>
-	
-	      <label>
-	        Effective Date
-	        <input id="adjustment-date" type="date" required>
-	      </label>
-	
-	      <label>
-	        Description
-	        <textarea id="adjustment-description" rows="2" placeholder="Optional notes"></textarea>
-	      </label>
-	
-	      <div class="modal-actions">
-	        <button type="button" id="adjustment-cancel">Cancel</button>
-	        <button type="submit">Save</button>
-	      </div>
-	
-	      <p id="adjustment-error" class="modal-error"></p>
-	    </form>
-	  </div>
-	</div>
-  </main>
+          <!-- Right: Payout Batches -->
+          <div class="payout-run-controls">
+            <button id="run-payouts-btn" type="button">
+              Run Scheduled Payouts
+            </button>
+            <small id="run-payouts-status" style="display:block;margin-top:4px;"></small>
+          </div>
+          <div class="card">
+            <h3>Payout Batches</h3>
+            <p>Review upcoming payout batches before they run.</p>
+            <div id="batch-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
+              <!-- payout batches will load here later -->
+            </div>
+          </div>
+        </div>
+      </section>
+          
+      <!-- Content Section -->
+      <section id="admin-content-section" class="panel" style="display:none;">
+        <h3>Content & Roster</h3>
+      
+        <div class="card-grid">
+          <!-- Announcements -->
+          <div class="card">
+            <h3>Announcements</h3>
+            <p>Send a message to specific agents or everyone. Appears on the dashboard.</p>
+      
+            <button id="open-annc-modal" class="card-link">Create Announcement</button>
+      
+            <button
+              id="toggle-annc-list"
+              type="button"
+              class="see-all"
+              style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;"
+              aria-expanded="false"
+            >
+              <span>Manage announcements</span>
+              <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+      
+            <div
+              id="annc-list"
+              class="scroll-container"
+              hidden
+              style="margin-top: 8px; max-height: 260px; overflow-y: auto;"
+            ></div>
+          </div>
+      
+          <!-- Training -->
+          <div class="card">
+            <h3>Add Training Material</h3>
+            <p>Publish a new item to the training hub.</p>
+            <button id="open-train-modal" class="card-link">Add Training</button>
+          
+            <button
+              id="toggle-training-list"
+              type="button"
+              class="see-all"
+              style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;"
+              aria-expanded="false"
+            >
+              <span>Manage training library</span>
+              <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+          
+            <div
+              id="training-manage-panel"
+              hidden
+              style="margin-top: 8px;"
+            >
+              <div style="margin-bottom: 8px;">
+                <input
+                  id="training-search"
+                  type="text"
+                  placeholder="Search by title, description, or tags…"
+                  style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;"
+                />
+              </div>
+          
+              <div
+                id="training-list"
+                class="scroll-container"
+                style="max-height: 260px; overflow-y: auto;"
+              >
+                <!-- Populated by admin.js -->
+              </div>
+            </div>
+          </div>
+      
+          <!-- Marketing -->
+          <div class="card">
+            <h3>Add Marketing Asset</h3>
+            <p>Publish a new download/link to the marketing hub.</p>
+            <button id="open-mkt-modal" class="card-link">Add Asset</button>
+          
+            <button
+              id="toggle-mkt-list"
+              type="button"
+              class="see-all"
+              style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;"
+              aria-expanded="false"
+            >
+              <span>Manage marketing library</span>
+              <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+          
+            <div
+              id="mkt-manage-panel"
+              hidden
+              style="margin-top: 8px;"
+            >
+              <div style="margin-bottom: 8px;">
+                <input
+                  id="mkt-search"
+                  type="text"
+                  placeholder="Search by title, description, or tags…"
+                  style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;"
+                />
+              </div>
+          
+              <div
+                id="mkt-list"
+                class="scroll-container"
+                style="max-height: 260px; overflow-y: auto;"
+              >
+                <!-- Populated by admin.js -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Assign Tasks -->
+          <div class="card">
+            <h3>Assign Tasks</h3>
+            <p>Create follow-ups, calls, and reminders for your agents.</p>
+    
+            <button id="open-task-modal" class="card-link">Create Task</button>
+    
+            <button
+              id="toggle-task-list"
+              type="button"
+              class="see-all"
+              style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;"
+              aria-expanded="false"
+            >
+              <span>Manage my sent tasks</span>
+              <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+    
+            <div
+              id="task-list-panel"
+              hidden
+              style="margin-top: 8px;"
+            >
+              <div
+                id="task-list"
+                class="scroll-container"
+                style="max-height: 260px; overflow-y: auto;"
+              >
+                <!-- Populated by admin.js -->
+              </div>
+            </div>
+          </div>
+      
+          <!-- Agents -->
+          <div class="card">
+            <h3>Pre-approve New Agent</h3>
+            <p>Issue an agent ID + invite so they can sign up.</p>
+            <button id="open-agent-modal" class="card-link">Add Agent</button>
+          </div>
+              
+          <!-- Pre-Approval Waitlist -->
+          <div class="card">
+            <h3>Pre-Approval Waitlist</h3>
+            <p>Agents you’ve started onboarding who are waiting for you to review ICA, licenses, and Stripe.</p>
+            <div id="waitlist-container"
+                 class="scroll-container"
+                 style="max-height: 260px; overflow-y: auto;">
+              <!-- Filled by admin.js -->
+            </div>
+          </div>
+
+          <button id="open-remove-agent-modal" class="content-btn">
+            Remove Agent
+          </button>
+          
+          <div id="remove-agent-modal" class="overlay" aria-hidden="true">
+            <div class="overlay-backdrop" data-close></div>
+            <div class="overlay-panel" role="dialog" aria-modal="true">
+              <button class="overlay-close" type="button" data-close>&times;</button>
+              <h2>Remove Agent</h2>
+              <p style="font-size: 13px; color:#555;">
+                Search by NPN (Agent ID) or name. Removing an agent will delete their NIPR
+                records, approved agent record, CRM agent record, matching recruit row,
+                and their login account.
+              </p>
+          
+              <div style="margin-top:10px; display:flex; gap:8px;">
+                <input
+                  id="remove-agent-search"
+                  type="text"
+                  placeholder="Search by NPN or name…"
+                  style="flex:1; padding:6px 8px;"
+                />
+                <button id="remove-agent-search-btn" type="button">
+                  Search
+                </button>
+              </div>
+          
+              <p id="remove-agent-msg" style="font-size:13px; color:#555; margin-top:8px;"></p>
+          
+              <div id="remove-agent-results"
+                   style="margin-top:10px; max-height:260px; overflow-y:auto; font-size:13px;">
+                <!-- results injected here -->
+              </div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- ===== Modals ===== -->
+      
+        <!-- Announcement Modal -->
+        <div id="annc-modal" class="overlay" aria-hidden="true">
+          <div class="overlay-backdrop" data-close></div>
+          <div class="overlay-panel">
+            <div class="overlay-header">
+              <h2>Create Announcement</h2>
+              <button class="overlay-close" data-close>&times;</button>
+            </div>
+            <div class="overlay-body">
+              <form id="annc-form">
+                <label class="form-group">
+                  <span>Title</span>
+                  <input id="annc-title" type="text" required />
+                </label>
+      
+                <label class="form-group">
+                  <span>Message</span>
+                  <textarea id="annc-body" rows="4" required></textarea>
+                </label>
+
+                <label class="form-group">
+                  <span>Link URL (optional)</span>
+                  <input id="annc-link" type="url" placeholder="https://example.com">
+                </label>
+
+                <label class="form-group">
+                  <span>Image (optional)</span>
+                  <input id="annc-image" type="file" accept="image/*">
+                  <small>PNG/JPG/GIF. Uploaded to Supabase Storage.</small>
+                </label>
+      
+                <div class="form-row" style="display:flex; gap:12px; align-items:flex-end;">
+                  <label class="form-group" style="flex:1;">
+                    <span>Audience</span>
+                    <select id="annc-scope">
+                      <option value="all">All users</option>
+                      <option value="admins">Admins only</option>
+                      <option value="by_level">By level</option>
+                      <option value="by_product">By product type</option>
+                      <option value="by_state">By state</option>
+                      <option value="by_product_state">By product &amp; state</option>
+                      <option value="custom_agents">Choose agents…</option>
+                    </select>
+                  </label>
+                
+                  <label class="form-group" style="flex:1; display:none;" id="annc-levels-wrap">
+                    <span>Levels</span>
+                    <select id="annc-levels" multiple></select>
+                  </label>
+                
+                  <label class="form-group" style="flex:1; display:none;" id="annc-products-wrap">
+                    <span>Product types</span>
+                    <select id="annc-products" multiple></select>
+                  </label>
+                
+                  <label class="form-group" style="flex:1; display:none;" id="annc-states-wrap">
+                    <span>States</span>
+                    <select id="annc-states" multiple>
+                      <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+                      <option>CA</option><option>CO</option><option>CT</option><option>DC</option>
+                      <option>DE</option><option>FL</option><option>GA</option><option>HI</option>
+                      <option>IA</option><option>ID</option><option>IL</option><option>IN</option>
+                      <option>KS</option><option>KY</option><option>LA</option><option>MA</option>
+                      <option>MD</option><option>ME</option><option>MI</option><option>MN</option>
+                      <option>MO</option><option>MS</option><option>MT</option><option>NC</option>
+                      <option>ND</option><option>NE</option><option>NH</option><option>NJ</option>
+                      <option>NM</option><option>NV</option><option>NY</option><option>OH</option>
+                      <option>OK</option><option>OR</option><option>PA</option><option>RI</option>
+                      <option>SC</option><option>SD</option><option>TN</option><option>TX</option>
+                      <option>UT</option><option>VA</option><option>VT</option><option>WA</option>
+                      <option>WI</option><option>WV</option><option>WY</option>
+                    </select>
+                  </label>
+                
+                  <label class="form-group" style="flex:1; display:none;" id="annc-agents-wrap">
+                    <span>Agents</span>
+                    <select id="annc-agent-ids" multiple></select>
+                  </label>
+                </div>
+      
+                <div class="form-row" style="display:flex; gap:12px;">
+                  <label class="form-group" style="flex:1;">
+                    <span>Publish at (optional)</span>
+                    <input id="annc-publish" type="text" placeholder="Now if empty" />
+                  </label>
+                  <label class="form-group" style="flex:1;">
+                    <span>Expires at (optional)</span>
+                    <input id="annc-expires" type="text" />
+                  </label>
+                </div>
+                <div class="form-row" style="display:flex; gap:12px;">
+                  <label class="form-group" style="flex:1;">
+                    <span>Repeat</span>
+                    <select id="annc-repeat">
+                      <option value="none">Does not repeat</option>
+                      <option value="daily">Daily</option>
+                      <option value="weekly">Weekly</option>
+                      <option value="monthly">Monthly</option>
+                      <option value="yearly">Yearly</option>
+                    </select>
+                  </label>
+                  <label class="form-group" style="flex:1;">
+                    <span>Repeat until (optional)</span>
+                    <input id="annc-repeat-end" type="text" placeholder="No end date" />
+                  </label>
+                </div>
+                <div style="display:flex; gap:10px; justify-content:flex-end;">
+                  <button type="button" data-close>Cancel</button>
+                  <button type="submit" class="see-all">Save</button>
+                </div>
+                <p id="annc-msg"></p>
+              </form>
+            </div>
+          </div>
+      
+          <!-- Training Modal -->
+          <div id="train-modal" class="overlay" aria-hidden="true">
+            <div class="overlay-backdrop" data-close></div>
+            <div class="overlay-panel">
+              <div class="overlay-header">
+                <h2>Add Training Material</h2>
+                <button class="overlay-close" data-close>&times;</button>
+              </div>
+              <div class="overlay-body">
+                <form id="train-form">
+                  <label class="form-group"><span>Title</span><input id="train-title" required></label>
+                  <label class="form-group"><span>Description</span><textarea id="train-desc" rows="3"></textarea></label>
+                  <label class="form-group"><span>Link (URL)</span><input id="train-url" type="url" placeholder="https://…"></label>
+                  <label class="form-group"><span>Tags (comma-separated)</span><input id="train-tags" placeholder="Life,P&C,Basics"></label>
+                  <div style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button type="button" data-close>Cancel</button>
+                    <button type="submit" class="see-all">Publish</button>
+                  </div>
+                  <p id="train-msg"></p>
+                </form>
+              </div>
+            </div>
+          </div>
+      
+          <!-- Marketing Modal -->
+          <div id="mkt-modal" class="overlay" aria-hidden="true">
+            <div class="overlay-backdrop" data-close></div>
+            <div class="overlay-panel">
+              <div class="overlay-header">
+                <h2>Add Marketing Asset</h2>
+                <button class="overlay-close" data-close>&times;</button>
+              </div>
+              <div class="overlay-body">
+                <form id="mkt-form">
+                  <label class="form-group"><span>Title</span><input id="mkt-title" required></label>
+                  <label class="form-group"><span>Description</span><textarea id="mkt-desc" rows="3"></textarea></label>
+                  <label class="form-group"><span>Link (URL)</span><input id="mkt-url" type="url" placeholder="https://…"></label>
+                  <label class="form-group"><span>Tags (comma-separated)</span><input id="mkt-tags" placeholder="Flyer,Facebook,Brand"></label>
+                  <div style="display:flex; gap:10px; justify-content:flex-end;">
+                    <button type="button" data-close>Cancel</button>
+                    <button type="submit" class="see-all">Publish</button>
+                  </div>
+                  <p id="mkt-msg"></p>
+                </form>
+              </div>
+            </div>
+          </div>
+
+          <!-- Task Modal -->
+          <div id="task-modal" class="overlay" aria-hidden="true">
+            <div class="overlay-backdrop" data-close></div>
+            <div class="overlay-panel">
+              <div class="overlay-header">
+                <h2>Create Task</h2>
+                <button class="overlay-close" data-close>&times;</button>
+              </div>
+              <div class="overlay-body">
+                <form id="admin-task-form" class="stacked-form">
+                  <div class="float-field">
+                    <select id="task-agent" required>
+                      <option value="">Select agent…</option>
+                    </select>
+                    <label for="task-agent">Assign to</label>
+                  </div>
+      
+                  <div class="float-field">
+                    <input id="task-title" type="text" placeholder=" " required />
+                    <label for="task-title">Task title</label>
+                  </div>
+      
+                  <div class="float-field">
+                    <textarea id="task-body" rows="3" placeholder=" "></textarea>
+                    <label for="task-body">Details / notes (optional)</label>
+                  </div>
+      
+                  <div class="float-field">
+                    <input id="task-link" type="url" placeholder=" " />
+                    <label for="task-link">Link URL (optional)</label>
+                  </div>
+      
+                  <div class="form-group">
+                    <span>Image (optional)</span>
+                    <input id="task-image" type="file" accept="image/*">
+                    <small>PNG/JPG/GIF. Uploaded to Supabase Storage.</small>
+                  </div>
+      
+                  <div class="float-field">
+                    <input id="task-due" type="text" placeholder=" " />
+                    <label for="task-due">Due date/time (optional)</label>
+                  </div>
+      
+                  <div style="display:flex; gap:10px; justify-content:flex-end; margin-top: 10px;">
+                    <button type="button" data-close>Cancel</button>
+                    <button type="submit" class="see-all">Save Task</button>
+                  </div>
+                  <p id="task-msg" class="status-line"></p>
+                </form>
+              </div>
+            </div>
+          </div>
+      
+          <!-- Add Agent Modal -->
+          <div id="agent-modal" class="overlay" aria-hidden="true">
+            <div class="overlay-backdrop" data-close></div>
+            <div class="overlay-panel">
+              <div class="overlay-header">
+                <h2>Pre-approve Agent</h2>
+                <button class="overlay-close" data-close>&times;</button>
+              </div>
+              <div class="overlay-body">
+                <form id="agent-form" class="stacked-form">
+                  <div class="float-field">
+                    <input id="agent-id" type="text" placeholder=" " required>
+                    <label for="agent-id">Agent ID (NPN)</label>
+                  </div>
+                  <div class="float-field">
+                    <input id="agent-first-name" type="text" placeholder=" " required>
+                    <label for="agent-first-name">First Name</label>
+                  </div>
+                  <div class="float-field">
+                    <input id="agent-last-name" type="text" placeholder=" " required>
+                    <label for="agent-last-name">Last Name</label>
+                  </div>
+                  <div class="float-field">
+                    <input id="agent-phone" type="tel" placeholder=" " required>
+                    <label for="agent-phone">Phone Number</label>
+                  </div>
+                  <div class="float-field">
+                    <input id="agent-email" type="email" placeholder=" " required>
+                    <label for="agent-email">Email (for ICA & login)</label>
+                  </div>
+                  <div class="float-field">
+                    <select id="agent-recruiter" required>
+                      <option value="">Select recruiter…</option>
+                    </select>
+                    <label for="agent-recruiter">Recruiter / Upline</label>
+                  </div>
+                  <div class="float-field">
+                    <select id="agent-level" required>
+                      <option value="">Select level…</option>
+                      <option value="agent">Agent</option>
+                      <option value="mit">MIT</option>
+                      <option value="manager">Manager</option>
+                      <option value="mga">MGA</option>
+                      <option value="area_manager">Area Manager</option>
+                    </select>
+                    <label for="agent-level">Starting Level</label>
+                  </div>
+                  <button type="submit">Pre-Approve Agent</button>
+                </form>
+                <p id="agent-msg" class="status-line"></p>
+              </div>
+            </div>
+          </div>
+        </section>
+      
+        <!-- Add Policy Modal -->
+        <div id="policy-modal" class="modal-backdrop" style="display:none;">
+          <div class="modal">
+            <h3>Add Policy</h3>
+            <form id="policy-form">
+              <label>
+                Agent
+                <select id="policy-agent" required></select>
+              </label>
+              <label>
+                Contact
+                <select id="policy-contact" required>
+                  <option value="">Select contact…</option>
+                  <option value="__new__">➕ New contact (enter below)</option>
+                </select>
+              </label>
+              <div id="policy-new-contact-wrap"
+                   style="display:none; margin-bottom:10px; padding:10px; border:1px solid #ddd; border-radius:8px;">
+                <h4 style="margin-top:0; margin-bottom:8px;">New Contact Details</h4>
+                <label>
+                  First Name
+                  <input id="policy-contact-first" type="text">
+                </label>
+                <label>
+                  Last Name
+                  <input id="policy-contact-last" type="text">
+                </label>
+                <label>
+                  Phone 1
+                  <input id="policy-contact-phone" type="text" placeholder="Primary phone">
+                </label>
+                <label>
+                  Phone 2 (optional)
+                  <input id="policy-contact-phone2" type="text" placeholder="Secondary phone">
+                </label>
+                <label>
+                  Email 1
+                  <input id="policy-contact-email" type="email" placeholder="Primary email">
+                </label>
+                <label>
+                  Email 2 (optional)
+                  <input id="policy-contact-email2" type="email" placeholder="Secondary email">
+                </label>
+                <label>
+                  Address Line 1
+                  <input id="policy-contact-address1" type="text">
+                </label>
+                <label>
+                  Address Line 2 (optional)
+                  <input id="policy-contact-address2" type="text">
+                </label>
+                <label>
+                  City
+                  <input id="policy-contact-city" type="text">
+                </label>
+                <label>
+                  State
+                  <input id="policy-contact-state" type="text" maxlength="2" placeholder="TN">
+                </label>
+                <label>
+                  ZIP
+                  <input id="policy-contact-zip" type="text" maxlength="10">
+                </label>
+              </div>
+
+              <label>
+                Carrier
+                <select id="policy-carrier" required>
+                  <option value="">Select carrier…</option>
+                </select>
+              </label>
+              <label>
+                Product Line
+                <select id="policy-product-line" required disabled>
+                  <option value="">Select carrier first…</option>
+                </select>
+              </label>
+              <label>
+                Policy Type
+                <select id="policy-policy-type" required disabled>
+                  <option value="">Select carrier first…</option>
+                </select>
+              </label>
+
+              <label>
+                Policy #
+                <input id="policy-number" type="text" required>
+              </label>
+              <label>
+                Annual Premium
+                <input id="policy-annual-premium" type="number" step="0.01" min="0" required>
+              </label>
+              <label>
+                Issue Date
+                <input id="policy-issue-date" type="date" required>
+              </label>
+              <label>
+                Status
+                <select id="policy-status">
+                  <option value="in_force">Active</option>
+                  <option value="pending">Pending</option>
+                  <option value="issued">Issued</option>
+                  <option value="lapsed">Lapsed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="reinstated">Reinstated</option>
+                  <option value="renewed">Renewed</option>
+                </select>
+              </label>
+              <div class="modal-actions">
+                <button type="button" id="policy-cancel">Cancel</button>
+                <button type="submit">Save Policy</button>
+              </div>
+              <p id="policy-error" class="modal-error"></p>
+            </form>
+          </div>
+        </div>
+      
+        <!-- Add Debit / Credit Modal -->
+        <div id="adjustment-modal" class="modal-backdrop" style="display:none;">
+          <div class="modal">
+            <h3>Add Debit / Credit</h3>
+            <form id="adjustment-form">
+              <label>
+                Agent
+                <select id="adjustment-agent" required></select>
+              </label>
+              <label>
+                Type
+                <select id="adjustment-type" required>
+                  <option value="debit">Debit (chargeback / lead debt)</option>
+                  <option value="credit">Credit</option>
+                </select>
+              </label>
+              <label>
+                Category
+                <select id="adjustment-category" required>
+                  <option value="chargeback">Chargeback</option>
+                  <option value="lead_debt">Lead Debt</option>
+                  <option value="manual_credit">Manual Credit</option>
+                  <option value="other">Other</option>
+                </select>
+              </label>
+              <label id="chargeback-policy-wrapper" style="display:none;">
+                Policy (for chargeback)
+                <select id="adjustment-policy">
+                  <option value="">Search or select policy…</option>
+                </select>
+                <small style="font-size:11px; color:#666;">
+                  Only policies written by the selected agent are listed.
+                </small>
+              </label>
+              <label id="lead-debt-lead-wrapper" style="display:none;">
+                Lead (for lead debt)
+                <select id="adjustment-lead">
+                  <option value="">Search or select lead…</option>
+                </select>
+                <small style="font-size:11px; color:#666;">
+                  Only leads assigned to the selected agent are listed.
+                </small>
+              </label>
+              <label>
+                Amount
+                <input id="adjustment-amount" type="number" step="0.01" min="0" required>
+              </label>
+              <label>
+                Effective Date
+                <input id="adjustment-date" type="date" required>
+              </label>
+              <label>
+                Description
+                <textarea id="adjustment-description" rows="2" placeholder="Optional notes"></textarea>
+              </label>
+              <div class="modal-actions">
+                <button type="button" id="adjustment-cancel">Cancel</button>
+                <button type="submit">Save</button>
+              </div>
+              <p id="adjustment-error" class="modal-error"></p>
+            </form>
+          </div>
+        </div>
+    </main>
+
     <!-- Reassignment Warning Modal -->
     <div id="reassign-warning-modal" style="display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 9999; align-items: center; justify-content: center;">
       <div style="background: white; padding: 20px; border-radius: 10px; max-width: 90vw; width: 300px; text-align: center;">
@@ -1190,44 +1087,78 @@
         </div>
       </div>
     </div>
-  <!-- Footer -->
-		<footer class="index-grid-footer">
-			<img id="footerlogo" src="Pics/img17.png">
-			<hr class="footerhr">
-			<div id="footercontact">
-				<a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
-				<span class="fa fa-envelope"></span>
-				<span class="contactcontcontacts">info@familyvaluesgroup.com</span>
-			</a>
-			<p> | </p>
-			<a class="contactcontainer" href="tel:+16292437980">
-				<span class="fa fa-phone"></span>
-				<span class="contactcontcontacts">+1-629-243-7980</span>
-			</a>
-			</div>
-			<hr class="footerhr">
-			<div id="footersocial">
-				<a class="fab fa-facebook-f" href="https://www.facebook.com/familyvaluesgroup"></a>
-				<a class="fab fa-linkedin-in" href="https://www.linkedin.com/in/demisi-johnson-026227391?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"></a>
-				<a class="fab fa-instagram" href="https://www.instagram.com/family.values.group?igsh=OHl3dGdnd3RwMTV0&utm_source=qr"></a>
-				<a class="fab fa-youtube" href="https://youtube.com/@familyvaluesgroup?si=mauqWp5nxyczgCJd"></a>
-				<a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
-			</div>
-			<!-- Footer links section (below social icons) -->
-			<div id="footerlinks">
-				<a href="faqs.html">FAQs</a>
-				<a href="terms.html">Terms</a>
-				<a href="accessibility.html">Accessibility</a>
-				<a href="privacy.html">Privacy</a>
-			</div>
-			<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
-		</footer>
-		<script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
-		  <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-		  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-		  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
-		<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-		<script type="module" src="scripts/general.js"></script>
-		<script type="module" src="scripts/admin.js"></script>
-	</body>
+
+    <!-- Footer -->
+    <footer class="index-grid-footer">
+      <img id="footerlogo" src="Pics/img17.png">
+      <hr class="footerhr">
+      <div id="footercontact">
+        <a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
+          <span class="fa fa-envelope"></span>
+          <span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+        </a>
+        <p> | </p>
+        <a class="contactcontainer" href="tel:+16292437980">
+          <span class="fa fa-phone"></span>
+          <span class="contactcontcontacts">+1-629-243-7980</span>
+        </a>
+      </div>
+      <hr class="footerhr">
+      <div id="footersocial">
+        <a class="fab fa-facebook-f" href="https://www.facebook.com/familyvaluesgroup"></a>
+        <a class="fab fa-linkedin-in" href="https://www.linkedin.com/in/demisi-johnson-026227391?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"></a>
+        <a class="fab fa-instagram" href="https://www.instagram.com/family.values.group?igsh=OHl3dGdnd3RwMTV0&utm_source=qr"></a>
+        <a class="fab fa-youtube" href="https://youtube.com/@familyvaluesgroup?si=mauqWp5nxyczgCJd"></a>
+        <a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
+      </div>
+      <div id="footerlinks">
+        <a href="faqs.html">FAQs</a>
+        <a href="terms.html">Terms</a>
+        <a href="accessibility.html">Accessibility</a>
+        <a href="privacy.html">Privacy</a>
+      </div>
+      <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="scripts/supabase-client.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="scripts/general.js"></script>
+    <script src="scripts/admin.js"></script>
+
+    <!-- Admin-only gate using shared window.supabaseClient -->
+    <script>
+      (async () => {
+        const supabase = window.supabaseClient;
+        if (!supabase) {
+          console.warn("Supabase client missing on admin.html");
+          // Show nothing instead of flashing content
+          return;
+        }
+
+        const { data: { session } = {} } = await supabase.auth.getSession();
+        if (!session) {
+          location.replace('login.html');
+          return;
+        }
+
+        const { data: profile } = await supabase
+          .from('agents')
+          .select('is_admin')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (profile?.is_admin === true) {
+          document.documentElement.style.visibility = 'visible';
+        } else {
+          location.replace('dashboard.html');
+        }
+      })();
+    </script>
+  </body>
 </html>
