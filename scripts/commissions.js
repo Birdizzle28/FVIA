@@ -9,7 +9,7 @@ let leadBalance = 0;
 let chargebackBalance = 0;
 
 document.addEventListener('DOMContentLoaded', async () => {
-   (!supabase) {
+   if (!supabase) {
     console.error('Supabase client missing on this page');
     return;
   }
