@@ -318,8 +318,8 @@
         function nextSlide(user = false){ go(i + 1, user); }
         function prevSlide(user = false){ go(i - 1, user); }
 
-        prev.addEventListener("click", () => nextSlide(true));
-        next.addEventListener("click", () => prevSlide(true));
+        prev.addEventListener("click", () => prevSlide(true));
+        next.addEventListener("click", () => nextSlide(true));
 
         // Drag / swipe
         function onDown(x){
