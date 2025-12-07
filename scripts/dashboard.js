@@ -1,10 +1,6 @@
 // Initialize Supabase client (module-friendly via ESM CDN)
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+const supabase = window.supabaseClient;
 
-const supabase = createClient(
-  'https://ddlbgkolnayqrxslzsxn.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
-);
 window.supabase = supabase;
 // Turn a stored path into a public URL from the "tasks" bucket.
 // If it's already an http(s) URL, use it as-is.
@@ -28,6 +24,10 @@ function resolveTaskImage(raw) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (!supabase) {
+    console.error('Supabase client missing on this page');
+    return;
+  }
   /* ---------- FOLDER TABS ---------- */
     function escapeHtml(str) {
     if (str === null || str === undefined) return '';
