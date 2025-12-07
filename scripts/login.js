@@ -1,18 +1,11 @@
 // scripts/login.js (non-module, uses global window.supabase)
-
-const SUPABASE_URL = 'https://ddlbgkolnayqrxslzsxn.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho';
-
-// Safety check in case Supabase script fails to load
-if (!window.supabase) {
-  console.error('Supabase JS failed to load on this page.');
-}
-
-const supabaseClient = window.supabase
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
-  : null;
+const supabase = window.supabaseClient;
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (!supabase) {
+    console.error('Supabase client missing on this page');
+    return;
+  }
   const form = document.getElementById('login-form');
   const emailInput = document.getElementById('email');
   const passwordInput = document.getElementById('password');
