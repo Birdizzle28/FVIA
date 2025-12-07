@@ -1,6 +1,4 @@
 // scripts/commissions.js
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
-
 const supabase = window.supabaseClient;
 
 let me = null;        // supabase auth user
