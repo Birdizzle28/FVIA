@@ -80,11 +80,14 @@
 			</div>
 			<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
 		</footer>
-
-		<script type="module" src="scripts/general.js"></script>
+		
+		<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+		<script src="scripts/supabase-client.js"></script>
+		<script src="scripts/general.js"></script>
 
 		<!-- Simple confirm-page logic: no Supabase, no onboarding -->
 		<script>
+		const supabase = window.supabaseClient;
 		  document.addEventListener('DOMContentLoaded', () => {
 		    const status = document.getElementById('status');
 		    if (status) {
