@@ -3,8 +3,12 @@
 // - Panels get data-open="true" when visible
 // - Keyboard: Up/Down/Home/End to navigate questions
 // - Search filters by question + answer text (case-insensitive)
-
+const supabase = window.supabaseClient;
 document.addEventListener('DOMContentLoaded', () => {
+  if (!supabase) {
+    console.error('Supabase client missing on this page');
+    return;
+  }
   const list = document.getElementById('faq-list');
   const buttons = Array.from(list.querySelectorAll('.faq-button'));
   const panels = buttons.map(btn => document.getElementById(btn.getAttribute('aria-controls')));
