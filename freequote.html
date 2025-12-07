@@ -12,32 +12,6 @@
   <link rel="stylesheet" href="styles/general.css" />
   <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-
-  <script type="module" src="scripts/general.js"></script>
-  <script>
-    window.FVG_SUPABASE_URL  = "https://ddlbgkolnayqrxslzsxn.supabase.co";
-    window.FVG_SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho";
-    window.FVG_WEBSITE_SUBMITTER_ID   = "11111111-2222-3333-4444-555555555555";
-    window.FVG_WEBSITE_SUBMITTER_NAME = "Website Lead";
-  </script>
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm";
-  
-    // Make a client that never uses a logged-in session
-    window.supabase = createClient(window.FVG_SUPABASE_URL, window.FVG_SUPABASE_ANON, {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        storage: { getItem: () => null, setItem: () => {}, removeItem: () => {} }
-      }
-    });
-  </script>
-  <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm";
-    window.supabase = createClient(window.FVG_SUPABASE_URL, window.FVG_SUPABASE_ANON);
-  </script>
-
-  <script type="module" src="scripts/freequote.js"></script>
   <title>Free Quote | Family Values Group</title>
   <meta name="description" content="Get a personalized life, home, or auto insurance quote in minutes. Family Values Group helps protect what matters most.">
 </head>
@@ -208,12 +182,42 @@
 			<a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
     </div>
 	  <div id="footerlinks">
-			<a href="faqs.html">FAQs</a>
-			<a href="terms.html">Terms</a>
-			<a href="accessibility.html">Accessibility</a>
-			<a href="privacy.html">Privacy</a>
-		</div>
+		  <a href="faqs.html">FAQs</a>
+		  <a href="terms.html">Terms</a>
+		  <a href="accessibility.html">Accessibility</a>
+		  <a href="privacy.html">Privacy</a>
+	  </div>
     <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
   </footer>
+  <!-- 1) Global config values -->
+  <script>
+    window.FVG_SUPABASE_URL  = "https://ddlbgkolnayqrxslzsxn.supabase.co";
+    window.FVG_SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho";
+    window.FVG_WEBSITE_SUBMITTER_ID   = "11111111-2222-3333-4444-555555555555";
+    window.FVG_WEBSITE_SUBMITTER_NAME = "Website Lead";
+  </script>
+
+  <!-- 2) Supabase UMD bundle (non-module) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+  <!-- 3) Create anon Supabase client (no persisted session) -->
+  <script>
+    // supabase global comes from the UMD script above
+    const { createClient } = supabase;
+
+    window.supabase = createClient(window.FVG_SUPABASE_URL, window.FVG_SUPABASE_ANON, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        storage: { getItem: () => null, setItem: () => {}, removeItem: () => {} }
+      }
+    });
+  </script>
+
+  <!-- 4) Your shared general JS (mobile menu, etc.) -->
+  <script src="scripts/general.js"></script>
+
+  <!-- 5) Page-specific logic for freequote -->
+  <script src="scripts/freequote.js"></script>
 </body>
 </html>
