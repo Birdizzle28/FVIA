@@ -1,22 +1,9 @@
-// scripts/general.js
-
-// --- Shared Supabase config (GLOBAL, used by all IIFEs) ---
-const SUPABASE_URL = 'https://ddlbgkolnayqrxslzsxn.supabase.co';
-const SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho';
+const supabase = window.supabaseClient;
 
 // --- Admin-link visibility (only show admin links for admins) ---
 (async () => {
   // Skip if no admin link exists on this page
   if (!document.querySelector('[data-admin-link], .admin-link')) return;
-
-  // Load supabase ESM quickly without waiting for the rest of your app
-  const { createClient } = await import(
-    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm'
-  );
-
-  // Create client once, using shared config
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) return; // still hidden
@@ -40,39 +27,43 @@ const menuToggle = document.getElementById('menu-toggle');
 const mobileMenu = document.getElementById('mobile-menu');
 
 // Open/close the slide-out menu on hamburger click
-menuToggle.addEventListener('click', () => {
-  // If opening, position the menu right below the header
-  if (!mobileMenu.classList.contains('open')) {
-    const header = document.querySelector('header.index-grid-header');
-    if (header) {
-      mobileMenu.style.top = header.offsetHeight + 'px';
+if (menuToggle && mobileMenu) {
+  menuToggle.addEventListener('click', () => {
+    // If opening, position the menu right below the header
+    if (!mobileMenu.classList.contains('open')) {
+      const header = document.querySelector('header.index-grid-header');
+      if (header) {
+        mobileMenu.style.top = header.offsetHeight + 'px';
+      }
     }
-  }
-  mobileMenu.classList.toggle('open');
-});
+    mobileMenu.classList.toggle('open');
+  });
 
-// Close the menu when clicking anywhere outside of it
-document.addEventListener('click', (e) => {
-  if (
-    mobileMenu.classList.contains('open') &&                 // menu is open
-    !mobileMenu.contains(e.target) &&                        // click is not inside menu
-    !e.target.closest('#menu-toggle')                        // click is not the toggle button
-  ) {
-    mobileMenu.classList.remove('open');
-  }
-});
+  // Close the menu when clicking anywhere outside of it
+  document.addEventListener('click', (e) => {
+    if (
+      mobileMenu.classList.contains('open') &&                 // menu is open
+      !mobileMenu.contains(e.target) &&                        // click is not inside menu
+      !e.target.closest('#menu-toggle')                        // click is not the toggle button
+    ) {
+      mobileMenu.classList.remove('open');
+    }
+  });
+}
 
 if (window.innerWidth <= 768) {
   const header = document.querySelector('.index-grid-header');
 
-  window.addEventListener('scroll', () => {
-    const scrolledPast = window.scrollY > 10;
-    if (scrolledPast) {
-      header.classList.add('scrolled');
-    } else {
-      header.classList.remove('scrolled');
-    }
-  });
+  if (header) {
+    window.addEventListener('scroll', () => {
+      const scrolledPast = window.scrollY > 10;
+      if (scrolledPast) {
+        header.classList.add('scrolled');
+      } else {
+        header.classList.remove('scrolled');
+      }
+    });
+  }
 }
 
 const chatBubble = document.getElementById("chat-bubble");
@@ -92,6 +83,7 @@ if (chatBubble && chatWindow) {
 
 // Function to add chat bubbles
 function addMessage(sender, message) {
+  if (!chatBody) return;
   const bubble = document.createElement("div");
   bubble.className = `chat-bubble ${sender}`;
   bubble.innerHTML = sender === "bot" ? `<strong>Kuma:</strong> ${message}` : message;
@@ -101,6 +93,7 @@ function addMessage(sender, message) {
 
 // Function to send user message
 async function handleSend() {
+  if (!chatInput) return;
   const userMessage = chatInput.value.trim();
   if (!userMessage) return;
 
@@ -129,6 +122,9 @@ chatInput?.addEventListener("keypress", function (e) {
   if (e.key === "Enter") handleSend();
 });
 
+// Send button click
+sendBtn?.addEventListener("click", handleSend);
+
 const toggleToolkit = document.getElementById('toolkit-toggle');
 const submenu = document.getElementById('toolkit-submenu');
 
@@ -153,12 +149,11 @@ if (toggleToolkit && submenu) {
   // Optional: close submenu when clicking outside the mobile menu
   document.addEventListener('click', (e) => {
     const mobileMenu = document.getElementById('mobile-menu');
-    if (!mobileMenu?.contains(e.target)) closeSubmenu();
+    if (!mobileMenu?.contains(e.target) && !toggleToolkit.contains(e.target)) {
+      closeSubmenu();
+    }
   });
 }
-
-// Send button click
-sendBtn?.addEventListener("click", handleSend);
 
 /* ============================================================
    NOTIFICATION BELL — ANNOUNCEMENTS + TASKS + UNREAD BADGE
@@ -169,11 +164,10 @@ sendBtn?.addEventListener("click", handleSend);
   const bell = document.getElementById("notifications-tab");
   if (!bell) return; // no bell on this page, skip
 
-  // --- Supabase init ONLY for this feature ---
-  const { createClient } = await import(
-    'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.44.4/+esm'
-  );
-  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  if (!supabase) {
+    console.warn("Supabase client missing: notifications disabled.");
+    return;
+  }
 
   // helper: resolve a tasks image path into a public URL
   function resolveTaskImage(raw) {
@@ -584,8 +578,8 @@ sendBtn?.addEventListener("click", handleSend);
       `;
     }
 
-    preview.style.display = "flex";
-    panel.style.display = "none";
+  preview.style.display = "flex";
+  panel.style.display = "none";
   }
 
   function closePreview() {
@@ -626,7 +620,7 @@ sendBtn?.addEventListener("click", handleSend);
         const pub = a.publish_at ? new Date(a.publish_at) : null;
         const exp = a.expires_at ? new Date(a.expires_at) : null;
         const pubOk = !pub || pub <= now;       // null = "now"
-        const expOk = !exp || exp > now;        // expires_at in future or null
+        const expOk = !exp || !exp || exp > now;        // expires_at in future or null
         if (!pubOk || !expOk) return false;
         return announcementShowsForMe(a);
       })
