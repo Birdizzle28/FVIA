@@ -1,12 +1,19 @@
-// scripts/profile.js
-import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js/+esm';
+// scripts/profile.js — using global window.supabase instead of import
 
-const supabase = createClient(
-  'https://ddlbgkolnayqrxslzsxn.supabase.co',
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho'
-);
+const SUPABASE_URL = 'https://ddlbgkolnayqrxslzsxn.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho';
+
+// If Supabase UMD didn’t load, this will be null and we just bail
+const supabase = window.supabase
+  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
+  : null;
 
 document.addEventListener('DOMContentLoaded', async () => {
+  if (!supabase) {
+    console.error('Supabase not available on profile page');
+    return;
+  }
+
   // Require auth
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return; }
@@ -115,6 +122,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 // Logout
 document.getElementById('logout-btn')?.addEventListener('click', async (e) => {
   e.preventDefault();
+  if (!supabase) return;
+
   await supabase.auth.signOut();
   window.location.href = '../index.html';
 });
