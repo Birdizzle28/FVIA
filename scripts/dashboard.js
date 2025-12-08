@@ -1,6 +1,4 @@
 // Initialize Supabase client (module-friendly via ESM CDN)
-const supabase = window.supabaseClient;
-
 window.supabase = supabase;
 // Turn a stored path into a public URL from the "tasks" bucket.
 // If it's already an http(s) URL, use it as-is.
