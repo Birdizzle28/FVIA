@@ -1,6 +1,4 @@
 // scripts/recruiting.js
-const supabase = window.supabaseClient;
-
 window.supabase = supabase;
 
 // --------- helpers ---------
