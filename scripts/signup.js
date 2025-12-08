@@ -1,5 +1,4 @@
 alert("✅ signup.js is loaded!");
-const supabase = window.supabaseClient;
 
 const path = window.location.pathname;
 const isSignupPage = path.includes('signup.html');
