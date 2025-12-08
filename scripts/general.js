@@ -1,5 +1,3 @@
-const supabase = window.supabaseClient;
-
 // --- Admin-link visibility (only show admin links for admins) ---
 (async () => {
   // Skip if no admin link exists on this page
