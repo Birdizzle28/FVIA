@@ -1,7 +1,4 @@
 // scripts/profile.js — using global window.supabase instead of import
-
-const supabase = window.supabaseClient;
-
 document.addEventListener('DOMContentLoaded', async () => {
   if (!supabase) {
     console.error('Supabase not available on profile page');
