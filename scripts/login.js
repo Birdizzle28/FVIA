@@ -1,6 +1,4 @@
 // scripts/login.js (non-module, uses global window.supabase)
-const supabase = window.supabaseClient;
-
 document.addEventListener('DOMContentLoaded', () => {
   if (!supabase) {
     console.error('Supabase client missing on this page');
