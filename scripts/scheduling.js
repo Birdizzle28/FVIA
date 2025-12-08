@@ -1,6 +1,4 @@
 // scripts/scheduling.js
-const supabase = window.supabaseClient;
-
 document.addEventListener('DOMContentLoaded', async () => {
     /* ---------------- Auth gate + header dropdown ---------------- */
   const { data: { session } } = await supabase.auth.getSession();
