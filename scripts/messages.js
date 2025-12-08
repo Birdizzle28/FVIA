@@ -1,6 +1,4 @@
 // scripts/messages.js
-const supabase = window.supabaseClient;
-
 // ---------- DOM ----------
 const hubToggle = document.getElementById('agent-hub-toggle');
 const hubMenu   = document.getElementById('agent-hub-menu');
