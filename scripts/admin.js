@@ -1,5 +1,3 @@
-const supabase = window.supabaseClient;
-
 let statPicker;
 let userId = null;
 let userRole = null;
