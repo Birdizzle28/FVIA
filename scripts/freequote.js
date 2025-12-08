@@ -1,6 +1,5 @@
 // scripts/freequote.js
 document.addEventListener('DOMContentLoaded', () => {
-  const supabase = window.supabase;
 
   // Panels
   const step1 = document.getElementById('step-1');
