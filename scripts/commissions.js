@@ -1,6 +1,4 @@
 // scripts/commissions.js
-const supabase = window.supabaseClient;
-
 let me = null;        // supabase auth user
 let myProfile = null; // row from agents table
 
