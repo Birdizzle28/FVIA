@@ -1,6 +1,4 @@
 // scripts/leads.js — DROP-IN REPLACEMENT
-const supabase = window.supabaseClient;
-
 let agentProfile = null;
 let agentCurrentPage = 1;
 let agentTotalPages = 1;
