@@ -1,6 +1,4 @@
 // Initialize Supabase client
-const supabase = window.supabaseClient;
-
 let map;                    // Google Map instance
 let directionsService;      // Google Maps Directions service
 let directionsRenderer;     // Renderer for displaying directions
