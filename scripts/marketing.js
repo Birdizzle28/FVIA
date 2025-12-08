@@ -1,6 +1,4 @@
 // scripts/marketing.js
-const supabase = window.supabaseClient;
-
 // Optional Agent Hub dropdown (safe if not present)
 const toggle = document.getElementById('agent-hub-toggle');
 const menu = document.getElementById('agent-hub-menu');
