@@ -1,12 +1,6 @@
 // scripts/profile.js — using global window.supabase instead of import
 
-const SUPABASE_URL = 'https://ddlbgkolnayqrxslzsxn.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho';
-
-// If Supabase UMD didn’t load, this will be null and we just bail
-const supabase = window.supabase
-  ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY)
-  : null;
+const supabase = window.supabaseClient;
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!supabase) {
