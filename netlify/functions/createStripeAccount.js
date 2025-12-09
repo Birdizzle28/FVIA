@@ -24,24 +24,18 @@ export async function handler(event) {
   }
 
   try {
-    // 1) Create a Stripe Express connected account for this NPN
+    // Create a Stripe Express connected account (CORRECT)
     const account = await stripe.accounts.create({
       type: 'express',
       business_type: 'individual',
-      // we can let Stripe collect email/name during onboarding,
-      // but we still tag it with NPN for later matching
-      metadata: {
-        npn
-      },
+      metadata: { npn },
       capabilities: {
-        card_payments: { requested: true },
         transfers: { requested: true }
       }
     });
 
-    // 2) Create onboarding link
-    const refreshUrl = 'https://familyvaluesgroup.com/agent/stripe-error';    // adjust later
-    const returnUrl  = 'https://familyvaluesgroup.com/agent/stripe-complete'; // adjust later
+    const refreshUrl = 'https://familyvaluesgroup.com/agent/stripe-error';
+    const returnUrl  = 'https://familyvaluesgroup.com/agent/stripe-complete';
 
     const link = await stripe.accountLinks.create({
       account: account.id,
@@ -58,6 +52,7 @@ export async function handler(event) {
         onboarding_url: link.url
       })
     };
+
   } catch (err) {
     console.error('Stripe error:', err);
     return {
