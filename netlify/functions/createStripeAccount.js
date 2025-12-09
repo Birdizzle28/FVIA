@@ -46,7 +46,7 @@ export async function handler(event) {
       business_profile: {
         mcc: '6300', // ✅ valid insurance MCC
         url: 'https://familyvaluesgroup.com',
-        product_description: 'Insurance commissions and overrides paid to agents',
+        product_description: 'This account is created for the purpose of recieving payment in the form of commissions and overrides from Family Values Group and nothing more.',
       },
 
       // Capabilities: we allow card_payments + transfers
