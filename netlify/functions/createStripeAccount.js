@@ -43,8 +43,8 @@ export async function handler(event) {
       },
 
       capabilities: {
-        // We only need transfers for paying agents; no direct charges
-        transfers: { requested: true },
+        "card_payments": { "requested": true },
+        "transfers": { "requested": true }
         // card_payments is not requested because agents won’t be charging customers
       },
     });
