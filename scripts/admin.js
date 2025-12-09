@@ -1927,7 +1927,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
     const msg = document.getElementById('agent-msg');
     if (msg) msg.textContent = '';
-  
+    
     const npn         = document.getElementById('agent-id')?.value.trim() || '';
     const firstName   = document.getElementById('agent-first-name')?.value.trim() || '';
     const lastName    = document.getElementById('agent-last-name')?.value.trim() || '';
@@ -1935,12 +1935,12 @@ document.addEventListener('DOMContentLoaded', async () => {
     const email       = document.getElementById('agent-email')?.value.trim() || '';
     const recruiterId = document.getElementById('agent-recruiter')?.value || '';
     const level       = document.getElementById('agent-level')?.value || '';
-  
+    
     if (!npn || !firstName || !lastName || !email || !recruiterId || !level) {
       if (msg) msg.textContent = '⚠️ Fill out NPN, name, email, level, and recruiter.';
       return;
     }
-  
+    
     // 1) Try to match a recruit row by recruiter + name
     let recruitId = null;
     try {
@@ -1951,7 +1951,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         .ilike('first_name', firstName)
         .ilike('last_name', lastName)
         .maybeSingle();
-  
+    
       if (recErr && recErr.code !== 'PGRST116') {
         console.error('Error checking recruits:', recErr);
       }
@@ -1961,7 +1961,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     } catch (err) {
       console.error('Unexpected error looking up recruit:', err);
     }
-  
+    
     // 2) Add/Update in agent_waitlist (ONLY waitlist here)
     const waitlistPayload = {
       agent_id: npn,
@@ -1974,23 +1974,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       recruit_id: recruitId || null
       // flags default to false via schema
     };
-  
+    
     const { error: waitErr } = await supabase
       .from('agent_waitlist')
       .upsert(waitlistPayload, { onConflict: 'agent_id' });
-  
+    
     if (waitErr) {
       console.error('Error saving to agent_waitlist:', waitErr);
       if (msg) msg.textContent = '❌ Could not save to pre-approval waitlist: ' + waitErr.message;
       return;
     }
-  
+    
     if (msg) msg.textContent =
-      '✅ Added to pre-approval waitlist. Syncing NIPR and sending ICA…';
-  
+      '✅ Added to pre-approval waitlist. Syncing NIPR, sending ICA, and starting Stripe onboarding…';
+    
     // Refresh the waitlist UI if Content tab is open
     try { loadWaitlist(); } catch (_) {}
-  
+    
     // 3) NIPR sync + parse (licenses lookup)
     try {
       const syncRes = await fetch('/.netlify/functions/nipr-sync-agent', {
@@ -1998,30 +1998,30 @@ document.addEventListener('DOMContentLoaded', async () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agent_id: npn })
       });
-  
+    
       if (!syncRes.ok) {
         const txt = await syncRes.text();
         console.error('NIPR sync error:', txt);
         if (msg) msg.textContent = '⚠️ On waitlist, but NIPR sync failed. Check logs.';
         return;
       }
-  
+    
       const syncJson = await syncRes.json();
       console.log('NIPR sync result:', syncJson);
-  
+    
       const parseRes = await fetch('/.netlify/functions/nipr-parse-agent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ agent_id: npn })
       });
-  
+    
       if (!parseRes.ok) {
         const txt = await parseRes.text();
         console.error('NIPR parse error:', txt);
         if (msg) msg.textContent = '⚠️ On waitlist & synced, but parse failed. Check logs.';
         return;
       }
-  
+    
       const parseJson = await parseRes.json();
       console.log('NIPR parse result:', parseJson);
     } catch (err) {
@@ -2030,7 +2030,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         '⚠️ On waitlist, but there was an error syncing NIPR data.';
       return;
     }
-  
+    
     // 4) Send ICA via Netlify + SignWell (NO approved_agents yet)
     try {
       const icaRes = await fetch('/.netlify/functions/send-ica', {
@@ -2045,18 +2045,16 @@ document.addEventListener('DOMContentLoaded', async () => {
           approved_agent_id: null   // keep field name for compatibility
         })
       });
-  
+    
       if (!icaRes.ok) {
         const txt = await icaRes.text();
         console.error('ICA send error:', txt);
         if (msg) msg.textContent = '⚠️ NIPR ok, but ICA send failed. Check logs.';
         return;
       }
-  
+    
       const icaJson = await icaRes.json();
       console.log('ICA send result:', icaJson);
-      if (msg) msg.textContent =
-        '🎉 Pre-approved, NIPR synced, and ICA sent for e-sign.';
     } catch (err) {
       console.error('Error calling send-ica function:', err);
       if (msg) msg.textContent =
@@ -2064,10 +2062,55 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
   
+    // 5) 🔐 Create Stripe Connect account + send onboarding link
+    try {
+      const stripeRes = await fetch('/.netlify/functions/createStripeAccount', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_id: npn,           // your NPN / external agent id
+          email,
+          first_name: firstName,
+          last_name: lastName,
+          level,
+          recruiter_id: recruiterId
+        })
+      });
+  
+      if (!stripeRes.ok) {
+        const txt = await stripeRes.text();
+        console.error('Stripe onboarding error:', txt);
+        if (msg) {
+          msg.textContent =
+            '⚠️ NIPR & ICA done, but Stripe onboarding failed. Check logs.';
+        }
+        // Don’t return a hard error — waitlist, NIPR, and ICA are still good.
+        return;
+      }
+  
+      const stripeJson = await stripeRes.json();
+      console.log('Stripe onboarding result:', stripeJson);
+  
+      if (msg) {
+        msg.textContent =
+          '🎉 Pre-approved, NIPR synced, ICA sent, and Stripe onboarding started.';
+      }
+    } catch (err) {
+      console.error('Error calling createStripeAccount:', err);
+      if (msg) {
+        msg.textContent =
+          '⚠️ NIPR & ICA done, but there was an error starting Stripe onboarding.';
+      }
+      return;
+    }
+    
+    // Close modal after a short delay
     setTimeout(() => {
       document.querySelector('#agent-modal [data-close]')?.click();
     }, 900);
-  });  // ===== Chargeback & Lead Debt selector logic =====
+  });  
+  
+  // ===== Chargeback & Lead Debt selector logic =====
   const adjustmentAgentSel       = document.getElementById('adjustment-agent');
   const adjustmentCategorySel    = document.getElementById('adjustment-category');
   const chargebackPolicyWrap     = document.getElementById('chargeback-policy-wrapper');
