@@ -5,7 +5,10 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function handler(event) {
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Use POST' };
+    return {
+      statusCode: 405,
+      body: 'Use POST',
+    };
   }
 
   let body;
@@ -27,24 +30,26 @@ export async function handler(event) {
   }
 
   try {
+    // Create a Stripe CUSTOM connected account
     const account = await stripe.accounts.create({
       type: 'custom',
       country: 'US',
       business_type: 'individual',
       metadata: { npn },
 
-      // New: prefill business profile so Stripe doesn’t have to ask as much
-      business_profile: {
-        url: 'https://familyvaluesgroup.com',
-        mcc: '6411', // Insurance – Brokers/Agents
-        product_description:
-          'Insurance agency paying commissions and bonuses to independent agents.',
-      },
-
+      // This makes it a full platform ToS, not the old “recipient” ToS
       tos_acceptance: {
         service_agreement: 'full',
       },
 
+      // Tell Stripe what this account is for (insurance payouts)
+      business_profile: {
+        mcc: '6300', // ✅ valid insurance MCC
+        url: 'https://familyvaluesgroup.com',
+        product_description: 'Insurance commissions and overrides paid to agents',
+      },
+
+      // Capabilities: we allow card_payments + transfers
       capabilities: {
         card_payments: { requested: true },
         transfers: { requested: true },
@@ -52,7 +57,7 @@ export async function handler(event) {
     });
 
     const refreshUrl = 'https://familyvaluesgroup.com/agent/stripe-error';
-    const returnUrl  = 'https://familyvaluesgroup.com/agent/stripe-complete';
+    const returnUrl = 'https://familyvaluesgroup.com/agent/stripe-complete';
 
     const link = await stripe.accountLinks.create({
       account: account.id,
