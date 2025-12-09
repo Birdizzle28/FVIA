@@ -24,13 +24,27 @@ export async function handler(event) {
   }
 
   try {
-    // Create a Stripe Express connected account (CORRECT)
+    // Create a Stripe CUSTOM connected account (not Express)
     const account = await stripe.accounts.create({
-      type: 'express',
+      type: 'custom',
+      country: 'US',
       business_type: 'individual',
       metadata: { npn },
+
+      // We only need them to RECEIVE transfers from your platform
       capabilities: {
         transfers: { requested: true }
+      },
+
+      // Tell Stripe this is a "recipient" style relationship
+      tos_acceptance: {
+        service_agreement: 'recipient'
+      },
+
+      business_profile: {
+        product_description: 'Independent insurance agent commissions',
+        // You can tweak this if Stripe support suggests a different MCC
+        mcc: '6411'
       }
     });
 
