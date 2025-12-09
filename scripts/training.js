@@ -1,6 +1,4 @@
 // scripts/training.js
-const supabase = window.supabaseClient;
-
 // --------- Local progress store (per-user, localStorage) ----------
 const STORAGE_KEY = 'fvg_training_progress';
 
