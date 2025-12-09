@@ -5,57 +5,59 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function handler(event) {
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Use POST' };
+    return {
+      statusCode: 405,
+      body: 'Use POST',
+    };
   }
 
   let body;
   try {
     body = JSON.parse(event.body || '{}');
   } catch {
-    return { statusCode: 400, body: 'Invalid JSON' };
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ error: 'Invalid JSON' }),
+    };
   }
 
   const { npn } = body;
   if (!npn) {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: 'npn is required' })
+      body: JSON.stringify({ error: 'npn is required' }),
     };
   }
 
   try {
-    // Create a Stripe CUSTOM connected account (not Express)
+    // Create a Stripe **Custom** connected account, transfer-only
     const account = await stripe.accounts.create({
-      type: 'custom',
+      type: 'custom',           // ⬅️ changed from 'express' to 'custom'
       country: 'US',
       business_type: 'individual',
       metadata: { npn },
 
-      // We only need them to RECEIVE transfers from your platform
-      capabilities: {
-        transfers: { requested: true }
-      },
-
-      // Tell Stripe this is a "recipient" style relationship
+      // This is the key part: move away from the old “recipient” agreement
       tos_acceptance: {
-        service_agreement: 'recipient'
+        service_agreement: 'full', // ⬅️ avoids the "recipient ToS" error
       },
 
-      business_profile: {
-        product_description: 'Independent insurance agent commissions',
-        // You can tweak this if Stripe support suggests a different MCC
-        mcc: '6411'
-      }
+      capabilities: {
+        // We only need transfers for paying agents; no direct charges
+        transfers: { requested: true },
+        // card_payments is not requested because agents won’t be charging customers
+      },
     });
 
     const refreshUrl = 'https://familyvaluesgroup.com/agent/stripe-error';
     const returnUrl  = 'https://familyvaluesgroup.com/agent/stripe-complete';
 
+    // Onboarding link still works for Custom accounts
     const link = await stripe.accountLinks.create({
       account: account.id,
       refresh_url: refreshUrl,
       return_url: returnUrl,
-      type: 'account_onboarding'
+      type: 'account_onboarding',
     });
 
     return {
@@ -63,18 +65,17 @@ export async function handler(event) {
       body: JSON.stringify({
         npn,
         stripe_account_id: account.id,
-        onboarding_url: link.url
-      })
+        onboarding_url: link.url,
+      }),
     };
-
   } catch (err) {
     console.error('Stripe error:', err);
     return {
       statusCode: 500,
       body: JSON.stringify({
         error: 'Stripe account creation failed',
-        message: err.message
-      })
+        message: err.message,
+      }),
     };
   }
 }
