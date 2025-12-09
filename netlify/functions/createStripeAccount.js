@@ -5,10 +5,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function handler(event) {
   if (event.httpMethod !== 'POST') {
-    return {
-      statusCode: 405,
-      body: 'Use POST',
-    };
+    return { statusCode: 405, body: 'Use POST' };
   }
 
   let body;
@@ -30,29 +27,33 @@ export async function handler(event) {
   }
 
   try {
-    // Create a Stripe **Custom** connected account, transfer-only
     const account = await stripe.accounts.create({
-      type: 'custom',           // ⬅️ changed from 'express' to 'custom'
+      type: 'custom',
       country: 'US',
       business_type: 'individual',
       metadata: { npn },
 
-      // This is the key part: move away from the old “recipient” agreement
+      // New: prefill business profile so Stripe doesn’t have to ask as much
+      business_profile: {
+        url: 'https://familyvaluesgroup.com',
+        mcc: '6411', // Insurance – Brokers/Agents
+        product_description:
+          'Insurance agency paying commissions and bonuses to independent agents.',
+      },
+
       tos_acceptance: {
-        service_agreement: 'full', // ⬅️ avoids the "recipient ToS" error
+        service_agreement: 'full',
       },
 
       capabilities: {
-        "card_payments": { "requested": true },
-        "transfers": { "requested": true }
-        // card_payments is not requested because agents won’t be charging customers
+        card_payments: { requested: true },
+        transfers: { requested: true },
       },
     });
 
     const refreshUrl = 'https://familyvaluesgroup.com/agent/stripe-error';
     const returnUrl  = 'https://familyvaluesgroup.com/agent/stripe-complete';
 
-    // Onboarding link still works for Custom accounts
     const link = await stripe.accountLinks.create({
       account: account.id,
       refresh_url: refreshUrl,
