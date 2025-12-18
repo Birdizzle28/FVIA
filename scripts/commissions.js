@@ -184,28 +184,36 @@ function initTabs() {
 
   if (!tabButtons.length || !panels.length) return;
 
+  function activateTab(target) {
+    // tabs
+    tabButtons.forEach(t => {
+      const isActive = t.getAttribute('data-tab') === target;
+      t.classList.toggle('is-active', isActive);
+      t.setAttribute('aria-selected', String(isActive));
+    });
+
+    // panels
+    panels.forEach(panel => {
+      const idMatch = panel.id === `panel-${target}`;
+      panel.classList.toggle('is-active', idMatch);
+      if (idMatch) panel.removeAttribute('hidden');
+      else panel.setAttribute('hidden', 'true');
+    });
+  }
+
+  // ✅ On load: pick an already-active tab if present, else first tab
+  const preActive = Array.from(tabButtons).find(t => t.classList.contains('is-active'));
+  const defaultTarget = (preActive || tabButtons[0]).getAttribute('data-tab');
+
+  // ✅ Hide everything except default immediately
+  if (defaultTarget) activateTab(defaultTarget);
+
+  // Click behavior
   tabButtons.forEach(tab => {
     tab.addEventListener('click', () => {
       const target = tab.getAttribute('data-tab');
       if (!target) return;
-
-      // Update active class + aria-selected
-      tabButtons.forEach(t => {
-        const isActive = t === tab;
-        t.classList.toggle('is-active', isActive);
-        t.setAttribute('aria-selected', String(isActive));
-      });
-
-      // Show only matching panel
-      panels.forEach(panel => {
-        const idMatch = panel.id === `panel-${target}`;
-        panel.classList.toggle('is-active', idMatch);
-        if (idMatch) {
-          panel.removeAttribute('hidden');
-        } else {
-          panel.setAttribute('hidden', 'true');
-        }
-      });
+      activateTab(target);
     });
   });
 }
