@@ -49,11 +49,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // 🔹 NEW: load upcoming payouts (advance + pay-thru)
-  const upcoming = await loadAgentUpcomingPayouts();
-  if (!upcoming && !overview) {
-    // if both fail for some reason, fall back to placeholder again
-    renderPlaceholderSummary();
-  }
+  const previews = await loadNextPayoutsFromPreviews();
+   
+   if (!previews?.weekly && !previews?.monthly && !overview) {
+     renderPlaceholderSummary();
+   }
 
   // ----- 4. Wire up tabs & basic UI -----
   initTabs();
@@ -77,6 +77,106 @@ document.addEventListener('DOMContentLoaded', async () => {
 /* ===============================
    Header helpers
    =============================== */
+function getNextFridayISO() {
+  const today = new Date();
+  const day = today.getDay(); // 0 Sun ... 5 Fri
+  const diff = (5 - day + 7) % 7 || 7;
+  const next = new Date(today);
+  next.setDate(today.getDate() + diff);
+  return next.toISOString().slice(0, 10);
+}
+
+// Your monthly pay-thru preview defaults to the 5th.
+// If today is after the 5th, we should preview NEXT month's 5th.
+function getNextMonthlyPayThruISO() {
+  const today = new Date();
+  const y = today.getFullYear();
+  const m = today.getMonth();
+  const thisMonths5th = new Date(y, m, 5);
+
+  const target = (today > thisMonths5th)
+    ? new Date(y, m + 1, 5)
+    : thisMonths5th;
+
+  return target.toISOString().slice(0, 10);
+}
+
+async function postPreviewJson(url) {
+  const res = await fetch(url, { method: 'POST' });
+  const text = await res.text();
+
+  let json = null;
+  try { json = JSON.parse(text); } catch {}
+
+  if (!res.ok) {
+    console.error('Preview function failed:', url, res.status, json || text);
+    return null;
+  }
+  return json;
+}
+
+function pickMyPayoutAmount(previewJson) {
+  // Weekly uses agent_payouts, Monthly uses agent_payouts_preview
+  const list =
+    previewJson?.agent_payouts_preview ||
+    previewJson?.agent_payouts ||
+    null;
+
+  if (Array.isArray(list) && me?.id) {
+    const mine = list.find(x => x?.agent_id === me.id);
+    if (mine) {
+      // Prefer net payout if present
+      const v =
+        mine.net_payout ??
+        mine.net_amount ??
+        mine.gross_payout ??
+        mine.gross_monthly_trail ??
+        mine.gross_amount ??
+        0;
+
+      return Number(v) || 0;
+    }
+  }
+
+  // Fallback totals (monthly vs weekly keys)
+  const fallback =
+    previewJson?.total_net_preview ??
+    previewJson?.total_net ??
+    previewJson?.total_gross_preview ??
+    previewJson?.total_gross ??
+    0;
+
+  return Number(fallback) || 0;
+}
+
+async function loadNextPayoutsFromPreviews() {
+  // Weekly Advance
+  const nextFriISO = getNextFridayISO();
+  const weekly = await postPreviewJson(`/.netlify/functions/previewWeeklyAdvance?pay_date=${encodeURIComponent(nextFriISO)}`);
+  if (weekly) {
+    const amt = pickMyPayoutAmount(weekly);
+    setText('summary-next-advance-amount', formatMoney(amt));
+    setText('summary-next-advance-date', `(${getNextFridayLabel()})`);
+    setText('next-advance-amount', formatMoney(amt));
+    setText('next-advance-date', `Pays on: ${getNextFridayLabel()}`);
+  }
+
+  // Monthly Pay-Thru
+  const nextMonthlyISO = getNextMonthlyPayThruISO();
+  const monthly = await postPreviewJson(`/.netlify/functions/previewMonthlyPayThru?pay_date=${encodeURIComponent(nextMonthlyISO)}`);
+  if (monthly) {
+    const amt = pickMyPayoutAmount(monthly);
+    const label = new Date(nextMonthlyISO).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+
+    setText('summary-next-paythru-amount', formatMoney(amt));
+    setText('summary-next-paythru-date', `(${label})`);
+
+    setText('next-paythru-amount', formatMoney(amt));
+    setText('next-paythru-date', `Pays on: ${label}`);
+  }
+
+  return { weekly, monthly };
+}
 
 function hydrateHeaderFromProfile(profile) {
   const nameEl = document.getElementById('comm-agent-name');
@@ -135,23 +235,31 @@ async function loadAgentUpcomingPayouts() {
     return null;
   }
 
-  // Fill the “Upcoming Payouts” snapshot + detail cards
-  const advance = Number(data.next_advance_gross) || 0;
-  const paythru = Number(data.next_paythru_gross) || 0;
+  const advance = Number(data?.next_advance_gross) || 0;
+  const paythru = Number(data?.next_paythru_gross) || 0;
+
+  // Labels (weekly = next Friday, monthly pay-thru = the 5th)
+  const nextFriLabel = getNextFridayLabel();
+
+  const nextMonthlyISO = getNextMonthlyPayThruISO(); // <-- uses your 5th logic
+  const payThruLabel = new Date(nextMonthlyISO).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric'
+  });
 
   // Top summary card
   setText('summary-next-advance-amount', formatMoney(advance));
-  setText('summary-next-advance-date', `(${getNextFridayLabel()})`);
+  setText('summary-next-advance-date', `(${nextFriLabel})`);
 
   setText('summary-next-paythru-amount', formatMoney(paythru));
-  setText('summary-next-paythru-date', `(${getEndOfMonthLabel()})`);
+  setText('summary-next-paythru-date', `(${payThruLabel})`);
 
   // Earnings & Payouts panel cards
   setText('next-advance-amount', formatMoney(advance));
-  setText('next-advance-date', `Pays on: ${getNextFridayLabel()}`);
+  setText('next-advance-date', `Pays on: ${nextFriLabel}`);
 
   setText('next-paythru-amount', formatMoney(paythru));
-  setText('next-paythru-date', `Pays on: ${getEndOfMonthLabel()}`);
+  setText('next-paythru-date', `Pays on: ${payThruLabel}`);
 
   return data;
 }
