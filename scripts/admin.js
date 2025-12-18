@@ -512,6 +512,268 @@ async function loadAdjustmentsIntoList() {
     container.appendChild(div);
   });
 }
+async function loadPayoutBatchesIntoList() {
+  const supabase = window.supabaseClient;
+  const list = document.getElementById("batch-list");
+  if (!supabase || !list) return;
+
+  const money = (v) => {
+    const n = Number(v);
+    if (!Number.isFinite(n)) return "—";
+    return n.toLocaleString(undefined, { style: "currency", currency: "USD" });
+  };
+
+  const fmtDate = (v) => {
+    if (!v) return "—";
+    const d = new Date(v);
+    if (Number.isNaN(d.getTime())) return String(v);
+    return d.toLocaleString();
+  };
+
+  const setBusy = (el, busy, labelBusy) => {
+    if (!el) return;
+    el.disabled = !!busy;
+    el.dataset._oldText ??= el.textContent;
+    if (busy) el.textContent = labelBusy || "Working…";
+    else el.textContent = el.dataset._oldText;
+  };
+
+  list.innerHTML = `<div style="opacity:.8;font-size:13px;">Loading payout batches…</div>`;
+
+  // Load batches
+  const { data: batches, error } = await supabase
+    .from("payout_batches")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(50);
+
+  if (error) {
+    list.innerHTML = `<div style="color:#b00020;font-size:13px;">Failed to load batches: ${error.message}</div>`;
+    return;
+  }
+
+  if (!batches || batches.length === 0) {
+    list.innerHTML = `<div style="opacity:.8;font-size:13px;">No payout batches yet.</div>`;
+    return;
+  }
+
+  list.innerHTML = "";
+
+  for (const b of batches) {
+    const row = document.createElement("div");
+    row.className = "batch-row";
+    row.style.display = "grid";
+    row.style.gridTemplateColumns = "1fr auto";
+    row.style.gap = "10px";
+    row.style.padding = "10px";
+    row.style.border = "1px solid #e6e6e6";
+    row.style.borderRadius = "10px";
+    row.style.marginBottom = "8px";
+    row.style.background = "#fff";
+
+    const left = document.createElement("div");
+    left.innerHTML = `
+      <div style="display:flex; align-items:center; gap:8px; flex-wrap:wrap;">
+        <strong style="font-size:14px;">Batch</strong>
+        <span style="font-size:12px; opacity:.75;">${b.id ?? "—"}</span>
+      </div>
+      <div style="margin-top:6px; font-size:13px; line-height:1.35;">
+        <div><span style="opacity:.75;">Total Net:</span> <span class="total-net-text">${money(b.total_net)}</span></div>
+        <div><span style="opacity:.75;">Created:</span> ${fmtDate(b.created_at)}</div>
+        ${b.run_at ? `<div><span style="opacity:.75;">Run At:</span> ${fmtDate(b.run_at)}</div>` : ``}
+        ${b.status ? `<div><span style="opacity:.75;">Status:</span> ${String(b.status)}</div>` : ``}
+      </div>
+      <div class="edit-wrap" style="margin-top:8px; display:none; gap:8px; align-items:center; flex-wrap:wrap;">
+        <input class="edit-total-net" type="number" step="0.01" min="0"
+          value="${Number.isFinite(Number(b.total_net)) ? Number(b.total_net) : ""}"
+          style="width:140px; padding:6px 8px; border:1px solid #ddd; border-radius:8px; font-size:13px;">
+        <button class="save-edit" type="button" style="padding:6px 10px; border-radius:8px;">Save</button>
+        <button class="cancel-edit" type="button" style="padding:6px 10px; border-radius:8px;">Cancel</button>
+        <small class="edit-msg" style="display:block; width:100%; font-size:12px; opacity:.75;"></small>
+      </div>
+    `;
+
+    const right = document.createElement("div");
+    right.style.display = "flex";
+    right.style.gap = "8px";
+    right.style.alignItems = "flex-start";
+    right.style.flexWrap = "wrap";
+    right.style.justifyContent = "flex-end";
+
+    const btnEdit = document.createElement("button");
+    btnEdit.type = "button";
+    btnEdit.textContent = "Edit";
+    btnEdit.style.padding = "6px 10px";
+    btnEdit.style.borderRadius = "8px";
+
+    const btnDelete = document.createElement("button");
+    btnDelete.type = "button";
+    btnDelete.textContent = "Delete";
+    btnDelete.style.padding = "6px 10px";
+    btnDelete.style.borderRadius = "8px";
+    btnDelete.style.borderColor = "#ffb3b3";
+
+    const btnPay = document.createElement("button");
+    btnPay.type = "button";
+    btnPay.textContent = "Pay";
+    btnPay.style.padding = "6px 12px";
+    btnPay.style.borderRadius = "8px";
+
+    right.appendChild(btnPay);
+    right.appendChild(btnEdit);
+    right.appendChild(btnDelete);
+
+    row.appendChild(left);
+    row.appendChild(right);
+    list.appendChild(row);
+
+    // Elements for editing
+    const editWrap = left.querySelector(".edit-wrap");
+    const editInput = left.querySelector(".edit-total-net");
+    const saveBtn = left.querySelector(".save-edit");
+    const cancelBtn = left.querySelector(".cancel-edit");
+    const editMsg = left.querySelector(".edit-msg");
+    const totalNetText = left.querySelector(".total-net-text");
+
+    // EDIT toggle
+    btnEdit.addEventListener("click", () => {
+      const open = editWrap.style.display !== "none";
+      editWrap.style.display = open ? "none" : "flex";
+      editMsg.textContent = "";
+      if (!open) {
+        // reset to current value
+        const current = Number(b.total_net);
+        editInput.value = Number.isFinite(current) ? String(current) : "";
+        editInput.focus();
+      }
+    });
+
+    cancelBtn.addEventListener("click", () => {
+      editWrap.style.display = "none";
+      editMsg.textContent = "";
+    });
+
+    // SAVE edit total_net
+    saveBtn.addEventListener("click", async () => {
+      const nextVal = Number(editInput.value);
+      if (!Number.isFinite(nextVal) || nextVal < 0) {
+        editMsg.style.color = "#b00020";
+        editMsg.textContent = "Enter a valid total_net (0 or higher).";
+        return;
+      }
+
+      setBusy(saveBtn, true, "Saving…");
+      setBusy(btnEdit, true);
+      setBusy(btnDelete, true);
+      setBusy(btnPay, true);
+
+      const { error: upErr } = await supabase
+        .from("payout_batches")
+        .update({ total_net: nextVal })
+        .eq("id", b.id);
+
+      setBusy(saveBtn, false);
+      setBusy(btnEdit, false);
+      setBusy(btnDelete, false);
+      setBusy(btnPay, false);
+
+      if (upErr) {
+        editMsg.style.color = "#b00020";
+        editMsg.textContent = `Save failed: ${upErr.message}`;
+        return;
+      }
+
+      // update local + UI
+      b.total_net = nextVal;
+      totalNetText.textContent = money(nextVal);
+      editMsg.style.color = "#0a7a0a";
+      editMsg.textContent = "Saved.";
+      setTimeout(() => {
+        editWrap.style.display = "none";
+        editMsg.textContent = "";
+      }, 600);
+    });
+
+    // DELETE batch row
+    btnDelete.addEventListener("click", async () => {
+      const ok = confirm("Delete this payout batch? This cannot be undone.");
+      if (!ok) return;
+
+      setBusy(btnDelete, true, "Deleting…");
+      setBusy(btnEdit, true);
+      setBusy(btnPay, true);
+
+      const { error: delErr } = await supabase
+        .from("payout_batches")
+        .delete()
+        .eq("id", b.id);
+
+      setBusy(btnDelete, false);
+      setBusy(btnEdit, false);
+      setBusy(btnPay, false);
+
+      if (delErr) {
+        alert(`Delete failed: ${delErr.message}`);
+        return;
+      }
+
+      row.remove();
+      if (!list.querySelector(".batch-row")) {
+        list.innerHTML = `<div style="opacity:.8;font-size:13px;">No payout batches yet.</div>`;
+      }
+    });
+
+    // PAY (run Netlify function)
+    btnPay.addEventListener("click", async () => {
+      const ok = confirm("Run this payout batch now?");
+      if (!ok) return;
+
+      setBusy(btnPay, true, "Paying…");
+      setBusy(btnEdit, true);
+      setBusy(btnDelete, true);
+
+      try {
+        const { data: { session } = {} } = await supabase.auth.getSession();
+        const token = session?.access_token;
+
+        const res = await fetch("/.netlify/functions/sendPayoutBatch", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          },
+          body: JSON.stringify({
+            batch_id: b.id,
+            // optional extras in case your function wants them:
+            total_net: b.total_net ?? null,
+            run_at: b.run_at ?? null
+          })
+        });
+
+        const text = await res.text();
+        let payload = null;
+        try { payload = JSON.parse(text); } catch (_) {}
+
+        if (!res.ok) {
+          const msg = payload?.error || payload?.message || text || `HTTP ${res.status}`;
+          alert(`Pay failed: ${msg}`);
+        } else {
+          const msg = payload?.message || "Batch sent successfully.";
+          alert(msg);
+          // Refresh list so status/paid_at changes show up if your function updates the row
+          await loadPayoutBatchesIntoList();
+          return;
+        }
+      } catch (e) {
+        alert(`Pay failed: ${e?.message || e}`);
+      } finally {
+        setBusy(btnPay, false);
+        setBusy(btnEdit, false);
+        setBusy(btnDelete, false);
+      }
+    });
+  }
+}
 
 const adjustmentForm = document.getElementById('adjustment-form');
 
