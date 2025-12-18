@@ -152,7 +152,8 @@
 	        last_name,
 	        phone,
 	        level,
-	        recruiter_id
+	        recruiter_id,
+  			stripe_account_id
 	      `)
 	      .eq('agent_id', agentId)
 	      .maybeSingle();
@@ -229,6 +230,7 @@
 	        const agentPayload = {
 	          email: authEmail,
 	          agent_id: approved.agent_id,
+			  stripe_account_id: approved.stripe_account_id || null,
 	          full_name: fullName,
 	          first_name: approved.first_name || null,
 	          last_name: approved.last_name || null,
