@@ -3472,7 +3472,7 @@ async function loadWaitlist() {
 
   const { data, error } = await supabase
     .from('agent_waitlist')
-    .select('id, agent_id, first_name, last_name, phone, email, recruiter_id, level, recruit_id, licensing_approved, ica_signed, banking_approved, created_at')
+    .select('id, agent_id, first_name, last_name, phone, email, recruiter_id, level, recruit_id, licensing_approved, ica_signed, banking_approved, stripe_account_id, created_at')
     .order('created_at', { ascending: false });
 
   if (error) {
