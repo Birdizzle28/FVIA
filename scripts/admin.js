@@ -3514,6 +3514,7 @@ async function loadWaitlist() {
              data-recruiter-id="${item.recruiter_id || ''}"
              data-level="${item.level || ''}"
              data-recruit-id="${item.recruit_id || ''}"
+             data-stripe-account-id="${item.stripe_account_id || ''}"
              style="border:1px solid #eee; border-radius:6px; padding:10px 12px; margin-bottom:10px; font-size:13px;">
           <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;">
             <div>
