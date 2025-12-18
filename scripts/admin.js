@@ -1521,7 +1521,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       loadAgentsForCommissions();
       loadPoliciesIntoList();
       loadAdjustmentsIntoList();
-      // loadPayoutBatchesIntoList(); // when we build this in step 3
+      loadPayoutBatchesIntoList(); // when we build this in step 3
     }
   }
 
