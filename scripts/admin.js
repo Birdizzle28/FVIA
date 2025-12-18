@@ -3607,6 +3607,7 @@ async function approveWaitlistEntry(row) {
   const recruiterId = row.getAttribute('data-recruiter-id') || '';
   const level       = row.getAttribute('data-level') || '';
   const recruitId   = row.getAttribute('data-recruit-id') || null;
+  const stripeAccountId = row.getAttribute('data-stripe-account-id') || null;
 
   const msgEl  = row.querySelector('.wait-msg');
   const licCb  = row.querySelector('.wait-lic');
@@ -3639,7 +3640,8 @@ async function approveWaitlistEntry(row) {
     level,
     ica_signed: true,
     banking_approved: true,
-    licensing_approved: true
+    licensing_approved: true,
+    stripe_account_id: stripeAccountId || null
   };
 
   if (msgEl) msgEl.textContent = 'Saving to approved_agents…';
