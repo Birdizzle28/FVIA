@@ -10,47 +10,24 @@ if (!supabaseUrl || !serviceKey) {
 
 const supabase = createClient(supabaseUrl, serviceKey);
 
-/**
- * Helper: get pay_date.
- * - Uses ?pay_date=YYYY-MM-DD if provided (for testing)
- * - Otherwise: 5th of *current* month
- */
 function getPayDate(event) {
   const qs = event.queryStringParameters || {};
-
   if (qs.pay_date) {
     const d = new Date(qs.pay_date);
-    if (!isNaN(d.getTime())) {
-      return d;
-    }
+    if (!isNaN(d.getTime())) return d;
   }
-
   const today = new Date();
-  // JS months 0-11
   return new Date(today.getFullYear(), today.getMonth(), 5);
 }
 
-/**
- * Helper: first + last day of the pay_date's month
- */
 function getMonthBounds(payDate) {
   const year  = payDate.getFullYear();
-  const month = payDate.getMonth(); // 0-based
-
+  const month = payDate.getMonth();
   const start = new Date(year, month, 1);
-  const end   = new Date(year, month + 1, 0); // last day of month
-
+  const end   = new Date(year, month + 1, 0);
   return { start, end };
 }
 
-/**
- * Same tiers as weekly:
- *   - if agent inactive => 100% of this check (up to remaining debt)
- *   - if active:
- *        < 1000         => 30%
- *        1000–1999.99   => 40%
- *        >= 2000        => 50%
- */
 function getRepaymentRate(totalDebt, isActive) {
   if (!isActive) return 1.0;
   if (totalDebt <= 0) return 0;
@@ -58,6 +35,66 @@ function getRepaymentRate(totalDebt, isActive) {
   if (totalDebt < 2000) return 0.40;
   return 0.50;
 }
+
+// -------- Helpers copied from runMonthlyPayThru (renewals) --------
+
+function getPolicyYear(policyCreatedAt, asOfDate) {
+  const start = new Date(policyCreatedAt);
+  if (isNaN(start.getTime())) return null;
+
+  let years = asOfDate.getFullYear() - start.getFullYear();
+  const annivThisYear = new Date(
+    asOfDate.getFullYear(),
+    start.getMonth(),
+    start.getDate()
+  );
+
+  if (asOfDate < annivThisYear) {
+    years -= 1;
+  }
+
+  const policyYear = years + 1;
+  return policyYear < 1 ? 1 : policyYear;
+}
+
+function getBaseRenewalRate(schedule, renewalYear) {
+  if (!renewalYear || renewalYear < 1) return 0;
+
+  let rule = schedule.renewal_trail_rule;
+  if (rule && typeof rule === 'string') {
+    try {
+      rule = JSON.parse(rule);
+    } catch {
+      rule = null;
+    }
+  }
+
+  if (rule && Array.isArray(rule.bands)) {
+    for (const band of rule.bands) {
+      const start = band.start_year ?? (schedule.renewal_start_year ?? 2);
+      const end   = band.end_year;
+      const withinLower = renewalYear >= start;
+      const withinUpper = end == null ? true : renewalYear <= end;
+      if (withinLower && withinUpper) {
+        return Number(band.rate || 0);
+      }
+    }
+    return 0;
+  }
+
+  const flatRate = Number(schedule.renewal_commission_rate || 0);
+  if (!flatRate) return 0;
+
+  const startYear = schedule.renewal_start_year ?? 2;
+  const endYear   = schedule.renewal_end_year;
+  const withinLower = renewalYear >= startYear;
+  const withinUpper = endYear == null ? true : renewalYear <= endYear;
+  if (withinLower && withinUpper) return flatRate;
+
+  return 0;
+}
+
+// ----------------------------------------------------------------
 
 export async function handler(event) {
   if (event.httpMethod !== 'POST') {
@@ -69,14 +106,13 @@ export async function handler(event) {
 
   try {
     const payDate     = getPayDate(event);
-    const payDateStr  = payDate.toISOString().slice(0, 10); // YYYY-MM-DD
-    const payMonthKey = payDateStr.slice(0, 7);             // YYYY-MM
+    const payDateStr  = payDate.toISOString().slice(0, 10);
+    const payMonthKey = payDateStr.slice(0, 7);
 
     const { start: monthStart, end: monthEnd } = getMonthBounds(payDate);
     const monthStartIso = monthStart.toISOString();
     const monthEndIso   = monthEnd.toISOString();
 
-    // 28-day wait: only pay trails for policies created_at <= pay_date - 28 days
     const cutoff = new Date(payDate);
     cutoff.setDate(cutoff.getDate() - 28);
     const cutoffIso = cutoff.toISOString();
@@ -90,7 +126,7 @@ export async function handler(event) {
       cutoffIso
     );
 
-    // 1) Already-paid this month (for counting / exclusion)
+    // A) Already-paid this month (YEAR-AWARE like runMonthlyPayThru)
     const { data: existingPayThru, error: existingErr } = await supabase
       .from('commission_ledger')
       .select('policy_id, agent_id, meta')
@@ -105,14 +141,19 @@ export async function handler(event) {
       };
     }
 
-    const alreadyPaidThisMonth = new Set(
-      (existingPayThru || []).map(r => `${r.policy_id}:${r.agent_id}`)
-    );
+    const alreadyPaidThisMonth = new Set();
+    (existingPayThru || []).forEach(row => {
+      const m = row.meta || {};
+      const py = m.policy_year != null ? Number(m.policy_year) : 1;
+      if (row.policy_id && row.agent_id) {
+        alreadyPaidThisMonth.add(`${row.policy_id}:${row.agent_id}:${py}`);
+      }
+    });
 
-    // 2) Count prior paythru per policy/agent (for 12-month cap)
+    // B) Prior paythru count map (YEAR-AWARE like runMonthlyPayThru)
     const { data: payThruPrior, error: priorErr } = await supabase
       .from('commission_ledger')
-      .select('policy_id, agent_id')
+      .select('policy_id, agent_id, meta')
       .eq('entry_type', 'paythru');
 
     if (priorErr) {
@@ -125,12 +166,14 @@ export async function handler(event) {
 
     const payThruCountMap = new Map();
     (payThruPrior || []).forEach(row => {
-      const key = `${row.policy_id}:${row.agent_id}`;
+      const m = row.meta || {};
+      const py = m.policy_year != null ? Number(m.policy_year) : 1;
+      const key = `${row.policy_id}:${row.agent_id}:${py}`;
       const prev = payThruCountMap.get(key) || 0;
       payThruCountMap.set(key, prev + 1);
     });
 
-    // 3) Eligible policies for new trails (respecting 28-day wait)
+    // C) Eligible policies (28-day wait)
     const { data: policies, error: polErr } = await supabase
       .from('policies')
       .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, created_at')
@@ -145,18 +188,17 @@ export async function handler(event) {
     }
 
     if (!policies || policies.length === 0) {
-      // Mirror runMonthlyPayThru early-return behavior
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: 'No policies eligible for monthly trails (28-day wait) this run.',
+          message: 'No policies eligible for monthly trails/renewals (28-day wait) this run.',
           pay_date: payDateStr,
           pay_month: payMonthKey,
         }),
       };
     }
 
-    // 4) Caches
+    // D) Caches (same fields as runMonthlyPayThru)
     const agentCache = new Map();
     const schedCache = new Map();
 
@@ -191,7 +233,10 @@ export async function handler(event) {
 
       const { data, error } = await supabase
         .from('commission_schedules')
-        .select('base_commission_rate, advance_rate')
+        .select(
+          'base_commission_rate, advance_rate, renewal_commission_rate, ' +
+          'renewal_start_year, renewal_end_year, renewal_trail_rule'
+        )
         .eq('carrier_name', policy.carrier_name)
         .eq('product_line', policy.product_line)
         .eq('policy_type', policy.policy_type)
@@ -208,13 +253,17 @@ export async function handler(event) {
       return data;
     }
 
-    // 5) Build NEW pay-thru accrual rows (simulation only, no insert)
+    // E) Build simulated NEW ledger rows (trails + renewals) exactly like runMonthlyPayThru
     const newLedgerRows = [];
     let totalNewGross = 0;
 
     for (const policy of policies) {
       const ap = Number(policy.premium_annual || 0);
       if (!policy.agent_id || ap <= 0) continue;
+      if (!policy.created_at) continue;
+
+      const policyYear = getPolicyYear(policy.created_at, payDate);
+      if (!policyYear) continue;
 
       const chain = [];
       let current = await getAgent(policy.agent_id);
@@ -229,8 +278,8 @@ export async function handler(event) {
         const schedule = await getSchedule(policy, level);
         if (!schedule) break;
 
-        const baseRate = Number(schedule.base_commission_rate) || 0;
-        const advRate  = Number(schedule.advance_rate) || 0;
+        const baseRate = Number(schedule.base_commission_rate || 0);
+        const advRate  = Number(schedule.advance_rate || 0);
 
         if (globalAdvanceRate == null) {
           globalAdvanceRate = advRate;
@@ -238,6 +287,7 @@ export async function handler(event) {
 
         chain.push({
           agent: current,
+          schedule,
           baseRate
         });
 
@@ -248,55 +298,78 @@ export async function handler(event) {
       if (!chain.length || globalAdvanceRate == null) continue;
 
       let prevBaseRate = 0;
+      let prevBaseRenewalRate = 0;
 
       for (const node of chain) {
-        const effectiveRate = node.baseRate - prevBaseRate;
-        prevBaseRate = node.baseRate;
+        let effectiveRate = 0;
+        let phase = 'trail';
+
+        if (policyYear === 1) {
+          const levelBaseRate = node.baseRate;
+          effectiveRate = levelBaseRate - prevBaseRate;
+          prevBaseRate = levelBaseRate;
+          phase = 'trail';
+        } else {
+          const baseRenewalRate = getBaseRenewalRate(node.schedule, policyYear);
+          if (!baseRenewalRate || baseRenewalRate <= 0) continue;
+          effectiveRate = baseRenewalRate - prevBaseRenewalRate;
+          prevBaseRenewalRate = baseRenewalRate;
+          phase = 'renewal';
+        }
 
         if (effectiveRate <= 0) continue;
 
-        const policyAgentKey = `${policy.id}:${node.agent.id}`;
+        const policyAgentYearKey = `${policy.id}:${node.agent.id}:${policyYear}`;
 
-        if (alreadyPaidThisMonth.has(policyAgentKey)) continue;
+        if (alreadyPaidThisMonth.has(policyAgentYearKey)) continue;
 
-        const priorCount = payThruCountMap.get(policyAgentKey) || 0;
+        const priorCount = payThruCountMap.get(policyAgentYearKey) || 0;
         if (priorCount >= 12) continue;
 
-        const annualResidual      = ap * effectiveRate * (1 - globalAdvanceRate);
-        const monthlyResidualRaw  = annualResidual / 12;
-        const monthlyResidual     = Math.round(monthlyResidualRaw * 100) / 100;
+        let annualAmount = 0;
+        if (policyYear === 1) {
+          annualAmount = ap * effectiveRate * (1 - globalAdvanceRate);
+        } else {
+          annualAmount = ap * effectiveRate;
+        }
 
-        if (monthlyResidual <= 0) continue;
+        const monthlyRaw = annualAmount / 12;
+        const monthly = Math.round(monthlyRaw * 100) / 100;
+        if (monthly <= 0) continue;
 
-        payThruCountMap.set(policyAgentKey, priorCount + 1);
-
-        totalNewGross += monthlyResidual;
+        payThruCountMap.set(policyAgentYearKey, priorCount + 1);
+        totalNewGross += monthly;
 
         newLedgerRows.push({
           agent_id: node.agent.id,
           policy_id: policy.id,
-          amount: monthlyResidual,
+          amount: monthly,
           currency: 'USD',
           entry_type: 'paythru',
-          description: `Monthly trail on ${policy.carrier_name} ${policy.product_line} (${policy.policy_type}) for ${payMonthKey}`,
+          description:
+            phase === 'trail'
+              ? `Monthly trail on ${policy.carrier_name} ${policy.product_line} (${policy.policy_type}) for ${payMonthKey}`
+              : `Monthly renewal (year ${policyYear}) on ${policy.carrier_name} ${policy.product_line} (${policy.policy_type}) for ${payMonthKey}`,
           period_start: monthStartIso,
           period_end: monthEndIso,
           is_settled: false,
           payout_batch_id: null,
           meta: {
             pay_month: payMonthKey,
+            policy_year: policyYear,
+            phase,
             carrier_name: policy.carrier_name,
             product_line: policy.product_line,
             policy_type: policy.policy_type,
             ap,
-            base_rate_portion: effectiveRate,
+            rate_portion: effectiveRate
           }
         });
       }
     }
 
-    // 6) Threshold + debt logic (preview mode)
-    // First, load current unpaid trails from DB
+    // F) Threshold + debt logic (preview mode)
+    // Load existing unpaid trails from DB, then combine with simulated new rows
     const { data: unpaidTrailsExisting, error: unpaidErr } = await supabase
       .from('commission_ledger')
       .select('id, agent_id, amount')
@@ -311,9 +384,7 @@ export async function handler(event) {
       };
     }
 
-    // Combine existing unpaid + simulated newLedgerRows
     const allUnpaidTrails = [];
-
     (unpaidTrailsExisting || []).forEach(row => {
       allUnpaidTrails.push({
         agent_id: row.agent_id,
@@ -321,7 +392,6 @@ export async function handler(event) {
         source: 'existing',
       });
     });
-
     newLedgerRows.forEach(row => {
       allUnpaidTrails.push({
         agent_id: row.agent_id,
@@ -334,36 +404,31 @@ export async function handler(event) {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: 'No unpaid trails to consider for $100 threshold (all caught up).',
+          message: 'No unpaid trails/renewals to consider for $100 threshold (all caught up).',
           pay_date: payDateStr,
           pay_month: payMonthKey,
           new_trails_created_preview: newLedgerRows.length,
-          agents_paid_preview: 0,
           total_new_trails_gross_preview: Number(totalNewGross.toFixed(2)),
+          agents_paid_preview: 0,
         }),
       };
     }
 
-    const agentTotals = {}; // total unpaid trails (existing + simulated) per agent
-
+    const agentTotals = {};
     for (const row of allUnpaidTrails) {
       const aid = row.agent_id;
       const amt = Number(row.amount || 0);
-      if (!agentTotals[aid]) {
-        agentTotals[aid] = 0;
-      }
+      if (!agentTotals[aid]) agentTotals[aid] = 0;
       agentTotals[aid] += amt;
     }
 
     const threshold = 100;
-    const basePayableAgents = []; // before debt withholding
-
+    const basePayableAgents = [];
     for (const [aid, sum] of Object.entries(agentTotals)) {
       if (sum >= threshold) {
-        const rounded = Number(sum.toFixed(2));
         basePayableAgents.push({
           agent_id: aid,
-          gross_monthly_trail: rounded,
+          gross_monthly_trail: Number(sum.toFixed(2)),
         });
       }
     }
@@ -372,17 +437,16 @@ export async function handler(event) {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: 'Monthly trails accrued (including new ones), but no agent reached the $100 minimum yet.',
+          message: 'Monthly trails/renewals accrued (including new ones), but no agent reached the $100 minimum yet.',
           pay_date: payDateStr,
           pay_month: payMonthKey,
           new_trails_created_preview: newLedgerRows.length,
-          agents_paid_preview: 0,
           total_new_trails_gross_preview: Number(totalNewGross.toFixed(2)),
+          agents_paid_preview: 0,
         }),
       };
     }
 
-    // 7) Load debts + is_active for payable agents
     const payableAgentIds = basePayableAgents.map(a => a.agent_id);
 
     const { data: debtRows, error: debtErr } = await supabase
@@ -425,7 +489,6 @@ export async function handler(event) {
       activeMap.set(a.id, a.is_active !== false);
     });
 
-    // 8) Apply tiers to these monthly trails (preview repayments only)
     const finalPayouts = [];
     let batchTotalGross = 0;
     let batchTotalDebits = 0;
@@ -480,22 +543,16 @@ export async function handler(event) {
     batchTotalDebits = Number(batchTotalDebits.toFixed(2));
     const batchTotalNet = Number((batchTotalGross - batchTotalDebits).toFixed(2));
 
-    // *** IMPORTANT DIFFERENCE FROM runMonthlyPayThru ***
-    // - No insert of newLedgerRows into commission_ledger
-    // - No payout_batches row
-    // - No updating commission_ledger.is_settled
-    // - No applyRepayments()
-    // This is a READ-ONLY PREVIEW.
-
     return {
       statusCode: 200,
       body: JSON.stringify(
         {
-          message: 'Monthly pay-thru PREVIEW with $100 minimum + tiered debt withholding (no DB changes).',
+          message: 'Monthly pay-thru PREVIEW with $100 minimum + tiered debt withholding (trails + renewals; no DB changes).',
           pay_date: payDateStr,
           pay_month: payMonthKey,
-          new_trails_created_preview: newLedgerRows.length,
-          total_new_trails_gross_preview: Number(totalNewGross.toFixed(2)),
+          cutoff: cutoffIso,
+          new_paythru_rows_preview: newLedgerRows.length,
+          total_new_paythru_gross_preview: Number(totalNewGross.toFixed(2)),
           agents_paid_preview: finalPayouts.length,
           total_gross_preview: batchTotalGross,
           total_debits_preview: batchTotalDebits,
