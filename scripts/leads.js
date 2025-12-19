@@ -53,7 +53,83 @@ document.querySelectorAll('.field select, .field input, .field textarea').forEac
   el.addEventListener('input', set);
   set(); // initialize
 });
+let contactChoices = null;
 
+async function initContactPicker() {
+  const el = document.getElementById('contact-picker');
+  if (!el) return;
+
+  // Load contacts user can see
+  const { data, error } = await supabase
+    .from('contacts')
+    .select('id, first_name, last_name, phones, emails')
+    .order('created_at', { ascending: false })
+    .limit(500);
+
+  if (error) {
+    console.error('contact picker load error:', error);
+    return;
+  }
+
+  // Fill options
+  el.innerHTML = `<option value="">New contact (auto-create)</option>`;
+  (data || []).forEach(c => {
+    const name = `${c.first_name || ''} ${c.last_name || ''}`.trim() || '(No name)';
+    const phone = (c.phones && c.phones[0]) ? ` • ${c.phones[0]}` : '';
+    const email = (c.emails && c.emails[0]) ? ` • ${c.emails[0]}` : '';
+    const opt = document.createElement('option');
+    opt.value = c.id;
+    opt.textContent = `${name}${phone}${email}`;
+    el.appendChild(opt);
+  });
+
+  // Make searchable (Choices.js)
+  if (window.Choices) {
+    if (contactChoices) contactChoices.destroy();
+    contactChoices = new Choices(el, {
+      searchEnabled: true,
+      shouldSort: false,
+      placeholder: true,
+      placeholderValue: 'Search contacts…',
+      itemSelectText: '',
+    });
+  }
+}
+
+async function ensureContactIdFromLeadForm() {
+  const picker = document.getElementById('contact-picker');
+  const chosenId = picker?.value || '';
+  if (chosenId) return chosenId;
+
+  // Create new contact from lead form
+  const phones = getPhoneValues(); // your existing function
+  const contactPayload = {
+    first_name: document.getElementById('lead-first')?.value?.trim() || null,
+    last_name: document.getElementById('lead-last')?.value?.trim() || null,
+    phones: phones.length ? phones : null,
+    address: document.getElementById('lead-address')?.value?.trim() || null,
+    city: document.getElementById('lead-city')?.value?.trim() || null,
+    state: document.getElementById('lead-state')?.value || null,
+    zip: document.getElementById('lead-zip')?.value?.trim() || null,
+    notes: document.getElementById('lead-notes')?.value?.trim() || null,
+  };
+
+  const { data: inserted, error } = await supabase
+    .from('contacts')
+    .insert(contactPayload)
+    .select('id')
+    .single();
+
+  if (error) {
+    console.error('create contact error:', error);
+    throw error;
+  }
+
+  // Refresh picker so the new contact is available immediately
+  await initContactPicker();
+
+  return inserted.id;
+}
 // ---------- UI sections (your existing tab behavior preserved) ----------
 const getNavButtons = () => ({
   view:    document.querySelector('#nav-view'),
