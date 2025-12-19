@@ -1294,13 +1294,39 @@ policyForm?.addEventListener('submit', async (e) => {
     return;
   }
 
-  // 🔹 Call your commission logic with the new policy id
-  try {
-    await runPolicyCommissionFlow(newPolicy.id);
-  } catch (e) {
-    console.error('Error running commission flow for policy', e);
-    // optional: show a soft warning somewhere, but don't block the policy save
+  // 🔹 Run commission flows AFTER policy is saved
+try {
+  await runPolicyCommissionFlow(newPolicy.id);
+} catch (e) {
+  console.error('Error running runPolicyCommissionFlow for policy', e);
+}
+
+// 🔹 ALSO run processPolicyCommission.js
+try {
+  // Option A (most common): Netlify function endpoint
+  const res = await fetch('/.netlify/functions/processPolicyCommission', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ policy_id: newPolicy.id })
+  });
+
+  const text = await res.text();
+  let json = null;
+  try { json = JSON.parse(text); } catch (_) {}
+
+  if (!res.ok) {
+    console.error('processPolicyCommission failed:', json || text);
+  } else {
+    console.log('processPolicyCommission OK:', json || text);
   }
+
+  // Option B (if you wired it as a browser function instead):
+  // if (typeof window.processPolicyCommission === 'function') {
+  //   await window.processPolicyCommission(newPolicy.id);
+  // }
+} catch (e) {
+  console.error('Error running processPolicyCommission for policy', e);
+}
 
   policyForm.reset();
   closeModal(policyModal);
