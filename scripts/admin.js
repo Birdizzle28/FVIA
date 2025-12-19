@@ -1304,7 +1304,7 @@ try {
 // 🔹 ALSO run processPolicyCommission.js
 try {
   // Option A (most common): Netlify function endpoint
-  const res = await fetch('/.netlify/functions/processPolicyCommission', {
+  const res = await fetch('/.netlify/functions/processPolicyCommission.js', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ policy_id: newPolicy.id })
