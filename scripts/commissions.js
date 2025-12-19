@@ -62,8 +62,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTeamAgentPanelToggle();
 
   // ----- 5. Load REAL lead debts + chargebacks -----
-  await loadAndRenderLeadDebts();
-  await loadAndRenderChargebacks();
+  initBalanceScopeToggle();
 
   // ----- 6. Load REAL policy commissions for this agent -----
   await loadAndRenderPolicies();
@@ -418,22 +417,49 @@ function initTeamAgentPanelToggle() {
   });
 }
 
+async function getAllDownlineAgentIds() {
+  if (!me) return [];
+
+  const { data, error } = await supabase
+    .rpc('get_downline_agent_ids', { root_id: me.id });
+
+  if (error) {
+    console.error('Error loading downline agent ids:', error);
+    return [];
+  }
+
+  return (data || []).map(r => r.agent_id).filter(Boolean);
+}
+
 /* ===============================
    REAL lead debts + chargebacks
    =============================== */
 
-async function loadAndRenderLeadDebts() {
+async function loadAndRenderLeadDebts(scope = 'me', teamIds = []) {
   if (!me) return;
 
   const tbody = document.querySelector('#lead-debts-table tbody');
   if (!tbody) return;
 
   try {
-    const { data, error } = await supabase
+    let q = supabase
       .from('lead_debts')
-      .select('id, created_at, description, source, amount, status')
-      .eq('agent_id', me.id)
-      .order('created_at', { ascending: false });
+      .select('id, created_at, description, source, amount, status, agent_id');
+
+    if (scope === 'team') {
+      if (!teamIds.length) {
+        tbody.innerHTML = `<tr><td colspan="6">No direct team agents found.</td></tr>`;
+        leadBalance = 0;
+        setText('balances-leads-count', '0 open items');
+        updateBalancesUI();
+        return;
+      }
+      q = q.in('agent_id', teamIds);
+    } else {
+      q = q.eq('agent_id', me.id);
+    }
+
+    const { data, error } = await q.order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error loading lead_debts:', error);
@@ -442,16 +468,15 @@ async function loadAndRenderLeadDebts() {
     }
 
     if (!data || data.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5">No lead debt records found.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6">No lead debt records found.</td></tr>`;
     } else {
       tbody.innerHTML = data.map(row => {
-        const date = row.created_at
-          ? new Date(row.created_at).toLocaleDateString()
-          : '—';
+        const date = row.created_at ? new Date(row.created_at).toLocaleDateString() : '—';
         const type = row.description || 'Lead';
         const source = row.source || 'FVG';
         const amount = Number(row.amount || 0);
         const status = formatStatus(row.status);
+        const who = scope === 'team' ? (row.agent_id || '—') : '';
 
         return `
           <tr>
@@ -460,15 +485,15 @@ async function loadAndRenderLeadDebts() {
             <td>${escapeHtml(source)}</td>
             <td>${formatMoney(amount)}</td>
             <td>${escapeHtml(status)}</td>
+            ${scope === 'team' ? `<td>${escapeHtml(who)}</td>` : ``}
           </tr>
         `;
       }).join('');
     }
 
-    // Compute open balances/count from the same data
     let openCount = 0;
     let openTotal = 0;
-    data.forEach(row => {
+    (data || []).forEach(row => {
       const status = (row.status || '').toLowerCase();
       if (status === 'open' || status === 'in_repayment') {
         openCount += 1;
@@ -477,12 +502,7 @@ async function loadAndRenderLeadDebts() {
     });
 
     leadBalance = openTotal;
-    setText(
-      'balances-leads-count',
-      `${openCount} open item${openCount === 1 ? '' : 's'}`
-    );
-
-    // Re-sync summary + balances with new number
+    setText('balances-leads-count', `${openCount} open item${openCount === 1 ? '' : 's'}`);
     updateBalancesUI();
   } catch (err) {
     console.error('Unexpected error in loadAndRenderLeadDebts:', err);
@@ -490,18 +510,31 @@ async function loadAndRenderLeadDebts() {
   }
 }
 
-async function loadAndRenderChargebacks() {
+async function loadAndRenderChargebacks(scope = 'me', teamIds = []) {
   if (!me) return;
 
   const tbody = document.querySelector('#chargebacks-table tbody');
   if (!tbody) return;
 
   try {
-    const { data, error } = await supabase
+    let q = supabase
       .from('policy_chargebacks')
-      .select('id, created_at, carrier_name, policyholder_name, amount, status')
-      .eq('agent_id', me.id)
-      .order('created_at', { ascending: false });
+      .select('id, created_at, carrier_name, policyholder_name, amount, status, agent_id');
+
+    if (scope === 'team') {
+      if (!teamIds.length) {
+        tbody.innerHTML = `<tr><td colspan="6">No direct team agents found.</td></tr>`;
+        chargebackBalance = 0;
+        setText('balances-chargebacks-count', '0 open items');
+        updateBalancesUI();
+        return;
+      }
+      q = q.in('agent_id', teamIds);
+    } else {
+      q = q.eq('agent_id', me.id);
+    }
+
+    const { data, error } = await q.order('created_at', { ascending: false });
 
     if (error) {
       console.error('Error loading policy_chargebacks:', error);
@@ -510,16 +543,15 @@ async function loadAndRenderChargebacks() {
     }
 
     if (!data || data.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="5">No chargebacks found.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6">No chargebacks found.</td></tr>`;
     } else {
       tbody.innerHTML = data.map(row => {
-        const date = row.created_at
-          ? new Date(row.created_at).toLocaleDateString()
-          : '—';
+        const date = row.created_at ? new Date(row.created_at).toLocaleDateString() : '—';
         const carrier = row.carrier_name || '—';
         const name = row.policyholder_name || '—';
         const amount = Number(row.amount || 0);
         const status = formatStatus(row.status);
+        const who = scope === 'team' ? (row.agent_id || '—') : '';
 
         return `
           <tr>
@@ -528,15 +560,15 @@ async function loadAndRenderChargebacks() {
             <td>${escapeHtml(name)}</td>
             <td>${formatMoney(amount)}</td>
             <td>${escapeHtml(status)}</td>
+            ${scope === 'team' ? `<td>${escapeHtml(who)}</td>` : ``}
           </tr>
         `;
       }).join('');
     }
 
-    // Compute open chargeback balance + count
     let openCount = 0;
     let openTotal = 0;
-    data.forEach(row => {
+    (data || []).forEach(row => {
       const status = (row.status || '').toLowerCase();
       if (status === 'open' || status === 'in_repayment') {
         openCount += 1;
@@ -545,17 +577,35 @@ async function loadAndRenderChargebacks() {
     });
 
     chargebackBalance = openTotal;
-    setText(
-      'balances-chargebacks-count',
-      `${openCount} open item${openCount === 1 ? '' : 's'}`
-    );
-
-    // Re-sync summary + balances with new number
+    setText('balances-chargebacks-count', `${openCount} open item${openCount === 1 ? '' : 's'}`);
     updateBalancesUI();
   } catch (err) {
     console.error('Unexpected error in loadAndRenderChargebacks:', err);
     renderPlaceholderChargebacks();
   }
+}
+
+function initBalanceScopeToggle() {
+  const radios = document.querySelectorAll('input[name="balance-scope"]');
+  if (!radios.length) return;
+
+  const applyScope = async () => {
+    const scope = document.querySelector('input[name="balance-scope"]:checked')?.value || 'me';
+    const teamIds = scope === 'team' ? await getDirectTeamAgentIds() : [];
+
+    // Reset numbers before reload to avoid mixed UI while loading
+    leadBalance = 0;
+    chargebackBalance = 0;
+    updateBalancesUI();
+
+    await loadAndRenderLeadDebts(scope, teamIds);
+    await loadAndRenderChargebacks(scope, teamIds);
+  };
+
+  radios.forEach(r => r.addEventListener('change', applyScope));
+
+  // Run once on load
+  applyScope();
 }
 
 /* ===============================
