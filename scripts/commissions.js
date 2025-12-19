@@ -77,6 +77,11 @@ document.addEventListener('DOMContentLoaded', async () => {
 /* ===============================
    Header helpers
    =============================== */
+function isoToLocalYMD(iso) {
+  const [y, m, d] = String(iso).split('-').map(Number);
+  return new Date(y, m - 1, d); // local date, no UTC shift
+}
+
 function getNextFridayISO() {
   const today = new Date();
   const day = today.getDay(); // 0 Sun ... 5 Fri
@@ -92,13 +97,14 @@ function getNextMonthlyPayThruISO() {
   const today = new Date();
   const y = today.getFullYear();
   const m = today.getMonth();
+
   const thisMonths5th = new Date(y, m, 5);
+  const target = (today > thisMonths5th) ? new Date(y, m + 1, 5) : thisMonths5th;
 
-  const target = (today > thisMonths5th)
-    ? new Date(y, m + 1, 5)
-    : thisMonths5th;
-
-  return target.toISOString().slice(0, 10);
+  const yy = target.getFullYear();
+  const mm = String(target.getMonth() + 1).padStart(2, '0');
+  const dd = '05';
+  return `${yy}-${mm}-${dd}`;
 }
 
 async function postPreviewJson(url) {
@@ -166,7 +172,7 @@ async function loadNextPayoutsFromPreviews() {
   const monthly = await postPreviewJson(`/.netlify/functions/previewMonthlyPayThru?pay_date=${encodeURIComponent(nextMonthlyISO)}`);
   if (monthly) {
     const amt = pickMyPayoutAmount(monthly);
-    const label = new Date(nextMonthlyISO).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+    const label = isoToLocalYMD(nextMonthlyISO).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
     setText('summary-next-paythru-amount', formatMoney(amt));
     setText('summary-next-paythru-date', `(${label})`);
@@ -242,10 +248,10 @@ async function loadAgentUpcomingPayouts() {
   const nextFriLabel = getNextFridayLabel();
 
   const nextMonthlyISO = getNextMonthlyPayThruISO(); // <-- uses your 5th logic
-  const payThruLabel = new Date(nextMonthlyISO).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric'
-  });
+  const payThruLabel = isoToLocalYMD(nextMonthlyISO).toLocaleDateString(undefined, {
+  month: 'short',
+  day: 'numeric'
+});
 
   // Top summary card
   setText('summary-next-advance-amount', formatMoney(advance));
