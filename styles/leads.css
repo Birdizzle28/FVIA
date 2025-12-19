@@ -324,3 +324,72 @@ a, button{ outline-color: var(--brand); }
   gap: 8px;
   align-items: center;
 }
+/* ================================
+   FIX: Choices select + floating labels
+   ================================ */
+
+/* Make the Choices control look like your other .field inputs */
+.field .choices {
+  width: 100%;
+  margin: 0;
+}
+
+.field .choices__inner {
+  border: 1px solid var(--line) !important;
+  border-radius: 8px !important;
+  background: #fff !important;
+  color: var(--ink) !important;
+  padding: 12px 12px 10px !important; /* match .field input padding */
+  min-height: 44px !important;        /* consistent height */
+  box-shadow: none !important;
+}
+
+/* Text inside */
+.field .choices__list--single {
+  padding: 0 !important;
+}
+.field .choices__list--single .choices__item {
+  color: var(--ink) !important;
+}
+
+/* Placeholder/Search text (removes the weird faint “Search contacts…” under label) */
+.field .choices[data-type*="select-one"] .choices__input {
+  color: var(--ink) !important;
+}
+.field .choices__placeholder {
+  opacity: 0 !important; /* prevents ghost placeholder behind label */
+}
+
+/* Dropdown panel should sit ABOVE everything */
+.field .choices__list--dropdown,
+.field .choices__list[aria-expanded] {
+  z-index: 9999 !important;
+  border: 1px solid var(--line) !important;
+  border-radius: 10px !important;
+  box-shadow: var(--shadow-2) !important;
+}
+
+/* When Choices is open, force the label to float and stay on top */
+.field .choices.is-open ~ label,
+.field .choices.is-focused ~ label {
+  color: var(--ink);
+  font-size: 0.76rem;
+  top: -6px;
+  background: #fff;
+  padding: 0 6px;
+  z-index: 10000; /* above dropdown edge */
+}
+
+/* IMPORTANT: Labels shouldn’t float above dropdowns from OTHER fields */
+.field label {
+  z-index: 2; /* keep label above its own input border */
+}
+
+/* Prevent SELECT option text from overlapping floating label (your “Alabama over State” issue) */
+.field select {
+  padding-top: 16px; /* gives room for label */
+}
+.field select:focus + label,
+.field.filled label {
+  background: #fff;
+}
