@@ -297,6 +297,7 @@ async function loadAgentLeads() {
     .from("leads")
     .select("*")
     .eq("assigned_to", user.id)
+    .eq("archived", false)
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -361,34 +362,29 @@ async function archiveSelectedLeads() {
   const ids = $$(".lead-checkbox:checked").map((cb) => cb.dataset.id);
   if (!ids.length) return alert("Select at least one lead.");
 
-  const { data: rows, error: selErr } = await supabase.from("leads").select("*").in("id", ids);
-  if (selErr) {
-    alert("Failed reading leads.");
-    console.error(selErr);
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
+  if (!user) return alert("You are not logged in.");
+
+  // Soft-archive: keep the lead, just mark it hidden
+  const { error } = await supabase
+    .from("leads")
+    .update({
+      archived: true,
+      archived_at: new Date().toISOString(),
+      archived_by: user.id,
+    })
+    .in("id", ids)
+    .eq("assigned_to", user.id); // prevents archiving other people’s leads
+
+  if (error) {
+    alert("Failed to archive.");
+    console.error(error);
     return;
-  }
-
-  let insErr = null;
-
-  const try1 = await supabase.from("leads_archive").insert(rows);
-  if (try1.error) {
-    const try2 = await supabase.from("archive").insert(rows);
-    if (try2.error) insErr = try2.error;
-  }
-
-  if (insErr) {
-    alert("Failed to archive (insert).");
-    console.error(insErr);
-    return;
-  }
-
-  const { error: delErr } = await supabase.from("leads").delete().in("id", ids);
-  if (delErr) {
-    alert("Archived, but failed to delete originals.");
-    console.error(delErr);
   }
 
   alert(`Archived ${ids.length} lead(s).`);
+
   const sa = $("#select-all");
   if (sa) sa.checked = false;
 
