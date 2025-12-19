@@ -565,10 +565,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (msg) msg.textContent = 'Please add at least 1 phone number.';
         return;
       }
-  
+      const contactId = await ensureContactIdFromLeadForm();
       const payload = {
         first_name: document.getElementById('lead-first')?.value?.trim() || null,
         last_name: document.getElementById('lead-last')?.value?.trim() || null,
+        contact_id: contactId,
         age: Number(document.getElementById('lead-age')?.value || '') || null,
         address: document.getElementById('lead-address')?.value?.trim() || null,
         city: document.getElementById('lead-city')?.value?.trim() || null,
@@ -615,6 +616,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       showSection('view');
     });
   }
+  await initContactPicker();
   initPhonesUI();
   submitLeadToSupabase(agentProfile);
 });
