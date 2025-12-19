@@ -1,20 +1,18 @@
 /* styles/leads-modern.css
-   Professional polish for Leads (View, Submit, Request, Contacts)
-   Works with your existing markup & JS. Minimal overrides, strong UX.
+   Clean + consolidated for Leads (View, Submit, Request, Contacts)
+   No patchwork overrides; Choices + floating labels are first-class.
 */
 
 /* ---------- Design tokens ---------- */
 :root{
-  /* FV purple theme */
-  --ink: #2a274a;               /* deep ink (text) */
-  --muted: #5f5a84;             /* secondary text (purple-tinted) */
-  --brand: #353468;             /* primary accent: Family Values Group purple */
-  --brand-ink: #242247;         /* pressed/darker */
+  --ink: #2a274a;
+  --muted: #5f5a84;
+  --brand: #353468;
+  --brand-ink: #242247;
 
-  /* keep panels light but purple-tinted */
   --panel-bg: #ffffff;
-  --soft: #f5f4fa;              /* table heads / soft bg (tinted) */
-  --line: #dcd9e8;              /* borders (tinted, not gray) */
+  --soft: #f5f4fa;
+  --line: #dcd9e8;
 
   --success: #2a8f6d;
   --danger: #b22424;
@@ -22,6 +20,13 @@
   --radius: 10px;
   --shadow-1: 0 4px 14px rgba(37, 36, 80, .06);
   --shadow-2: 0 10px 30px rgba(37, 36, 80, .10);
+
+  /* unified field sizing */
+  --field-radius: 8px;
+  --field-pad-x: 12px;
+  --field-pad-top: 16px;  /* space for floating label */
+  --field-pad-bot: 10px;
+  --field-min-h: 44px;
 }
 
 /* ---------- Page rhythm ---------- */
@@ -37,9 +42,11 @@ body#dashboardbody{
   padding: 0 16px;
 }
 
-/* ---------- Header (keep your header markup, just polish) ---------- */
+/* ---------- Header ---------- */
 .index-grid-header{
-  position: sticky; top: 0; z-index: 50;
+  position: sticky;
+  top: 0;
+  z-index: 50;
   background: #fff;
   border-bottom: 1px solid var(--line);
   box-shadow: var(--shadow-1);
@@ -47,27 +54,33 @@ body#dashboardbody{
 
 /* ---------- Tabs row ---------- */
 .lead-tabs{
-  display:flex; gap:10px; align-items:center;
+  display:flex;
+  gap:10px;
+  align-items:center;
   margin: 6px 0 18px;
   padding: 6px 2px;
   border-bottom: 1px solid var(--line);
-   background: rgba(53,52,104,.10);
-   color: var(--brand);
+  background: rgba(53,52,104,.10);
+  color: var(--brand);
 }
 .lead-tabs .tab-button{
-  appearance: none; border: 0; background: transparent;
+  appearance: none;
+  border: 0;
+  background: transparent;
   color: var(--muted);
-  padding: 10px 14px; font-weight: 700; letter-spacing:.2px;
+  padding: 10px 14px;
+  font-weight: 700;
+  letter-spacing:.2px;
   border-radius: 8px;
   transition: background .15s ease, color .15s ease;
 }
 .lead-tabs .tab-button:hover{ background: var(--soft); color: var(--ink); }
 .lead-tabs .tab-button.active{
   background: rgba(53,52,104,.10);
-   color: var(--brand);
+  color: var(--brand);
 }
 
-/* ---------- Cards & toolbars ---------- */
+/* ---------- Cards & headings ---------- */
 .card{
   background: var(--panel-bg);
   border: 1px solid var(--line);
@@ -76,116 +89,351 @@ body#dashboardbody{
   padding: 16px;
 }
 .lead-section h3{
-  margin: 0 0 10px; font-size: 1.15rem; letter-spacing:.2px;
+  margin: 0 0 10px;
+  font-size: 1.15rem;
+  letter-spacing:.2px;
 }
 
 /* Toolbar strip above tables (pagination + actions) */
 #lead-viewer-section .card:first-of-type{
-  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  flex-wrap:wrap;
 }
 
-/* ---------- Buttons ---------- */
-.btn, .see-all, #agent-archive-btn, #agent-prev-page, #agent-next-page,
+/* ---------- Buttons (single source of truth) ---------- */
+.btn, .see-all,
+#agent-archive-btn, #agent-prev-page, #agent-next-page,
 #contacts-select-toggle, #contacts-select-all, #contacts-bulk-save,
-#contacts-refresh {
-  appearance:none; border:1px solid var(--line);
-  background:#fff; color: var(--ink);
-  padding:10px 14px; border-radius:10px; font-weight:700;
-  cursor:pointer; transition: transform .02s ease, background .15s ease, border-color .15s;
+#contacts-refresh,
+#add-phone{
+  appearance:none;
+  border:1px solid var(--line);
+  background:#fff;
+  color: var(--ink);
+  padding:10px 14px;
+  border-radius:10px;
+  font-weight:700;
+  cursor:pointer;
+  transition: transform .02s ease, background .15s ease, border-color .15s;
 }
-.btn:hover, .see-all:hover, #agent-archive-btn:hover, #contacts-refresh:hover{
+.btn:hover, .see-all:hover,
+#agent-archive-btn:hover, #contacts-refresh:hover,
+#add-phone:hover{
   background: var(--soft);
 }
-.btn:active, .see-all:active{ transform: translateY(1px); }
+.btn:active, .see-all:active, #add-phone:active{ transform: translateY(1px); }
 
-/* Primary accent button */
 .btn--primary{
   background: var(--brand);
-  color: #fff; border-color: transparent;
+  color: #fff;
+  border-color: transparent;
 }
 .btn--primary:hover{ background: #2f2e5d; }
 .btn--primary:active{ background: var(--brand-ink); }
 
-/* Subtle danger */
 .btn--danger{ border-color: #f1c4c4; color: #9f1b1b; }
 .btn--danger:hover{ background:#fff4f4; }
 
-/* ---------- Forms ---------- */
-input[type="text"], input[type="search"], input[type="tel"], input[type="number"], select, textarea{
-  border: 1px solid var(--line);
-  background:#fff; color: var(--ink);
-  border-radius: 10px;
-  padding: 10px 12px;
+/* ✅ Add phone = small fixed button (no growth) */
+#add-phone{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  padding:8px 12px;
+  height:40px;
+  min-height:40px;
+  max-height:40px;
+  width:auto;
+  white-space:nowrap;
+  align-self:start;
+  font-size:.95rem;
+  line-height:1;
 }
-input:focus, select:focus, textarea:focus{
-  outline: 2px solid rgba(53,52,104,.32);
+
+/* ---------- Forms: unified system ---------- */
+.form-grid{
+  display:grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 10px;
+}
+.form-grid > * { min-width: 0; }
+
+.field{
+  position: relative;
+  min-width: 0;
+}
+
+/* Base interactive controls */
+.field input,
+.field select,
+.field textarea{
+  width:100%;
+  max-width:100%;
+  box-sizing:border-box;
+  display:block;
+
+  border:1px solid var(--line);
+  background:#fff;
+  color: var(--ink);
+
+  border-radius: var(--field-radius);
+  min-height: var(--field-min-h);
+
+  padding: var(--field-pad-top) var(--field-pad-x) var(--field-pad-bot);
+  line-height: 1.1;
+
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+}
+
+/* Focus */
+.field input:focus,
+.field select:focus,
+.field textarea:focus{
+  outline: 2px solid rgba(53,52,104,.28);
   border-color: var(--brand);
 }
 
-/* ---------- Leads table (View) ---------- */
+/* Placeholder hack (placeholder=" ") */
+.field input::placeholder,
+.field textarea::placeholder{ color: transparent; }
+
+/* Floating label */
+.field label{
+  position:absolute;
+  left: var(--field-pad-x);
+  top: 12px;
+  color: var(--muted);
+  font-size: .96rem;
+  line-height: 1;
+  pointer-events:none;
+  transform-origin:left top;
+  transition: transform .15s ease, color .15s ease, background .15s ease, font-size .15s ease, top .15s ease;
+  padding: 0 4px;
+  z-index: 2; /* labels sit above their own control */
+}
+
+/* Float conditions:
+   - inputs/textarea: :placeholder-shown trick
+   - select: .field.filled from JS, plus focus
+*/
+.field input:focus + label,
+.field input:not(:placeholder-shown) + label,
+.field textarea:focus + label,
+.field textarea:not(:placeholder-shown) + label,
+.field select:focus + label,
+.field.filled label{
+  color: var(--ink);
+  font-size: .76rem;
+  top: -6px;
+  background:#fff;
+  padding: 0 6px;
+}
+
+/* Select caret + padding (fixes “Alabama over State”) */
+.field select{
+  padding-right: 36px;
+  -webkit-appearance: none;
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, #9aa0aa 50%),
+    linear-gradient(135deg, #9aa0aa 50%, transparent 50%);
+  background-position:
+    calc(100% - 22px) calc(50% - 4px),
+    calc(100% - 16px) calc(50% - 4px);
+  background-size: 6px 6px, 6px 6px;
+  background-repeat:no-repeat;
+}
+
+/* Textarea sizing */
+.field textarea{
+  min-height: 100px;
+  resize: vertical;
+}
+
+/* Row separators in cards */
+.form-row{ margin-top: 10px; }
+
+/* ---------- Choices (contact picker) integrated, not “patched” ---------- */
+.field .choices{
+  width:100%;
+  margin:0;
+  position:relative;
+  z-index: 1;
+}
+
+/* Choices “input box” should match .field controls */
+.field .choices__inner{
+  border:1px solid var(--line);
+  border-radius: var(--field-radius);
+  background:#fff;
+  color: var(--ink);
+  min-height: var(--field-min-h);
+  padding: var(--field-pad-top) var(--field-pad-x) var(--field-pad-bot);
+  box-shadow:none;
+}
+
+/* kill the ghost placeholder behind label */
+.field .choices__placeholder{ opacity: 0; }
+
+/* single value area */
+.field .choices__list--single{ padding:0; }
+.field .choices__item{ color: var(--ink); }
+
+/* Dropdown must overlay other fields (fix label bleed-through) */
+.field .choices__list--dropdown,
+.field .choices__list[aria-expanded]{
+  z-index: 9999;
+  border:1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow-2);
+}
+
+/* When Choices is focused/open, label should float (same behavior as select) */
+.field .choices.is-open ~ label,
+.field .choices.is-focused ~ label{
+  color: var(--ink);
+  font-size: .76rem;
+  top: -6px;
+  background:#fff;
+  padding: 0 6px;
+  z-index: 10000;
+}
+
+/* (Choices sometimes sets inline styles; this is one of the few places where !important is justified) */
+.field .choices__inner{ box-sizing: border-box !important; }
+
+/* ---------- Leads table ---------- */
 #agent-leads-table{
-  width:100%; border-collapse: separate; border-spacing: 0;
-  background:#fff; border:1px solid var(--line);
-  border-radius: 12px; overflow: hidden; box-shadow: var(--shadow-1);
+  width:100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius: 12px;
+  overflow:hidden;
+  box-shadow: var(--shadow-1);
 }
 #agent-leads-table thead th{
   background: var(--soft);
-  font-weight: 800; color: #1d2433;
-  padding: 12px 10px; border-bottom: 1px solid var(--line);
+  font-weight: 800;
+  color: #1d2433;
+  padding: 12px 10px;
+  border-bottom: 1px solid var(--line);
 }
 #agent-leads-table td{
-  padding: 10px 10px; border-bottom: 1px solid var(--line);
-  vertical-align: top; color: var(--ink);
+  padding: 10px 10px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: top;
+  color: var(--ink);
 }
-#agent-leads-table tbody tr:hover{ background: #fbfdff; }
-#agent-leads-table td:first-child, #agent-leads-table th:first-child{ width:44px; }
-#agent-leads-table,
-.card{ border-color: var(--line); }
+#agent-leads-table tbody tr:hover{ background:#fbfdff; }
+#agent-leads-table td:first-child,
+#agent-leads-table th:first-child{ width:44px; }
 
-/* Pagination label */
-#agent-current-page{ font-weight: 700; color:#1d2433; }
+#agent-current-page{ font-weight:700; color:#1d2433; }
 
 /* ---------- Contacts list ---------- */
-#contacts-list{ padding:0; overflow:hidden; border-radius:12px; box-shadow: var(--shadow-1); }
+#contacts-list{
+  padding:0;
+  overflow:hidden;
+  border-radius:12px;
+  box-shadow: var(--shadow-1);
+}
 #contacts-list .contacts-head,
 #contacts-list .contact-row{
-  display:grid; grid-template-columns: 48px 1.2fr 1fr 1fr;
-  gap:10px; align-items:center;
-  padding: 14px 16px; border-bottom: 1px solid var(--line); background:#fff;
+  display:grid;
+  grid-template-columns: 48px 1.2fr 1fr 1fr;
+  gap:10px;
+  align-items:center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--line);
+  background:#fff;
 }
 #contacts-list .contacts-head{
-  background: var(--soft); font-weight:800; color:#1d2433;
+  background: var(--soft);
+  font-weight:800;
+  color:#1d2433;
 }
-#contacts-list .contact-row:hover{ background: #fbfdff; }
-#contacts-list .c-name{ font-weight:800; color:#111827; }
-#contacts-list .c-phone, #contacts-list .c-email{ color: var(--muted); }
-
-/* Bulk sticky bar */
+#contacts-list .contact-row:hover{ background:#fbfdff; }
 #contacts-bulk-actions{
-  position: sticky; bottom:0; background:#fff;
+  position: sticky;
+  bottom:0;
+  background:#fff;
   border: 1px solid var(--line);
-  border-radius: 12px; box-shadow: var(--shadow-2);
+  border-radius: 12px;
+  box-shadow: var(--shadow-2);
 }
 
-/* Modal */
-.overlay{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; z-index:1000; }
+/* ---------- Modal ---------- */
+.overlay{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:1000;
+}
 .overlay.open{ display:flex; }
 .overlay-backdrop{ position:absolute; inset:0; background: rgba(2,6,23,.45); }
 .overlay-panel{
-  position:relative; width:min(720px,94vw); max-height:88vh; overflow:auto;
-  background:#fff; border:1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow-2);
+  position:relative;
+  width:min(720px,94vw);
+  max-height:88vh;
+  overflow:auto;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-2);
 }
-.overlay-header{ display:flex; align-items:center; justify-content:space-between;
-  padding:14px 16px; border-bottom:1px solid var(--line); background: var(--soft);
+.overlay-header{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:14px 16px;
+  border-bottom:1px solid var(--line);
+  background: var(--soft);
 }
 .overlay-header h2{ margin:0; font-size:1.15rem; }
-.overlay-close{ border:1px solid var(--line); background:#fff; border-radius:10px; padding:6px 10px; cursor:pointer; }
+.overlay-close{
+  border:1px solid var(--line);
+  background:#fff;
+  border-radius:10px;
+  padding:6px 10px;
+  cursor:pointer;
+}
 .overlay-close:hover{ background: var(--soft); }
 .overlay-body{ padding:16px; }
 
 /* ---------- Micro interactions ---------- */
 a, button{ outline-color: var(--brand); }
-:focus-visible{ outline: 3px solid rgba(37,99,235,.35); outline-offset: 2px; border-radius: 8px; }
+:focus-visible{
+  outline: 3px solid rgba(37,99,235,.35);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* ---------- Phone row helpers (optional) ---------- */
+.icon-btn{
+  appearance:none;
+  border:1px solid var(--line);
+  background:#fff;
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor:pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.icon-btn:hover{ background: var(--soft); color: var(--ink); }
+
+.phone-row{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap:8px;
+  align-items:center;
+}
 
 /* ---------- Responsive ---------- */
 @media (max-width: 980px){
@@ -199,223 +447,4 @@ a, button{ outline-color: var(--brand); }
   .lead-tabs .tab-button{ padding:8px 10px; }
   #contacts-list .contacts-head,
   #contacts-list .contact-row{ grid-template-columns: 36px 1fr; }
-  #contacts-list .contact-row .c-phone{ display:none; }
-}
-/* ---------- Floating labels + uniform field sizing ---------- */
-.form-grid{
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 10px;
-}
-.form-grid > * { min-width: 0; }
-.field{
-  position: relative;
-   min-width: 0;
-}
-.field select{
-  padding-right: 36px;
-}
-.field input,
-.field select,
-.field textarea{
-  width: 100%;
-  border: 1px solid var(--line);
-   max-width: 100%;
-   box-sizing: border-box;
-  display: block;
-  background: #fff;
-  color: var(--ink);
-  border-radius: 8px;
-  padding: 12px 12px 10px;         /* extra top padding for the label */
-  line-height: 1;
-  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
-}
-
-/* Make heights consistent across input types */
-.field input[type="text"],
-.field input[type="search"],
-.field input[type="tel"],
-.field input[type="number"],
-.field select{
-  -webkit-appearance: none;
-  appearance: none;
-  background-position: right 10px center;
-  background-repeat: no-repeat;
-}
-
-/* Placeholder hack (use placeholder=" ") to enable :placeholder-shown */
-.field input::placeholder,
-.field textarea::placeholder{ color: transparent; }
-
-/* The label itself */
-.field label{
-  position: absolute;
-  left: 12px;
-  top: 10px;
-  color: var(--muted);
-  font-size: 0.96rem;
-  line-height: 1;
-  pointer-events: none;
-  transform-origin: left top;
-  transition: transform .15s ease, color .15s ease, background .15s ease, font-size .15s ease, top .15s ease;
-  background: transparent;
-  padding: 0 4px;
-   z-index: 1;  
-}
-
-/* Float on focus or when filled (inputs & textarea via :placeholder-shown) */
-.field input:focus,
-.field textarea:focus{ border-color: var(--brand); outline: 2px solid rgba(53,52,104,.28); }
-
-.field input:focus + label,
-.field input:not(:placeholder-shown) + label,
-.field textarea:focus + label,
-.field textarea:not(:placeholder-shown) + label,
-.field.filled label,                 /* for selects (JS toggles .filled) */
-.field select:focus + label{
-  color: var(--ink);
-  font-size: 0.76rem;
-  top: -6px;
-  transform: translateY(0);
-  background: #fff;     
-  padding: 0 6px
-}
-
-/* Keep the chip readable over the border */
-.field.filled label,
-.field input:focus + label,
-.field input:not(:placeholder-shown) + label,
-.field textarea:focus + label,
-.field textarea:not(:placeholder-shown) + label{
-  padding: 0 6px;
-}
-
-/* Textarea sizing */
-.field textarea{
-  min-height: 100px;
-  resize: vertical;
-}
-/* Row separators in cards for nicer rhythm */
-.form-row{ margin-top: 10px; }
-
-/* Optional: subtle caret for selects */
-.field select{
-  background-image:
-    linear-gradient(45deg, transparent 50%, #9aa0aa 50%),
-    linear-gradient(135deg, #9aa0aa 50%, transparent 50%);
-  background-position:
-    calc(100% - 22px) calc(50% - 4px),
-    calc(100% - 16px) calc(50% - 4px);
-  background-size: 6px 6px, 6px 6px;
-}
-/* Small inline icon button for removing a phone row */
-.icon-btn {
-  appearance: none; border: 1px solid var(--line);
-  background: #fff; color: var(--muted);
-  border-radius: 8px; padding: 8px 10px; cursor: pointer;
-  transition: background .15s ease, color .15s ease, border-color .15s ease;
-}
-.icon-btn:hover { background: var(--soft); color: var(--ink); }
-
-/* phone row layout: input + remove button aligned */
-.phone-row {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px;
-  align-items: center;
-}
-/* ================================
-   FIX: Choices select + floating labels
-   ================================ */
-
-/* Make the Choices control look like your other .field inputs */
-.field .choices {
-  width: 100%;
-  margin: 0;
-}
-
-.field .choices__inner {
-  border: 1px solid var(--line) !important;
-  border-radius: 8px !important;
-  background: #fff !important;
-  color: var(--ink) !important;
-  padding: 12px 12px 10px !important; /* match .field input padding */
-  min-height: 44px !important;        /* consistent height */
-  box-shadow: none !important;
-}
-
-/* Text inside */
-.field .choices__list--single {
-  padding: 0 !important;
-}
-.field .choices__list--single .choices__item {
-  color: var(--ink) !important;
-}
-
-/* Placeholder/Search text (removes the weird faint “Search contacts…” under label) */
-.field .choices[data-type*="select-one"] .choices__input {
-  color: var(--ink) !important;
-}
-.field .choices__placeholder {
-  opacity: 0 !important; /* prevents ghost placeholder behind label */
-}
-
-/* Dropdown panel should sit ABOVE everything */
-.field .choices__list--dropdown,
-.field .choices__list[aria-expanded] {
-  z-index: 9999 !important;
-  border: 1px solid var(--line) !important;
-  border-radius: 10px !important;
-  box-shadow: var(--shadow-2) !important;
-}
-
-/* When Choices is open, force the label to float and stay on top */
-.field .choices.is-open ~ label,
-.field .choices.is-focused ~ label {
-  color: var(--ink);
-  font-size: 0.76rem;
-  top: -6px;
-  background: #fff;
-  padding: 0 6px;
-  z-index: 10000; /* above dropdown edge */
-}
-
-/* IMPORTANT: Labels shouldn’t float above dropdowns from OTHER fields */
-.field label {
-  z-index: 2; /* keep label above its own input border */
-}
-
-/* Prevent SELECT option text from overlapping floating label (your “Alabama over State” issue) */
-.field select {
-  padding-top: 16px; /* gives room for label */
-}
-.field select:focus + label,
-.field.filled label {
-  background: #fff;
-}
-/* ================================
-   FIX: Add Phone button stays small + fixed
-   ================================ */
-
-#add-phone {
-  display: inline-flex !important;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-
-  padding: 8px 12px !important;
-  font-size: 0.95rem;
-  line-height: 1 !important;
-
-  height: 40px !important;       /* fixed height */
-  min-height: 40px !important;
-  max-height: 40px !important;
-
-  width: auto !important;
-  white-space: nowrap;
-}
-
-/* Make sure it’s NOT treated like a grid row that stretches */
-#add-phone.btn {
-  align-self: start !important;
 }
