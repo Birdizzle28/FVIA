@@ -80,8 +80,8 @@ function formatUSPhone(raw) {
 
 function getPhoneValues() {
   return Array.from(document.querySelectorAll(".lead-phone-input"))
-    .map((i) => i.value.trim())
-    .filter(Boolean);
+    .map((i) => String(i.value || "").replace(/\D/g, "")) // store digits only
+    .filter((v) => v.length > 0);
 }
 
 function renderPhoneField(value = "") {
