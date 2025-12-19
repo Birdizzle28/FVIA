@@ -360,13 +360,35 @@ function initSelectAll() {
 
 async function archiveSelectedLeads() {
   const ids = $$(".lead-checkbox:checked").map((cb) => cb.dataset.id);
-  if (!ids.length) return alert("Select at least one lead.");
+  if (!ids.length) {
+    alert("Select at least one lead.");
+    return;
+  }
+
+  const warning = `
+⚠️ WARNING: Archive Leads
+
+You are about to archive ${ids.length} lead(s).
+
+• Archived leads will NO LONGER be visible to you
+• They CANNOT be restored by you
+• They still count toward lead history & reporting
+
+This action is effectively permanent for agents.
+
+Do you want to continue?
+`.trim();
+
+  const confirmed = window.confirm(warning);
+  if (!confirmed) return;
 
   const { data: { session } } = await supabase.auth.getSession();
   const user = session?.user;
-  if (!user) return alert("You are not logged in.");
+  if (!user) {
+    alert("You are not logged in.");
+    return;
+  }
 
-  // Soft-archive: keep the lead, just mark it hidden
   const { error } = await supabase
     .from("leads")
     .update({
@@ -375,10 +397,10 @@ async function archiveSelectedLeads() {
       archived_by: user.id,
     })
     .in("id", ids)
-    .eq("assigned_to", user.id); // prevents archiving other people’s leads
+    .eq("assigned_to", user.id);
 
   if (error) {
-    alert("Failed to archive.");
+    alert("Failed to archive leads.");
     console.error(error);
     return;
   }
