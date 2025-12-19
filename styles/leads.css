@@ -448,3 +448,26 @@ a, button{ outline-color: var(--brand); }
   #contacts-list .contacts-head,
   #contacts-list .contact-row{ grid-template-columns: 36px 1fr; }
 }
+/* FIX: stop seeing labels through the Choices dropdown */
+.field .choices__list--dropdown,
+.field .choices__list[aria-expanded]{
+  background: #fff !important;      /* <- key: opaque background */
+}
+
+.field .choices__list--dropdown .choices__list{
+  background: #fff !important;      /* inner list also opaque */
+}
+
+/* optional: make each option paint solid too */
+.field .choices__list--dropdown .choices__item{
+  background: #fff;
+}
+/* dropdown must win the stacking war */
+.field .choices__list--dropdown{
+  position: absolute !important;
+  z-index: 999999 !important;
+}
+/* Stop "Attach to Contact" from spanning the full row */
+#lead-form .field:has(#contact-picker){
+  grid-column: auto !important; /* back to normal 1-column behavior */
+}
