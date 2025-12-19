@@ -348,7 +348,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   agentProfile = await fetchAgentProfile();
   if (!agentProfile?.is_admin) $('.admin-only')?.style && ($('.admin-only').style.display = 'none');
-
+  
+  initPhonesUI();
+  submitLeadToSupabase(agentProfile);
+  
   // tabs
   const navs = getNavButtons();
   navs.view?.addEventListener('click', () => showSection('view'));
@@ -397,4 +400,146 @@ document.addEventListener('DOMContentLoaded', async () => {
     const { error } = await supabase.auth.signOut();
     if (error) alert('Logout failed!'); else window.location.href = '../index.html';
   });
+  function formatUSPhone(raw) {
+    const d = String(raw || '').replace(/\D/g, '').slice(0, 10);
+    const a = d.slice(0, 3);
+    const b = d.slice(3, 6);
+    const c = d.slice(6, 10);
+    if (d.length <= 3) return a;
+    if (d.length <= 6) return `(${a}) ${b}`;
+    return `(${a}) ${b}-${c}`;
+  }
+  
+  function getPhoneValues() {
+    return Array.from(document.querySelectorAll('.lead-phone-input'))
+      .map(i => i.value.trim())
+      .filter(Boolean);
+  }
+  
+  function renderPhoneField(value = '') {
+    const phoneList = document.getElementById('phone-list');
+    if (!phoneList) return;
+  
+    const wrap = document.createElement('div');
+    wrap.className = 'field';
+    wrap.innerHTML = `
+      <input type="tel" class="lead-phone-input" placeholder=" " inputmode="tel" autocomplete="tel">
+      <label>Phone</label>
+      <button type="button" class="remove-phone" style="margin-top:6px;">
+        <i class="fa-solid fa-trash"></i>
+      </button>
+    `;
+  
+    const input = wrap.querySelector('input');
+    const removeBtn = wrap.querySelector('.remove-phone');
+  
+    input.value = value;
+    input.addEventListener('input', () => {
+      input.value = formatUSPhone(input.value);
+      const parent = input.closest('.field');
+      if (parent) parent.classList.toggle('filled', !!input.value.trim());
+    });
+  
+    removeBtn.addEventListener('click', () => {
+      wrap.remove();
+      // never allow 0 phones — keep at least one input
+      if (document.querySelectorAll('.lead-phone-input').length === 0) {
+        renderPhoneField('');
+      }
+    });
+  
+    phoneList.appendChild(wrap);
+  
+    // floating label init for this injected field
+    const parent = input.closest('.field');
+    if (parent) parent.classList.toggle('filled', !!input.value.trim());
+  }
+  
+  function initPhonesUI() {
+    const phoneList = document.getElementById('phone-list');
+    const addBtn = document.getElementById('add-phone');
+  
+    if (!phoneList || !addBtn) return;
+  
+    // start with 1 phone input if empty
+    if (phoneList.children.length === 0) {
+      renderPhoneField('');
+    }
+  
+    addBtn.addEventListener('click', () => {
+      renderPhoneField('');
+    });
+  }
+  
+  async function submitLeadToSupabase(agentProfile) {
+    const form = document.getElementById('lead-form');
+    if (!form) return;
+  
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+  
+      const msg = document.getElementById('lead-message');
+      if (msg) msg.textContent = 'Submitting...';
+  
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        if (msg) msg.textContent = 'You are not logged in.';
+        return;
+      }
+  
+      const phones = getPhoneValues();
+      if (phones.length === 0) {
+        if (msg) msg.textContent = 'Please add at least 1 phone number.';
+        return;
+      }
+  
+      const payload = {
+        first_name: document.getElementById('lead-first')?.value?.trim() || null,
+        last_name: document.getElementById('lead-last')?.value?.trim() || null,
+        age: Number(document.getElementById('lead-age')?.value || '') || null,
+        address: document.getElementById('lead-address')?.value?.trim() || null,
+        city: document.getElementById('lead-city')?.value?.trim() || null,
+        state: document.getElementById('lead-state')?.value || null,
+        zip: document.getElementById('lead-zip')?.value?.trim() || null,
+        product_type: document.getElementById('lead-product-type')?.value || null,
+        notes: document.getElementById('lead-notes')?.value?.trim() || null,
+  
+        // IMPORTANT: your table rendering expects an array in l.phone
+        phone: phones,
+  
+        // ownership
+        submitted_by: session.user.id,
+        assigned_to: session.user.id,
+  
+        // optional display
+        submitted_by_name: agentProfile
+          ? `${agentProfile.first_name || ''} ${agentProfile.last_name || ''}`.trim()
+          : null
+      };
+  
+      const { error } = await supabase.from('leads').insert(payload);
+  
+      if (error) {
+        console.error('Insert lead error:', error);
+        if (msg) msg.textContent = `Failed: ${error.message}`;
+        return;
+      }
+  
+      if (msg) msg.textContent = 'Lead submitted!';
+  
+      form.reset();
+      // reset floating labels
+      document.querySelectorAll('#lead-form .field').forEach(f => f.classList.remove('filled'));
+  
+      // reset phones back to one blank field
+      const phoneList = document.getElementById('phone-list');
+      if (phoneList) phoneList.innerHTML = '';
+      renderPhoneField('');
+  
+      // refresh the table
+      agentCurrentPage = 1;
+      await loadAgentLeads();
+      showSection('view');
+    });
+  }
 });
