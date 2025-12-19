@@ -393,3 +393,29 @@ a, button{ outline-color: var(--brand); }
 .field.filled label {
   background: #fff;
 }
+/* ================================
+   FIX: Add Phone button stays small + fixed
+   ================================ */
+
+#add-phone {
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: 8px 12px !important;
+  font-size: 0.95rem;
+  line-height: 1 !important;
+
+  height: 40px !important;       /* fixed height */
+  min-height: 40px !important;
+  max-height: 40px !important;
+
+  width: auto !important;
+  white-space: nowrap;
+}
+
+/* Make sure it’s NOT treated like a grid row that stretches */
+#add-phone.btn {
+  align-self: start !important;
+}
