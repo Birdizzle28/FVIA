@@ -67,7 +67,7 @@ function initFloatingLabels(scope = document) {
   });
 }
 
-// ---------- phone fields (TOP LEVEL so contact creator can use it) ----------
+// ---------- phone fields ----------
 function formatUSPhone(raw) {
   const d = String(raw || "").replace(/\D/g, "").slice(0, 10);
   const a = d.slice(0, 3);
@@ -251,11 +251,16 @@ async function ensureContactIdFromLeadForm() {
   if (chosenId) return chosenId;
 
   const phones = getPhoneValues();
+
+  // ✅ contacts schema uses address_line1 / address_line2 (NOT address)
   const contactPayload = {
     first_name: $("#lead-first")?.value?.trim() || null,
     last_name: $("#lead-last")?.value?.trim() || null,
     phones: phones.length ? phones : null,
-    address: $("#lead-address")?.value?.trim() || null,
+
+    address_line1: $("#lead-address")?.value?.trim() || null,
+    address_line2: null,
+
     city: $("#lead-city")?.value?.trim() || null,
     state: $("#lead-state")?.value || null,
     zip: $("#lead-zip")?.value?.trim() || null,
@@ -412,6 +417,16 @@ function openContactDetail(c) {
   const name = `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Contact";
 
   title.textContent = name;
+
+  // ✅ contacts schema uses address_line1/address_line2
+  const addr = [
+    c.address_line1,
+    c.address_line2,
+    c.city,
+    c.state,
+    c.zip
+  ].filter(Boolean).join(", ");
+
   body.innerHTML = `
     <p><strong><i class="fa-solid fa-phone"></i> Phone(s):</strong><br>${
       (c.phones || []).map((p) => `<a href="tel:${toE164(p) || p}">${p}</a>`).join("<br>") || "—"
@@ -419,9 +434,7 @@ function openContactDetail(c) {
     <p><strong><i class="fa-solid fa-envelope"></i> Email(s):</strong><br>${
       (c.emails || []).map((e) => `<a href="mailto:${e}">${e}</a>`).join("<br>") || "—"
     }</p>
-    <p><strong><i class="fa-solid fa-location-dot"></i> Address:</strong><br>${
-      [c.address, c.city, c.state, c.zip].filter(Boolean).join(", ") || "—"
-    }</p>
+    <p><strong><i class="fa-solid fa-location-dot"></i> Address:</strong><br>${addr || "—"}</p>
     ${c.notes ? `<p><strong><i class="fa-solid fa-note-sticky"></i> Notes:</strong><br>${c.notes}</p>` : ""}
     <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
       <button id="contact-save-one" class="see-all"><i class="fa-solid fa-download"></i> Save to phone (.vcf)</button>
@@ -568,6 +581,7 @@ function submitLeadToSupabase(agentProfile) {
     try {
       contactId = await ensureContactIdFromLeadForm();
     } catch (err) {
+      console.error(err);
       if (msg) msg.textContent = "Failed creating contact.";
       return;
     }
