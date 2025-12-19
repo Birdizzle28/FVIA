@@ -514,3 +514,22 @@ a, button{ outline-color: var(--brand); }
 .field .choices__list--dropdown *{
   background: #fff !important;
 }
+/* STOP trapping the dropdown in a low z-index stacking context */
+.field .choices{
+  z-index: auto !important;
+}
+
+/* Make sure dropdown is positioned within the .field and wins */
+.field{
+  z-index: 1;
+}
+.field:focus-within{
+  z-index: 9999;
+}
+
+/* Dropdown is fully opaque */
+.field .choices__list--dropdown,
+.field .choices__list[aria-expanded]{
+  background:#fff !important;
+  z-index: 999999 !important;
+}
