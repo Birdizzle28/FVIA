@@ -349,9 +349,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   agentProfile = await fetchAgentProfile();
   if (!agentProfile?.is_admin) $('.admin-only')?.style && ($('.admin-only').style.display = 'none');
   
-  initPhonesUI();
-  submitLeadToSupabase(agentProfile);
-  
   // tabs
   const navs = getNavButtons();
   navs.view?.addEventListener('click', () => showSection('view'));
@@ -542,4 +539,6 @@ document.addEventListener('DOMContentLoaded', async () => {
       showSection('view');
     });
   }
+  initPhonesUI();
+  submitLeadToSupabase(agentProfile);
 });
