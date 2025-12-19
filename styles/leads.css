@@ -471,3 +471,46 @@ a, button{ outline-color: var(--brand); }
 #lead-form .field:has(#contact-picker){
   grid-column: auto !important; /* back to normal 1-column behavior */
 }
+/* ---------------------------
+   Phone rows: input + trash inside the same row
+---------------------------- */
+.phone-field .phone-row{
+  display: grid;
+  grid-template-columns: 1fr 40px;
+  gap: 8px;
+  align-items: center;
+}
+
+.phone-field .lead-phone-input{
+  min-height: var(--field-min-h);
+}
+
+/* trash button looks like an input icon */
+.phone-field .remove-phone{
+  height: var(--field-min-h);
+  width: 40px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: var(--field-radius);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.phone-field .remove-phone:hover{
+  background: var(--soft);
+}
+/* ---------------------------
+   Choices dropdown must be fully opaque and above labels
+---------------------------- */
+.field .choices__list--dropdown,
+.field .choices__list[aria-expanded]{
+  background: #fff !important;
+  opacity: 1 !important;
+  z-index: 999999 !important;
+}
+
+.field .choices__list--dropdown *{
+  background: #fff !important;
+}
