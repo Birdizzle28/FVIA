@@ -7,5 +7,5 @@ if (!window.supabase) {
   console.error('Supabase UMD bundle not loaded before supabase-client.js');
 } else {
   window.supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  window.supabase = window.supabaseClient;
 }
-const supabase = window.supabaseClient;
