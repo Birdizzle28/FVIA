@@ -89,13 +89,15 @@ function renderPhoneField(value = "") {
   if (!phoneList) return;
 
   const wrap = document.createElement("div");
-  wrap.className = "field";
+  wrap.className = "field phone-field"; // <-- extra class for CSS targeting
   wrap.innerHTML = `
-    <input type="tel" class="lead-phone-input" placeholder=" " inputmode="tel" autocomplete="tel">
+    <div class="phone-row">
+      <input type="tel" class="lead-phone-input" placeholder=" " inputmode="tel" autocomplete="tel">
+      <button type="button" class="remove-phone" aria-label="Remove phone">
+        <i class="fa-solid fa-trash"></i>
+      </button>
+    </div>
     <label>Phone</label>
-    <button type="button" class="remove-phone" style="margin-top:6px;">
-      <i class="fa-solid fa-trash"></i>
-    </button>
   `;
 
   const input = wrap.querySelector("input");
@@ -105,8 +107,7 @@ function renderPhoneField(value = "") {
 
   input.addEventListener("input", () => {
     input.value = formatUSPhone(input.value);
-    const parent = input.closest(".field");
-    if (parent) parent.classList.toggle("filled", !!input.value.trim());
+    wrap.classList.toggle("filled", !!input.value.trim());
   });
 
   removeBtn.addEventListener("click", () => {
@@ -117,9 +118,7 @@ function renderPhoneField(value = "") {
   });
 
   phoneList.appendChild(wrap);
-
-  const parent = input.closest(".field");
-  if (parent) parent.classList.toggle("filled", !!input.value.trim());
+  wrap.classList.toggle("filled", !!input.value.trim());
 }
 
 function initPhonesUI() {
