@@ -51,22 +51,7 @@ function downloadText(filename, text, mime = "text/vcard;charset=utf-8") {
   a.click();
   URL.revokeObjectURL(url);
 }
-async function expireDncForAgentLeads(agentId) {
-  const supabase = window.supabase;
 
-  // Anything older than 18 months should require a DNC check again
-  const cutoffIso = new Date(Date.now() - 18 * 30.436875 * 24 * 60 * 60 * 1000).toISOString();
-  // ^ approx 18 months. If you want exact “calendar 18 months”, do it in SQL (recommended below).
-
-  const { error } = await supabase
-    .from('leads')
-    .update({ needs_dnc_check: true })
-    .eq('assigned_to', agentId)
-    .eq('needs_dnc_check', false)
-    .or(`consent_at.is.null,consent_at.lt.${cutoffIso}`);
-
-  if (error) throw error;
-}
 // ---------- floating labels ----------
 function initFloatingLabels(scope = document) {
   scope.querySelectorAll(".field select, .field input, .field textarea").forEach((el) => {
@@ -668,14 +653,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   initAgentHubMenu();
   closeOverlaysOnClicks();
   initFloatingLabels(document);
-  await expireDncForAgentLeads(agentId);
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
     window.location.href = "login.html";
     return;
   }
-
+  const { error: dncErr } = await supabase.rpc('expire_dnc_for_agent_contacts', {
+    p_agent_id: session.user.id
+  });
+  if (dncErr) console.error('expire_dnc_for_agent_contacts failed:', dncErr);
   agentProfile = await fetchAgentProfile();
 
   if (!agentProfile?.is_admin) {
