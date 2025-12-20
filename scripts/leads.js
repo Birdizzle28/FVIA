@@ -706,7 +706,26 @@ function submitLeadToSupabase(agentProfile) {
       if (msg) msg.textContent = "Please add at least 1 phone number.";
       return;
     }
-
+      // 🚫 BLOCK NEW CONTACT IF SAME NAME + PHONE EXISTS ON INTERNAL DNC
+    const picker = document.getElementById("contact-picker");
+    const chosenId = picker?.value || "";
+  
+    // Only block here if creating a NEW contact
+    if (!chosenId) {
+      const blocked = await duplicateOnInternalDnc(
+        $("#lead-first")?.value,
+        $("#lead-last")?.value,
+        phones
+      );
+  
+      if (blocked) {
+        if (msg) {
+          msg.textContent =
+            "This person has requested not to be contacted. Lead submission blocked.";
+        }
+        return;
+      }
+    }
     let contactId = null;
     try {
       contactId = await ensureContactIdFromLeadForm();
@@ -720,20 +739,7 @@ function submitLeadToSupabase(agentProfile) {
       if (msg) msg.textContent = "Failed creating contact.";
       return;
     }
-    // ❌ BLOCK if same person exists AND is on internal DNC
-    const isBlocked = await duplicateOnInternalDnc(
-      $("#lead-first")?.value,
-      $("#lead-last")?.value,
-      phones
-    );
-    
-    if (isBlocked) {
-      if (msg) {
-        msg.textContent =
-          "This person has requested not to be contacted. Lead submission blocked.";
-      }
-      return;
-    }
+
     const payload = {
       first_name: $("#lead-first")?.value?.trim() || null,
       last_name: $("#lead-last")?.value?.trim() || null,
