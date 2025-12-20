@@ -42,6 +42,35 @@ document.addEventListener('DOMContentLoaded', () => {
   const wrapOf = (el) => el.closest('.fl-field') || el.parentElement;
   function markInvalid(el) { el.classList.add('is-invalid'); wrapOf(el)?.classList.add('is-invalid'); }
   function clearInvalid(el) { el.classList.remove('is-invalid'); wrapOf(el)?.classList.remove('is-invalid'); }
+  async function createLeadDebtsForSubmission({ agentId, createdBy, contactId, leads, total = 60 }) {
+    const client = window.supabase;
+    if (!client) throw new Error("Supabase not loaded");
+  
+    // charge only for newly inserted leads
+    const billable = (leads || []).filter(l => !l.duplicate && l.id);
+  
+    if (!billable.length) return; // nothing new created -> no debt rows
+  
+    const perLead = Number((total / billable.length).toFixed(2));
+  
+    const rows = billable.map(l => ({
+      agent_id: agentId,
+      lead_id: l.id,
+      description: `Website lead charge ($${total} per contact; split ${billable.length} ways)`,
+      source: "freequote",
+      amount: perLead,
+      status: "open",
+      created_by: createdBy || null,
+      metadata: {
+        contact_id: contactId,
+        total_contact_charge: total,
+        split_count: billable.length
+      }
+    }));
+  
+    const { error } = await client.from("lead_debts").insert(rows);
+    if (error) throw error;
+  }
   const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || '');
   const toE164 = (v) => {
     if (!v) return null;
@@ -628,7 +657,8 @@ document.addEventListener('DOMContentLoaded', () => {
         tcpaconsent: true,
         consent_source: 'website',
         consent_at: new Date().toISOString(),
-        notes: newNotes
+        notes: newNotes,
+        needs_dnc_check: false
       };
       if (contactInfo.first_name?.trim()) updatePayload.first_name = contactInfo.first_name.trim();
       if (contactInfo.last_name?.trim())  updatePayload.last_name  = contactInfo.last_name.trim();
@@ -653,7 +683,8 @@ document.addEventListener('DOMContentLoaded', () => {
           tcpaconsent: true,
           consent_source: 'website',
           consent_at: new Date().toISOString(),
-          notes: contactInfo.notes || null
+          notes: contactInfo.notes || null,
+          needs_dnc_check: false
         })
         .select('id')
         .single();
@@ -704,6 +735,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     return { contactId, leads: insertedOrExisting };
   }
+  await createLeadDebtsForSubmission({
+    agentId: choice.agent.id,
+    createdBy: window.FVG_WEBSITE_SUBMITTER_ID,
+    contactId,
+    leads,
+    total: 60
+  });
 
   // === Submit handler ===
   btnSubmit.addEventListener('click', async () => {
