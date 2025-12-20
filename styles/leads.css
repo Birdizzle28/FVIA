@@ -533,3 +533,30 @@ a, button{ outline-color: var(--brand); }
   background:#fff !important;
   z-index: 999999 !important;
 }
+/* DNC status dot */
+.dnc-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+  vertical-align: middle;
+  box-shadow: 0 0 10px rgba(0,0,0,.25);
+}
+
+.dnc-dot--ok {
+  background: #23b6ff; /* neon blue */
+  box-shadow:
+    0 0 6px rgba(35,182,255,.9),
+    0 0 14px rgba(35,182,255,.65);
+}
+
+.dnc-dot--bad {
+  background: #ff2e6f; /* neon red/pink */
+  box-shadow:
+    0 0 6px rgba(255,46,111,.9),
+    0 0 14px rgba(255,46,111,.65);
+}
+
+.dnc-cell {
+  text-align: center;
+}
