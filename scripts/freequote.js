@@ -450,72 +450,51 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!baseEligibleAgents.length) {
           return { reason: 'none_fit', agent: null, shouldCall: false };
         }
-    
-        // --- helper: check upline chain licensing for a single agent ---
+        
+        // --- helper: check recruiter_id chain licensing for a single agent ---
         async function hasLicensedUplineChain(agentRow) {
-          let currentId = agentRow.id;
+          const FVG_ID = '906a707c-69bb-4e6e-be1d-1415f45561c4';
+        
+          let current = agentRow; // start at the selected agent row
           const visited = new Set();
-    
+        
           while (true) {
-            if (!currentId) {
-              // reached the top (no more uplines) → OK
-              return true;
-            }
+            const currentId = current?.id;
+            if (!currentId) return true;
+        
             if (visited.has(currentId)) {
-              // cycle safety: if the graph is messed up, fail-safe
-              console.warn('Cycle detected in uplines for agent', currentId);
+              console.warn('Cycle detected in recruiter chain for agent', currentId);
               return false;
             }
             visited.add(currentId);
-    
-            // Look up direct upline relationship
-            const { data: upRel, error: upErr } = await supabase
-              .from('uplines')
-              .select('upline_id')
-              .eq('agent_id', currentId)
-              .maybeSingle();
-    
-            if (upErr) {
-              throw new Error(upErr.message);
-            }
-    
-            const upId = upRel?.upline_id;
-            if (!upId) {
-              // no more uplines → OK
-              return true;
-            }
-    
-            if (upId === FVG_ID) {
-              // Family Values Group is NEUTRAL:
-              // It does NOT need matching LOAs and does NOT break the chain.
-              // If the only upline is FVG, the agent is still eligible.
-              return true;
-            }
-    
-            // Load upline agent
-            const { data: upAgent, error: upAgentErr } = await supabase
+        
+            const upId = current?.recruiter_id || null;
+        
+            // No upline -> OK (top reached)
+            if (!upId) return true;
+        
+            // FVG is neutral stop -> OK
+            if (upId === FVG_ID) return true;
+        
+            // Load the upline agent row (must exist)
+            const { data: upAgent, error: upErr } = await supabase
               .from('agents')
-              .select('id, agent_id')
+              .select('id, agent_id, recruiter_id')
               .eq('id', upId)
               .maybeSingle();
-    
-            if (upAgentErr) {
-              throw new Error(upAgentErr.message);
-            }
-    
-            if (!upAgent || !upAgent.agent_id) {
-              // No valid upline agent record → treat as not licensed
-              return false;
-            }
-    
-            // Check if THIS upline has all needed tokens in this state
+        
+            if (upErr) throw new Error(upErr.message);
+        
+            // If chain references a missing upline record, fail-safe
+            if (!upAgent || !upAgent.agent_id) return false;
+        
+            // Upline must have all needed tokens in this state
             if (!hasAllTokensForKey(upAgent.agent_id)) {
-              // ❌ Human upline missing a required LOA → agent is NOT eligible
               return false;
             }
-    
-            // Move up the chain and repeat
-            currentId = upAgent.id;
+        
+            // Move up the chain
+            current = upAgent;
           }
         }
     
