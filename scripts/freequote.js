@@ -735,13 +735,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     return { contactId, leads: insertedOrExisting };
   }
-  await createLeadDebtsForSubmission({
-    agentId: choice.agent.id,
-    createdBy: window.FVG_WEBSITE_SUBMITTER_ID,
-    contactId,
-    leads,
-    total: 60
-  });
 
   // === Submit handler ===
   btnSubmit.addEventListener('click', async () => {
@@ -813,6 +806,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
       // Insert/update contact + insert leads
       const { contactId, leads } = await insertContactAndLeads(contactInfo, perTypeNotes, productTypes);
+      await createLeadDebtsForSubmission({
+        agentId: choice.agent.id,
+        createdBy: window.FVG_WEBSITE_SUBMITTER_ID,
+        contactId,
+        leads,
+        total: 60
+      });
 
       // pick the “best” lead for whisper: prefer Property if both Property & Casualty exist
       const pickLeadIdForCall = (() => {
