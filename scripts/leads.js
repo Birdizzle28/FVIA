@@ -49,7 +49,45 @@ async function duplicateContactExists(first, last, phones) {
     )
   );
 }
+async function duplicateOnInternalDnc(first, last, phones) {
+  if (!first || !last || !phones?.length) return false;
 
+  const norm = (s) => (s || "").trim().toLowerCase();
+  const digits10 = (s) => String(s || "").replace(/\D/g, "").slice(-10);
+
+  const phoneDigits = phones.map(digits10).filter(Boolean);
+  if (!phoneDigits.length) return false;
+
+  const { data, error } = await supabase
+    .from("contacts")
+    .select(`
+      id,
+      first_name,
+      last_name,
+      phones,
+      internal_dnc:internal_dnc!internal_dnc_contact_id_fkey (
+        id,
+        is_active
+      )
+    `)
+    .ilike("first_name", norm(first))
+    .ilike("last_name", norm(last));
+
+  if (error) {
+    console.error("DNC duplicate check failed:", error);
+    return true; // fail CLOSED
+  }
+
+  return (data || []).some(c => {
+    // must have active internal DNC
+    const hasActiveDnc = (c.internal_dnc || []).some(d => d.is_active);
+    if (!hasActiveDnc) return false;
+
+    // must match phone
+    const existingPhones = (c.phones || []).map(digits10);
+    return existingPhones.some(p => phoneDigits.includes(p));
+  });
+}
 function toE164(v) {
   if (!v) return null;
   const s = String(v).trim();
@@ -672,12 +710,30 @@ function submitLeadToSupabase(agentProfile) {
     let contactId = null;
     try {
       contactId = await ensureContactIdFromLeadForm();
+      // ❌ INTERNAL DNC BLOCK
+      if (await contactHasInternalDnc(contactId)) {
+        if (msg) msg.textContent = "This contact is on the internal Do Not Contact list.";
+        return;
+      }
     } catch (err) {
       console.error(err);
       if (msg) msg.textContent = "Failed creating contact.";
       return;
     }
-
+    // ❌ BLOCK if same person exists AND is on internal DNC
+    const isBlocked = await duplicateOnInternalDnc(
+      $("#lead-first")?.value,
+      $("#lead-last")?.value,
+      phones
+    );
+    
+    if (isBlocked) {
+      if (msg) {
+        msg.textContent =
+          "This person has requested not to be contacted. Lead submission blocked.";
+      }
+      return;
+    }
     const payload = {
       first_name: $("#lead-first")?.value?.trim() || null,
       last_name: $("#lead-last")?.value?.trim() || null,
