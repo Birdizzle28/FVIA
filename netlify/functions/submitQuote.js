@@ -56,6 +56,7 @@ export const handler = async (event) => {
     // --- helpers (server-side copies) ---
     const norm = (s) => (s || "").toString().trim().toLowerCase();
     const digits10 = (s) => (s || "").toString().replace(/\D/g, "").slice(-10);
+    const CONSENT_TEXT_VERSION = "fvg_freequote_tcpav1_2025-12-20";
 
     // ========= (1) findDuplicateLeadByNamePlusOne (server) =========
     async function findDuplicateLeadByNamePlusOne({
@@ -299,9 +300,12 @@ export const handler = async (event) => {
           state: contactInfo.state ?? existing.state ?? null,
           lat: contactInfo.lat ?? existing.lat ?? null,
           lng: contactInfo.lng ?? existing.lng ?? null,
+        
           tcpaconsent: true,
           consent_source: "website",
           consent_at: new Date().toISOString(),
+          consent_text_version: CONSENT_TEXT_VERSION,
+        
           notes: newNotes,
           needs_dnc_check: false
         };
@@ -330,9 +334,12 @@ export const handler = async (event) => {
             lat: contactInfo.lat ?? null,
             lng: contactInfo.lng ?? null,
             contact_status: "new",
+          
             tcpaconsent: true,
             consent_source: "website",
             consent_at: new Date().toISOString(),
+            consent_text_version: CONSENT_TEXT_VERSION,
+          
             notes: contactInfo.notes || null,
             needs_dnc_check: false
           })
