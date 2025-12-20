@@ -51,7 +51,20 @@ function downloadText(filename, text, mime = "text/vcard;charset=utf-8") {
   a.click();
   URL.revokeObjectURL(url);
 }
+function dotHtml(needsDncCheck) {
+  const cls = needsDncCheck ? "dnc-dot dnc-dot--bad" : "dnc-dot dnc-dot--ok";
+  const label = needsDncCheck ? "Needs DNC check" : "DNC OK";
+  return `<span class="${cls}" title="${label}" aria-label="${label}"></span>`;
+}
 
+// if lead has its own needs_dnc_check use it; otherwise fall back to the linked contact status
+function leadNeedsDnc(lead, contactMap) {
+  if (typeof lead.needs_dnc_check === "boolean") return lead.needs_dnc_check;
+  const c = lead.contact_id ? contactMap.get(lead.contact_id) : null;
+  if (c && typeof c.needs_dnc_check === "boolean") return c.needs_dnc_check;
+  // safest default: if unknown, treat as needs check
+  return true;
+}
 // ---------- floating labels ----------
 function initFloatingLabels(scope = document) {
   scope.querySelectorAll(".field select, .field input, .field textarea").forEach((el) => {
@@ -295,7 +308,7 @@ async function loadAgentLeads() {
 
   let { data: leads, error } = await supabase
     .from("leads")
-    .select("*")
+    .select("*, contacts:contact_id ( id, needs_dnc_check )")
     .eq("assigned_to", user.id)
     .eq("archived", false)
     .order("created_at", { ascending: false });
@@ -313,12 +326,19 @@ async function loadAgentLeads() {
 
   const tbody = $("#agent-leads-table tbody");
   if (!tbody) return;
-
+  
+  const contactMap = new Map();
+  (leads || []).forEach((l) => {
+    if (l.contacts?.id) contactMap.set(l.contacts.id, l.contacts);
+  });
+  
   tbody.innerHTML = "";
   page.forEach((l) => {
     const tr = document.createElement("tr");
+    const needsDnc = leadNeedsDnc(l, contactMap);
     tr.innerHTML = `
       <td><input type="checkbox" class="lead-checkbox" data-id="${l.id}"></td>
+      <td class="dnc-cell">${dotHtml(needsDnc)}</td>
       <td>${l.created_at ? new Date(l.created_at).toLocaleDateString() : ""}</td>
       <td>${l.submitted_by_name || ""}</td>
       <td>${l.first_name || ""}</td>
@@ -523,7 +543,7 @@ function renderContacts() {
       <div>${
         selectMode
           ? `<input type="checkbox" class="contact-cb" data-id="${c.id}" ${checked}>`
-          : '<i class="fa-solid fa-user"></i>'
+          : `${dotHtml(!!c.needs_dnc_check)}`
       }</div>
       <div><i class="fa-solid fa-id-card-clip" style="margin-right:6px;"></i>${name}</div>
       <div><i class="fa-solid fa-phone" style="margin-right:6px;"></i>${phone || "—"}</div>
