@@ -11,6 +11,45 @@ let contactChoices = null;
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
+async function contactHasInternalDnc(contactId) {
+  const { data, error } = await supabase
+    .from("internal_dnc")
+    .select("id")
+    .eq("contact_id", contactId)
+    .eq("is_active", true)
+    .limit(1);
+
+  if (error) {
+    console.error("DNC check failed", error);
+    return true; // fail CLOSED
+  }
+
+  return (data || []).length > 0;
+}
+
+async function duplicateContactExists(first, last, phones) {
+  if (!first || !last || !phones?.length) return false;
+
+  const digits = phones.map(p => p.replace(/\D/g, "").slice(-10));
+
+  const { data, error } = await supabase
+    .from("contacts")
+    .select("id, phones")
+    .ilike("first_name", first.trim())
+    .ilike("last_name", last.trim());
+
+  if (error) {
+    console.error(error);
+    return true; // fail closed
+  }
+
+  return (data || []).some(c =>
+    (c.phones || []).some(p =>
+      digits.includes(p.replace(/\D/g, "").slice(-10))
+    )
+  );
+}
+
 function toE164(v) {
   if (!v) return null;
   const s = String(v).trim();
@@ -308,7 +347,14 @@ async function loadAgentLeads() {
 
   let { data: leads, error } = await supabase
     .from("leads")
-    .select("*, contacts:contact_id ( id, needs_dnc_check )")
+    .select(`
+      *,
+      contacts:contact_id (
+        id,
+        needs_dnc_check,
+        internal_dnc:internal_dnc!internal_dnc_contact_id_fkey ( id )
+      )
+    `)
     .eq("assigned_to", user.id)
     .eq("archived", false)
     .order("created_at", { ascending: false });
@@ -318,6 +364,10 @@ async function loadAgentLeads() {
     leads = [];
   }
 
+  leads = (leads || []).filter(l => {
+    const dnc = l.contacts?.internal_dnc || [];
+    return dnc.length === 0; // keep only if NOT on internal DNC
+  });
   agentTotalPages = Math.max(1, Math.ceil((leads.length || 0) / PAGE_SIZE));
   if (agentCurrentPage > agentTotalPages) agentCurrentPage = agentTotalPages;
 
@@ -572,15 +622,20 @@ function renderContacts() {
 async function loadContacts() {
   const { data, error } = await supabase
     .from("contacts")
-    .select("*")
+    .select(`
+      *,
+      internal_dnc:internal_dnc!internal_dnc_contact_id_fkey ( id )
+    `)
     .order("created_at", { ascending: false });
 
   if (error) {
     console.error("contacts load error", error);
     return;
   }
-
-  contacts = data || [];
+  contacts = (data || []).filter(c => {
+    const dnc = c.internal_dnc || [];
+    return dnc.length === 0;
+  });
   renderContacts();
 }
 
