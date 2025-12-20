@@ -437,7 +437,7 @@ document.addEventListener('DOMContentLoaded', () => {
         //   - are active + receiving_leads
         const { data: agents, error: agentErr } = await supabase
           .from('agents')
-          .select('id, agent_id, full_name, phone, is_active, is_available, last_assigned_at')
+          .select('id, agent_id, recruiter_id, full_name, phone, is_active, is_available, last_assigned_at')
           .eq('is_active', true)
           .eq('receiving_leads', true)
           .in('agent_id', eligibleAgentKeys);
