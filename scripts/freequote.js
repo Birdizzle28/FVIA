@@ -42,35 +42,7 @@ document.addEventListener('DOMContentLoaded', () => {
   const wrapOf = (el) => el.closest('.fl-field') || el.parentElement;
   function markInvalid(el) { el.classList.add('is-invalid'); wrapOf(el)?.classList.add('is-invalid'); }
   function clearInvalid(el) { el.classList.remove('is-invalid'); wrapOf(el)?.classList.remove('is-invalid'); }
-  async function createLeadDebtsForSubmission({ agentId, createdBy, contactId, leads, total = 60 }) {
-    const client = window.supabase;
-    if (!client) throw new Error("Supabase not loaded");
-  
-    // charge only for newly inserted leads
-    const billable = (leads || []).filter(l => !l.duplicate && l.id);
-  
-    if (!billable.length) return; // nothing new created -> no debt rows
-  
-    const perLead = Number((total / billable.length).toFixed(2));
-  
-    const rows = billable.map(l => ({
-      agent_id: agentId,
-      lead_id: l.id,
-      description: `Website lead charge ($${total} per contact; split ${billable.length} ways)`,
-      source: "freequote",
-      amount: perLead,
-      status: "open",
-      created_by: createdBy || null,
-      metadata: {
-        contact_id: contactId,
-        total_contact_charge: total,
-        split_count: billable.length
-      }
-    }));
-  
-    const { error } = await client.from("lead_debts").insert(rows);
-    if (error) throw error;
-  }
+
   const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || '');
   const toE164 = (v) => {
     if (!v) return null;
@@ -82,56 +54,6 @@ document.addEventListener('DOMContentLoaded', () => {
     if (d.length === 11 && d.startsWith('1')) return `+${d}`;
     return `+${d}`;
   };
-
-  // --- duplicate finder (unchanged) ---
-  async function findDuplicateLeadByNamePlusOne({
-    first_name, last_name, phoneArr, email, zip, product_type, windowDays = 90
-  }) {
-    const client = window.supabase;
-    if (!client) throw new Error('Supabase not loaded');
-
-    const sinceIso = new Date(Date.now() - windowDays*24*60*60*1000).toISOString();
-    const nFirst = norm(first_name);
-    const nLast  = norm(last_name);
-
-    const { data: candidates, error } = await client
-      .from('leads')
-      .select('id, first_name, last_name, phone, zip, product_type, created_at, contacts:contact_id(emails, phones, zip)')
-      .gte('created_at', sinceIso)
-      .ilike('first_name', nFirst)
-      .ilike('last_name', nLast)
-      .limit(1000);
-    if (error) throw new Error(error.message);
-
-    const emailsArr = (email ? [email] : []).map(norm);
-    const ourPhones = phoneArr || [];
-
-    for (const c of (candidates || [])) {
-      if (norm(c.first_name) !== nFirst || norm(c.last_name) !== nLast) continue;
-
-      const candPhonesFromLead    = Array.isArray(c.phone) ? c.phone : [];
-      const candPhonesFromContact = Array.isArray(c.contacts?.phones) ? c.contacts.phones : [];
-      const candEmails            = Array.isArray(c.contacts?.emails) ? c.contacts.emails : [];
-      const candZip               = c.zip || c.contacts?.zip || null;
-
-      const phoneMatch = (() => {
-        const set1 = new Set((ourPhones || []).map(digits10).filter(Boolean));
-        for (const p of [...candPhonesFromLead, ...candPhonesFromContact].map(digits10).filter(Boolean)) {
-          if (set1.has(p)) return true;
-        }
-        return false;
-      })();
-
-      const emailMatch = emailsArr.length ? candEmails.map(norm).some(e => emailsArr.includes(e)) : false;
-      const zipMatch   = zip && candZip ? String(zip).trim() === String(candZip).trim() : false;
-
-      if ((phoneMatch || emailMatch || zipMatch) &&
-          (!product_type || !c.product_type || norm(product_type) === norm(c.product_type))) {
-        return c;
-      }
-    }
-    return null;
-  }
 
   function hideAllModals() {
     document.querySelectorAll('.modal').forEach(m => m.style.display = 'none');
@@ -195,7 +117,6 @@ document.addEventListener('DOMContentLoaded', () => {
         lbl.classList.toggle('selected');
         if (cb) cb.checked = lbl.classList.contains('selected');
         updateCoverDisplayAndCsv();
-
         toggleMenu(false);
       });
       lbl.tabIndex = 0;
@@ -346,187 +267,6 @@ document.addEventListener('DOMContentLoaded', () => {
     return byType;
   }
 
-      // --- Use agent_nipr_licenses as source of truth; require all needed lines in that state;
-      // --- ALSO require that every human upline in the chain has those same LOAs.
-      // --- Family Values Group (id == FVG_ID) is neutral: it does NOT need matching LOAs.
-      async function pickAgentForAll(requiredLines, state2) {
-        const supabase = window.supabase;
-        const state = (state2 || '').toUpperCase();
-        const FVG_ID = '906a707c-69bb-4e6e-be1d-1415f45561c4';
-    
-        if (!state || !/^[A-Z]{2}$/.test(state)) {
-          return { reason: 'none_fit', agent: null, shouldCall: false };
-        }
-    
-        // Map normalized line keys to text tokens that appear in LOA names
-        const lineTokenMap = {
-          life:       'Life',
-          health:     'Accident & Health', // adjust if your LOA text is different
-          property:   'Property',
-          casualty:   'Casualty',
-          legalshield:'Life',      // you’re hiding these choices anyway
-          idshield:   'Life'
-        };
-    
-        const neededTokens = Array.from(
-          new Set(
-            (requiredLines || [])
-              .map(lineKey => lineTokenMap[lineKey])
-              .filter(Boolean)
-          )
-        );
-    
-        if (!neededTokens.length) {
-          return { reason: 'none_fit', agent: null, shouldCall: false };
-        }
-    
-        // 1) Pull all NIPR license rows for this state
-        const { data: niprRows, error: niprErr } = await supabase
-          .from('agent_nipr_licenses')
-          .select('agent_id, state, active, loa_names')
-          .eq('state', state);
-    
-        if (niprErr) {
-          throw new Error(niprErr.message);
-        }
-    
-        if (!niprRows || !niprRows.length) {
-          return { reason: 'none_fit', agent: null, shouldCall: false };
-        }
-    
-        function rowMatchesToken(row, token) {
-          if (!Array.isArray(row.loa_names)) return false;
-          const lowerToken = token.toLowerCase();
-          return row.loa_names.some(name =>
-            (name || '').toString().toLowerCase().includes(lowerToken)
-          );
-        }
-    
-        // Group rows by agent_id (text) and see which ones have *all* needed tokens active
-        const byAgentKey = new Map();
-        for (const row of niprRows) {
-          if (!row.active) continue;
-          const key = row.agent_id;  // text agent_id from NIPR table
-          if (!key) continue;
-          if (!byAgentKey.has(key)) byAgentKey.set(key, []);
-          byAgentKey.get(key).push(row);
-        }
-    
-        function hasAllTokensForKey(agentKey) {
-          const rows = byAgentKey.get(agentKey) || [];
-          if (!rows.length) return false;
-          return neededTokens.every(token =>
-            rows.some(r => rowMatchesToken(r, token))
-          );
-        }
-    
-        const eligibleAgentKeys = [];
-        for (const [agentKey, rows] of byAgentKey.entries()) {
-          if (!rows.length) continue;
-          if (hasAllTokensForKey(agentKey)) {
-            eligibleAgentKeys.push(agentKey);
-          }
-        }
-    
-        if (!eligibleAgentKeys.length) {
-          return { reason: 'none_fit', agent: null, shouldCall: false };
-        }
-    
-        // 2) Load agents that:
-        //   - match those agent_id values
-        //   - are active + receiving_leads
-        const { data: agents, error: agentErr } = await supabase
-          .from('agents')
-          .select('id, agent_id, recruiter_id, full_name, phone, is_active, is_available, last_assigned_at')
-          .eq('is_active', true)
-          .eq('receiving_leads', true)
-          .in('agent_id', eligibleAgentKeys);
-    
-        if (agentErr) {
-          throw new Error(agentErr.message);
-        }
-    
-        const baseEligibleAgents = (agents || []);
-        if (!baseEligibleAgents.length) {
-          return { reason: 'none_fit', agent: null, shouldCall: false };
-        }
-        
-        // --- helper: check recruiter_id chain licensing for a single agent ---
-        async function hasLicensedUplineChain(agentRow) {
-          const FVG_ID = '906a707c-69bb-4e6e-be1d-1415f45561c4';
-        
-          let current = agentRow; // start at the selected agent row
-          const visited = new Set();
-        
-          while (true) {
-            const currentId = current?.id;
-            if (!currentId) return true;
-        
-            if (visited.has(currentId)) {
-              console.warn('Cycle detected in recruiter chain for agent', currentId);
-              return false;
-            }
-            visited.add(currentId);
-        
-            const upId = current?.recruiter_id || null;
-        
-            // No upline -> OK (top reached)
-            if (!upId) return true;
-        
-            // FVG is neutral stop -> OK
-            if (upId === FVG_ID) return true;
-        
-            // Load the upline agent row (must exist)
-            const { data: upAgent, error: upErr } = await supabase
-              .from('agents')
-              .select('id, agent_id, recruiter_id')
-              .eq('id', upId)
-              .maybeSingle();
-        
-            if (upErr) throw new Error(upErr.message);
-        
-            // If chain references a missing upline record, fail-safe
-            if (!upAgent || !upAgent.agent_id) return false;
-        
-            // Upline must have all needed tokens in this state
-            if (!hasAllTokensForKey(upAgent.agent_id)) {
-              return false;
-            }
-        
-            // Move up the chain
-            current = upAgent;
-          }
-        }
-    
-        // 3) Filter base-eligible agents by upline licensing chain
-        const fullyEligible = [];
-        for (const ag of baseEligibleAgents) {
-          const okChain = await hasLicensedUplineChain(ag);
-          if (okChain) {
-            fullyEligible.push(ag);
-          }
-        }
-    
-        if (!fullyEligible.length) {
-          return { reason: 'none_fit', agent: null, shouldCall: false };
-        }
-    
-        // Same queue logic as before: prefer online, rotate by oldest last_assigned_at
-        const byOldest = (arr) =>
-          arr.slice().sort((a, b) => {
-            const ax = a.last_assigned_at ? new Date(a.last_assigned_at).getTime() : 0;
-            const bx = b.last_assigned_at ? new Date(b.last_assigned_at).getTime() : 0;
-            return ax - bx;
-          });
-    
-        const online = fullyEligible.filter(a => !!a.is_available);
-        if (online.length) {
-          return { reason: 'online', agent: byOldest(online)[0], shouldCall: true };
-        }
-    
-        return { reason: 'offline_only', agent: byOldest(fullyEligible)[0], shouldCall: false };
-      }
-
   // ----- STEP NAV -----
   btnStep1.addEventListener('click', async () => {
     const zipOk  = /^\d{5}$/.test((zip.value||'').trim());
@@ -591,131 +331,7 @@ document.addEventListener('DOMContentLoaded', () => {
     return (pairs.length) ? `utm:${pairs.join('|')}` : '';
   }
 
-  async function insertContactAndLeads(contactInfo, perTypeNotes, productTypes) {
-    const client = window.supabase;
-    if (!client) throw new Error('Supabase not loaded');
-
-    const e164 = contactInfo.phone ? String(contactInfo.phone).trim() : null;
-    const tenFromE164 = (e164 || '').replace(/\D/g, '').slice(-10);
-    const emailClean = (contactInfo.email || '').trim();
-    const emailArr = emailClean ? [emailClean] : [];
-    if (!e164 && !tenFromE164 && emailArr.length === 0) throw new Error('Provide at least one phone or email.');
-
-    // Upsert contact (merge phones/emails) WITH geo fields
-    let existing = null;
-    if (e164) {
-      const r1 = await client.from('contacts').select('id, phones, emails, zip, city, state, lat, lng, notes').contains('phones', [e164]).maybeSingle();
-      if (r1.data) existing = r1.data;
-    }
-    if (!existing && tenFromE164) {
-      const r2 = await client.from('contacts').select('id, phones, emails, zip, city, state, lat, lng, notes').contains('phones', [tenFromE164]).maybeSingle();
-      if (r2.data) existing = r2.data;
-    }
-    if (!existing && emailArr.length) {
-      const r3 = await client.from('contacts').select('id, phones, emails, zip, city, state, lat, lng, notes').contains('emails', [emailArr[0]]).maybeSingle();
-      if (r3.data) existing = r3.data;
-    }
-
-    const phonesArr = (e164 && tenFromE164 && tenFromE164 !== e164) ? [e164, tenFromE164] : (e164 ? [e164] : (tenFromE164 ? [tenFromE164] : []));
-    let contactId;
-
-    if (existing) {
-      const mergedPhones = Array.from(new Set([...(existing.phones || []), ...phonesArr].filter(Boolean)));
-      const mergedEmails = Array.from(new Set([...(existing.emails || []), ...emailArr].filter(Boolean)));
-      const newZip   = contactInfo.zip || existing.zip || null;
-      const newNotes = contactInfo.notes ? (existing.notes ? `${existing.notes} || ${contactInfo.notes}` : contactInfo.notes) : (existing.notes || null);
-
-      const updatePayload = {
-        phones: mergedPhones,
-        emails: mergedEmails,
-        zip: newZip,
-        city: contactInfo.city ?? existing.city ?? null,
-        state: contactInfo.state ?? existing.state ?? null,
-        lat: contactInfo.lat ?? existing.lat ?? null,
-        lng: contactInfo.lng ?? existing.lng ?? null,
-        tcpaconsent: true,
-        consent_source: 'website',
-        consent_at: new Date().toISOString(),
-        notes: newNotes,
-        needs_dnc_check: false
-      };
-      if (contactInfo.first_name?.trim()) updatePayload.first_name = contactInfo.first_name.trim();
-      if (contactInfo.last_name?.trim())  updatePayload.last_name  = contactInfo.last_name.trim();
-
-      const { data: updated, error: uerr } = await client.from('contacts').update(updatePayload).eq('id', existing.id).select('id').single();
-      if (uerr) throw new Error(uerr.message);
-      contactId = updated.id;
-    } else {
-      const { data: inserted, error: ierr } = await client
-        .from('contacts')
-        .insert({
-          first_name: contactInfo.first_name,
-          last_name:  contactInfo.last_name,
-          phones: phonesArr,
-          emails: emailArr,
-          zip: contactInfo.zip || null,
-          city: contactInfo.city || null,
-          state: contactInfo.state || null,
-          lat: contactInfo.lat ?? null,
-          lng: contactInfo.lng ?? null,
-          contact_status: 'new',
-          tcpaconsent: true,
-          consent_source: 'website',
-          consent_at: new Date().toISOString(),
-          notes: contactInfo.notes || null,
-          needs_dnc_check: false
-        })
-        .select('id')
-        .single();
-      if (ierr) throw new Error(ierr.message);
-      contactId = inserted.id;
-    }
-
-    // Insert leads (unique product types), WITH geo + age
-    const leadPhone = e164 ? [e164] : (tenFromE164 ? [tenFromE164] : []);
-    const insertedOrExisting = [];
-    const candidateEmail = contactInfo.email?.trim() ? contactInfo.email.trim() : null;
-
-    for (const pt of productTypes) {
-      const dup = await findDuplicateLeadByNamePlusOne({
-        first_name: contactInfo.first_name,
-        last_name:  contactInfo.last_name,
-        phoneArr:   leadPhone,
-        email:      candidateEmail,
-        zip:        contactInfo.zip || null,
-        product_type: pt,
-        windowDays: 90
-      });
-      if (dup) { insertedOrExisting.push({ id: dup.id, product_type: dup.product_type, duplicate: true }); continue; }
-
-      const payload = {
-        first_name: contactInfo.first_name,
-        last_name:  contactInfo.last_name,
-        zip:        contactInfo.zip || null,
-        city:       contactInfo.city || null,
-        state:      contactInfo.state || null,
-        lat:        contactInfo.lat ?? null,
-        lng:        contactInfo.lng ?? null,
-        age:        contactInfo.age ?? null,
-        phone:      leadPhone,
-        email:      candidateEmail ? [candidateEmail] : [],
-        lead_type:  'Web',
-        product_type: pt,
-        contact_id: contactId,
-        submitted_by: window.FVG_WEBSITE_SUBMITTER_ID,
-        submitted_by_name: window.FVG_WEBSITE_SUBMITTER_NAME || 'Website Lead',
-        notes: perTypeNotes.get(pt) || contactInfo.notes || null
-      };
-
-      const { data: one, error: insErr } = await client.from('leads').insert([payload]).select('id, product_type').single();
-      if (insErr) throw new Error(insErr.message);
-      insertedOrExisting.push({ id: one.id, product_type: one.product_type, duplicate: false });
-    }
-
-    return { contactId, leads: insertedOrExisting };
-  }
-
-  // === Submit handler ===
+  // === Submit handler (NOW calls server-side function for the full workflow) ===
   btnSubmit.addEventListener('click', async () => {
     [firstName, lastName, phone, email].forEach(clearInvalid);
 
@@ -759,16 +375,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return;
       }
 
-      // Choose eligible agent BEFORE any inserts (compliance-safe)
-      const choice = await pickAgentForAll(requiredLines, DETECTED_GEO.state);
-      if (choice.reason === 'none_fit') {
-        alert('We’re sorry — we don’t currently have a licensed agent for your selection in your state.');
-        btnSubmit.disabled = false;
-        btnSubmit.textContent = prev;
-        return;
-      }
-
-      // Prepare contact payload including GEO + age
+      // Prepare contact payload including GEO + age (same as before)
       const contactInfo = {
         first_name: firstName.value.trim(),
         last_name:  lastName.value.trim(),
@@ -783,51 +390,58 @@ document.addEventListener('DOMContentLoaded', () => {
         notes:      baseNotes.join(' || ')
       };
 
-      // Insert/update contact + insert leads
-      const { contactId, leads } = await insertContactAndLeads(contactInfo, perTypeNotes, productTypes);
-      await createLeadDebtsForSubmission({
-        agentId: choice.agent.id,
-        createdBy: window.FVG_WEBSITE_SUBMITTER_ID,
-        contactId,
-        leads,
-        total: 60
+      // Call server-side submit (Step 2 will provide the function)
+      const resp = await fetch('/.netlify/functions/submitQuote', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          // core routing context
+          selections,
+          requiredLines,
+          productTypes,
+          state: DETECTED_GEO.state,
+
+          // notes (server expects object form)
+          perTypeNotes: Object.fromEntries(perTypeNotes.entries()),
+
+          // contact + meta
+          contactInfo,
+
+          // keep these consistent with your existing globals
+          totalDebtCharge: 60,
+          submittedBy: window.FVG_WEBSITE_SUBMITTER_ID,
+          submittedByName: window.FVG_WEBSITE_SUBMITTER_NAME || 'Website Lead'
+        })
       });
 
-      // pick the “best” lead for whisper: prefer Property if both Property & Casualty exist
-      const pickLeadIdForCall = (() => {
-        const prop = leads.find(l => l.product_type === 'Property Insurance');
-        if (prop) return prop.id;
-        return leads[0]?.id || null;
-      })();
+      const rawText = await resp.text();
+      let json = {};
+      try { json = JSON.parse(rawText || '{}'); } catch { json = { ok:false, error: rawText || 'Bad JSON' }; }
 
-      // Assign to chosen agent, set ownership, bump last_assigned_at
-      const nowIso = new Date().toISOString();
+      if (!resp.ok) {
+        throw new Error(json?.error || `submitQuote failed (${resp.status})`);
+      }
 
-      await supabase.from('leads')
-        .update({ assigned_to: choice.agent.id, assigned_at: nowIso })
-        .in('id', leads.map(x => x.id));
+      // If server says none_fit, mirror old behavior
+      if (!json.ok || json.reason === 'none_fit' || json?.choice?.reason === 'none_fit') {
+        alert('We’re sorry — we don’t currently have a licensed agent for your selection in your state.');
+        btnSubmit.disabled = false;
+        btnSubmit.textContent = prev;
+        return;
+      }
 
-      await supabase.from('contacts')
-        .update({ owning_agent_id: choice.agent.id })
-        .eq('id', contactId);
+      const leads = Array.isArray(json.leads) ? json.leads : [];
+      const pickLeadIdForCall = json.pickLeadIdForCall || (leads[0]?.id ?? null);
 
-      await supabase.from('agents')
-        .update({ last_assigned_at: nowIso })
-        .eq('id', choice.agent.id);
+      // Only auto-dial if the chosen agent is available (server decides shouldCall)
+      const shouldCall = !!json?.choice?.shouldCall;
+      const agentPhone = json?.choice?.agent?.phone;
 
-      // Optional: mark contacted_at immediately
-      await supabase.from('leads')
-        .update({ contacted_at: new Date().toISOString() })
-        .in('id', leads.map(x => x.id));
-
-      // Only auto-dial if the chosen agent is available
-      if (choice.shouldCall && pickLeadIdForCall) {
-        const rawAgentNumber = Array.isArray(choice.agent.phone) ? choice.agent.phone[0] : choice.agent.phone;
+      if (shouldCall && pickLeadIdForCall) {
+        const rawAgentNumber = Array.isArray(agentPhone) ? agentPhone[0] : agentPhone;
         const agentNumber    = toE164(rawAgentNumber);
 
         if (agentNumber && e164Prospect) {
-          // Build a human whisper (Telnyx will speak this). We’ll parse on the webhook too,
-          // but passing it makes the intent explicit.
           const wants = selections
             .map(s => {
               if (s === 'Myself') return 'their life';
@@ -842,26 +456,26 @@ document.addEventListener('DOMContentLoaded', () => {
             })
             .join(' and ');
 
-          const resp = await fetch('/.netlify/functions/makeCall', {
+          const callResp = await fetch('/.netlify/functions/makeCall', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              agentId: choice.agent.id,
+              agentId: json?.choice?.agent?.id,
               agentNumber,
               prospectNumber: e164Prospect,
               leadId: pickLeadIdForCall,
               whisper: `New lead: ${firstName.value.trim()} ${lastName.value.trim()}, wants to cover ${wants}, press 1 to connect`
             })
           });
-          const rawText = await resp.text();
-          console.log('makeCall status:', resp.status, 'body:', rawText);
-          if (!resp.ok) {
-            alert(`We couldn’t start the call automatically (code ${resp.status}). We’ll follow up ASAP.`);
+          const callBody = await callResp.text();
+          console.log('makeCall status:', callResp.status, 'body:', callBody);
+          if (!callResp.ok) {
+            alert(`We couldn’t start the call automatically (code ${callResp.status}). We’ll follow up ASAP.`);
           }
         }
       }
 
-      // Thank-you screen
+      // Thank-you screen (same UI as before)
       const resTitle = document.getElementById('result-title');
       const resBody  = document.getElementById('result-body');
       const resActions = document.getElementById('result-actions');
@@ -885,6 +499,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
       show(resultScr);
       hideAllModals();
+
     } catch (err) {
       alert(`Could not submit: ${err.message||'unknown error'}`);
       show(step3);
