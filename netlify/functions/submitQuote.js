@@ -416,7 +416,7 @@ export const handler = async (event) => {
         source: "freequote",
         amount: perLead,
         status: "open",
-        created_by: createdBy || null,
+        created_by: null,
         metadata: {
           contact_id: contactId,
           total_contact_charge: total,
