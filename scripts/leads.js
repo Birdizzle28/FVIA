@@ -405,7 +405,8 @@ async function ensureContactIdFromLeadForm() {
   return inserted.id;
 }
 
-// ---------- leads table ----------function updatePaginationControls() {
+// ---------- leads table ----------
+function updatePaginationControls() {
   const label = $("#agent-current-page");
   const prev = $("#agent-prev-page");
   const next = $("#agent-next-page");
