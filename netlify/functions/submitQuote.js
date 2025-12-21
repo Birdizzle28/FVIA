@@ -436,6 +436,15 @@ export const handler = async (event) => {
       return { statusCode: 200, body: JSON.stringify({ ok: false, reason: "none_fit" }) };
     }
 
+  const { data: lifted, error: liftErr } = await supabase.rpc("lift_internal_dnc_on_new_consent", {
+    p_first_name: contactInfo.first_name,
+    p_last_name:  contactInfo.last_name,
+    p_phone:      contactInfo.phone || null,
+    p_email:      contactInfo.email || null,
+    p_actor_id:   submittedBy || null
+  });
+
+if (liftErr) throw new Error(`lift_internal_dnc_on_new_consent failed: ${liftErr.message}`);
     // Insert/update contact + insert leads
     const { contactId, leads } = await insertContactAndLeads(
       contactInfo,
