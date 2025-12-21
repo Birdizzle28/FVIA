@@ -94,12 +94,25 @@
 				<!-- rows injected by JS -->
 				</div>
 				<div id="contacts-bulk-actions" style="display:none;position:sticky;bottom:0;background:#fff;border-top:1px solid #e9eaf0;padding:10px;display:flex;gap:12px;justify-content:space-between;align-items:center;">
-					<div>
-						<strong><span id="contacts-selected-count">0</span></strong> selected
-					</div>
-					<button id="contacts-bulk-save" class="see-all">
-						<i class="fa-solid fa-download"></i> Save selected to phone (.vcf)
-					</button>
+				  <div>
+				    <strong><span id="contacts-selected-count">0</span></strong> selected
+				  </div>
+				
+				  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:flex-end;">
+				    <button id="contacts-bulk-route" class="see-all">
+				      <i class="fa-solid fa-route"></i> Route
+				    </button>
+				    <button id="contacts-bulk-quote" class="see-all">
+				      <i class="fa-solid fa-file-invoice-dollar"></i> Quote
+				    </button>
+				    <button id="contacts-bulk-schedule" class="see-all">
+				      <i class="fa-solid fa-calendar-check"></i> Schedule
+				    </button>
+				
+				    <button id="contacts-bulk-save" class="see-all">
+				      <i class="fa-solid fa-download"></i> Save selected to phone (.vcf)
+				    </button>
+				  </div>
 				</div>
 				<div id="contact-detail-modal" class="overlay" aria-hidden="true">
 					<div class="overlay-backdrop" data-close></div>
