@@ -916,6 +916,39 @@ function saveSelectedContacts() {
   downloadText(`FVIA_Contacts_${pick.length}.vcf`, text);
 }
 
+async function addSelectedContactsToDnc() {
+  const ids = Array.from(selectedIds);
+  if (!ids.length) return;
+
+  const confirmed = window.confirm(
+    `⚠️ Add to Do Not Call\n\nYou are about to mark ${ids.length} contact(s) as INTERNAL DNC (active).\n\nThey will disappear from your contacts list and their leads will be filtered out.\n\nContinue?`
+  );
+  if (!confirmed) return;
+
+  const reason = "Agent marked Do Not Call";
+  const notes = null;
+
+  const { data, error } = await supabase.rpc("add_contacts_to_internal_dnc", {
+    p_contact_ids: ids,
+    p_reason: reason,
+    p_notes: notes,
+  });
+
+  if (error) {
+    console.error(error);
+    alert("Failed to add to internal DNC.");
+    return;
+  }
+
+  const inserted = Array.isArray(data) ? data[0]?.inserted_count : data?.inserted_count;
+  alert(`Done. Added ${inserted ?? 0} contact(s) to internal DNC.`);
+
+  // Clear selection + refresh lists
+  selectedIds.clear();
+  await loadContacts();
+  await loadAgentLeads();
+}
+
 // ---------- submit lead ----------
 function submitLeadToSupabase(agentProfile) {
   const form = $("#lead-form");
@@ -1081,7 +1114,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("#contacts-bulk-schedule")?.addEventListener("click", () => {
     alert("Schedule: coming soon");
   });
-
+  $("#contacts-bulk-dnc")?.addEventListener("click", addSelectedContactsToDnc);
   $("#contacts-select-toggle")?.addEventListener("click", () => {
     selectMode = !selectMode;
     if (!selectMode) selectedIds.clear();
