@@ -8,6 +8,40 @@ const PAGE_SIZE = 25;
 let contactChoices = null;
 
 // ---------- helpers ----------
+function escapeHtml(str) {
+  if (str == null) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+function linesToArray(v) {
+  return String(v || "")
+    .split("\n")
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
+function arrToLines(arr) {
+  return (arr || []).filter(Boolean).join("\n");
+}
+
+async function fetchContactLeads(contactId) {
+  const { data, error } = await supabase
+    .from("leads")
+    .select("id, created_at, product_type, lead_type")
+    .eq("contact_id", contactId)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (error) {
+    console.error("fetchContactLeads error:", error);
+    return [];
+  }
+  return data || [];
+}
+
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
 
@@ -102,7 +136,7 @@ function toE164(v) {
 function contactToVCard(c) {
   const first = c.first_name || "";
   const last = c.last_name || "";
-  const org = "Family Values Insurance Agency";
+  const org = "Family Values Group";
   const phones = Array.isArray(c.phones) ? c.phones : (c.phones ? [c.phones] : []);
   const emails = Array.isArray(c.emails) ? c.emails : (c.emails ? [c.emails] : []);
 
@@ -533,18 +567,16 @@ function updateBulkBar() {
   if (bar) bar.style.display = count > 0 ? "flex" : "none";
 }
 
-function openContactDetail(c) {
+async function openContactDetail(c) {
   const modal = $("#contact-detail-modal");
   const title = $("#contact-modal-name");
   const body = $("#contact-modal-body");
   if (!modal || !title || !body) return;
 
   const name = `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Contact";
-
   title.textContent = name;
 
-  // ✅ contacts schema uses address_line1/address_line2
-  const addr = [
+  const addrText = [
     c.address_line1,
     c.address_line2,
     c.city,
@@ -553,25 +585,220 @@ function openContactDetail(c) {
   ].filter(Boolean).join(", ");
 
   body.innerHTML = `
-    <p><strong><i class="fa-solid fa-phone"></i> Phone(s):</strong><br>${
-      (c.phones || []).map((p) => `<a href="tel:${toE164(p) || p}">${p}</a>`).join("<br>") || "—"
-    }</p>
-    <p><strong><i class="fa-solid fa-envelope"></i> Email(s):</strong><br>${
-      (c.emails || []).map((e) => `<a href="mailto:${e}">${e}</a>`).join("<br>") || "—"
-    }</p>
-    <p><strong><i class="fa-solid fa-location-dot"></i> Address:</strong><br>${addr || "—"}</p>
-    ${c.notes ? `<p><strong><i class="fa-solid fa-note-sticky"></i> Notes:</strong><br>${c.notes}</p>` : ""}
-    <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
-      <button id="contact-save-one" class="see-all"><i class="fa-solid fa-download"></i> Save to phone (.vcf)</button>
+    <div class="contact-ov">
+
+      <!-- Phones -->
+      <div class="contact-sec" data-sec="phones">
+        <div class="contact-sec-head">
+          <strong><i class="fa-solid fa-phone"></i> Phone(s)</strong>
+          <button class="contact-edit-btn" data-edit="phones" title="Edit phones">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+        </div>
+
+        <div class="contact-sec-view" data-view="phones">
+          ${
+            (c.phones || []).length
+              ? (c.phones || []).map(p => `<a href="tel:${toE164(p) || p}">${escapeHtml(p)}</a>`).join("<br>")
+              : "—"
+          }
+        </div>
+
+        <div class="contact-sec-edit" data-form="phones" style="display:none;">
+          <textarea id="edit-phones" rows="4" style="width:100%;padding:10px;border:1px solid #d6d9e2;border-radius:0;">${escapeHtml(arrToLines(c.phones || []))}</textarea>
+          <small style="opacity:.75;">One phone per line</small>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+            <button class="see-all" data-cancel="phones">Cancel</button>
+            <button class="see-all" data-save="phones"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Emails -->
+      <div class="contact-sec" data-sec="emails">
+        <div class="contact-sec-head">
+          <strong><i class="fa-solid fa-envelope"></i> Email(s)</strong>
+          <button class="contact-edit-btn" data-edit="emails" title="Edit emails">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+        </div>
+
+        <div class="contact-sec-view" data-view="emails">
+          ${
+            (c.emails || []).length
+              ? (c.emails || []).map(e => `<a href="mailto:${escapeHtml(e)}">${escapeHtml(e)}</a>`).join("<br>")
+              : "—"
+          }
+        </div>
+
+        <div class="contact-sec-edit" data-form="emails" style="display:none;">
+          <textarea id="edit-emails" rows="4" style="width:100%;padding:10px;border:1px solid #d6d9e2;border-radius:0;">${escapeHtml(arrToLines(c.emails || []))}</textarea>
+          <small style="opacity:.75;">One email per line</small>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+            <button class="see-all" data-cancel="emails">Cancel</button>
+            <button class="see-all" data-save="emails"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Address -->
+      <div class="contact-sec" data-sec="address">
+        <div class="contact-sec-head">
+          <strong><i class="fa-solid fa-location-dot"></i> Address</strong>
+          <button class="contact-edit-btn" data-edit="address" title="Edit address">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+        </div>
+
+        <div class="contact-sec-view" data-view="address">
+          ${escapeHtml(addrText || "—")}
+        </div>
+
+        <div class="contact-sec-edit" data-form="address" style="display:none;">
+          <input id="edit-address1" type="text" placeholder="Address line 1" value="${escapeHtml(c.address_line1 || "")}" style="width:100%;padding:10px;border:1px solid #d6d9e2;border-radius:0;margin-bottom:8px;">
+          <input id="edit-address2" type="text" placeholder="Address line 2" value="${escapeHtml(c.address_line2 || "")}" style="width:100%;padding:10px;border:1px solid #d6d9e2;border-radius:0;margin-bottom:8px;">
+          <div style="display:grid;grid-template-columns:1fr 120px 120px;gap:8px;">
+            <input id="edit-city"  type="text" placeholder="City"  value="${escapeHtml(c.city || "")}" style="padding:10px;border:1px solid #d6d9e2;border-radius:0;">
+            <input id="edit-state" type="text" placeholder="State" value="${escapeHtml(c.state || "")}" style="padding:10px;border:1px solid #d6d9e2;border-radius:0;">
+            <input id="edit-zip"   type="text" placeholder="ZIP"   value="${escapeHtml(c.zip || "")}" style="padding:10px;border:1px solid #d6d9e2;border-radius:0;">
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+            <button class="see-all" data-cancel="address">Cancel</button>
+            <button class="see-all" data-save="address"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notes -->
+      <div class="contact-sec" data-sec="notes">
+        <div class="contact-sec-head">
+          <strong><i class="fa-solid fa-note-sticky"></i> Notes</strong>
+          <button class="contact-edit-btn" data-edit="notes" title="Edit notes">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+        </div>
+
+        <div class="contact-sec-view" data-view="notes">
+          ${c.notes ? escapeHtml(c.notes) : "—"}
+        </div>
+
+        <div class="contact-sec-edit" data-form="notes" style="display:none;">
+          <textarea id="edit-notes" rows="5" style="width:100%;padding:10px;border:1px solid #d6d9e2;border-radius:0;">${escapeHtml(c.notes || "")}</textarea>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+            <button class="see-all" data-cancel="notes">Cancel</button>
+            <button class="see-all" data-save="notes"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Connected Leads -->
+      <div class="contact-sec" data-sec="leads">
+        <div class="contact-sec-head">
+          <strong><i class="fa-solid fa-link"></i> Connected Leads</strong>
+        </div>
+        <div id="contact-leads-list" style="opacity:.85;">Loading…</div>
+      </div>
+
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
+        <button id="contact-save-one" class="see-all"><i class="fa-solid fa-download"></i> Save to phone (.vcf)</button>
+      </div>
+
     </div>
   `;
 
   modal.classList.add("open");
   modal.setAttribute("aria-hidden", "false");
 
+  // Save single
   $("#contact-save-one")?.addEventListener("click", () =>
     downloadText(`${name || "contact"}.vcf`, contactToVCard(c))
   );
+
+  // Load connected leads
+  const leadsBox = $("#contact-leads-list");
+  const leads = await fetchContactLeads(c.id);
+  if (leadsBox) {
+    if (!leads.length) {
+      leadsBox.textContent = "—";
+    } else {
+      leadsBox.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:6px;">
+          ${leads.map(l => {
+            const d = l.created_at ? new Date(l.created_at).toLocaleDateString() : "";
+            const what = l.product_type || l.lead_type || "Lead";
+            return `<div style="border:1px solid #eef0f6;padding:8px;">
+              <strong>${escapeHtml(what)}</strong><br>
+              <span style="opacity:.8;">${escapeHtml(d)}</span>
+            </div>`;
+          }).join("")}
+        </div>
+      `;
+    }
+  }
+
+  // Edit toggles
+  function showEdit(sec) {
+    body.querySelector(`[data-view="${sec}"]`)?.setAttribute("style", "display:none;");
+    body.querySelector(`[data-form="${sec}"]`)?.setAttribute("style", "display:block;");
+  }
+  function hideEdit(sec) {
+    body.querySelector(`[data-form="${sec}"]`)?.setAttribute("style", "display:none;");
+    body.querySelector(`[data-view="${sec}"]`)?.setAttribute("style", "display:block;");
+  }
+
+  body.querySelectorAll("[data-edit]").forEach(btn => {
+    btn.addEventListener("click", () => showEdit(btn.getAttribute("data-edit")));
+  });
+
+  body.querySelectorAll("[data-cancel]").forEach(btn => {
+    btn.addEventListener("click", () => hideEdit(btn.getAttribute("data-cancel")));
+  });
+
+  // Saves
+  body.querySelectorAll("[data-save]").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const sec = btn.getAttribute("data-save");
+      let update = {};
+
+      if (sec === "phones") {
+        update.phones = linesToArray($("#edit-phones")?.value);
+      }
+      if (sec === "emails") {
+        update.emails = linesToArray($("#edit-emails")?.value);
+      }
+      if (sec === "notes") {
+        update.notes = ($("#edit-notes")?.value || "").trim() || null;
+      }
+      if (sec === "address") {
+        update.address_line1 = ($("#edit-address1")?.value || "").trim() || null;
+        update.address_line2 = ($("#edit-address2")?.value || "").trim() || null;
+        update.city = ($("#edit-city")?.value || "").trim() || null;
+        update.state = ($("#edit-state")?.value || "").trim() || null;
+        update.zip = ($("#edit-zip")?.value || "").trim() || null;
+      }
+
+      const { data: updated, error } = await supabase
+        .from("contacts")
+        .update(update)
+        .eq("id", c.id)
+        .select("*")
+        .single();
+
+      if (error) {
+        alert("Failed to save contact changes.");
+        console.error(error);
+        return;
+      }
+
+      // update local cache + re-render list
+      const idx = contacts.findIndex(x => x.id === c.id);
+      if (idx >= 0) contacts[idx] = updated;
+
+      // reopen overlay with fresh data (keeps everything in sync)
+      renderContacts();
+      openContactDetail(updated);
+    });
+  });
 }
 
 function renderContacts() {
@@ -840,6 +1067,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   $("#contacts-refresh")?.addEventListener("click", loadContacts);
   $("#contacts-search")?.addEventListener("input", renderContacts);
   $("#contacts-order")?.addEventListener("change", renderContacts);
+  $("#contacts-bulk-route")?.addEventListener("click", () => {
+    alert("Route: coming soon");
+  });
+  $("#contacts-bulk-quote")?.addEventListener("click", () => {
+    alert("Quote: coming soon");
+  });
+  $("#contacts-bulk-schedule")?.addEventListener("click", () => {
+    alert("Schedule: coming soon");
+  });
 
   $("#contacts-select-toggle")?.addEventListener("click", () => {
     selectMode = !selectMode;
