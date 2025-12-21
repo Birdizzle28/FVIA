@@ -405,11 +405,15 @@ async function ensureContactIdFromLeadForm() {
   return inserted.id;
 }
 
-// ---------- leads table ----------
-function updatePaginationControls() {
-  $("#agent-current-page") && ($("#agent-current-page").textContent = `Page ${agentCurrentPage}`);
-  $("#agent-prev-page")?.toggleAttribute("disabled", agentCurrentPage === 1);
-  $("#agent-next-page")?.toggleAttribute("disabled", agentCurrentPage === agentTotalPages);
+// ---------- leads table ----------function updatePaginationControls() {
+  const label = $("#agent-current-page");
+  const prev = $("#agent-prev-page");
+  const next = $("#agent-next-page");
+
+  if (label) label.textContent = `Page ${agentCurrentPage}`;
+
+  if (prev) prev.disabled = agentCurrentPage === 1;
+  if (next) next.disabled = agentCurrentPage === agentTotalPages;
 }
 
 async function loadAgentLeads() {
@@ -907,7 +911,7 @@ async function loadContacts() {
 function saveSelectedContacts() {
   const pick = contacts.filter((c) => selectedIds.has(c.id));
   if (!pick.length) return;
-  const text = pick.map(contactToVCard).join("\r\n");
+  const text = pick.map(contactToVCard).join("\r\n\r\n");
   downloadText(`FVIA_Contacts_${pick.length}.vcf`, text);
 }
 
