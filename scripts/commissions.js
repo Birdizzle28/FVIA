@@ -5,6 +5,14 @@ let myProfile = null; // row from agents table
 // We'll keep these in sync with Supabase so all UI uses the same numbers
 let leadBalance = 0;
 let chargebackBalance = 0;
+// ---- Policies filters state ----
+let policiesFp = null; // flatpickr instance (if loaded)
+let policiesFilters = {
+  startISO: null,   // YYYY-MM-DD
+  endISO: null,     // YYYY-MM-DD
+  carrier: '',
+  status: ''
+};
 // Cache so we don't re-fetch names every toggle
 let agentNameMapCache = {}; // { [agentId]: full_name }
 
@@ -91,6 +99,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ----- 4. Wire up tabs & basic UI -----
   initTabs();
   initPoliciesDateRange();
+  initPoliciesFilters();
+  await populatePoliciesCarrierDropdown();
   initFilesChips();
   initTeamAgentPanelToggle();
 
@@ -374,9 +384,28 @@ function initPoliciesDateRange() {
 
   // If flatpickr is available, use it. If not, just leave the plain input.
   if (window.flatpickr) {
-    window.flatpickr(input, {
+    policiesFp = window.flatpickr(input, {
       mode: 'range',
-      dateFormat: 'Y-m-d'
+      dateFormat: 'Y-m-d',
+      onChange: (selectedDates) => {
+        // Keep filters in sync when user picks dates
+        if (Array.isArray(selectedDates) && selectedDates.length) {
+          const start = selectedDates[0] ? toISODate(selectedDates[0]) : null;
+          const end = selectedDates[1] ? toISODate(selectedDates[1]) : start;
+          policiesFilters.startISO = start;
+          policiesFilters.endISO = end;
+        } else {
+          policiesFilters.startISO = null;
+          policiesFilters.endISO = null;
+        }
+      }
+    });
+  } else {
+    // No flatpickr loaded: user can type "YYYY-MM-DD to YYYY-MM-DD" or "YYYY-MM-DD - YYYY-MM-DD"
+    input.addEventListener('change', () => {
+      const { startISO, endISO } = parseDateRangeInput(input.value);
+      policiesFilters.startISO = startISO;
+      policiesFilters.endISO = endISO;
     });
   }
 }
@@ -655,41 +684,169 @@ function initBalanceScopeToggle() {
   // Run once on load
   applyScope();
 }
+function toISODate(d) {
+  // local YYYY-MM-DD (no UTC shift)
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+function addDaysISO(iso, days) {
+  const [y, m, d] = String(iso).split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  dt.setDate(dt.getDate() + (Number(days) || 0));
+  return toISODate(dt);
+}
+
+function parseDateRangeInput(str) {
+  const raw = String(str || '').trim();
+  if (!raw) return { startISO: null, endISO: null };
+
+  // Accept: "YYYY-MM-DD to YYYY-MM-DD" OR "YYYY-MM-DD - YYYY-MM-DD"
+  let parts = raw.split(' to ');
+  if (parts.length === 1) parts = raw.split(' - ');
+
+  const start = (parts[0] || '').trim();
+  const end = (parts[1] || '').trim();
+
+  const looksLikeISO = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s);
+  if (!looksLikeISO(start)) return { startISO: null, endISO: null };
+
+  if (end && looksLikeISO(end)) return { startISO: start, endISO: end };
+  return { startISO: start, endISO: start };
+}
+
+async function populatePoliciesCarrierDropdown() {
+  const sel = document.getElementById('policies-carrier');
+  if (!sel || !me) return;
+
+  // Pull carrier_name values for THIS agent and build a unique list
+  const { data, error } = await supabase
+    .from('agent_policy_commissions_view')
+    .select('carrier_name')
+    .eq('agent_id', me.id);
+
+  if (error) {
+    console.error('Error loading carriers for dropdown:', error);
+    return;
+  }
+
+  const carriers = Array.from(
+    new Set((data || []).map(r => (r.carrier_name || '').trim()).filter(Boolean))
+  ).sort((a, b) => a.localeCompare(b));
+
+  // Keep the first "All carriers" option
+  sel.innerHTML = `<option value="">All carriers</option>` + carriers
+    .map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`)
+    .join('');
+}
+
+function initPoliciesFilters() {
+  const dateInput = document.getElementById('policies-date-range');
+  const carrierSel = document.getElementById('policies-carrier');
+  const statusSel = document.getElementById('policies-status');
+  const applyBtn = document.getElementById('policies-apply-filters');
+  const resetBtn = document.getElementById('policies-reset-filters');
+
+  if (!applyBtn || !resetBtn) return;
+
+  // Keep state updated when user changes carrier/status
+  if (carrierSel) {
+    carrierSel.addEventListener('change', () => {
+      policiesFilters.carrier = carrierSel.value || '';
+    });
+  }
+  if (statusSel) {
+    statusSel.addEventListener('change', () => {
+      policiesFilters.status = statusSel.value || '';
+    });
+  }
+
+  applyBtn.addEventListener('click', async () => {
+    // If flatpickr not present, parse typed range
+    if (!policiesFp && dateInput) {
+      const { startISO, endISO } = parseDateRangeInput(dateInput.value);
+      policiesFilters.startISO = startISO;
+      policiesFilters.endISO = endISO;
+    }
+
+    await loadAndRenderPolicies(policiesFilters);
+  });
+
+  resetBtn.addEventListener('click', async () => {
+    // Clear UI
+    if (policiesFp) {
+      policiesFp.clear();
+    } else if (dateInput) {
+      dateInput.value = '';
+    }
+
+    if (carrierSel) carrierSel.value = '';
+    if (statusSel) statusSel.value = '';
+
+    // Clear state
+    policiesFilters = { startISO: null, endISO: null, carrier: '', status: '' };
+
+    await loadAndRenderPolicies(policiesFilters);
+  });
+}
 
 /* ===============================
    REAL Policies & Details
    =============================== */
 
-async function loadAndRenderPolicies() {
+async function loadAndRenderPolicies(filters = null) {
   if (!me) return;
 
   const tbody = document.querySelector('#policies-table tbody');
   if (!tbody) return;
 
+  const f = filters || policiesFilters;
+
   try {
-    const { data, error } = await supabase
+    let q = supabase
       .from('agent_policy_commissions_view')
       .select(
         'policy_id, agent_id, written_at, policyholder_name, carrier_name, product_line, status, ap, advance_amount, renewal_amount, total_commission'
       )
-      .eq('agent_id', me.id)
-      .order('written_at', { ascending: false });
+      .eq('agent_id', me.id);
+
+    // Date range filter (written_at)
+    if (f?.startISO) {
+      q = q.gte('written_at', f.startISO);
+    }
+    if (f?.endISO) {
+      // use < next day to include entire end date
+      const nextDay = addDaysISO(f.endISO, 1);
+      q = q.lt('written_at', nextDay);
+    }
+
+    // Carrier filter
+    if (f?.carrier) {
+      q = q.eq('carrier_name', f.carrier);
+    }
+
+    // Status filter
+    if (f?.status) {
+      q = q.eq('status', f.status);
+    }
+
+    const { data, error } = await q.order('written_at', { ascending: false });
 
     if (error) {
       console.error('Error loading agent_policy_commissions_view:', error);
-      renderPlaceholderPolicies(); // fallback if view/policy_commissions not ready yet
+      renderPlaceholderPolicies();
       return;
     }
 
     if (!data || data.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="9">No policy commissions found for you yet.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="9">No policies match your filters.</td></tr>`;
       return;
     }
 
     tbody.innerHTML = data.map(row => {
-      const writtenDate = row.written_at
-        ? new Date(row.written_at).toLocaleDateString()
-        : '—';
+      const writtenDate = row.written_at ? new Date(row.written_at).toLocaleDateString() : '—';
       const name = row.policyholder_name || '—';
       const carrier = row.carrier_name || '—';
       const product = row.product_line || '—';
@@ -718,6 +875,7 @@ async function loadAndRenderPolicies() {
     renderPlaceholderPolicies();
   }
 }
+
 /* ===============================
    REAL Payouts (advance + pay-thru)
    =============================== */
