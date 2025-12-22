@@ -527,7 +527,7 @@ async function loadAgentLeads() {
       <td>${l.last_name || ""}</td>
       <td>${l.age ?? ""}</td>
       <td>${(l.phone || []).join(", ")}</td>
-      <td>${l.address_line1 || ""}</td>
+      <td>${l.address || ""}</td>
       <td>${l.city || ""}</td>
       <td>${l.state || ""}</td>
       <td>${l.zip || ""}</td>
