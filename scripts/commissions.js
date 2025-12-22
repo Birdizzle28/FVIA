@@ -440,7 +440,7 @@ async function loadAndRenderLeadDebts(scope = 'me', teamIds = []) {
 
   const tbody = document.querySelector('#lead-debts-table tbody');
   if (!tbody) return;
-
+   setLeadDebtAgentColumnVisible(scope === 'team');
   try {
     let q = supabase
       .from('lead_debts')
@@ -591,7 +591,7 @@ function initBalanceScopeToggle() {
 
   const applyScope = async () => {
     const scope = document.querySelector('input[name="balance-scope"]:checked')?.value || 'me';
-    const teamIds = scope === 'team' ? await getDirectTeamAgentIds() : [];
+    const teamIds = scope === 'team' ? await getAllDownlineAgentIds() : [];
 
     // Reset numbers before reload to avoid mixed UI while loading
     leadBalance = 0;
@@ -1011,4 +1011,18 @@ function escapeHtml(str) {
     .replace(/&/g, '&amp;')
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;');
+}
+
+function setLeadDebtAgentColumnVisible(visible) {
+  const table = document.getElementById('lead-debts-table');
+  if (!table) return;
+
+  // assumes "Agent" is the LAST column in your lead debts table
+  const th = table.querySelector('thead th:last-child');
+  if (th) th.style.display = visible ? '' : 'none';
+
+  table.querySelectorAll('tbody tr').forEach(tr => {
+    const td = tr.querySelector('td:last-child');
+    if (td) td.style.display = visible ? '' : 'none';
+  });
 }
