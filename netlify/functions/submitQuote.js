@@ -518,10 +518,8 @@ export const handler = async (event) => {
     const neededLines = Array.from(new Set(
       (requiredLines || []).map(x => String(x || "").toLowerCase().trim()).filter(Boolean)
     ));
+    
     if (!neededLines.length) neededLines.push("life");
-    // fallback
-    if (neededLinesSet.size === 0) neededLinesSet.add("life");
-    const neededLines = Array.from(neededLinesSet);
 
     // Resolve per-line agent assignments using contactId as person_id
     const pickedAgent = await pickSingleAgentForSubmission(contactId, neededLines);
