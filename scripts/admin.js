@@ -878,11 +878,43 @@ adjustmentForm?.addEventListener('submit', async (e) => {
 
   // If it's a DEBIT + chargeback, also create a policy_chargebacks row
   if (normType === 'debit' && category === 'chargeback') {
+    // Require a policy for chargebacks
+    if (!policy_id) {
+      if (errorEl) errorEl.textContent = 'Please choose a policy for this chargeback.';
+      return;
+    }
+  
+    // 1) Pull carrier + contact for the selected policy
+    const { data: pol, error: polErr } = await supabase
+      .from('policies')
+      .select(`
+        id,
+        carrier_name,
+        contact:contacts (
+          first_name,
+          last_name
+        )
+      `)
+      .eq('id', policy_id)
+      .single();
+  
+    if (polErr) {
+      console.error('Error loading policy for chargeback:', polErr);
+      if (errorEl) errorEl.textContent = 'Could not load policy details: ' + polErr.message;
+      return;
+    }
+  
+    const carrier_name = pol?.carrier_name || null;
+    const policyholder_name = pol?.contact
+      ? [pol.contact.first_name, pol.contact.last_name].filter(Boolean).join(' ').trim() || null
+      : null;
+  
+    // 2) Insert chargeback with filled fields
     const { error: cbErr } = await supabase.from('policy_chargebacks').insert([{
       agent_id,
-      policy_id: policy_id || null,   // link to policies.id
-      carrier_name: null,             // can auto-fill later
-      policyholder_name: null,        // can auto-fill later
+      policy_id,
+      carrier_name,
+      policyholder_name,
       amount: rawAmount,
       status: 'open',
       reason: description || null,
@@ -891,7 +923,7 @@ adjustmentForm?.addEventListener('submit', async (e) => {
         commission_ledger_id: ledgerRow.id
       }
     }]);
-
+  
     if (cbErr) {
       console.error('Error inserting policy_chargeback', cbErr);
       if (errorEl) errorEl.textContent =
