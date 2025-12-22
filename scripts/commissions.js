@@ -67,6 +67,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   me = session.user;
   await loadAndRenderLeadDebts('me', []);
   await loadAndRenderChargebacks('me', []);
+  summaryLeadBalance = leadBalance;
+  summaryChargebackBalance = chargebackBalance;
+  updateBalancesUI({ updateSummary: true, updateBalancesTab: true });
   
   // Force the summary bar to reflect "me"
   updateBalancesUI({ updateSummary: true, updateBalancesTab: true });
@@ -962,11 +965,12 @@ async function loadAndRenderPayouts() {
    =============================== */
 
 function renderPlaceholderSummary() {
-  // Just a soft example so the page doesn’t look dead.
-  const leads = 320;
-  const chargebacks = 180;
-  leadBalance = leads;
-  chargebackBalance = chargebacks;
+  summaryLeadBalance = 320;
+  summaryChargebackBalance = 180;
+
+  // Optional: make the Balances tab show the same placeholders initially
+  leadBalance = summaryLeadBalance;
+  chargebackBalance = summaryChargebackBalance;
 
   updateBalancesUI({ updateSummary: true, updateBalancesTab: true });
 
