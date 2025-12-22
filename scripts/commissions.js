@@ -841,8 +841,12 @@ async function loadAndRenderPolicies(filters = null) {
       return;
     }
 
+    const hasFilters = !!(f?.startISO || f?.endISO || f?.carrier || f?.status);
+
     if (!data || data.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="9">No policies match your filters.</td></tr>`;
+      tbody.innerHTML = hasFilters
+        ? `<tr><td colspan="9">No policies match your filters.</td></tr>`
+        : `<tr><td colspan="9">No policy commissions found for you yet.</td></tr>`;
       return;
     }
 
