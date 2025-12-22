@@ -795,8 +795,8 @@ adjustmentForm?.addEventListener('submit', async (e) => {
   const leadIdRaw = document.getElementById('adjustment-lead')?.value || '';
   const lead_id   = leadIdRaw || null;
 
-  if (!agent_id || !type || !category || !effective_date || !rawAmount) {
-    if (errorEl) errorEl.textContent = 'Please fill in all required fields.';
+  if (!agent_id || !type || !category || !effective_date || !Number.isFinite(rawAmount) || rawAmount <= 0) {
+    errorEl.textContent = 'Please fill in all required fields.';
     return;
   }
 
