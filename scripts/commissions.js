@@ -739,7 +739,10 @@ async function populatePoliciesCarrierDropdown() {
   // Keep the first "All carriers" option
   sel.innerHTML = 
     `<option value="">All carriers</option>` + carriers
-      .map(c => `<option value="${c}">${escapeHtml(c)}</option>`)
+      .map(c => {
+        const safeValue = String(c).replace(/"/g, '&quot;');
+        return `<option value="${safeValue}">${escapeHtml(c)}</option>`;
+      })
       .join('');
 }
 
