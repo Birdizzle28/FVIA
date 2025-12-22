@@ -5,6 +5,39 @@ let myProfile = null; // row from agents table
 // We'll keep these in sync with Supabase so all UI uses the same numbers
 let leadBalance = 0;
 let chargebackBalance = 0;
+// Cache so we don't re-fetch names every toggle
+let agentNameMapCache = {}; // { [agentId]: full_name }
+
+async function getAgentNameMap(agentIds = []) {
+  const ids = (agentIds || []).filter(Boolean);
+  if (!ids.length) return {};
+
+  // return cached if we already have all of them
+  const missing = ids.filter(id => !agentNameMapCache[id]);
+  if (!missing.length) {
+    const out = {};
+    ids.forEach(id => (out[id] = agentNameMapCache[id]));
+    return out;
+  }
+
+  const { data, error } = await supabase
+    .from('agents')
+    .select('id, full_name')
+    .in('id', missing);
+
+  if (error) {
+    console.error('Error loading agent names:', error);
+    // fall back to whatever cache we already have
+  } else {
+    (data || []).forEach(r => {
+      agentNameMapCache[r.id] = r.full_name || '';
+    });
+  }
+
+  const out = {};
+  ids.forEach(id => (out[id] = agentNameMapCache[id] || ''));
+  return out;
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
 
@@ -468,7 +501,8 @@ async function loadAndRenderLeadDebts(scope = 'me', teamIds = []) {
       setTableAgentColumnVisible('lead-debts-table', false);
       return;
     }
-
+   const nameMap = scope === 'team' ? await getAgentNameMap(teamIds) : {};
+     
     if (!data || data.length === 0) {
       tbody.innerHTML = `<tr><td colspan="6">No lead debt records found.</td></tr>`;
     } else {
@@ -478,16 +512,19 @@ async function loadAndRenderLeadDebts(scope = 'me', teamIds = []) {
         const source = row.source || 'FVG';
         const amount = Number(row.amount || 0);
         const status = formatStatus(row.status);
-        const who = scope === 'team' ? (row.agent_id || '—') : '';
+        const who =
+           scope === 'team'
+             ? (nameMap[row.agent_id] || '—')
+             : '';
 
         return `
           <tr>
+             <td class="col-agent">${escapeHtml(who)}</td>
             <td>${date}</td>
             <td>${escapeHtml(type)}</td>
             <td>${escapeHtml(source)}</td>
             <td>${formatMoney(amount)}</td>
             <td>${escapeHtml(status)}</td>
-            <td class="col-agent">${escapeHtml(who)}</td>
           </tr>
         `;
       }).join('');
@@ -548,7 +585,8 @@ async function loadAndRenderChargebacks(scope = 'me', teamIds = []) {
       renderPlaceholderChargebacks();
       return;
     }
-
+   const nameMap = scope === 'team' ? await getAgentNameMap(teamIds) : {};
+     
     if (!data || data.length === 0) {
       tbody.innerHTML = `<tr><td colspan="6">No chargebacks found.</td></tr>`;
     } else {
@@ -558,16 +596,19 @@ async function loadAndRenderChargebacks(scope = 'me', teamIds = []) {
         const name = row.policyholder_name || '—';
         const amount = Number(row.amount || 0);
         const status = formatStatus(row.status);
-        const who = scope === 'team' ? (row.agent_id || '—') : '';
+        const who =
+           scope === 'team'
+             ? (nameMap[row.agent_id] || '—')
+             : '';
 
         return `
           <tr>
+             <td class="col-agent">${escapeHtml(who)}</td>
             <td>${date}</td>
             <td>${escapeHtml(carrier)}</td>
             <td>${escapeHtml(name)}</td>
             <td>${formatMoney(amount)}</td>
             <td>${escapeHtml(status)}</td>
-            <td class="col-agent">${escapeHtml(who)}</td>
           </tr>
         `;
       }).join('');
