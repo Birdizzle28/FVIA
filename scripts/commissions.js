@@ -99,8 +99,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ----- 4. Wire up tabs & basic UI -----
   initTabs();
   initPoliciesDateRange();
-  initPoliciesFilters();
   await populatePoliciesCarrierDropdown();
+  initPoliciesFilters();
   initFilesChips();
   initTeamAgentPanelToggle();
 
