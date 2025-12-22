@@ -369,6 +369,78 @@ export const handler = async (event) => {
       return !!okChain;
     }
 
+    async function pickSingleAgentForSubmission(personId, neededLines) {
+      // 1) Prefer already-connected agents (person_agent_order)
+      const { data: orderRows, error: poErr } = await supabase
+        .from("person_agent_order")
+        .select("agent_id, first_assigned_at")
+        .eq("person_id", personId)
+        .order("first_assigned_at", { ascending: true });
+    
+      if (poErr) throw new Error(poErr.message);
+    
+      const connectedIds = (orderRows || []).map(r => r.agent_id).filter(Boolean);
+    
+      const connectedEligible = [];
+      for (const aid of connectedIds) {
+        const row = await loadAgentRowById(aid);
+        if (!row) continue;
+    
+        let okAll = true;
+        for (const line of neededLines) {
+          const ok = await isAgentEligibleForLine(row, line);
+          if (!ok) { okAll = false; break; }
+        }
+        if (okAll) connectedEligible.push(row);
+      }
+    
+      const byOldest = (arr) =>
+        arr.slice().sort((a, b) => {
+          const ax = a.last_assigned_at ? new Date(a.last_assigned_at).getTime() : 0;
+          const bx = b.last_assigned_at ? new Date(b.last_assigned_at).getTime() : 0;
+          return ax - bx;
+        });
+    
+      if (connectedEligible.length) {
+        const online = connectedEligible.filter(a => !!a.is_available);
+        return (online.length ? byOldest(online)[0] : byOldest(connectedEligible)[0]) || null;
+      }
+    
+      // 2) Else pick fresh from global pool, but MUST satisfy ALL needed lines
+      const tokens = neededLines.map(l => lineTokenMap[l]).filter(Boolean);
+      if (!tokens.length) return null;
+    
+      const eligibleAgentKeys = [];
+      for (const agentKey of byAgentKey.keys()) {
+        const hasAll = tokens.every(t => agentKeyHasToken(agentKey, t));
+        if (hasAll) eligibleAgentKeys.push(agentKey);
+      }
+      if (!eligibleAgentKeys.length) return null;
+    
+      const { data: agents, error: agentErr } = await supabase
+        .from("agents")
+        .select("id, agent_id, recruiter_id, full_name, phone, is_active, is_available, last_assigned_at, receiving_leads")
+        .eq("is_active", true)
+        .eq("receiving_leads", true)
+        .in("agent_id", eligibleAgentKeys);
+    
+      if (agentErr) throw new Error(agentErr.message);
+    
+      const fullyEligible = [];
+      for (const ag of (agents || [])) {
+        let okAll = true;
+        for (const line of neededLines) {
+          const token = lineTokenMap[line];
+          const okChain = await hasLicensedUplineChainForToken(ag, token);
+          if (!okChain) { okAll = false; break; }
+        }
+        if (okAll) fullyEligible.push(ag);
+      }
+      if (!fullyEligible.length) return null;
+    
+      const online = fullyEligible.filter(a => !!a.is_available);
+      return (online.length ? byOldest(online)[0] : byOldest(fullyEligible)[0]) || null;
+    }
     // ========= (4) per-line routing using person_line_agents + person_agent_order =========
     async function resolveAgentsPerLine(personId, neededLines) {
       // existing line agents
