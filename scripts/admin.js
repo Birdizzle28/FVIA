@@ -878,13 +878,12 @@ adjustmentForm?.addEventListener('submit', async (e) => {
 
   // If it's a DEBIT + chargeback, also create a policy_chargebacks row
   if (normType === 'debit' && category === 'chargeback') {
-    // Require a policy for chargebacks
     if (!policy_id) {
       if (errorEl) errorEl.textContent = 'Please choose a policy for this chargeback.';
       return;
     }
   
-    // 1) Pull carrier + contact for the selected policy
+    // 1) Pull carrier + contact name in one query
     const { data: pol, error: polErr } = await supabase
       .from('policies')
       .select(`
@@ -909,7 +908,7 @@ adjustmentForm?.addEventListener('submit', async (e) => {
       ? [pol.contact.first_name, pol.contact.last_name].filter(Boolean).join(' ').trim() || null
       : null;
   
-    // 2) Insert chargeback with filled fields
+    // 2) Insert chargeback row
     const { error: cbErr } = await supabase.from('policy_chargebacks').insert([{
       agent_id,
       policy_id,
@@ -931,7 +930,6 @@ adjustmentForm?.addEventListener('submit', async (e) => {
       return;
     }
   }
-
   adjustmentForm.reset();
   closeModal(adjustmentModal);
   loadAdjustmentsIntoList();
