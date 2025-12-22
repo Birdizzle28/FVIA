@@ -518,7 +518,7 @@ async function loadAndRenderLeadDebts(scope = 'me', teamIds = []) {
         setTableAgentColumnVisible('lead-debts-table', true);
         leadBalance = 0;
         setText('balances-leads-count', '0 open items');
-        updateBalancesUI();
+        updateBalancesUI({ updateSummary: false, updateBalancesTab: true });
         return;
       }
       q = q.in('agent_id', teamIds);
@@ -579,7 +579,7 @@ async function loadAndRenderLeadDebts(scope = 'me', teamIds = []) {
 
     leadBalance = openTotal;
     setText('balances-leads-count', `${openCount} open item${openCount === 1 ? '' : 's'}`);
-    updateBalancesUI();
+    updateBalancesUI({ updateSummary: false, updateBalancesTab: true });
   } catch (err) {
     console.error('Unexpected error in loadAndRenderLeadDebts:', err);
     renderPlaceholderLeadDebts();
@@ -603,7 +603,7 @@ async function loadAndRenderChargebacks(scope = 'me', teamIds = []) {
         tbody.innerHTML = `<tr><td colspan="6">No direct team agents found.</td></tr>`;
         chargebackBalance = 0;
         setText('balances-chargebacks-count', '0 open items');
-        updateBalancesUI();
+        updateBalancesUI({ updateSummary: false, updateBalancesTab: true });
         return;
       }
       q = q.in('agent_id', teamIds);
@@ -659,7 +659,7 @@ async function loadAndRenderChargebacks(scope = 'me', teamIds = []) {
    setTableAgentColumnVisible('chargebacks-table', scope === 'team');
     chargebackBalance = openTotal;
     setText('balances-chargebacks-count', `${openCount} open item${openCount === 1 ? '' : 's'}`);
-    updateBalancesUI();
+    updateBalancesUI({ updateSummary: false, updateBalancesTab: true });
   } catch (err) {
     console.error('Unexpected error in loadAndRenderChargebacks:', err);
     renderPlaceholderChargebacks();
@@ -968,7 +968,7 @@ function renderPlaceholderSummary() {
   leadBalance = leads;
   chargebackBalance = chargebacks;
 
-  updateBalancesUI();
+  updateBalancesUI({ updateSummary: false, updateBalancesTab: true });
 
   setText('summary-next-advance-amount', '$1,250.00');
   setText('summary-next-advance-date', '(Next Friday)');
