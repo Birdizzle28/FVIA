@@ -470,7 +470,7 @@ async function loadAndRenderLeadDebts(scope = 'me', teamIds = []) {
     }
 
     if (!data || data.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="${scope === 'team' ? 6 : 5}">No lead debt records found.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="6">No lead debt records found.</td></tr>`;
     } else {
       tbody.innerHTML = data.map(row => {
         const date = row.created_at ? new Date(row.created_at).toLocaleDateString() : '—';
@@ -487,14 +487,14 @@ async function loadAndRenderLeadDebts(scope = 'me', teamIds = []) {
             <td>${escapeHtml(source)}</td>
             <td>${formatMoney(amount)}</td>
             <td>${escapeHtml(status)}</td>
-            ${scope === 'team' ? `<td>${escapeHtml(who)}</td>` : ``}
+            <td class="col-agent">${escapeHtml(who)}</td>
           </tr>
         `;
       }).join('');
     }
 
     // ✅ RUN AFTER ROWS EXIST
-    setLeadDebtAgentColumnVisible(scope === 'team');
+    setTableAgentColumnVisible('lead-debts-table', scope === 'team');
 
     // balances
     let openCount = 0;
@@ -567,7 +567,7 @@ async function loadAndRenderChargebacks(scope = 'me', teamIds = []) {
             <td>${escapeHtml(name)}</td>
             <td>${formatMoney(amount)}</td>
             <td>${escapeHtml(status)}</td>
-            ${scope === 'team' ? `<td>${escapeHtml(who)}</td>` : ``}
+            <td class="col-agent">${escapeHtml(who)}</td>
           </tr>
         `;
       }).join('');
@@ -582,7 +582,7 @@ async function loadAndRenderChargebacks(scope = 'me', teamIds = []) {
         openTotal += Number(row.amount || 0);
       }
     });
-
+   setTableAgentColumnVisible('chargebacks-table', scope === 'team');
     chargebackBalance = openTotal;
     setText('balances-chargebacks-count', `${openCount} open item${openCount === 1 ? '' : 's'}`);
     updateBalancesUI();
