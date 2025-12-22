@@ -83,7 +83,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   // ----- 3. Load aggregate commission overview (view) -----
-    const overview = await loadAgentCommissionOverview();
+  const overview = await loadAgentCommissionOverview();
   if (!overview) {
     // if overview fails, still give placeholders for balances/payouts
     renderPlaceholderSummary();
@@ -737,9 +737,10 @@ async function populatePoliciesCarrierDropdown() {
   ).sort((a, b) => a.localeCompare(b));
 
   // Keep the first "All carriers" option
-  sel.innerHTML = `<option value="">All carriers</option>` + carriers
-    .map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`)
-    .join('');
+  sel.innerHTML = 
+    `<option value="">All carriers</option>` + carriers
+      .map(c => `<option value="${c}">${escapeHtml(c)}</option>`)
+      .join('');
 }
 
 function initPoliciesFilters() {
