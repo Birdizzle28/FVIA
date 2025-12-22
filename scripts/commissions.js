@@ -316,18 +316,22 @@ async function loadAgentUpcomingPayouts() {
    Shared balances UI helper
    =============================== */
 
-function updateBalancesUI() {
+function updateBalancesUI({ updateSummary = true, updateBalancesTab = true } = {}) {
   const totalDebt = leadBalance + chargebackBalance;
 
-  // Top summary
-  setText('summary-leads-balance', formatMoney(leadBalance));
-  setText('summary-chargeback-balance', formatMoney(chargebackBalance));
-  setText('summary-total-balance', formatMoney(totalDebt));
+  // Top summary cards (ONLY when allowed)
+  if (updateSummary) {
+    setText('summary-leads-balance', formatMoney(leadBalance));
+    setText('summary-chargeback-balance', formatMoney(chargebackBalance));
+    setText('summary-total-balance', formatMoney(totalDebt));
+  }
 
-  // Balances tab
-  setText('balances-leads-amount', formatMoney(leadBalance));
-  setText('balances-chargebacks-amount', formatMoney(chargebackBalance));
-  setText('balances-total-amount', formatMoney(totalDebt));
+  // Balances tab cards (ONLY when allowed)
+  if (updateBalancesTab) {
+    setText('balances-leads-amount', formatMoney(leadBalance));
+    setText('balances-chargebacks-amount', formatMoney(chargebackBalance));
+    setText('balances-total-amount', formatMoney(totalDebt));
+  }
 }
 
 /* ===============================
@@ -673,7 +677,7 @@ function initBalanceScopeToggle() {
     // Reset numbers before reload to avoid mixed UI while loading
     leadBalance = 0;
     chargebackBalance = 0;
-    updateBalancesUI();
+    updateBalancesUI({ updateSummary: false, updateBalancesTab: true });
 
     await loadAndRenderLeadDebts(scope, teamIds);
     await loadAndRenderChargebacks(scope, teamIds);
