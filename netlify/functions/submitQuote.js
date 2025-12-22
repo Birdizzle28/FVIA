@@ -668,11 +668,27 @@ export const handler = async (event) => {
     const neededLines = Array.from(neededLinesSet);
 
     // Resolve per-line agent assignments using contactId as person_id
-    const agentByLine = await resolveAgentsPerLine(contactId, neededLines);
+    const pickedAgent = await pickSingleAgentForSubmission(contactId, neededLines);
 
-    // If ANY needed line is none_fit -> you can choose your preferred behavior.
-    // Here: if all needed lines are none_fit, return none_fit.
-    const anyAssigned = neededLines.some(l => agentByLine?.[l]?.agentId);
+    if (!pickedAgent?.id) {
+      return { statusCode: 200, body: JSON.stringify({ ok: false, reason: "none_fit" }) };
+    }
+    
+    // Persist “connected agent” + per-line mapping FOR THIS SUBMISSION’S LINES
+    await supabase.from("person_agent_order").upsert(
+      [{ person_id: contactId, agent_id: pickedAgent.id }],
+      { onConflict: "person_id,agent_id" }
+    );
+    
+    await supabase.from("person_line_agents").upsert(
+      neededLines.map(line => ({
+        person_id: contactId,
+        line,
+        agent_id: pickedAgent.id,
+        assigned_at: new Date().toISOString()
+      })),
+      { onConflict: "person_id,line" }
+    );
     if (!anyAssigned) {
       return { statusCode: 200, body: JSON.stringify({ ok: false, reason: "none_fit" }) };
     }
