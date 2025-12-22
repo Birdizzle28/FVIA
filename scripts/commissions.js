@@ -440,7 +440,7 @@ async function loadAndRenderLeadDebts(scope = 'me', teamIds = []) {
 
   const tbody = document.querySelector('#lead-debts-table tbody');
   if (!tbody) return;
-   setLeadDebtAgentColumnVisible(scope === 'team');
+
   try {
     let q = supabase
       .from('lead_debts')
@@ -449,6 +449,7 @@ async function loadAndRenderLeadDebts(scope = 'me', teamIds = []) {
     if (scope === 'team') {
       if (!teamIds.length) {
         tbody.innerHTML = `<tr><td colspan="6">No direct team agents found.</td></tr>`;
+        setLeadDebtAgentColumnVisible(true); // show agent col for the message row
         leadBalance = 0;
         setText('balances-leads-count', '0 open items');
         updateBalancesUI();
@@ -464,11 +465,12 @@ async function loadAndRenderLeadDebts(scope = 'me', teamIds = []) {
     if (error) {
       console.error('Error loading lead_debts:', error);
       renderPlaceholderLeadDebts();
+      setLeadDebtAgentColumnVisible(false); // placeholder has 5 cols
       return;
     }
 
     if (!data || data.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6">No lead debt records found.</td></tr>`;
+      tbody.innerHTML = `<tr><td colspan="${scope === 'team' ? 6 : 5}">No lead debt records found.</td></tr>`;
     } else {
       tbody.innerHTML = data.map(row => {
         const date = row.created_at ? new Date(row.created_at).toLocaleDateString() : '—';
@@ -491,6 +493,10 @@ async function loadAndRenderLeadDebts(scope = 'me', teamIds = []) {
       }).join('');
     }
 
+    // ✅ RUN AFTER ROWS EXIST
+    setLeadDebtAgentColumnVisible(scope === 'team');
+
+    // balances
     let openCount = 0;
     let openTotal = 0;
     (data || []).forEach(row => {
@@ -507,6 +513,7 @@ async function loadAndRenderLeadDebts(scope = 'me', teamIds = []) {
   } catch (err) {
     console.error('Unexpected error in loadAndRenderLeadDebts:', err);
     renderPlaceholderLeadDebts();
+    setLeadDebtAgentColumnVisible(false);
   }
 }
 
