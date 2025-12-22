@@ -689,9 +689,6 @@ export const handler = async (event) => {
       })),
       { onConflict: "person_id,line" }
     );
-    if (!anyAssigned) {
-      return { statusCode: 200, body: JSON.stringify({ ok: false, reason: "none_fit" }) };
-    }
 
     // Insert leads assigned per line
     const leads = await insertLeadsAssigned({
@@ -753,7 +750,7 @@ export const handler = async (event) => {
         contactId,
         leads,
         pickLeadIdForCall,
-        agentByLine // helpful for debugging; safe to remove later
+        pickedAgentId: pickedAgent.id
       })
     };
 
