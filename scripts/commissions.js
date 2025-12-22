@@ -5,6 +5,8 @@ let myProfile = null; // row from agents table
 // We'll keep these in sync with Supabase so all UI uses the same numbers
 let leadBalance = 0;
 let chargebackBalance = 0;
+let summaryLeadBalance = 0;
+let summaryChargebackBalance = 0;
 // ---- Policies filters state ----
 let policiesFp = null; // flatpickr instance (if loaded)
 let policiesFilters = {
@@ -322,20 +324,19 @@ async function loadAgentUpcomingPayouts() {
    =============================== */
 
 function updateBalancesUI({ updateSummary = true, updateBalancesTab = true } = {}) {
-  const totalDebt = leadBalance + chargebackBalance;
+  const summaryTotal = summaryLeadBalance + summaryChargebackBalance;
+  const tabTotal = leadBalance + chargebackBalance;
 
-  // Top summary cards (ONLY when allowed)
   if (updateSummary) {
-    setText('summary-leads-balance', formatMoney(leadBalance));
-    setText('summary-chargeback-balance', formatMoney(chargebackBalance));
-    setText('summary-total-balance', formatMoney(totalDebt));
+    setText('summary-leads-balance', formatMoney(summaryLeadBalance));
+    setText('summary-chargeback-balance', formatMoney(summaryChargebackBalance));
+    setText('summary-total-balance', formatMoney(summaryTotal));
   }
 
-  // Balances tab cards (ONLY when allowed)
   if (updateBalancesTab) {
     setText('balances-leads-amount', formatMoney(leadBalance));
     setText('balances-chargebacks-amount', formatMoney(chargebackBalance));
-    setText('balances-total-amount', formatMoney(totalDebt));
+    setText('balances-total-amount', formatMoney(tabTotal));
   }
 }
 
@@ -728,31 +729,25 @@ function parseDateRangeInput(str) {
 
 async function populatePoliciesCarrierDropdown() {
   const sel = document.getElementById('policies-carrier');
-  if (!sel || !me) return;
+  if (!sel) return;
 
-  // Pull carrier_name values for THIS agent and build a unique list
   const { data, error } = await supabase
-    .from('agent_policy_commissions_view')
+    .from('carriers')
     .select('carrier_name')
-    .eq('agent_id', me.id);
+    .order('carrier_name', { ascending: true });
 
   if (error) {
-    console.error('Error loading carriers for dropdown:', error);
+    console.error('Error loading carriers:', error);
     return;
   }
 
-  const carriers = Array.from(
-    new Set((data || []).map(r => (r.carrier_name || '').trim()).filter(Boolean))
-  ).sort((a, b) => a.localeCompare(b));
+  const carriers = (data || [])
+    .map(r => (r.carrier_name || '').trim())
+    .filter(Boolean);
 
-  // Keep the first "All carriers" option
-  sel.innerHTML = 
-    `<option value="">All carriers</option>` + carriers
-      .map(c => {
-        const safeValue = String(c).replace(/"/g, '&quot;');
-        return `<option value="${safeValue}">${escapeHtml(c)}</option>`;
-      })
-      .join('');
+  sel.innerHTML =
+    `<option value="">All carriers</option>` +
+    carriers.map(c => `<option value="${c.replace(/"/g, '&quot;')}">${escapeHtml(c)}</option>`).join('');
 }
 
 function initPoliciesFilters() {
@@ -973,7 +968,7 @@ function renderPlaceholderSummary() {
   leadBalance = leads;
   chargebackBalance = chargebacks;
 
-  updateBalancesUI({ updateSummary: false, updateBalancesTab: true });
+  updateBalancesUI({ updateSummary: true, updateBalancesTab: true });
 
   setText('summary-next-advance-amount', '$1,250.00');
   setText('summary-next-advance-date', '(Next Friday)');
