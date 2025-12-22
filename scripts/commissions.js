@@ -70,9 +70,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   summaryLeadBalance = leadBalance;
   summaryChargebackBalance = chargebackBalance;
   updateBalancesUI({ updateSummary: true, updateBalancesTab: true });
-  
-  // Force the summary bar to reflect "me"
-  updateBalancesUI({ updateSummary: true, updateBalancesTab: true });
 
   // ----- 2. Load my agent profile (for name + "level" label) -----
   try {
