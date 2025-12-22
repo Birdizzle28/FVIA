@@ -1020,14 +1020,20 @@ function escapeHtml(str) {
     .replace(/>/g, '&gt;');
 }
 
-function setLeadDebtAgentColumnVisible(visible) {
-  const table = document.getElementById('lead-debts-table');
+function setTableAgentColumnVisible(tableId, visible) {
+  const table = document.getElementById(tableId);
   if (!table) return;
 
-  // assumes "Agent" is the LAST column in your lead debts table
+  // hide/show anything marked as col-agent (best)
+  const agentCells = table.querySelectorAll('.col-agent');
+  if (agentCells.length) {
+    agentCells.forEach(el => (el.style.display = visible ? '' : 'none'));
+    return;
+  }
+
+  // fallback: last column
   const th = table.querySelector('thead th:last-child');
   if (th) th.style.display = visible ? '' : 'none';
-
   table.querySelectorAll('tbody tr').forEach(tr => {
     const td = tr.querySelector('td:last-child');
     if (td) td.style.display = visible ? '' : 'none';
