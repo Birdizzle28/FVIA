@@ -544,7 +544,7 @@ export const handler = async (event) => {
     }
 
     // ========= (5) create leads per productType, assigned to per-line agent =========
-    async function insertLeadsAssigned({ contactId, contactInfo, productTypes, perTypeNotesObj, submittedBy, submittedByName, agentByLine }) {
+    async function insertLeadsAssigned({ contactId, contactInfo, productTypes, perTypeNotesObj, submittedBy, submittedByName, pickedAgent }) {
       const e164 = contactInfo.phone ? String(contactInfo.phone).trim() : null;
       const tenFromE164 = (e164 || "").replace(/\D/g, "").slice(-10);
       const leadPhone = e164 ? [e164] : (tenFromE164 ? [tenFromE164] : []);
@@ -574,7 +574,7 @@ export const handler = async (event) => {
         }
 
         const line = productTypeToLine[pt] || null;
-        const agentId = line ? (agentByLine?.[line]?.agentId || null) : null;
+        const agentId = pickedAgent?.id || null;
 
         const payload = {
           first_name: contactInfo.first_name,
@@ -701,7 +701,7 @@ export const handler = async (event) => {
       perTypeNotesObj: perTypeNotes || {},
       submittedBy,
       submittedByName,
-      agentByLine
+      pickedAgent
     });
 
     // Debts for newly inserted leads, charged to receiving agents
