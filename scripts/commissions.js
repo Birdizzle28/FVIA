@@ -449,7 +449,7 @@ async function loadAndRenderLeadDebts(scope = 'me', teamIds = []) {
     if (scope === 'team') {
       if (!teamIds.length) {
         tbody.innerHTML = `<tr><td colspan="6">No direct team agents found.</td></tr>`;
-        setLeadDebtAgentColumnVisible(true); // show agent col for the message row
+        setTableAgentColumnVisible('lead-debts-table', true);
         leadBalance = 0;
         setText('balances-leads-count', '0 open items');
         updateBalancesUI();
@@ -465,7 +465,7 @@ async function loadAndRenderLeadDebts(scope = 'me', teamIds = []) {
     if (error) {
       console.error('Error loading lead_debts:', error);
       renderPlaceholderLeadDebts();
-      setLeadDebtAgentColumnVisible(false); // placeholder has 5 cols
+      setTableAgentColumnVisible('lead-debts-table', false);
       return;
     }
 
@@ -513,7 +513,7 @@ async function loadAndRenderLeadDebts(scope = 'me', teamIds = []) {
   } catch (err) {
     console.error('Unexpected error in loadAndRenderLeadDebts:', err);
     renderPlaceholderLeadDebts();
-    setLeadDebtAgentColumnVisible(false);
+    setTableAgentColumnVisible('lead-debts-table', false);
   }
 }
 
