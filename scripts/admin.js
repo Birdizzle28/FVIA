@@ -513,7 +513,6 @@ async function loadAdjustmentsIntoList() {
   });
 }
 async function loadPayoutBatchesIntoList() {
-  const supabase = window.supabaseClient;
   const list = document.getElementById("batch-list");
   if (!supabase || !list) return;
 
