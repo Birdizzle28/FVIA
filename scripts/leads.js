@@ -1171,7 +1171,14 @@ function submitLeadRequestToSupabase(agentProfile) {
 
     const productType = document.getElementById("request-product-type")?.value || null;
     const leadType    = document.getElementById("request-lead-type")?.value || null;
-    const qty         = Number(document.getElementById("request-qty")?.value || "") || 1;
+    const qtyEl = document.getElementById("request-qty");
+    const qtyRaw = (qtyEl?.value ?? "").trim();
+    const qty = qtyRaw === "" ? 1 : parseInt(qtyRaw, 10);
+    
+    if (!Number.isFinite(qty) || qty < 1) {
+      if (msg) msg.textContent = "Requested quantity must be 1 or more.";
+      return;
+    }
     const notes       = (document.getElementById("request-notes")?.value || "").trim() || null;
 
     const state = document.getElementById("request-state")?.value || null;
