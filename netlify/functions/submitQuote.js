@@ -314,49 +314,6 @@ export const handler = async (event) => {
       return data || null;
     }
 
-    async function pickFreshAgentForLine(line, state2) {
-      const token = lineTokenMap[line];
-      if (!token) return { reason: "none_fit", agent: null, shouldCall: false };
-
-      // Which agent_keys (agent_id) have the token?
-      const eligibleAgentKeys = [];
-      for (const agentKey of byAgentKey.keys()) {
-        if (agentKeyHasToken(agentKey, token)) eligibleAgentKeys.push(agentKey);
-      }
-      if (!eligibleAgentKeys.length) return { reason: "none_fit", agent: null, shouldCall: false };
-
-      const { data: agents, error: agentErr } = await supabase
-        .from("agents")
-        .select("id, agent_id, recruiter_id, full_name, phone, is_active, is_available, last_assigned_at, receiving_leads")
-        .eq("is_active", true)
-        .eq("receiving_leads", true)
-        .in("agent_id", eligibleAgentKeys);
-
-      if (agentErr) throw new Error(agentErr.message);
-
-      const baseEligible = (agents || []);
-      if (!baseEligible.length) return { reason: "none_fit", agent: null, shouldCall: false };
-
-      const fullyEligible = [];
-      for (const ag of baseEligible) {
-        const okChain = await hasLicensedUplineChainForToken(ag, token);
-        if (okChain) fullyEligible.push(ag);
-      }
-      if (!fullyEligible.length) return { reason: "none_fit", agent: null, shouldCall: false };
-
-      const byOldest = (arr) =>
-        arr.slice().sort((a, b) => {
-          const ax = a.last_assigned_at ? new Date(a.last_assigned_at).getTime() : 0;
-          const bx = b.last_assigned_at ? new Date(b.last_assigned_at).getTime() : 0;
-          return ax - bx;
-        });
-
-      const online = fullyEligible.filter(a => !!a.is_available);
-      if (online.length) return { reason: "online", agent: byOldest(online)[0], shouldCall: true };
-
-      return { reason: "offline_only", agent: byOldest(fullyEligible)[0], shouldCall: false };
-    }
-
     async function isAgentEligibleForLine(agentRow, line) {
       if (!agentRow) return false;
       if (!agentRow.is_active) return false;
@@ -442,106 +399,7 @@ export const handler = async (event) => {
       return (online.length ? byOldest(online)[0] : byOldest(fullyEligible)[0]) || null;
     }
     // ========= (4) per-line routing using person_line_agents + person_agent_order =========
-    async function resolveAgentsPerLine(personId, neededLines) {
-      // existing line agents
-      const { data: existingLineRows, error: plErr } = await supabase
-        .from("person_line_agents")
-        .select("person_id, line, agent_id")
-        .eq("person_id", personId);
-
-      if (plErr) throw new Error(plErr.message);
-
-      const existingByLine = new Map();
-      for (const r of (existingLineRows || [])) existingByLine.set(r.line, r.agent_id);
-
-      // order list (oldest first)
-      const { data: orderRows, error: poErr } = await supabase
-        .from("person_agent_order")
-        .select("person_id, agent_id, first_assigned_at")
-        .eq("person_id", personId)
-        .order("first_assigned_at", { ascending: true });
-
-      if (poErr) throw new Error(poErr.message);
-
-      const preferredAgentIds = (orderRows || []).map(r => r.agent_id).filter(Boolean);
-
-      const results = {}; // line -> { agentId, reason, shouldCall }
-      const toUpsertLine = [];
-      const toUpsertOrder = [];
-
-      for (const line of neededLines) {
-        // 1) keep existing line agent if eligible
-        const existingAgentId = existingByLine.get(line) || null;
-        if (existingAgentId) {
-          const row = await loadAgentRowById(existingAgentId);
-          if (await isAgentEligibleForLine(row, line)) {
-            results[line] = {
-              agentId: existingAgentId,
-              reason: "kept_existing_line_agent",
-              shouldCall: !!row.is_available
-            };
-            continue;
-          }
-        }
-
-        // 2) try preferred agents (order list)
-        let picked = null;
-        for (const aid of preferredAgentIds) {
-          const row = await loadAgentRowById(aid);
-          if (await isAgentEligibleForLine(row, line)) {
-            picked = { agent: row, reason: "used_person_agent_order" };
-            break;
-          }
-        }
-
-        // 3) else pick fresh
-        if (!picked) {
-          const fresh = await pickFreshAgentForLine(line, stateUp);
-          if (!fresh?.agent?.id) {
-            results[line] = { agentId: null, reason: "none_fit", shouldCall: false };
-            continue;
-          }
-          picked = { agent: fresh.agent, reason: fresh.reason };
-        }
-
-        results[line] = {
-          agentId: picked.agent.id,
-          reason: picked.reason,
-          shouldCall: !!picked.agent.is_available
-        };
-
-        // ensure mappings exist / updated
-        toUpsertLine.push({
-          person_id: personId,
-          line,
-          agent_id: picked.agent.id,
-          assigned_at: new Date().toISOString()
-        });
-
-        toUpsertOrder.push({
-          person_id: personId,
-          agent_id: picked.agent.id
-        });
-      }
-
-      // write person_line_agents
-      if (toUpsertLine.length) {
-        const { error } = await supabase
-          .from("person_line_agents")
-          .upsert(toUpsertLine, { onConflict: "person_id,line" });
-        if (error) throw new Error(error.message);
-      }
-
-      // write person_agent_order (keep earliest; upsert does nothing to timestamp if row exists)
-      if (toUpsertOrder.length) {
-        const { error } = await supabase
-          .from("person_agent_order")
-          .upsert(toUpsertOrder, { onConflict: "person_id,agent_id" });
-        if (error) throw new Error(error.message);
-      }
-
-      return results;
-    }
+  
 
     // ========= (5) create leads per productType, assigned to per-line agent =========
     async function insertLeadsAssigned({ contactId, contactInfo, productTypes, perTypeNotesObj, submittedBy, submittedByName, pickedAgent }) {
@@ -573,7 +431,6 @@ export const handler = async (event) => {
           continue;
         }
 
-        const line = productTypeToLine[pt] || null;
         const agentId = pickedAgent?.id || null;
 
         const payload = {
@@ -658,11 +515,10 @@ export const handler = async (event) => {
     const { contactId } = await upsertContact(contactInfo);
 
     // Determine which "lines" are needed (ONLY the 4 we track; legal/id go to life)
-    const neededLinesSet = new Set();
-    for (const pt of productTypes) {
-      const line = productTypeToLine[pt];
-      if (line) neededLinesSet.add(line);
-    }
+    const neededLines = Array.from(new Set(
+      (requiredLines || []).map(x => String(x || "").toLowerCase().trim()).filter(Boolean)
+    ));
+    if (!neededLines.length) neededLines.push("life");
     // fallback
     if (neededLinesSet.size === 0) neededLinesSet.add("life");
     const neededLines = Array.from(neededLinesSet);
