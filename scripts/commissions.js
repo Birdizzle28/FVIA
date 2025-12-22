@@ -63,6 +63,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
   me = session.user;
+  await loadAndRenderLeadDebts('me', []);
+  await loadAndRenderChargebacks('me', []);
+  
+  // Force the summary bar to reflect "me"
+  updateBalancesUI({ updateSummary: true, updateBalancesTab: true });
 
   // ----- 2. Load my agent profile (for name + "level" label) -----
   try {
