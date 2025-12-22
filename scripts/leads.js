@@ -1152,6 +1152,59 @@ function submitLeadToSupabase(agentProfile) {
     showSection("view");
   });
 }
+function submitLeadRequestToSupabase(agentProfile) {
+  const form = document.getElementById("lead-request-form");
+  if (!form) return;
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+
+    const msg = document.getElementById("request-message");
+    if (msg) msg.textContent = "Submitting request...";
+
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
+    if (!user) {
+      if (msg) msg.textContent = "You are not logged in.";
+      return;
+    }
+
+    const productType = document.getElementById("request-product-type")?.value || null;
+    const leadType    = document.getElementById("request-lead-type")?.value || null;
+    const qty         = Number(document.getElementById("request-qty")?.value || "") || 1;
+    const notes       = (document.getElementById("request-notes")?.value || "").trim() || null;
+
+    const state = document.getElementById("request-state")?.value || null;
+    const city  = (document.getElementById("request-city")?.value || "").trim() || null;
+    const zip   = (document.getElementById("request-zip")?.value || "").trim() || null;
+
+    const payload = {
+      submitted_by: user.id,
+      submitted_by_name: agentProfile
+        ? `${agentProfile.first_name || ""} ${agentProfile.last_name || ""}`.trim()
+        : null,
+      requested_count: qty,
+      product_type: productType,
+      lead_type: leadType,
+      state,
+      city,
+      zip,
+      notes
+    };
+
+    const { error } = await supabase.from("lead_requests").insert(payload);
+
+    if (error) {
+      console.error("lead_requests insert error:", error);
+      if (msg) msg.textContent = `Failed: ${error.message}`;
+      return;
+    }
+
+    if (msg) msg.textContent = "Request submitted!";
+    form.reset();
+    document.querySelectorAll("#lead-request-form .field").forEach((f) => f.classList.remove("filled"));
+  });
+}
 
 // ---------- DOMContentLoaded ----------
 document.addEventListener("DOMContentLoaded", async () => {
@@ -1169,7 +1222,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
   if (dncErr) console.error('expire_dnc_for_agent_contacts failed:', dncErr);
   agentProfile = await fetchAgentProfile();
-
+  submitLeadRequestToSupabase(agentProfile);
+  
   if (!agentProfile?.is_admin) {
     $$(".admin-only").forEach((el) => (el.style.display = "none"));
   }
