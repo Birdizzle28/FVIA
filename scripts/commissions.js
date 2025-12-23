@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initPoliciesScopeToggle();
   initFilesChips();
   initTeamAgentPanelToggle();
-
+  initBalanceScopeToggle();
   // ----- 5. Load REAL lead debts + chargebacks -----
 
   // ----- 7. Still use placeholder data for payouts, team, files (for now) -----
