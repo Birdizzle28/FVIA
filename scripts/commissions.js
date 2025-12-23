@@ -795,7 +795,7 @@ function initPoliciesFilters() {
     // Clear state
     policiesFilters = { startISO: null, endISO: null, carrier: '', status: '' };
 
-    await loadAndRenderPolicies(policiesFilters);
+    await loadAndRenderPolicies(policiesFilters, policiesScope);
   });
 }
 
