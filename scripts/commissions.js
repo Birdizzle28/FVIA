@@ -17,6 +17,7 @@ let policiesFilters = {
 };
 // Cache so we don't re-fetch names every toggle
 let agentNameMapCache = {}; // { [agentId]: full_name }
+let policiesScope = 'me'; // 'me' | 'team'
 
 async function getAgentNameMap(agentIds = []) {
   const ids = (agentIds || []).filter(Boolean);
@@ -804,7 +805,71 @@ function initPoliciesFilters() {
    REAL Policies & Details
    =============================== */
 
-async function loadAndRenderPolicies(filters = null) {
+function getPolicyWrittenAtLocal(policyRow) {
+  // Best-effort “Written Date” without adding a written_at column:
+  // prefer submitted_at, then issued_at, else created_at.
+  const v = policyRow?.submitted_at || policyRow?.issued_at || policyRow?.created_at || null;
+  const d = v ? new Date(v) : null;
+  return d && !Number.isNaN(d.getTime()) ? d : null;
+}
+
+function formatDateShort(d) {
+  if (!d) return '—';
+  return d.toLocaleDateString();
+}
+
+function renderPoliciesTableHeader(scope) {
+  const thead = document.querySelector('#policies-table thead');
+  if (!thead) return;
+
+  if (scope === 'team') {
+    thead.innerHTML = `
+      <tr>
+        <th>Agent</th>
+        <th>Written Date</th>
+        <th>Policyholder</th>
+        <th>Carrier</th>
+        <th>AP</th>
+        <th>Status</th>
+        <th>Override</th>
+      </tr>
+    `;
+  } else {
+    thead.innerHTML = `
+      <tr>
+        <th>Written Date</th>
+        <th>Policyholder</th>
+        <th>Carrier</th>
+        <th>AP</th>
+        <th>Status</th>
+        <th>Advance</th>
+        <th>Pay-Thru</th>
+        <th>Total Commission</th>
+      </tr>
+    `;
+  }
+}
+
+function initPoliciesScopeToggle() {
+  const radios = document.querySelectorAll('input[name="policies-scope"]');
+  if (!radios.length) return;
+
+  const apply = async () => {
+    policiesScope =
+      document.querySelector('input[name="policies-scope"]:checked')?.value || 'me';
+
+    // When switching scope, also switch table header immediately
+    renderPoliciesTableHeader(policiesScope);
+
+    // Reload with current filters
+    await loadAndRenderPolicies(policiesFilters, policiesScope);
+  };
+
+  radios.forEach(r => r.addEventListener('change', apply));
+  apply(); // run once
+}
+
+async function loadAndRenderPolicies(filters = null, scope = 'me') {
   if (!me) return;
 
   const tbody = document.querySelector('#policies-table tbody');
@@ -812,79 +877,266 @@ async function loadAndRenderPolicies(filters = null) {
 
   const f = filters || policiesFilters;
 
+  // Ensure header matches scope (in case called directly)
+  renderPoliciesTableHeader(scope);
+
+  tbody.innerHTML = `<tr><td colspan="9">Loading…</td></tr>`;
+
   try {
-    let q = supabase
-      .from('agent_policy_commissions_view')
-      .select(
-        'policy_id, agent_id, written_at, policyholder_name, carrier_name, product_line, status, ap, advance_amount, renewal_amount, total_commission'
-      )
-      .eq('agent_id', me.id);
+    if (scope === 'me') {
+      // 1) Load my policies
+      // NOTE: AP uses premium_annual.
+      // Status uses policies.status.
+      const { data: policies, error: polErr } = await supabase
+        .from('policies')
+        .select(`
+          id,
+          created_at,
+          submitted_at,
+          issued_at,
+          status,
+          premium_annual,
+          carrier_name,
+          product_line,
+          contact:contacts(first_name, last_name)
+        `)
+        .eq('agent_id', me.id)
+        .order('created_at', { ascending: false })
+        .limit(500);
 
-    // Date range filter (written_at)
-    if (f?.startISO) {
-      q = q.gte('written_at', f.startISO);
-    }
-    if (f?.endISO) {
-      // use < next day to include entire end date
-      const nextDay = addDaysISO(f.endISO, 1);
-      q = q.lt('written_at', nextDay);
-    }
+      if (polErr) {
+        console.error('Error loading policies (me):', polErr);
+        tbody.innerHTML = `<tr><td colspan="8">Failed to load policies.</td></tr>`;
+        return;
+      }
 
-    // Carrier filter
-    if (f?.carrier) {
-      q = q.eq('carrier_name', f.carrier);
-    }
+      let rows = policies || [];
 
-    // Status filter
-    if (f?.status) {
-      q = q.eq('status', f.status);
-    }
+      // Apply filters (carrier/status/date range)
+      rows = rows.filter(p => {
+        if (f?.carrier && (p.carrier_name || '') !== f.carrier) return false;
+        if (f?.status && (p.status || '') !== f.status) return false;
 
-    const { data, error } = await q.order('written_at', { ascending: false });
+        const wd = getPolicyWrittenAtLocal(p);
+        const wdISO = wd ? toISODate(wd) : null;
 
-    if (error) {
-      console.error('Error loading agent_policy_commissions_view:', error);
-      renderPlaceholderPolicies();
+        if (f?.startISO && (!wdISO || wdISO < f.startISO)) return false;
+        if (f?.endISO && (!wdISO || wdISO > f.endISO)) return false;
+
+        return true;
+      });
+
+      if (!rows.length) {
+        const hasFilters = !!(f?.startISO || f?.endISO || f?.carrier || f?.status);
+        tbody.innerHTML = hasFilters
+          ? `<tr><td colspan="8">No policies match your filters.</td></tr>`
+          : `<tr><td colspan="8">No policies found for you yet.</td></tr>`;
+        return;
+      }
+
+      // 2) Load ledger entries for those policies (advance/renewal)
+      const policyIds = rows.map(r => r.id);
+      const { data: ledger, error: ledErr } = await supabase
+        .from('commission_ledger')
+        .select('policy_id, entry_type, amount')
+        .eq('agent_id', me.id)
+        .in('policy_id', policyIds);
+
+      if (ledErr) {
+        console.error('Error loading commission_ledger (me):', ledErr);
+      }
+
+      // group totals per policy
+      const byPolicy = {};
+      (ledger || []).forEach(l => {
+        const pid = l.policy_id;
+        if (!pid) return;
+        byPolicy[pid] ||= { advance: 0, renewal: 0 };
+        const amt = Number(l.amount || 0);
+        const t = (l.entry_type || '').toLowerCase();
+        if (t === 'advance') byPolicy[pid].advance += amt;
+        if (t === 'renewal' || t === 'paythru' || t === 'trail') byPolicy[pid].renewal += amt;
+      });
+
+      tbody.innerHTML = rows.map(p => {
+        const written = getPolicyWrittenAtLocal(p);
+        const writtenDate = formatDateShort(written);
+
+        const contact = p.contact || {};
+        const policyholder =
+          [contact.first_name, contact.last_name].filter(Boolean).join(' ') || '—';
+
+        const carrier = p.carrier_name || '—';
+        const ap = Number(p.premium_annual || 0);
+        const status = formatStatus(p.status);
+
+        const sums = byPolicy[p.id] || { advance: 0, renewal: 0 };
+        const adv = Number(sums.advance || 0);
+        const paythru = Number(sums.renewal || 0);
+        const total = adv + paythru;
+
+        return `
+          <tr>
+            <td>${writtenDate}</td>
+            <td>${escapeHtml(policyholder)}</td>
+            <td>${escapeHtml(carrier)}</td>
+            <td>${formatMoney(ap)}</td>
+            <td>${escapeHtml(status)}</td>
+            <td>${formatMoney(adv)}</td>
+            <td>${formatMoney(paythru)}</td>
+            <td>${formatMoney(total)}</td>
+          </tr>
+        `;
+      }).join('');
+
       return;
     }
 
-    const hasFilters = !!(f?.startISO || f?.endISO || f?.carrier || f?.status);
+    // =========================
+    // TEAM scope = overrides I earned
+    // =========================
 
-    if (!data || data.length === 0) {
+    // 1) Load override ledger rows that pay ME
+    const { data: overrides, error: ovErr } = await supabase
+      .from('commission_ledger')
+      .select('policy_id, amount, created_at, meta')
+      .eq('agent_id', me.id)
+      .eq('entry_type', 'override')
+      .order('created_at', { ascending: false })
+      .limit(1000);
+
+    if (ovErr) {
+      console.error('Error loading override ledger:', ovErr);
+      tbody.innerHTML = `<tr><td colspan="7">Failed to load team overrides.</td></tr>`;
+      return;
+    }
+
+    const ovRows = overrides || [];
+    if (!ovRows.length) {
+      tbody.innerHTML = `<tr><td colspan="7">No overrides found yet.</td></tr>`;
+      return;
+    }
+
+    // 2) Group by policy, sum override amounts, keep downline name/id
+    const policyAgg = {}; // {policy_id: {overrideTotal, downlineName, downlineId}}
+    ovRows.forEach(r => {
+      const pid = r.policy_id;
+      if (!pid) return;
+      const amt = Number(r.amount || 0);
+      const meta = r.meta || {};
+      policyAgg[pid] ||= {
+        overrideTotal: 0,
+        downlineName: meta.downline_agent_name || '',
+        downlineId: meta.downline_agent_id || null
+      };
+      policyAgg[pid].overrideTotal += amt;
+
+      // keep a name if we get one later
+      if (!policyAgg[pid].downlineName && meta.downline_agent_name) {
+        policyAgg[pid].downlineName = meta.downline_agent_name;
+      }
+      if (!policyAgg[pid].downlineId && meta.downline_agent_id) {
+        policyAgg[pid].downlineId = meta.downline_agent_id;
+      }
+    });
+
+    const policyIds = Object.keys(policyAgg);
+    if (!policyIds.length) {
+      tbody.innerHTML = `<tr><td colspan="7">No overrides found yet.</td></tr>`;
+      return;
+    }
+
+    // 3) Load those policies
+    const { data: policies, error: polErr } = await supabase
+      .from('policies')
+      .select(`
+        id,
+        created_at,
+        submitted_at,
+        issued_at,
+        status,
+        premium_annual,
+        carrier_name,
+        contact:contacts(first_name, last_name)
+      `)
+      .in('id', policyIds)
+      .order('created_at', { ascending: false });
+
+    if (polErr) {
+      console.error('Error loading policies (team):', polErr);
+      tbody.innerHTML = `<tr><td colspan="7">Failed to load team policies.</td></tr>`;
+      return;
+    }
+
+    let rows = (policies || []).map(p => {
+      const agg = policyAgg[p.id] || { overrideTotal: 0, downlineName: '', downlineId: null };
+      return { policy: p, agg };
+    });
+
+    // If we need missing names, fetch them
+    const missingIds = rows
+      .map(r => r.agg.downlineId)
+      .filter(id => id && !agentNameMapCache[id]);
+    if (missingIds.length) {
+      await getAgentNameMap(missingIds);
+    }
+
+    // Apply filters (carrier/status/date range)
+    rows = rows.filter(({ policy }) => {
+      if (f?.carrier && (policy.carrier_name || '') !== f.carrier) return false;
+      if (f?.status && (policy.status || '') !== f.status) return false;
+
+      const wd = getPolicyWrittenAtLocal(policy);
+      const wdISO = wd ? toISODate(wd) : null;
+
+      if (f?.startISO && (!wdISO || wdISO < f.startISO)) return false;
+      if (f?.endISO && (!wdISO || wdISO > f.endISO)) return false;
+
+      return true;
+    });
+
+    if (!rows.length) {
+      const hasFilters = !!(f?.startISO || f?.endISO || f?.carrier || f?.status);
       tbody.innerHTML = hasFilters
-        ? `<tr><td colspan="9">No policies match your filters.</td></tr>`
-        : `<tr><td colspan="9">No policy commissions found for you yet.</td></tr>`;
+        ? `<tr><td colspan="7">No team policies match your filters.</td></tr>`
+        : `<tr><td colspan="7">No team policies found yet.</td></tr>`;
       return;
     }
 
-    tbody.innerHTML = data.map(row => {
-      const writtenDate = row.written_at ? new Date(row.written_at).toLocaleDateString() : '—';
-      const name = row.policyholder_name || '—';
-      const carrier = row.carrier_name || '—';
-      const product = row.product_line || '—';
-      const premium = Number(row.ap || 0);
-      const status = formatStatus(row.status);
-      const adv = Number(row.advance_amount || 0);
-      const paythru = Number(row.renewal_amount || 0);
-      const total = Number(row.total_commission || 0);
+    tbody.innerHTML = rows.map(({ policy, agg }) => {
+      const written = getPolicyWrittenAtLocal(policy);
+      const writtenDate = formatDateShort(written);
+
+      const contact = policy.contact || {};
+      const policyholder =
+        [contact.first_name, contact.last_name].filter(Boolean).join(' ') || '—';
+
+      const carrier = policy.carrier_name || '—';
+      const ap = Number(policy.premium_annual || 0);
+      const status = formatStatus(policy.status);
+
+      const agentName =
+        agg.downlineName ||
+        (agg.downlineId ? (agentNameMapCache[agg.downlineId] || '') : '') ||
+        '—';
+
+      const overrideAmt = Number(agg.overrideTotal || 0);
 
       return `
         <tr>
+          <td>${escapeHtml(agentName)}</td>
           <td>${writtenDate}</td>
-          <td>${escapeHtml(name)}</td>
+          <td>${escapeHtml(policyholder)}</td>
           <td>${escapeHtml(carrier)}</td>
-          <td>${escapeHtml(product)}</td>
-          <td>${formatMoney(premium)}</td>
+          <td>${formatMoney(ap)}</td>
           <td>${escapeHtml(status)}</td>
-          <td>${formatMoney(adv)}</td>
-          <td>${formatMoney(paythru)}</td>
-          <td>${formatMoney(total)}</td>
+          <td>${formatMoney(overrideAmt)}</td>
         </tr>
       `;
     }).join('');
   } catch (err) {
     console.error('Unexpected error in loadAndRenderPolicies:', err);
-    renderPlaceholderPolicies();
+    tbody.innerHTML = `<tr><td colspan="9">Unexpected error loading policies.</td></tr>`;
   }
 }
 
