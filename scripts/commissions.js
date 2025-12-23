@@ -878,7 +878,8 @@ async function loadAndRenderPolicies(filters = null, scope = 'me') {
   // Ensure header matches scope (in case called directly)
   renderPoliciesTableHeader(scope);
 
-  tbody.innerHTML = `<tr><td colspan="9">Loading…</td></tr>`;
+  const colCount = (scope === 'team') ? 7 : 8;
+  tbody.innerHTML = `<tr><td colspan="${colCount}">Loading…</td></tr>`;
 
   try {
     if (scope === 'me') {
