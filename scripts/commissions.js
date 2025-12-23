@@ -532,7 +532,8 @@ async function loadAndRenderLeadDebts(scope = 'me', teamIds = []) {
    const nameMap = scope === 'team' ? await getAgentNameMap(teamIds) : {};
      
     if (!data || data.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6">No lead debt records found.</td></tr>`;
+      const colCount = (scope === 'team') ? 6 : 5;
+      tbody.innerHTML = `<tr><td colspan="${colCount}">No lead debt records found.</td></tr>`;
     } else {
       tbody.innerHTML = data.map(row => {
         const date = row.created_at ? new Date(row.created_at).toLocaleDateString() : '—';
