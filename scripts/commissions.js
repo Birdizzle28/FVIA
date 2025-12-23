@@ -109,6 +109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initPoliciesDateRange();
   await populatePoliciesCarrierDropdown();
   initPoliciesFilters();
+  initPoliciesScopeToggle();
   initFilesChips();
   initTeamAgentPanelToggle();
 
