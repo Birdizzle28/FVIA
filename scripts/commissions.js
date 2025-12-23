@@ -87,10 +87,6 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ----- 3. Load aggregate commission overview (view) -----
   const overview = await loadAgentCommissionOverview();
-  if (!overview) {
-    // if overview fails, still give placeholders for balances/payouts
-    renderPlaceholderSummary();
-  }
 
   // 🔹 NEW: load upcoming payouts (advance + pay-thru)
   const previews = await loadNextPayoutsFromPreviews();
