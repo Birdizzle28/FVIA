@@ -667,10 +667,13 @@ async function loadAndRenderChargebacks(scope = 'me', teamIds = []) {
 
 function initBalanceScopeToggle() {
   const radios = document.querySelectorAll('input[name="balance-scope"]');
-  if (!radios.length) return;
 
   const applyScope = async () => {
-    const scope = document.querySelector('input[name="balance-scope"]:checked')?.value || 'me';
+    // If radios exist, use them. If not, default to "me"
+    const scope = radios.length
+      ? (document.querySelector('input[name="balance-scope"]:checked')?.value || 'me')
+      : 'me';
+
     const teamIds = scope === 'team' ? await getAllDownlineAgentIds() : [];
 
     // Reset numbers before reload to avoid mixed UI while loading
@@ -678,15 +681,25 @@ function initBalanceScopeToggle() {
     chargebackBalance = 0;
     updateBalancesUI({ updateSummary: false, updateBalancesTab: true });
 
+    // Load tables
     await loadAndRenderLeadDebts(scope, teamIds);
     await loadAndRenderChargebacks(scope, teamIds);
+
+    // ✅ Keep summary balances synced to whatever we just loaded
+    summaryLeadBalance = leadBalance;
+    summaryChargebackBalance = chargebackBalance;
+    updateBalancesUI({ updateSummary: true, updateBalancesTab: false });
   };
 
-  radios.forEach(r => r.addEventListener('change', applyScope));
+  // If radios exist, hook changes
+  if (radios.length) {
+    radios.forEach(r => r.addEventListener('change', applyScope));
+  }
 
-  // Run once on load
+  // ✅ Always run once on page load
   applyScope();
 }
+
 function toISODate(d) {
   // local YYYY-MM-DD (no UTC shift)
   const yyyy = d.getFullYear();
