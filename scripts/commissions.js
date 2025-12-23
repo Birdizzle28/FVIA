@@ -109,7 +109,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   initTeamAgentPanelToggle();
 
   // ----- 5. Load REAL lead debts + chargebacks -----
-  initBalanceScopeToggle();
 
   // ----- 7. Still use placeholder data for payouts, team, files (for now) -----
   await loadAndRenderPayouts();
