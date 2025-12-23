@@ -116,9 +116,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ----- 5. Load REAL lead debts + chargebacks -----
   initBalanceScopeToggle();
 
-  // ----- 6. Load REAL policy commissions for this agent -----
-  await loadAndRenderPolicies();
-
   // ----- 7. Still use placeholder data for payouts, team, files (for now) -----
   await loadAndRenderPayouts();
   renderPlaceholderTeam();
@@ -781,7 +778,7 @@ function initPoliciesFilters() {
       policiesFilters.endISO = endISO;
     }
 
-    await loadAndRenderPolicies(policiesFilters);
+    await loadAndRenderPolicies(policiesFilters, policiesScope);
   });
 
   resetBtn.addEventListener('click', async () => {
