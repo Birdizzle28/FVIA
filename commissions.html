@@ -370,7 +370,17 @@
                   <option value="lapsed">Lapsed</option>
                   <option value="cancelled">Cancelled</option>
                 </select>
-
+                <fieldset class="comm-scope-toggle">
+                  <legend>Scope</legend>
+                  <label>
+                    <input type="radio" name="policies-scope" value="me" checked />
+                    Me
+                  </label>
+                  <label>
+                    <input type="radio" name="policies-scope" value="team" />
+                    My Team
+                  </label>
+                </fieldset>
                 <button type="button" id="policies-apply-filters">Apply</button>
                 <button type="button" id="policies-reset-filters">Reset</button>
               </div>
