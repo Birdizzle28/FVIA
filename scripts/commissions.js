@@ -850,21 +850,22 @@ function renderPoliciesTableHeader(scope) {
 
 function initPoliciesScopeToggle() {
   const radios = document.querySelectorAll('input[name="policies-scope"]');
-  if (!radios.length) return;
 
   const apply = async () => {
     policiesScope =
       document.querySelector('input[name="policies-scope"]:checked')?.value || 'me';
 
-    // When switching scope, also switch table header immediately
     renderPoliciesTableHeader(policiesScope);
-
-    // Reload with current filters
     await loadAndRenderPolicies(policiesFilters, policiesScope);
   };
 
+  if (!radios.length) {
+    apply(); // ✅ still loads policies even if no radios exist
+    return;
+  }
+
   radios.forEach(r => r.addEventListener('change', apply));
-  apply(); // run once
+  apply();
 }
 
 async function loadAndRenderPolicies(filters = null, scope = 'me') {
@@ -1135,7 +1136,7 @@ async function loadAndRenderPolicies(filters = null, scope = 'me') {
     }).join('');
   } catch (err) {
     console.error('Unexpected error in loadAndRenderPolicies:', err);
-    tbody.innerHTML = `<tr><td colspan="9">Unexpected error loading policies.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${colCount}">Unexpected error loading policies.</td></tr>`;
   }
 }
 
