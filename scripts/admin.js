@@ -825,7 +825,7 @@ adjustmentForm?.addEventListener('submit', async (e) => {
     period_start: effective_date,
     period_end: effective_date,
     policy_id: category === 'chargeback' ? policy_id : null,
-  lead_id: category === 'lead' ? lead_id : null,
+    lead_id: category === 'lead_debt' ? lead_id : null,
     meta: {
       ui_type: normType,
       ui_category: category
