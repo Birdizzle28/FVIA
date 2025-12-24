@@ -1541,6 +1541,14 @@ document.addEventListener('DOMContentLoaded', async () => {
       loadProductLinesAndTypesForCarrier(carrierId);
     });
   }
+
+  // When product line changes, hydrate policy types for that line
+  const policyLineSel = document.getElementById('policy-product-line');
+  if (policyLineSel) {
+    policyLineSel.addEventListener('change', () => {
+      hydratePolicyTypesForSelectedLine();
+    });
+  }
   userRole = 'admin';
 
   flatpickr('#date-range', { mode:'range', dateFormat:'Y-m-d',
