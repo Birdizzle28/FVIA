@@ -824,10 +824,11 @@ adjustmentForm?.addEventListener('submit', async (e) => {
     description: description || null,
     period_start: effective_date,
     period_end: effective_date,
+    policy_id: category === 'chargeback' ? policy_id : null,
+  lead_id: category === 'lead' ? lead_id : null,
     meta: {
       ui_type: normType,
-      ui_category: category,
-      policy_id      // keep for reporting even if null
+      ui_category: category
     }
   };
 
