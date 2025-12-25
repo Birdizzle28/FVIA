@@ -7,6 +7,8 @@ let leadBalance = 0;
 let chargebackBalance = 0;
 let summaryLeadBalance = 0;
 let summaryChargebackBalance = 0;
+let accessToken = null;
+let paythruPreviewByPolicy = {}; // { [policy_id]: monthly_amount }
 // ---- Policies filters state ----
 let policiesFp = null; // flatpickr instance (if loaded)
 let policiesFilters = {
@@ -66,7 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
   me = session.user;
-
+  accessToken = session.access_token;
   // ----- 2. Load my agent profile (for name + "level" label) -----
   try {
     const { data: profile, error: profErr } = await supabase
@@ -146,7 +148,11 @@ function getNextMonthlyPayThruISO() {
 }
 
 async function postPreviewJson(url) {
-  const res = await fetch(url, { method: 'POST' });
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: accessToken ? { Authorization: `Bearer ${accessToken}` } : {}
+  });
+
   const text = await res.text();
 
   let json = null;
@@ -209,6 +215,7 @@ async function loadNextPayoutsFromPreviews() {
   const nextMonthlyISO = getNextMonthlyPayThruISO();
   const monthly = await postPreviewJson(`/.netlify/functions/previewMonthlyPayThru?pay_date=${encodeURIComponent(nextMonthlyISO)}`);
   if (monthly) {
+    paythruPreviewByPolicy = monthly?.paythru_by_policy_preview || {};
     const amt = pickMyPayoutAmount(monthly);
     const label = isoToLocalYMD(nextMonthlyISO).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
@@ -977,7 +984,9 @@ async function loadAndRenderPolicies(filters = null, scope = 'me') {
 
         const sums = byPolicy[p.id] || { advance: 0, renewal: 0 };
         const adv = Number(sums.advance || 0);
-        const paythru = Number(sums.renewal || 0);
+        const ledgerPaythru = Number(sums.renewal || 0);
+        const previewPaythru = Number(paythruPreviewByPolicy?.[p.id] || 0);
+        const paythru = ledgerPaythru > 0 ? ledgerPaythru : previewPaythru;
         const total = adv + paythru;
 
         return `
