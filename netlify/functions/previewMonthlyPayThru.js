@@ -343,7 +343,8 @@ export async function handler(event) {
     // E) Build simulated NEW ledger rows (trails + renewals) exactly like runMonthlyPayThru
     const newLedgerRows = [];
     let totalNewGross = 0;
-
+    const paythruByPolicy = {};
+    
     for (const policy of policies) {
       const ap = Number(policy.premium_annual || 0);
       if (!policy.agent_id || ap <= 0) continue;
@@ -427,6 +428,13 @@ export async function handler(event) {
         payThruCountMap.set(policyAgentYearKey, priorCount + 1);
         totalNewGross += monthly;
 
+        if (policyYear === 1) {
+          if (!paythruByPolicy[policy.id]) {
+            paythruByPolicy[policy.id] = 0;
+          }
+          paythruByPolicy[policy.id] += monthly;
+        }
+  
         newLedgerRows.push({
           agent_id: node.agent.id,
           policy_id: policy.id,
@@ -640,7 +648,12 @@ export async function handler(event) {
     batchTotalGross  = Number(batchTotalGross.toFixed(2));
     batchTotalDebits = Number(batchTotalDebits.toFixed(2));
     const batchTotalNet = Number((batchTotalGross - batchTotalDebits).toFixed(2));
-
+    const lifetimePaythruByPolicy = {};
+    Object.entries(paythruByPolicy).forEach(([policyId, monthly]) => {
+      lifetimePaythruByPolicy[policyId] =
+        Number((monthly * 12).toFixed(2));
+    });
+    
     return {
       statusCode: 200,
       body: JSON.stringify(
@@ -656,9 +669,10 @@ export async function handler(event) {
           total_debits_preview: batchTotalDebits,
           total_net_preview: batchTotalNet,
           agent_payouts_preview: finalPayouts,
-          paythru_by_policy_preview,
+          paythru_by_policy_preview: lifetimePaythruByPolicy,
           paythru_total_ever_by_policy,
           paythru_monthly_fixed_by_policy,
+          
         },
         null,
         2
