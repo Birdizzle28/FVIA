@@ -214,14 +214,19 @@ async function loadNextPayoutsFromPreviews() {
   // Monthly Pay-Thru
   const nextMonthlyISO = getNextMonthlyPayThruISO();
   const monthly = await postPreviewJson(`/.netlify/functions/previewMonthlyPayThru?pay_date=${encodeURIComponent(nextMonthlyISO)}`);
+  
   if (monthly) {
+    // ✅ This is your per-policy TOTAL pay-thru (lifetime) numbers for the Policies table
     paythruPreviewByPolicy = monthly?.paythru_by_policy_preview || {};
-    const amt = Object.values(paythruPreviewByPolicy).reduce((s, v) => s + (Number(v) || 0), 0);
+  
+    // ✅ This is the actual NEXT paythru payout amount (threshold + debt logic already applied)
+    const amt = pickMyPayoutAmount(monthly);
+  
     const label = isoToLocalYMD(nextMonthlyISO).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-
+  
     setText('summary-next-paythru-amount', formatMoney(amt));
     setText('summary-next-paythru-date', `(${label})`);
-
+  
     setText('next-paythru-amount', formatMoney(amt));
     setText('next-paythru-date', `Pays on: ${label}`);
   }
