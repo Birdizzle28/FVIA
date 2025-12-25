@@ -128,6 +128,74 @@ export async function handler(event) {
     }
     
     const viewerId = userData.user.id;
+    // ================================
+    // NEW: Fixed Pay-Thru totals EVER (per policy) for the logged-in agent
+    // - NOT accrued
+    // - NOT threshold-based
+    // - NOT dependent on commission_ledger
+    // - This value never changes unless schedule/premium changes
+    // ================================
+    
+    function round2(n) {
+      return Math.round((Number(n) || 0) * 100) / 100;
+    }
+    
+    // Load viewer level (so schedule lookup matches their level)
+    const { data: viewerAgentRow, error: viewerAgentErr } = await supabase
+      .from('agents')
+      .select('id, level')
+      .eq('id', viewerId)
+      .single();
+    
+    if (viewerAgentErr) {
+      console.warn('[previewMonthlyPayThru] Could not load viewer agent level, defaulting to agent:', viewerAgentErr);
+    }
+    
+    const viewerLevel = viewerAgentRow?.level || 'agent';
+    
+    // Load ALL policies for this viewer (no 28-day cutoff, because “ever” shouldn’t be 0 for new policies)
+    const { data: viewerPoliciesAll, error: viewerPolErr } = await supabase
+      .from('policies')
+      .select('id, premium_annual, carrier_name, product_line, policy_type')
+      .eq('agent_id', viewerId);
+    
+    if (viewerPolErr) {
+      console.error('[previewMonthlyPayThru] Error loading viewer policies for fixed paythru:', viewerPolErr);
+    }
+    
+    // Compute fixed totals
+    const paythru_total_ever_by_policy = {};
+    const paythru_monthly_fixed_by_policy = {};
+    
+    for (const p of (viewerPoliciesAll || [])) {
+      const ap = Number(p.premium_annual || 0);
+      if (!p.id || ap <= 0) {
+        paythru_total_ever_by_policy[p?.id] = 0;
+        paythru_monthly_fixed_by_policy[p?.id] = 0;
+        continue;
+      }
+    
+      // Reuse your existing getSchedule(policy, level)
+      const schedule = await getSchedule(p, viewerLevel);
+    
+      if (!schedule) {
+        paythru_total_ever_by_policy[p.id] = 0;
+        paythru_monthly_fixed_by_policy[p.id] = 0;
+        continue;
+      }
+    
+      const baseRate = Number(schedule.base_commission_rate || 0);
+      const advRate  = Number(schedule.advance_rate || 0);
+    
+      // Fixed total pay-thru EVER for year 1 = AP * baseRate * (1 - advanceRate)
+      // (rounded via monthly cents to keep consistent with your system)
+      const totalEverRaw = ap * baseRate * (1 - advRate);
+      const monthly = round2(totalEverRaw / 12);
+      const totalEver = round2(monthly * 12);
+    
+      paythru_monthly_fixed_by_policy[p.id] = monthly;
+      paythru_total_ever_by_policy[p.id] = totalEver;
+    }
 
     const { start: monthStart, end: monthEnd } = getMonthBounds(payDate);
     const monthStartIso = monthStart.toISOString();
@@ -590,6 +658,8 @@ export async function handler(event) {
           total_net_preview: batchTotalNet,
           agent_payouts_preview: finalPayouts,
           paythru_by_policy_preview,
+          paythru_total_ever_by_policy,
+          paythru_monthly_fixed_by_policy,
         },
         null,
         2
