@@ -343,7 +343,6 @@ export async function handler(event) {
     // E) Build simulated NEW ledger rows (trails + renewals) exactly like runMonthlyPayThru
     const newLedgerRows = [];
     let totalNewGross = 0;
-    const paythruByPolicy = {};
     
     for (const policy of policies) {
       const ap = Number(policy.premium_annual || 0);
@@ -427,13 +426,6 @@ export async function handler(event) {
 
         payThruCountMap.set(policyAgentYearKey, priorCount + 1);
         totalNewGross += monthly;
-
-        if (policyYear === 1) {
-          if (!paythruByPolicy[policy.id]) {
-            paythruByPolicy[policy.id] = 0;
-          }
-          paythruByPolicy[policy.id] += monthly;
-        }
   
         newLedgerRows.push({
           agent_id: node.agent.id,
@@ -519,14 +511,7 @@ export async function handler(event) {
       if (!agentTotals[aid]) agentTotals[aid] = 0;
       agentTotals[aid] += amt;
     }
-    // ✅ Per-policy paythru preview for the logged-in agent (existing unpaid + simulated new)
-    const paythru_by_policy_preview = {};
-    for (const row of allUnpaidTrails) {
-      if (row.agent_id !== viewerId) continue;
-      const pid = row.policy_id;
-      if (!pid) continue;
-      paythru_by_policy_preview[pid] = Number(((paythru_by_policy_preview[pid] || 0) + Number(row.amount || 0)).toFixed(2));
-    }
+    
     const threshold = 100;
     const basePayableAgents = [];
     for (const [aid, sum] of Object.entries(agentTotals)) {
@@ -648,11 +633,6 @@ export async function handler(event) {
     batchTotalGross  = Number(batchTotalGross.toFixed(2));
     batchTotalDebits = Number(batchTotalDebits.toFixed(2));
     const batchTotalNet = Number((batchTotalGross - batchTotalDebits).toFixed(2));
-    const lifetimePaythruByPolicy = {};
-    Object.entries(paythruByPolicy).forEach(([policyId, monthly]) => {
-      lifetimePaythruByPolicy[policyId] =
-        Number((monthly * 12).toFixed(2));
-    });
     
     return {
       statusCode: 200,
@@ -669,10 +649,7 @@ export async function handler(event) {
           total_debits_preview: batchTotalDebits,
           total_net_preview: batchTotalNet,
           agent_payouts_preview: finalPayouts,
-          paythru_by_policy_preview: lifetimePaythruByPolicy,
-          paythru_total_ever_by_policy,
-          paythru_monthly_fixed_by_policy,
-          
+          paythru_by_policy_preview: paythru_total_ever_by_policy,
         },
         null,
         2
