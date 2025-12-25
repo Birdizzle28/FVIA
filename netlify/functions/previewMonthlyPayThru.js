@@ -432,6 +432,7 @@ export async function handler(event) {
           new_trails_created_preview: newLedgerRows.length,
           total_new_trails_gross_preview: Number(totalNewGross.toFixed(2)),
           agents_paid_preview: 0,
+          paythru_by_policy_preview: {},
         }),
       };
     }
@@ -472,6 +473,7 @@ export async function handler(event) {
           new_trails_created_preview: newLedgerRows.length,
           total_new_trails_gross_preview: Number(totalNewGross.toFixed(2)),
           agents_paid_preview: 0,
+          paythru_by_policy_preview,
         }),
       };
     }
