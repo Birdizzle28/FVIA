@@ -387,14 +387,6 @@ export async function handler(event) {
         });
       }
     }
-    // ✅ Per-policy paythru preview for the logged-in agent (monthly accrual for this pay month)
-    const paythru_by_policy_preview = {};
-    for (const row of newLedgerRows) {
-      if (row.agent_id !== viewerId) continue;
-      const pid = row.policy_id;
-      if (!pid) continue;
-      paythru_by_policy_preview[pid] = Number(((paythru_by_policy_preview[pid] || 0) + Number(row.amount || 0)).toFixed(2));
-    }
 
     // F) Threshold + debt logic (preview mode)
     // Load existing unpaid trails from DB, then combine with simulated new rows
@@ -413,6 +405,14 @@ export async function handler(event) {
     }
 
     const allUnpaidTrails = [];
+    // ✅ Per-policy paythru preview for the logged-in agent (existing unpaid + simulated new)
+    const paythru_by_policy_preview = {};
+    for (const row of allUnpaidTrails) {
+      if (row.agent_id !== viewerId) continue;
+      const pid = row.policy_id;
+      if (!pid) continue;
+      paythru_by_policy_preview[pid] = Number(((paythru_by_policy_preview[pid] || 0) + Number(row.amount || 0)).toFixed(2));
+    }
     (unpaidTrailsExisting || []).forEach(row => {
       allUnpaidTrails.push({
         agent_id: row.agent_id,
