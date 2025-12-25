@@ -4,6 +4,13 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.SUPABASE_URL;
 const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+function getBearerToken(event) {
+  const h = event.headers || {};
+  const raw = h.authorization || h.Authorization || '';
+  const m = String(raw).match(/^Bearer\s+(.+)$/i);
+  return m ? m[1] : null;
+}
+
 if (!supabaseUrl || !serviceKey) {
   console.warn('[previewMonthlyPayThru] Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY env vars');
 }
@@ -108,6 +115,19 @@ export async function handler(event) {
     const payDate     = getPayDate(event);
     const payDateStr  = payDate.toISOString().slice(0, 10);
     const payMonthKey = payDateStr.slice(0, 7);
+
+    // ✅ Identify the caller so we only return THEIR per-policy preview
+    const token = getBearerToken(event);
+    if (!token) {
+      return { statusCode: 401, body: JSON.stringify({ error: 'Missing Authorization Bearer token' }) };
+    }
+    
+    const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+    if (userErr || !userData?.user?.id) {
+      return { statusCode: 401, body: JSON.stringify({ error: 'Invalid session token' }) };
+    }
+    
+    const viewerId = userData.user.id;
 
     const { start: monthStart, end: monthEnd } = getMonthBounds(payDate);
     const monthStartIso = monthStart.toISOString();
@@ -367,6 +387,14 @@ export async function handler(event) {
         });
       }
     }
+    // ✅ Per-policy paythru preview for the logged-in agent (monthly accrual for this pay month)
+    const paythru_by_policy_preview = {};
+    for (const row of newLedgerRows) {
+      if (row.agent_id !== viewerId) continue;
+      const pid = row.policy_id;
+      if (!pid) continue;
+      paythru_by_policy_preview[pid] = Number(((paythru_by_policy_preview[pid] || 0) + Number(row.amount || 0)).toFixed(2));
+    }
 
     // F) Threshold + debt logic (preview mode)
     // Load existing unpaid trails from DB, then combine with simulated new rows
@@ -558,6 +586,7 @@ export async function handler(event) {
           total_debits_preview: batchTotalDebits,
           total_net_preview: batchTotalNet,
           agent_payouts_preview: finalPayouts,
+          paythru_by_policy_preview,
         },
         null,
         2
