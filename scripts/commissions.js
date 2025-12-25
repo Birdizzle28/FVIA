@@ -215,7 +215,7 @@ async function loadNextPayoutsFromPreviews() {
   const nextMonthlyISO = getNextMonthlyPayThruISO();
   const monthly = await postPreviewJson(`/.netlify/functions/previewMonthlyPayThru?pay_date=${encodeURIComponent(nextMonthlyISO)}`);
   if (monthly) {
-    paythruPreviewByPolicy = monthly?.paythru_total_ever_by_policy || {};
+    paythruPreviewByPolicy = monthly?.paythru_by_policy_preview || {};
     const amt = Object.values(paythruPreviewByPolicy).reduce((s, v) => s + (Number(v) || 0), 0);
     const label = isoToLocalYMD(nextMonthlyISO).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
