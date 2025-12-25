@@ -215,7 +215,7 @@ async function loadNextPayoutsFromPreviews() {
   const nextMonthlyISO = getNextMonthlyPayThruISO();
   const monthly = await postPreviewJson(`/.netlify/functions/previewMonthlyPayThru?pay_date=${encodeURIComponent(nextMonthlyISO)}`);
   if (monthly) {
-    paythruPreviewByPolicy = monthly?.paythru_by_policy_preview || {};
+    paythruPreviewByPolicy = monthly?.paythru_total_ever_by_policy || {};
     const amt = Object.values(paythruPreviewByPolicy).reduce((s, v) => s + (Number(v) || 0), 0);
     const label = isoToLocalYMD(nextMonthlyISO).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 
@@ -984,9 +984,7 @@ async function loadAndRenderPolicies(filters = null, scope = 'me') {
 
         const sums = byPolicy[p.id] || { advance: 0, renewal: 0 };
         const adv = Number(sums.advance || 0);
-        const ledgerPaythru = Number(sums.renewal || 0);
-        const previewPaythru = Number(paythruPreviewByPolicy?.[p.id] || 0);
-        const paythru = ledgerPaythru > 0 ? ledgerPaythru : previewPaythru;
+        const paythru = Number(paythruPreviewByPolicy?.[p.id] || 0);
         const total = adv + paythru;
 
         return `
