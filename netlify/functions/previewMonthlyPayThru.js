@@ -392,7 +392,7 @@ export async function handler(event) {
     // Load existing unpaid trails from DB, then combine with simulated new rows
     const { data: unpaidTrailsExisting, error: unpaidErr } = await supabase
       .from('commission_ledger')
-      .select('id, agent_id, amount')
+      .select('id, agent_id, policy_id, amount')
       .eq('entry_type', 'paythru')
       .eq('is_settled', false);
 
@@ -405,17 +405,10 @@ export async function handler(event) {
     }
 
     const allUnpaidTrails = [];
-    // ✅ Per-policy paythru preview for the logged-in agent (existing unpaid + simulated new)
-    const paythru_by_policy_preview = {};
-    for (const row of allUnpaidTrails) {
-      if (row.agent_id !== viewerId) continue;
-      const pid = row.policy_id;
-      if (!pid) continue;
-      paythru_by_policy_preview[pid] = Number(((paythru_by_policy_preview[pid] || 0) + Number(row.amount || 0)).toFixed(2));
-    }
     (unpaidTrailsExisting || []).forEach(row => {
       allUnpaidTrails.push({
         agent_id: row.agent_id,
+        policy_id: row.policy_id,
         amount: Number(row.amount || 0),
         source: 'existing',
       });
@@ -423,6 +416,7 @@ export async function handler(event) {
     newLedgerRows.forEach(row => {
       allUnpaidTrails.push({
         agent_id: row.agent_id,
+        policy_id: row.policy_id,
         amount: Number(row.amount || 0),
         source: 'simulated',
       });
@@ -449,7 +443,14 @@ export async function handler(event) {
       if (!agentTotals[aid]) agentTotals[aid] = 0;
       agentTotals[aid] += amt;
     }
-
+    // ✅ Per-policy paythru preview for the logged-in agent (existing unpaid + simulated new)
+    const paythru_by_policy_preview = {};
+    for (const row of allUnpaidTrails) {
+      if (row.agent_id !== viewerId) continue;
+      const pid = row.policy_id;
+      if (!pid) continue;
+      paythru_by_policy_preview[pid] = Number(((paythru_by_policy_preview[pid] || 0) + Number(row.amount || 0)).toFixed(2));
+    }
     const threshold = 100;
     const basePayableAgents = [];
     for (const [aid, sum] of Object.entries(agentTotals)) {
