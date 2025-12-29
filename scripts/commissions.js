@@ -504,6 +504,228 @@ async function getAllDownlineAgentIds() {
   return (data || []).map(r => r.agent_id).filter(Boolean);
 }
 
+function getPeriodStartISO(days) {
+  const end = new Date();
+  const start = new Date();
+  start.setDate(end.getDate() - (Number(days) || 30));
+  return { startISO: toISODate(start), endISO: toISODate(end) };
+}
+
+function sumPremiumAnnual(rows) {
+  return (rows || []).reduce((acc, r) => acc + (Number(r.premium_annual || 0)), 0);
+}
+
+function chunk(arr, size = 250) {
+  const out = [];
+  for (let i = 0; i < (arr || []).length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+async function getDirectDownlineAgents() {
+  if (!me) return [];
+  const { data, error } = await supabase
+    .from('agents')
+    .select('id, full_name, level, is_active')
+    .eq('recruiter_id', me.id)
+    .order('full_name', { ascending: true });
+
+  if (error) {
+    console.error('Error loading direct downline agents:', error);
+    return [];
+  }
+  return data || [];
+}
+
+async function loadAPForAgents(agentIds, startISO, endISO) {
+  // returns map { agent_id: apSum }
+  const apMap = {};
+  const batches = chunk(agentIds, 250);
+
+  for (const ids of batches) {
+    const { data, error } = await supabase
+      .from('policies_with_written_at')
+      .select('agent_id, premium_annual, written_at')
+      .in('agent_id', ids)
+      .gte('written_at', `${startISO}T00:00:00`)
+      .lte('written_at', `${endISO}T23:59:59`);
+
+    if (error) {
+      console.error('Error loading policies_with_written_at for AP:', error);
+      continue;
+    }
+
+    (data || []).forEach(p => {
+      const aid = p.agent_id;
+      if (!aid) return;
+      apMap[aid] = (apMap[aid] || 0) + Number(p.premium_annual || 0);
+    });
+  }
+
+  return apMap;
+}
+
+async function loadOverridesForMe(startISO, endISO) {
+  if (!me) return { total: 0, byDownline: {} };
+
+  const { data, error } = await supabase
+    .from('commission_ledger')
+    .select('amount, created_at, meta')
+    .eq('agent_id', me.id)
+    .eq('entry_type', 'override')
+    .gte('created_at', `${startISO}T00:00:00`)
+    .lte('created_at', `${endISO}T23:59:59`);
+
+  if (error) {
+    console.error('Error loading overrides:', error);
+    return { total: 0, byDownline: {} };
+  }
+
+  let total = 0;
+  const byDownline = {}; // { downlineId: sum }
+  (data || []).forEach(r => {
+    const amt = Number(r.amount || 0);
+    total += amt;
+
+    const downlineId = r?.meta?.downline_agent_id || null;
+    if (downlineId) {
+      byDownline[downlineId] = (byDownline[downlineId] || 0) + amt;
+    }
+  });
+
+  return { total, byDownline };
+}
+
+async function loadOpenBalances(agentIds) {
+  const map = {};
+  const batches = chunk(agentIds, 250);
+
+  for (const ids of batches) {
+    const { data, error } = await supabase
+      .from('agent_open_balances')
+      .select('agent_id, open_lead_debt, open_chargebacks')
+      .in('agent_id', ids);
+
+    if (error) {
+      console.error('Error loading agent_open_balances:', error);
+      continue;
+    }
+
+    (data || []).forEach(r => {
+      map[r.agent_id] = {
+        leads: Number(r.open_lead_debt || 0),
+        chargebacks: Number(r.open_chargebacks || 0),
+      };
+    });
+  }
+
+  return map;
+}
+
+async function loadAndRenderTeamOverridesPanel() {
+  if (!me) return;
+
+  // Use the same period as your payouts range dropdown (last 30/90/365/all)
+  const rangeSel = document.getElementById('payout-range');
+  const days = Number(rangeSel?.value || 30);
+
+  let startISO = null, endISO = null;
+  if (days === 0) {
+    // all time
+    startISO = '1970-01-01';
+    endISO = toISODate(new Date());
+  } else if (days === 365) {
+    // YTD
+    const now = new Date();
+    startISO = `${now.getFullYear()}-01-01`;
+    endISO = toISODate(now);
+  } else {
+    ({ startISO, endISO } = getPeriodStartISO(days));
+  }
+
+  const periodLabel =
+    days === 0 ? 'All time' :
+    days === 365 ? 'Year to date' :
+    `Last ${days} days`;
+
+  setText('team-my-ap-period', periodLabel);
+  setText('team-overrides-period', periodLabel);
+
+  // 1) My AP
+  const myAPMap = await loadAPForAgents([me.id], startISO, endISO);
+  const myAP = Number(myAPMap[me.id] || 0);
+  setText('team-my-ap', formatMoney(myAP));
+
+  // 2) All downline AP (NOT just direct)
+  const downlineRows = await getAllDownlineAgentIds(); // your RPC
+  const downlineIds = (downlineRows || []).filter(Boolean);
+  const teamIdsAll = Array.from(new Set([ ...downlineIds ])); // exclude me (it’s “team”)
+
+  let teamAP = 0;
+  if (teamIdsAll.length) {
+    const teamAPMap = await loadAPForAgents(teamIdsAll, startISO, endISO);
+    teamAP = Object.values(teamAPMap).reduce((a, b) => a + Number(b || 0), 0);
+  }
+
+  // You want this card to be ALL downline, so overwrite label
+  setText('team-direct-ap', formatMoney(teamAP));
+  // we will set count below using DIRECT downline active count, since snapshot is direct
+  // (If you want total downline count instead, tell me.)
+  
+  // 3) Overrides Earned (period)
+  const overrides = await loadOverridesForMe(startISO, endISO);
+  setText('team-overrides-amount', formatMoney(overrides.total));
+
+  // 4) Direct team snapshot table
+  const directAgents = await getDirectDownlineAgents();
+  const directIds = directAgents.map(a => a.id);
+  const activeCount = directAgents.filter(a => a.is_active !== false).length;
+  setText('team-direct-count', `${activeCount} active agents`);
+
+  const apByDirect = directIds.length ? await loadAPForAgents(directIds, startISO, endISO) : {};
+  const balancesByDirect = directIds.length ? await loadOpenBalances(directIds) : {};
+
+  // Fill the agent select (direct downline)
+  const select = document.getElementById('team-agent-select');
+  if (select) {
+    const keepFirst = select.querySelector('option:first-child');
+    select.innerHTML = '';
+    if (keepFirst) select.appendChild(keepFirst);
+
+    directAgents.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = a.full_name || 'Agent';
+      select.appendChild(opt);
+    });
+  }
+
+  // Fill the table
+  const tbody = document.querySelector('#team-agents-table tbody');
+  if (!tbody) return;
+
+  if (!directAgents.length) {
+    tbody.innerHTML = `<tr><td colspan="6">No direct downline agents yet.</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = directAgents.map(a => {
+    const ap = Number(apByDirect[a.id] || 0);
+    const bal = balancesByDirect[a.id] || { leads: 0, chargebacks: 0 };
+    const ovToYou = Number(overrides.byDownline[a.id] || 0);
+
+    return `
+      <tr>
+        <td>${escapeHtml(a.full_name || '—')}</td>
+        <td>${escapeHtml(String(a.level || 'agent').replace('_',' '))}</td>
+        <td>${formatMoney(ap)}</td>
+        <td>${formatMoney(bal.leads)}</td>
+        <td>${formatMoney(bal.chargebacks)}</td>
+        <td>${formatMoney(ovToYou)}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
 /* ===============================
    REAL lead debts + chargebacks
    =============================== */
