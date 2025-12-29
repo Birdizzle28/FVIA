@@ -674,9 +674,8 @@ async function loadAndRenderTeamOverridesPanel() {
   setText('team-my-ap', formatMoney(myAP));
 
   // 2) All downline AP (NOT just direct)
-  const downlineRows = await getAllDownlineAgentIds(); // your RPC
-  const downlineIds = (downlineRows || []).filter(Boolean);
-  const teamIdsAll = Array.from(new Set([ ...downlineIds ])); // exclude me (it’s “team”)
+  const downlineIds = await getAllDownlineAgentIds();
+  const teamIdsAll = Array.from(new Set(downlineIds));
 
   let teamAP = 0;
   if (teamIdsAll.length) {
@@ -849,7 +848,7 @@ async function loadAndRenderChargebacks(scope = 'me', teamIds = []) {
 
     if (scope === 'team') {
       if (!teamIds.length) {
-        tbody.innerHTML = `<tr><td colspan="6">No direct team agents found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6">No downline agents found.</td></tr>`;
         chargebackBalance = 0;
         setText('balances-chargebacks-count', '0 open items');
         updateBalancesUI({ updateSummary: false, updateBalancesTab: true });
