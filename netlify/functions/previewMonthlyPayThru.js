@@ -31,7 +31,7 @@ function getMonthBounds(payDate) {
   const year  = payDate.getFullYear();
   const month = payDate.getMonth();
   const start = new Date(year, month, 1);
-  const end   = new Date(year, month + 1, 0);
+  const end   = new Date(year, month + 1, 0, 23, 59, 59, 999);
   return { start, end };
 }
 
@@ -128,6 +128,102 @@ export async function handler(event) {
     }
     
     const viewerId = userData.user.id
+    let paythru_total_ever_by_policy = {};
+    const agentCache = new Map();
+    const schedCache = new Map();
+
+    async function getSchedule(policy, level) {
+      const key = [
+        policy.carrier_name || '',
+        policy.product_line || '',
+        policy.policy_type || '',
+        level || 'agent',
+      ].join('|');
+
+      if (schedCache.has(key)) return schedCache.get(key);
+
+      const { data, error } = await supabase
+        .from('commission_schedules')
+        .select(
+          'base_commission_rate, advance_rate, renewal_commission_rate, ' +
+          'renewal_start_year, renewal_end_year, renewal_trail_rule'
+        )
+        .eq('carrier_name', policy.carrier_name)
+        .eq('product_line', policy.product_line)
+        .eq('policy_type', policy.policy_type)
+        .eq('agent_level', level || 'agent')
+        .single();
+
+      if (error || !data) {
+        console.warn('[previewMonthlyPayThru] No schedule for', key, error);
+        schedCache.set(key, null);
+        return null;
+      }
+
+      schedCache.set(key, data);
+      return data;
+    }
+
+    function round2(n) {
+      return Math.round((Number(n) || 0) * 100) / 100;
+    }
+    
+    // Load viewer level (so schedule lookup matches their level)
+    const { data: viewerAgentRow, error: viewerAgentErr } = await supabase
+      .from('agents')
+      .select('id, level')
+      .eq('id', viewerId)
+      .single();
+    
+    if (viewerAgentErr) {
+      console.warn('[previewMonthlyPayThru] Could not load viewer agent level, defaulting to agent:', viewerAgentErr);
+    }
+    
+    const viewerLevel = viewerAgentRow?.level || 'agent';
+    
+    // Load ALL policies for this viewer (no 28-day cutoff, because “ever” shouldn’t be 0 for new policies)
+    const { data: viewerPoliciesAll, error: viewerPolErr } = await supabase
+      .from('policies')
+      .select('id, premium_annual, carrier_name, product_line, policy_type')
+      .eq('agent_id', viewerId);
+    
+    if (viewerPolErr) {
+      console.error('[previewMonthlyPayThru] Error loading viewer policies for fixed paythru:', viewerPolErr);
+    }
+    
+    // Compute fixed totals
+    paythru_total_ever_by_policy = {};
+    const paythru_monthly_fixed_by_policy = {};
+    
+    for (const p of (viewerPoliciesAll || [])) {
+      const ap = Number(p.premium_annual || 0);
+      if (!p.id || ap <= 0) {
+        paythru_total_ever_by_policy[p?.id] = 0;
+        paythru_monthly_fixed_by_policy[p?.id] = 0;
+        continue;
+      }
+    
+      // Reuse your existing getSchedule(policy, level)
+      const schedule = await getSchedule(p, viewerLevel);
+    
+      if (!schedule) {
+        paythru_total_ever_by_policy[p.id] = 0;
+        paythru_monthly_fixed_by_policy[p.id] = 0;
+        continue;
+      }
+    
+      const baseRate = Number(schedule.base_commission_rate || 0);
+      const advRate  = Number(schedule.advance_rate || 0);
+    
+      // Fixed total pay-thru EVER for year 1 = AP * baseRate * (1 - advanceRate)
+      // (rounded via monthly cents to keep consistent with your system)
+      const totalEverRaw = ap * baseRate * (1 - advRate);
+      const monthly = round2(totalEverRaw / 12);
+      const totalEver = round2(monthly * 12);
+    
+      paythru_monthly_fixed_by_policy[p.id] = monthly;
+      paythru_total_ever_by_policy[p.id] = totalEver;
+    }
 
     const { start: monthStart, end: monthEnd } = getMonthBounds(payDate);
     const monthStartIso = monthStart.toISOString();
@@ -197,7 +293,9 @@ export async function handler(event) {
     const { data: policies, error: polErr } = await supabase
       .from('policies')
       .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, created_at')
+      .eq('agent_id', viewerId)
       .lte('created_at', cutoffIso);
+            
 
     if (polErr) {
       console.error('[previewMonthlyPayThru] Error loading policies:', polErr);
@@ -211,7 +309,7 @@ export async function handler(event) {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: 'No policies eligible for monthly trails/renewals (28-day wait) this run.',
+          message: 'No policies eligible for THIS MONTHLY RUN (28-day wait), but lifetime paythru totals are included.',
           pay_date: payDateStr,
           pay_month: payMonthKey,
     
@@ -223,9 +321,6 @@ export async function handler(event) {
     }
 
     // D) Caches (same fields as runMonthlyPayThru)
-    const agentCache = new Map();
-    const schedCache = new Map();
-
     async function getAgent(agentId) {
       if (!agentId) return null;
       if (agentCache.has(agentId)) return agentCache.get(agentId);
@@ -245,37 +340,6 @@ export async function handler(event) {
       return data;
     }
 
-    async function getSchedule(policy, level) {
-      const key = [
-        policy.carrier_name || '',
-        policy.product_line || '',
-        policy.policy_type || '',
-        level || 'agent',
-      ].join('|');
-
-      if (schedCache.has(key)) return schedCache.get(key);
-
-      const { data, error } = await supabase
-        .from('commission_schedules')
-        .select(
-          'base_commission_rate, advance_rate, renewal_commission_rate, ' +
-          'renewal_start_year, renewal_end_year, renewal_trail_rule'
-        )
-        .eq('carrier_name', policy.carrier_name)
-        .eq('product_line', policy.product_line)
-        .eq('policy_type', policy.policy_type)
-        .eq('agent_level', level || 'agent')
-        .single();
-
-      if (error || !data) {
-        console.warn('[previewMonthlyPayThru] No schedule for', key, error);
-        schedCache.set(key, null);
-        return null;
-      }
-
-      schedCache.set(key, data);
-      return data;
-    }
     // ================================
     // NEW: Fixed Pay-Thru totals EVER (per policy) for the logged-in agent
     // - NOT accrued
@@ -284,66 +348,6 @@ export async function handler(event) {
     // - This value never changes unless schedule/premium changes
     // ================================
     
-    function round2(n) {
-      return Math.round((Number(n) || 0) * 100) / 100;
-    }
-    
-    // Load viewer level (so schedule lookup matches their level)
-    const { data: viewerAgentRow, error: viewerAgentErr } = await supabase
-      .from('agents')
-      .select('id, level')
-      .eq('id', viewerId)
-      .single();
-    
-    if (viewerAgentErr) {
-      console.warn('[previewMonthlyPayThru] Could not load viewer agent level, defaulting to agent:', viewerAgentErr);
-    }
-    
-    const viewerLevel = viewerAgentRow?.level || 'agent';
-    
-    // Load ALL policies for this viewer (no 28-day cutoff, because “ever” shouldn’t be 0 for new policies)
-    const { data: viewerPoliciesAll, error: viewerPolErr } = await supabase
-      .from('policies')
-      .select('id, premium_annual, carrier_name, product_line, policy_type')
-      .eq('agent_id', viewerId);
-    
-    if (viewerPolErr) {
-      console.error('[previewMonthlyPayThru] Error loading viewer policies for fixed paythru:', viewerPolErr);
-    }
-    
-    // Compute fixed totals
-    const paythru_total_ever_by_policy = {};
-    const paythru_monthly_fixed_by_policy = {};
-    
-    for (const p of (viewerPoliciesAll || [])) {
-      const ap = Number(p.premium_annual || 0);
-      if (!p.id || ap <= 0) {
-        paythru_total_ever_by_policy[p?.id] = 0;
-        paythru_monthly_fixed_by_policy[p?.id] = 0;
-        continue;
-      }
-    
-      // Reuse your existing getSchedule(policy, level)
-      const schedule = await getSchedule(p, viewerLevel);
-    
-      if (!schedule) {
-        paythru_total_ever_by_policy[p.id] = 0;
-        paythru_monthly_fixed_by_policy[p.id] = 0;
-        continue;
-      }
-    
-      const baseRate = Number(schedule.base_commission_rate || 0);
-      const advRate  = Number(schedule.advance_rate || 0);
-    
-      // Fixed total pay-thru EVER for year 1 = AP * baseRate * (1 - advanceRate)
-      // (rounded via monthly cents to keep consistent with your system)
-      const totalEverRaw = ap * baseRate * (1 - advRate);
-      const monthly = round2(totalEverRaw / 12);
-      const totalEver = round2(monthly * 12);
-    
-      paythru_monthly_fixed_by_policy[p.id] = monthly;
-      paythru_total_ever_by_policy[p.id] = totalEver;
-    }
     // E) Build simulated NEW ledger rows (trails + renewals) exactly like runMonthlyPayThru
     const newLedgerRows = [];
     let totalNewGross = 0;
@@ -537,7 +541,7 @@ export async function handler(event) {
           new_trails_created_preview: newLedgerRows.length,
           total_new_trails_gross_preview: Number(totalNewGross.toFixed(2)),
           agents_paid_preview: 0,
-          paythru_by_policy_preview,
+          paythru_by_policy_preview: paythru_total_ever_by_policy,
         }),
       };
     }
