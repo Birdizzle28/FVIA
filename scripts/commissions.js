@@ -99,6 +99,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ----- 4. Wire up tabs & basic UI -----
   initTabs();
+  initPayoutRangeChange();
   initPoliciesDateRange();
   await populatePoliciesCarrierDropdown();
   initPoliciesFilters();
@@ -344,6 +345,14 @@ function updateBalancesUI({ updateSummary = true, updateBalancesTab = true } = {
 /* ===============================
    Tabs logic
    =============================== */
+function initPayoutRangeChange() {
+  const rangeSel = document.getElementById('payout-range');
+  if (!rangeSel) return;
+
+  rangeSel.addEventListener('change', async () => {
+    await loadAndRenderTeamOverridesPanel();
+  });
+}
 
 function initTabs() {
   const tabButtons = document.querySelectorAll('.commissions-tabs .tab');
@@ -382,13 +391,6 @@ function initTabs() {
       if (!target) return;
       activateTab(target);
     });
-  });
-}
-
-const rangeSel = document.getElementById('payout-range');
-if (rangeSel) {
-  rangeSel.addEventListener('change', async () => {
-    await loadAndRenderTeamOverridesPanel();
   });
 }
 
@@ -691,23 +693,24 @@ async function loadAndRenderTeamOverridesPanel() {
   const overrides = await loadOverridesForMe(startISO, endISO);
   setText('team-overrides-amount', formatMoney(overrides.total));
 
-  // 4) Direct team snapshot table
-  const directAgents = await getDirectDownlineAgents();
-  const directIds = directAgents.map(a => a.id);
-  const activeCount = directAgents.filter(a => a.is_active !== false).length;
+  // 4) Team snapshot table (WHOLE downline)
+  const teamAgents = await getAllDownlineAgentsFull();
+  const teamIds = teamAgents.map(a => a.id);
+
+  const activeCount = teamAgents.filter(a => a.is_active !== false).length;
   setText('team-direct-count', `${activeCount} active agents`);
 
-  const apByDirect = directIds.length ? await loadAPForAgents(directIds, startISO, endISO) : {};
-  const balancesByDirect = directIds.length ? await loadOpenBalances(directIds) : {};
+  const apByTeam = teamIds.length ? await loadAPForAgents(teamIds, startISO, endISO) : {};
+  const balancesByTeam = teamIds.length ? await loadOpenBalances(teamIds) : {};
 
-  // Fill the agent select (direct downline)
+  // Fill the agent select (whole downline)
   const select = document.getElementById('team-agent-select');
   if (select) {
     const keepFirst = select.querySelector('option:first-child');
     select.innerHTML = '';
     if (keepFirst) select.appendChild(keepFirst);
 
-    directAgents.forEach(a => {
+    teamAgents.forEach(a => {
       const opt = document.createElement('option');
       opt.value = a.id;
       opt.textContent = a.full_name || 'Agent';
@@ -719,14 +722,14 @@ async function loadAndRenderTeamOverridesPanel() {
   const tbody = document.querySelector('#team-agents-table tbody');
   if (!tbody) return;
 
-  if (!directAgents.length) {
-    tbody.innerHTML = `<tr><td colspan="6">No direct downline agents yet.</td></tr>`;
+  if (!teamAgents.length) {
+    tbody.innerHTML = `<tr><td colspan="6">No downline agents yet.</td></tr>`;
     return;
   }
 
-  tbody.innerHTML = directAgents.map(a => {
-    const ap = Number(apByDirect[a.id] || 0);
-    const bal = balancesByDirect[a.id] || { leads: 0, chargebacks: 0 };
+  tbody.innerHTML = teamAgents.map(a => {
+    const ap = Number(apByTeam[a.id] || 0);
+    const bal = balancesByTeam[a.id] || { leads: 0, chargebacks: 0 };
     const ovToYou = Number(overrides.byDownline[a.id] || 0);
 
     return `
