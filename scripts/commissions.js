@@ -528,18 +528,27 @@ function chunk(arr, size = 250) {
   return out;
 }
 
-async function getDirectDownlineAgents() {
+async function getAllDownlineAgentsFull() {
   if (!me) return [];
+
+  // Your RPC returns rows like [{ agent_id: uuid }, ...]
+  const downlineIds = await getAllDownlineAgentIds();
+  const ids = Array.from(new Set((downlineIds || []).filter(Boolean)));
+
+  if (!ids.length) return [];
+
+  // Pull agent rows for ALL downline
   const { data, error } = await supabase
     .from('agents')
-    .select('id, full_name, level, is_active')
-    .eq('recruiter_id', me.id)
+    .select('id, full_name, level, is_active, recruiter_id')
+    .in('id', ids)
     .order('full_name', { ascending: true });
 
   if (error) {
-    console.error('Error loading direct downline agents:', error);
+    console.error('Error loading full downline agents:', error);
     return [];
   }
+
   return data || [];
 }
 
