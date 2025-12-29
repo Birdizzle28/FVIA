@@ -110,7 +110,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ----- 7. Still use placeholder data for payouts, team, files (for now) -----
   await loadAndRenderPayouts();
-  renderPlaceholderTeam();
+  await loadAndRenderTeamOverridesPanel();
   renderPlaceholderFiles();
 });
 
@@ -382,6 +382,13 @@ function initTabs() {
       if (!target) return;
       activateTab(target);
     });
+  });
+}
+
+const rangeSel = document.getElementById('payout-range');
+if (rangeSel) {
+  rangeSel.addEventListener('change', async () => {
+    await loadAndRenderTeamOverridesPanel();
   });
 }
 
