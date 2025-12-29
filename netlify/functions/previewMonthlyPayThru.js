@@ -214,7 +214,11 @@ export async function handler(event) {
           message: 'No policies eligible for monthly trails/renewals (28-day wait) this run.',
           pay_date: payDateStr,
           pay_month: payMonthKey,
+    
+          // ✅ ALWAYS include the policies table payload
+          paythru_by_policy_preview: paythru_total_ever_by_policy || {},
         }),
+        headers: { 'Content-Type': 'application/json' },
       };
     }
 
