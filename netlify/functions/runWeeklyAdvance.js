@@ -258,15 +258,17 @@ export async function handler(event) {
   }
 
   try {
-    const payDate    = getPayDate(event);                    // JS Date
-    const payDateStr = payDate.toISOString().slice(0, 10);   // YYYY-MM-DD
+    const payDateStr = getPayDateStr(event); // YYYY-MM-DD (Friday)
 
-    // 1) cutoff = pay_date - 14 days
-    const cutoff = new Date(payDate);
-    cutoff.setDate(cutoff.getDate() - 14);
-    const cutoffIso = cutoff.toISOString();
-
-    console.log('[runWeeklyAdvance] pay_date =', payDateStr, 'cutoff =', cutoffIso);
+    // NEW RULE WINDOW:
+    // Eligible sales are from (payFriday - 9 days) through (payFriday - 2 days) exclusive
+    const startYMD = addDaysYMD(payDateStr, -9);   // previous Wed
+    const endYMD   = addDaysYMD(payDateStr, -2);   // Wednesday 00:00 (exclusive upper bound)
+    
+    const startIso = localMidnightToUtcIso(startYMD, PAY_TZ); // inclusive
+    const endIso   = localMidnightToUtcIso(endYMD, PAY_TZ);   // exclusive
+    
+    console.log('[runWeeklyAdvance] pay_date =', payDateStr, 'window =', startYMD, 'to', endYMD, '(end exclusive)');
 
     // 2) Find all eligible ledger rows (advances + overrides not yet settled)
     const { data: ledgerRows, error: ledgerErr } = await supabase
