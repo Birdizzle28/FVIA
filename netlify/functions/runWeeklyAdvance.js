@@ -13,25 +13,103 @@ const supabase = createClient(supabaseUrl, serviceKey);
 /**
  * Helper: get the pay_date (Friday) either from query param or "next Friday from today"
  */
-function getPayDate(event) {
-  const qs = event.queryStringParameters || {};
+const PAY_TZ = 'America/Chicago';
 
+/**
+ * Helper: return YYYY-MM-DD in America/Chicago
+ */
+function getLocalYMD(date = new Date(), tz = PAY_TZ) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const y = parts.find(p => p.type === 'year').value;
+  const m = parts.find(p => p.type === 'month').value;
+  const d = parts.find(p => p.type === 'day').value;
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Helper: day-of-week number in America/Chicago (0=Sun .. 6=Sat)
+ */
+function getLocalDOW(date = new Date(), tz = PAY_TZ) {
+  const dowStr = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    weekday: 'short',
+  }).format(date);
+
+  const map = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return map[dowStr] ?? date.getDay();
+}
+
+/**
+ * Add days to a YYYY-MM-DD string and return YYYY-MM-DD
+ * (safe for “date math” because it operates at UTC midnight)
+ */
+function addDaysYMD(ymd, days) {
+  const d = new Date(`${ymd}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Get numeric offset like "-06:00" or "-05:00" for a given date (DST-safe enough)
+ */
+function getOffsetForYMD(ymd, tz = PAY_TZ) {
+  // use a midday probe to avoid DST edge-hour weirdness
+  const probe = new Date(`${ymd}T12:00:00Z`);
+  const s = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    timeZoneName: 'shortOffset',
+  }).format(probe);
+
+  // s often contains something like "GMT-6" or "GMT-05:00"
+  const match = s.match(/GMT([+-]\d{1,2})(?::(\d{2}))?/);
+  if (!match) return '-06:00';
+
+  const signHours = parseInt(match[1], 10); // includes sign
+  const mins = match[2] ? parseInt(match[2], 10) : 0;
+
+  const sign = signHours < 0 ? '-' : '+';
+  const absH = String(Math.abs(signHours)).padStart(2, '0');
+  const absM = String(Math.abs(mins)).padStart(2, '0');
+  return `${sign}${absH}:${absM}`;
+}
+
+/**
+ * Convert a local America/Chicago midnight (YYYY-MM-DDT00:00:00 offset)
+ * into a UTC ISO string for Supabase comparisons.
+ */
+function localMidnightToUtcIso(ymd, tz = PAY_TZ) {
+  const offset = getOffsetForYMD(ymd, tz);
+  const local = new Date(`${ymd}T00:00:00${offset}`);
+  return local.toISOString();
+}
+
+/**
+ * Helper: get pay_date (Friday) as YYYY-MM-DD.
+ * - if ?pay_date=YYYY-MM-DD provided, use that.
+ * - else: choose the NEXT Friday in America/Chicago (never “today” even if Friday)
+ */
+function getPayDateStr(event) {
+  const qs = event.queryStringParameters || {};
   if (qs.pay_date) {
-    // Allow override like ?pay_date=2025-12-05 for testing
-    const d = new Date(qs.pay_date);
-    if (!isNaN(d.getTime())) {
-      return d;
-    }
+    const d = new Date(`${qs.pay_date}T12:00:00Z`);
+    if (!isNaN(d.getTime())) return qs.pay_date;
   }
 
-  // Default: today → next Friday (always upcoming, not today)
-  const today = new Date();
-  const day = today.getDay(); // 0=Sun, 5=Fri
-  let diff = (5 - day + 7) % 7;
+  const now = new Date();
+  const todayYMD = getLocalYMD(now, PAY_TZ);
+  const dow = getLocalDOW(now, PAY_TZ); // 0=Sun..6=Sat
+
+  // Friday is 5. Always upcoming, not today.
+  let diff = (5 - dow + 7) % 7;
   if (diff === 0) diff = 7;
-  const nextFriday = new Date(today);
-  nextFriday.setDate(today.getDate() + diff);
-  return nextFriday;
+
+  return addDaysYMD(todayYMD, diff);
 }
 
 /**
