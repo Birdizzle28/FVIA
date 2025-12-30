@@ -10,56 +10,100 @@ if (!supabaseUrl || !serviceKey) {
 
 const supabase = createClient(supabaseUrl, serviceKey);
 
-/**
- * Helper: get the pay_date (Friday) either from query param or "next Friday from today"
- */
-function getPayDate(event) {
-  const qs = event.queryStringParameters || {};
+/* ================================
+   MATCH runWeeklyAdvance WINDOW LOGIC
+   America/Chicago (DST-safe enough)
+   ================================ */
+const PAY_TZ = 'America/Chicago';
 
+function getLocalYMD(date = new Date(), tz = PAY_TZ) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: tz,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).formatToParts(date);
+
+  const y = parts.find(p => p.type === 'year').value;
+  const m = parts.find(p => p.type === 'month').value;
+  const d = parts.find(p => p.type === 'day').value;
+  return `${y}-${m}-${d}`;
+}
+
+function getLocalDOW(date = new Date(), tz = PAY_TZ) {
+  const dowStr = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    weekday: 'short',
+  }).format(date);
+
+  const map = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  return map[dowStr] ?? date.getDay();
+}
+
+function addDaysYMD(ymd, days) {
+  const d = new Date(`${ymd}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
+
+function getOffsetForYMD(ymd, tz = PAY_TZ) {
+  const probe = new Date(`${ymd}T12:00:00Z`);
+  const s = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz,
+    timeZoneName: 'shortOffset',
+  }).format(probe);
+
+  const match = s.match(/GMT([+-]\d{1,2})(?::(\d{2}))?/);
+  if (!match) return '-06:00';
+
+  const signHours = parseInt(match[1], 10);
+  const mins = match[2] ? parseInt(match[2], 10) : 0;
+
+  const sign = signHours < 0 ? '-' : '+';
+  const absH = String(Math.abs(signHours)).padStart(2, '0');
+  const absM = String(Math.abs(mins)).padStart(2, '0');
+  return `${sign}${absH}:${absM}`;
+}
+
+function localMidnightToUtcIso(ymd, tz = PAY_TZ) {
+  const offset = getOffsetForYMD(ymd, tz);
+  const local = new Date(`${ymd}T00:00:00${offset}`);
+  return local.toISOString();
+}
+
+/**
+ * Helper: get pay_date (Friday) as YYYY-MM-DD.
+ * - if ?pay_date=YYYY-MM-DD provided, use that.
+ * - else: choose the NEXT Friday in America/Chicago (never “today” even if Friday)
+ */
+function getPayDateStr(event) {
+  const qs = event.queryStringParameters || {};
   if (qs.pay_date) {
-    // Allow override like ?pay_date=2025-12-05 for testing
-    const d = new Date(qs.pay_date);
-    if (!isNaN(d.getTime())) {
-      return d;
-    }
+    const d = new Date(`${qs.pay_date}T12:00:00Z`);
+    if (!isNaN(d.getTime())) return qs.pay_date;
   }
 
-  // Default: today → next Friday (always upcoming, not today)
-  const today = new Date();
-  const day = today.getDay(); // 0=Sun, 5=Fri
-  let diff = (5 - day + 7) % 7;
+  const now = new Date();
+  const todayYMD = getLocalYMD(now, PAY_TZ);
+  const dow = getLocalDOW(now, PAY_TZ);
+
+  let diff = (5 - dow + 7) % 7;
   if (diff === 0) diff = 7;
-  const nextFriday = new Date(today);
-  nextFriday.setDate(today.getDate() + diff);
-  return nextFriday;
+
+  return addDaysYMD(todayYMD, diff);
 }
 
 /**
  * Repayment rate based on:
  * - totalDebt (lead + chargeback)
  * - isActive (agents.is_active)
- *
- * Rules:
- *   - if not active → 100% of this check (up to remaining debt)
- *   - if active:
- *        < 1000         => 30%
- *        1000–1999.99   => 40%
- *        >= 2000        => 50%
  */
 function getRepaymentRate(totalDebt, isActive) {
-  if (!isActive) {
-    return 1.0; // 100%
-  }
-  if (totalDebt <= 0) {
-    return 0;
-  }
-  if (totalDebt < 1000) {
-    return 0.30;
-  }
-  if (totalDebt < 2000) {
-    return 0.40;
-  }
-  return 0.50; // 2000+
+  if (!isActive) return 1.0;
+  if (totalDebt <= 0) return 0;
+  if (totalDebt < 1000) return 0.30;
+  if (totalDebt < 2000) return 0.40;
+  return 0.50;
 }
 
 export async function handler(event) {
@@ -71,24 +115,35 @@ export async function handler(event) {
   }
 
   try {
-    const payDate    = getPayDate(event);                    // JS Date
-    const payDateStr = payDate.toISOString().slice(0, 10);   // YYYY-MM-DD
+    const payDateStr = getPayDateStr(event); // Friday YYYY-MM-DD
 
-    // 1) cutoff = pay_date - 14 days
-    const cutoff = new Date(payDate);
-    cutoff.setDate(cutoff.getDate() - 14);
-    const cutoffIso = cutoff.toISOString();
+    // ✅ NEW RULE WINDOW (same as runWeeklyAdvance):
+    // Sun/Mon/Tue -> paid this Friday
+    // Window: Sunday 00:00 inclusive through Wednesday 00:00 exclusive
+    const startYMD = addDaysYMD(payDateStr, -5); // Sunday
+    const endYMD   = addDaysYMD(payDateStr, -2); // Wednesday (exclusive)
 
-    console.log('[previewWeeklyAdvance] pay_date =', payDateStr, 'cutoff =', cutoffIso);
+    const startIso = localMidnightToUtcIso(startYMD, PAY_TZ); // inclusive
+    const endIso   = localMidnightToUtcIso(endYMD, PAY_TZ);   // exclusive
 
-    // 2) Find all eligible ledger rows (advances + overrides not yet settled)
+    console.log(
+      '[previewWeeklyAdvance] pay_date =',
+      payDateStr,
+      'window =',
+      startYMD,
+      'to',
+      endYMD,
+      '(end exclusive)'
+    );
+
+    // 2) Find all eligible ledger rows (advances + overrides not yet settled) IN WINDOW
     const { data: ledgerRows, error: ledgerErr } = await supabase
       .from('commission_ledger')
       .select('id, agent_id, amount, entry_type, created_at, is_settled')
       .in('entry_type', ['advance', 'override'])
-      // treat NULL as not settled too
       .or('is_settled.is.null,is_settled.eq.false')
-      .lte('created_at', cutoffIso);
+      .gte('created_at', startIso)
+      .lt('created_at', endIso);
 
     if (ledgerErr) {
       console.error('[previewWeeklyAdvance] Error loading ledger rows:', ledgerErr);
@@ -106,7 +161,8 @@ export async function handler(event) {
         body: JSON.stringify({
           message: 'No eligible commission_ledger rows to pay for this advance preview.',
           pay_date: payDateStr,
-          cutoff_date: cutoffIso,
+          window_start: startIso,
+          window_end_exclusive: endIso,
           agent_payouts: [],
           total_gross: 0,
           total_debits: 0,
@@ -121,15 +177,12 @@ export async function handler(event) {
 
     for (const row of ledgerRows) {
       const aid = row.agent_id;
-      if (!agentTotals[aid]) {
-        agentTotals[aid] = { advance: 0, override: 0, gross: 0 };
-      }
+      if (!agentTotals[aid]) agentTotals[aid] = { advance: 0, override: 0, gross: 0 };
+
       const amt = Number(row.amount || 0);
-      if (row.entry_type === 'advance') {
-        agentTotals[aid].advance += amt;
-      } else if (row.entry_type === 'override') {
-        agentTotals[aid].override += amt;
-      }
+      if (row.entry_type === 'advance') agentTotals[aid].advance += amt;
+      else if (row.entry_type === 'override') agentTotals[aid].override += amt;
+
       agentTotals[aid].gross += amt;
     }
 
@@ -140,7 +193,8 @@ export async function handler(event) {
         body: JSON.stringify({
           message: 'No agents with eligible rows for this advance preview (after grouping).',
           pay_date: payDateStr,
-          cutoff_date: cutoffIso,
+          window_start: startIso,
+          window_end_exclusive: endIso,
           agent_payouts: [],
           total_gross: 0,
           total_debits: 0,
@@ -189,13 +243,12 @@ export async function handler(event) {
 
     const activeMap = new Map();
     (agentRows || []).forEach(a => {
-      // treat null as active by default
       activeMap.set(a.id, a.is_active !== false);
     });
 
-    // 6) Build payout summary with tiered repayment (30/40/50 or 100% if inactive)
+    // 6) Build payout summary with tiered repayment
     const payoutSummary = [];
-    let totalGross  = 0;
+    let totalGross = 0;
     let totalDebits = 0;
 
     for (const [agent_id, t] of Object.entries(agentTotals)) {
@@ -204,29 +257,26 @@ export async function handler(event) {
 
       const debtInfo = debtMap.get(agent_id) || { lead: 0, chargeback: 0, total: 0 };
       const totalDebt = debtInfo.total;
-      const isActive  = activeMap.has(agent_id) ? activeMap.get(agent_id) : true;
+      const isActive = activeMap.has(agent_id) ? activeMap.get(agent_id) : true;
 
       let leadRepay = 0;
       let chargebackRepay = 0;
       let net = gross;
 
       if (gross > 0 && totalDebt > 0) {
-        const rate       = getRepaymentRate(totalDebt, isActive);
-        const maxRepay   = Number((gross * rate).toFixed(2));   // tiered % of this check
-        const toRepay    = Math.min(maxRepay, totalDebt);       // but never more than they owe
+        const rate = getRepaymentRate(totalDebt, isActive);
+        const maxRepay = Number((gross * rate).toFixed(2));
+        const toRepay = Math.min(maxRepay, totalDebt);
 
-        // PRIORITY: chargebacks first, then leads
         let remaining = toRepay;
 
-        const chargebackOutstanding = debtInfo.chargeback;
-        if (chargebackOutstanding > 0 && remaining > 0) {
-          chargebackRepay = Math.min(remaining, chargebackOutstanding);
+        if (debtInfo.chargeback > 0 && remaining > 0) {
+          chargebackRepay = Math.min(remaining, debtInfo.chargeback);
           remaining -= chargebackRepay;
         }
 
-        const leadOutstanding = debtInfo.lead;
-        if (leadOutstanding > 0 && remaining > 0) {
-          leadRepay = Math.min(remaining, leadOutstanding);
+        if (debtInfo.lead > 0 && remaining > 0) {
+          leadRepay = Math.min(remaining, debtInfo.lead);
           remaining -= leadRepay;
         }
 
@@ -246,23 +296,19 @@ export async function handler(event) {
       });
     }
 
-    totalGross  = Number(totalGross.toFixed(2));
+    totalGross = Number(totalGross.toFixed(2));
     totalDebits = Number(totalDebits.toFixed(2));
     const totalNet = Number((totalGross - totalDebits).toFixed(2));
 
-    // *** IMPORTANT DIFFERENCE FROM runWeeklyAdvance ***
-    // No insert into payout_batches
-    // No update of commission_ledger
-    // No applyRepayments()
-    // This is a READ-ONLY preview.
-
+    // READ-ONLY preview (no inserts/updates)
     return {
       statusCode: 200,
       body: JSON.stringify(
         {
           message: 'Weekly advance PREVIEW (no DB changes performed).',
           pay_date: payDateStr,
-          cutoff_date: cutoffIso,
+          window_start: startIso,
+          window_end_exclusive: endIso,
           total_gross: totalGross,
           total_debits: totalDebits,
           total_net: totalNet,
