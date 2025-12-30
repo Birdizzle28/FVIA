@@ -426,49 +426,33 @@
             <header class="comm-panel-header">
               <h2>Team & Overrides</h2>
               <div class="comm-filters">
-                <fieldset class="comm-scope-toggle">
-                  <legend>View</legend>
-                  <label>
-                    <input type="radio" name="team-scope" value="my-book" checked />
-                    My book
-                  </label>
-                  <label>
-                    <input type="radio" name="team-scope" value="direct-team" />
-                    Direct team
-                  </label>
-                </fieldset>
-
-                <label for="team-agent-select">Individual Agent</label>
-                <select id="team-agent-select">
-                  <option value="">Select agent…</option>
-                  <!-- options filled via JS (direct downline only) -->
-                </select>
+                <!-- intentionally empty now -->
               </div>
             </header>
-
+          
             <section class="comm-team-stats">
               <article class="comm-card">
                 <h3>My Total AP (Period)</h3>
                 <p class="comm-amount" id="team-my-ap">$0</p>
                 <p class="comm-subtext" id="team-my-ap-period">Last 30 days</p>
               </article>
-
+          
               <article class="comm-card">
-                <h3>Team AP (Direct Only)</h3>
+                <h3>Team AP (Period)</h3>
                 <p class="comm-amount" id="team-direct-ap">$0</p>
                 <p class="comm-subtext" id="team-direct-count">0 active agents</p>
               </article>
-
+          
               <article class="comm-card">
                 <h3>Overrides Earned</h3>
                 <p class="comm-amount" id="team-overrides-amount">$0.00</p>
                 <p class="comm-subtext" id="team-overrides-period">Last 30 days</p>
               </article>
             </section>
-
+          
             <section class="comm-table-section">
               <header class="comm-table-header">
-                <h3>Direct Team Snapshot</h3>
+                <h3>Team Snapshot</h3>
               </header>
               <div class="comm-table-scroll">
                 <table id="team-agents-table">
@@ -484,25 +468,6 @@
                   </thead>
                   <tbody>
                     <!-- Filled via commissions.js -->
-                  </tbody>
-                </table>
-              </div>
-            </section>
-
-            <section class="comm-table-section" id="team-individual-wrapper" hidden>
-              <header class="comm-table-header">
-                <h3 id="team-individual-title">Agent Detail</h3>
-              </header>
-              <div class="comm-table-scroll">
-                <table id="team-individual-table">
-                  <thead>
-                    <tr>
-                      <th>Metric</th>
-                      <th>Value</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <!-- Filled via commissions.js for selected agent -->
                   </tbody>
                 </table>
               </div>
