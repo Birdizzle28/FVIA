@@ -262,8 +262,8 @@ export async function handler(event) {
 
     // NEW RULE WINDOW:
     // Eligible sales are from (payFriday - 9 days) through (payFriday - 2 days) exclusive
-    const startYMD = addDaysYMD(payDateStr, -9);   // previous Wed
-    const endYMD   = addDaysYMD(payDateStr, -2);   // Wednesday 00:00 (exclusive upper bound)
+    const startYMD = addDaysYMD(payDateStr, -5); // Sunday
+    const endYMD   = addDaysYMD(payDateStr, -2); // Wednesday (exclusive)
     
     const startIso = localMidnightToUtcIso(startYMD, PAY_TZ); // inclusive
     const endIso   = localMidnightToUtcIso(endYMD, PAY_TZ);   // exclusive
@@ -277,7 +277,8 @@ export async function handler(event) {
       .in('entry_type', ['advance', 'override'])
       // treat NULL as not settled too
       .or('is_settled.is.null,is_settled.eq.false')
-      .lte('created_at', cutoffIso);
+      .gte('created_at', startIso)
+      .lt('created_at', endIso);
 
     if (ledgerErr) {
       console.error('[runWeeklyAdvance] Error loading ledger rows:', ledgerErr);
@@ -295,7 +296,8 @@ export async function handler(event) {
         body: JSON.stringify({
           message: 'No eligible commission_ledger rows to pay for this advance run.',
           pay_date: payDateStr,
-          cutoff_date: cutoffIso,
+          window_start: startIso,
+          window_end_exclusive: endIso,
         }),
       };
     }
@@ -324,7 +326,8 @@ export async function handler(event) {
         body: JSON.stringify({
           message: 'No agents with eligible rows for this run (after grouping).',
           pay_date: payDateStr,
-          cutoff_date: cutoffIso,
+          window_start: startIso,
+          window_end_exclusive: endIso,
         }),
       };
     }
@@ -461,8 +464,8 @@ export async function handler(event) {
       .update({
         is_settled: true,
         payout_batch_id: batch.id,
-        period_start: cutoffIso,
-        period_end: payDate.toISOString(),
+        period_start: startIso,
+        period_end: endIso,
       })
       .in('id', ledgerIds);
 
@@ -490,7 +493,8 @@ export async function handler(event) {
         {
           message: 'Weekly advance run completed (with tiered debt withholding + repayment records).',
           pay_date: payDateStr,
-          cutoff_date: cutoffIso,
+          window_start: startIso,
+          window_end_exclusive: endIso,
           batch_id: batch.id,
           total_gross: totalGross,
           total_debits: totalDebits,
