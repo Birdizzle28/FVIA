@@ -128,7 +128,7 @@ function getNextFridayISO() {
   const diff = (5 - day + 7) % 7 || 7;
   const next = new Date(today);
   next.setDate(today.getDate() + diff);
-  return next.toISOString().slice(0, 10);
+  return toISODate(next); // <-- your local YYYY-MM-DD helper
 }
 
 // Your monthly pay-thru preview defaults to the 5th.
