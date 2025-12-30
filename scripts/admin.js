@@ -152,33 +152,18 @@ function diffInDays(a, b) {
  *
  * Returns a Date for that Friday, or null if today is not in the Thu–Sat window.
  */
-function getWeeklyScheduledDateIfAllowed(today) {
-  // Look in a 3-day window around today for a Friday
-  for (let offset = -1; offset <= 1; offset++) {
-    const candidate = new Date(today);
-    candidate.setDate(today.getDate() + offset);
-    if (candidate.getDay() === 5) { // 5 = Friday
-      return candidate;
-    }
-  }
-  return null;
+// Always returns the Friday of the current week (relative to "today")
+function getWeeklyScheduledDate(today) {
+  const d = new Date(today);
+  const day = d.getDay(); // 0 Sun ... 5 Fri
+  const diffToFriday = (5 - day + 7) % 7; // 0 if already Friday
+  d.setDate(d.getDate() + diffToFriday);
+  return d;
 }
 
-/**
- * Monthly pay-thru run day:
- *   - Scheduled pay date = 5th of this month
- *   - Allow button click on 4th, 5th, or 6th
- *     -> always run with the 5TH as pay_date
- *
- * Returns a Date for the 5th, or null if today is not within ±1 day.
- */
-function getMonthlyScheduledDateIfAllowed(today) {
-  const scheduled = new Date(today.getFullYear(), today.getMonth(), 5);
-  const diff = diffInDays(today, scheduled); // positive if today after 5th
-  if (Math.abs(diff) <= 1) {
-    return scheduled;
-  }
-  return null;
+// Always returns the 5th of the current month
+function getMonthlyScheduledDate(today) {
+  return new Date(today.getFullYear(), today.getMonth(), 5);
 }
 
 // ===== Hook up the "Run Scheduled Payouts" button =====
@@ -190,23 +175,22 @@ if (runPayoutsBtn && runPayoutsStatus) {
   runPayoutsBtn.addEventListener('click', async () => {
     const today = new Date();
 
-    const weeklyDate  = getWeeklyScheduledDateIfAllowed(today);
-    const monthlyDate = getMonthlyScheduledDateIfAllowed(today);
-
+    const weeklyDate  = getWeeklyScheduledDate(today);
+    const monthlyDate = getMonthlyScheduledDate(today);
+    
+    // ALWAYS run both (or comment one out if you want a single button)
     const tasks = [];
     let statusText = '';
-
+    
     runPayoutsBtn.disabled = true;
     runPayoutsStatus.textContent = 'Running payouts...';
-
+    
     try {
-      // Weekly advance (Thu/Fri/Sat)
-      if (weeklyDate) {
+      // Weekly advance (always allowed)
+      {
         const payDateStr = toIsoDate(weeklyDate);
         tasks.push(
-          fetch(`/.netlify/functions/runWeeklyAdvance?pay_date=${payDateStr}`, {
-            method: 'POST'
-          })
+          fetch(`/.netlify/functions/runWeeklyAdvance?pay_date=${payDateStr}`, { method: 'POST' })
             .then(res => res.json())
             .then(data => {
               statusText += `Weekly advance run for ${payDateStr}: ${data.message || 'OK'}\n`;
@@ -218,14 +202,12 @@ if (runPayoutsBtn && runPayoutsStatus) {
             })
         );
       }
-
-      // Monthly pay-thru (4th/5th/6th)
-      if (monthlyDate) {
+    
+      // Monthly pay-thru (always allowed)
+      {
         const payDateStr = toIsoDate(monthlyDate);
         tasks.push(
-          fetch(`/.netlify/functions/runMonthlyPayThru?pay_date=${payDateStr}`, {
-            method: 'POST'
-          })
+          fetch(`/.netlify/functions/runMonthlyPayThru?pay_date=${payDateStr}`, { method: 'POST' })
             .then(res => res.json())
             .then(data => {
               statusText += `Monthly pay-thru run for ${payDateStr}: ${data.message || 'OK'}\n`;
@@ -237,19 +219,10 @@ if (runPayoutsBtn && runPayoutsStatus) {
             })
         );
       }
-
-      if (tasks.length === 0) {
-        runPayoutsStatus.textContent =
-          'Not in the allowed window: ' +
-          'Weekly (Thu–Sat around Friday) or Monthly (4th–6th around the 5th).';
-        return;
-      }
-
+    
       await Promise.all(tasks);
-
       runPayoutsStatus.textContent = statusText.trim();
-      // Optionally: after success, you could refresh payout batch list here.
-
+    
     } catch (err) {
       console.error('Error running payouts:', err);
       runPayoutsStatus.textContent = `Unexpected error: ${err.message}`;
