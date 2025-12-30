@@ -111,7 +111,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   // ----- 7. Still use placeholder data for payouts, team, files (for now) -----
   await loadAndRenderPayouts();
   await loadAndRenderTeamOverridesPanel();
-  renderPlaceholderFiles();
+  await loadAndRenderFilesForChip('all');
 });
 
 /* ===============================
@@ -433,7 +433,7 @@ function initFilesChips() {
   const chipsWrap = document.getElementById('files-type-chips');
   if (!chipsWrap) return;
 
-  chipsWrap.addEventListener('click', (e) => {
+  chipsWrap.addEventListener('click', async (e) => {
     const btn = e.target.closest('.chip');
     if (!btn) return;
 
@@ -444,16 +444,8 @@ function initFilesChips() {
       chip.classList.toggle('is-active', chip === btn);
     });
 
-    // Filter files table rows by data-doc-type attribute
-    const tbody = document.querySelector('#files-table tbody');
-    if (!tbody) return;
-
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    rows.forEach(row => {
-      const rowType = row.getAttribute('data-doc-type') || 'other';
-      const shouldShow = type === 'all' || rowType === type;
-      row.style.display = shouldShow ? '' : 'none';
-    });
+    // ✅ Instead of just hiding/showing rows, we re-render the table
+    await loadAndRenderFilesForChip(type);
   });
 }
 
@@ -1625,6 +1617,169 @@ function renderPlaceholderFiles() {
       </td>
     </tr>
   `).join('');
+}
+async function loadAndRenderFilesForChip(type) {
+  if (type === 'schedule') {
+    await loadAndRenderPaySchedulesTable();
+    return;
+  }
+
+  // For now keep your existing placeholder rows for other types
+  renderPlaceholderFiles();
+
+  // And then apply the filter to those placeholder rows
+  const tbody = document.querySelector('#files-table tbody');
+  if (!tbody) return;
+
+  const rows = Array.from(tbody.querySelectorAll('tr'));
+  rows.forEach(row => {
+    const rowType = row.getAttribute('data-doc-type') || 'other';
+    const shouldShow = type === 'all' || rowType === type;
+    row.style.display = shouldShow ? '' : 'none';
+  });
+}
+
+async function loadAndRenderPaySchedulesTable() {
+  const tbody = document.querySelector('#files-table tbody');
+  if (!tbody) return;
+
+  if (!me || !myProfile) {
+    tbody.innerHTML = `<tr><td colspan="6">Loading…</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = `<tr><td colspan="6">Loading pay schedules…</td></tr>`;
+
+  try {
+    // ✅ If admin, show ALL carriers
+    // ✅ If not admin, show ONLY carriers they are actively contracted with
+    let carriers = [];
+
+    if (myProfile.is_admin) {
+      const { data, error } = await supabase
+        .from('carriers')
+        .select('id, carrier_name')
+        .order('carrier_name', { ascending: true });
+
+      if (error) throw error;
+      carriers = data || [];
+    } else {
+      // Pull agent_carriers and join carrier name
+      const { data, error } = await supabase
+        .from('agent_carriers')
+        .select(`
+          carrier_id,
+          is_contracted,
+          status,
+          effective_date,
+          terminated_date,
+          carriers:carriers ( id, carrier_name )
+        `)
+        .eq('agent_id', me.id)
+        .eq('is_contracted', true)
+        .eq('status', 'active');
+
+      if (error) throw error;
+
+      const today = new Date();
+      const iso = today.toISOString().slice(0, 10);
+
+      carriers = (data || [])
+        .filter(r => {
+          // effective_date <= today (if set)
+          if (r.effective_date && String(r.effective_date) > iso) return false;
+          // terminated_date > today (if set)
+          if (r.terminated_date && String(r.terminated_date) <= iso) return false;
+          return true;
+        })
+        .map(r => r.carriers)
+        .filter(Boolean);
+    }
+
+    // De-dupe by id (just in case)
+    const seen = new Set();
+    carriers = (carriers || []).filter(c => {
+      if (!c?.id) return false;
+      if (seen.has(c.id)) return false;
+      seen.add(c.id);
+      return true;
+    });
+
+    if (!carriers.length) {
+      tbody.innerHTML = `<tr><td colspan="6">No active carrier pay schedules found.</td></tr>`;
+      return;
+    }
+
+    // Render rows as "Schedule" type
+    tbody.innerHTML = carriers.map(c => `
+      <tr data-doc-type="schedule" data-carrier-id="${escapeHtml(c.id)}">
+        <td>${escapeHtml(c.carrier_name || 'Carrier')}</td>
+        <td>Schedule</td>
+        <td>Current</td>
+        <td>FVG</td>
+        <td>—</td>
+        <td>
+          <button type="button" class="btn-ghost-sm btn-download-schedule" data-carrier-id="${escapeHtml(c.id)}">
+            Download
+          </button>
+        </td>
+      </tr>
+    `).join('');
+
+    // Wire download buttons
+    tbody.querySelectorAll('.btn-download-schedule').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const carrierId = btn.getAttribute('data-carrier-id');
+        if (!carrierId) return;
+        await downloadCarrierPaySchedulePdf(carrierId);
+      });
+    });
+
+  } catch (err) {
+    console.error('Error loading pay schedules:', err);
+    tbody.innerHTML = `<tr><td colspan="6">Failed to load pay schedules.</td></tr>`;
+  }
+}
+
+async function downloadCarrierPaySchedulePdf(carrierId) {
+  try {
+    if (!accessToken) {
+      alert('Missing session token. Please log in again.');
+      return;
+    }
+
+    const url = `/.netlify/functions/downloadCarrierPaySchedule?carrier_id=${encodeURIComponent(carrierId)}`;
+
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+
+    if (!res.ok) {
+      const t = await res.text();
+      console.error('Download failed:', res.status, t);
+      alert('Download failed. You may not be active with that carrier.');
+      return;
+    }
+
+    const blob = await res.blob();
+
+    // filename from header if present
+    const dispo = res.headers.get('Content-Disposition') || '';
+    const match = dispo.match(/filename="([^"]+)"/i);
+    const filename = match?.[1] || 'PaySchedule.pdf';
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  } catch (err) {
+    console.error('downloadCarrierPaySchedulePdf error:', err);
+    alert('Download error. Check console.');
+  }
 }
 
 /* ===============================
