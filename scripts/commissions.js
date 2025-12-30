@@ -458,6 +458,47 @@ function initFilesChips() {
   });
 }
 
+function initTeamAgentPanelToggle() {
+  const select = document.getElementById('team-agent-select');
+  const wrapper = document.getElementById('team-individual-wrapper');
+  const title = document.getElementById('team-individual-title');
+  const tableBody = document.querySelector('#team-individual-table tbody');
+
+  if (!select || !wrapper || !tableBody) return;
+
+  // Show/hide on change
+  select.addEventListener('change', () => {
+    const val = select.value;
+    if (!val) {
+      wrapper.hidden = true;
+      tableBody.innerHTML = '';
+      return;
+    }
+
+    wrapper.hidden = false;
+    // For now, just simple placeholder details. Later we’ll fetch from Supabase.
+    title.textContent = `Agent Detail – ${select.options[select.selectedIndex].text || 'Agent'}`;
+    tableBody.innerHTML = `
+      <tr>
+        <td>AP (Last 30 Days)</td>
+        <td>$4,200</td>
+      </tr>
+      <tr>
+        <td>Leads Balance</td>
+        <td>$320.00</td>
+      </tr>
+      <tr>
+        <td>Chargebacks</td>
+        <td>$180.00</td>
+      </tr>
+      <tr>
+        <td>Overrides You Earned</td>
+        <td>$540.00</td>
+      </tr>
+    `;
+  });
+}
+
 async function getAllDownlineAgentIds() {
   if (!me) return [];
 
@@ -660,6 +701,21 @@ async function loadAndRenderTeamOverridesPanel() {
 
   const apByTeam = teamIds.length ? await loadAPForAgents(teamIds, startISO, endISO) : {};
   const balancesByTeam = teamIds.length ? await loadOpenBalances(teamIds) : {};
+
+  // Fill the agent select (whole downline)
+  const select = document.getElementById('team-agent-select');
+  if (select) {
+    const keepFirst = select.querySelector('option:first-child');
+    select.innerHTML = '';
+    if (keepFirst) select.appendChild(keepFirst);
+
+    teamAgents.forEach(a => {
+      const opt = document.createElement('option');
+      opt.value = a.id;
+      opt.textContent = a.full_name || 'Agent';
+      select.appendChild(opt);
+    });
+  }
 
   // Fill the table
   const tbody = document.querySelector('#team-agents-table tbody');
