@@ -141,24 +141,55 @@ function drawTableHeader(doc, y) {
   return { cols, nextY: y + 22 };
 }
 
+function parseRenewalTrailCells(rule) {
+  if (!rule) return { renewalText: "—", yearsText: "—" };
+
+  let obj = rule;
+
+  // if stored as text, parse it
+  if (typeof obj === "string") {
+    try { obj = JSON.parse(obj); } catch { obj = null; }
+  }
+
+  const bands = Array.isArray(obj?.bands) ? obj.bands : [];
+  if (!bands.length) return { renewalText: "—", yearsText: "—" };
+
+  const renewalLines = [];
+  const yearsLines = [];
+
+  for (const b of bands) {
+    const ratePct = rateToPercentString(b?.rate);
+    const s = b?.start_year ?? "—";
+    const e = b?.end_year ?? "—";
+
+    let years = "—";
+    if (s !== "—" && e === "—") years = `${s}+`;
+    else if (s !== "—" && e !== "—") years = `${s}-${e}`;
+
+    renewalLines.push(ratePct);
+    yearsLines.push(years);
+  }
+
+  return {
+    renewalText: renewalLines.join("\n"),
+    yearsText: yearsLines.join("\n")
+  };
+}
+
 function drawTableRow(doc, row, y, cols) {
   const left = doc.page.margins.left;
   const right = doc.page.width - doc.page.margins.right;
   const w = right - left;
+
+  const { renewalText, yearsText } = parseRenewalTrailCells(row.renewal_trail_rule);
 
   const cells = [
     row.product_line || "—",
     row.policy_type || "—",
     rateToPercentString(row.base_commission_rate),
     rateToPercentString(row.advance_rate),
-    row.renewal_commission_rate == null ? "—" : rateToPercentString(row.renewal_commission_rate),
-    (() => {
-      const s = row.renewal_start_year ?? "—";
-      const e = row.renewal_end_year ?? "—";
-      if (s === "—" && e === "—") return "—";
-      if (s !== "—" && e === "—") return `${s}+`;
-      return `${s}–${e}`;
-    })(),
+    renewalText,
+    yearsText,
     row.notes || "—"
   ];
 
@@ -288,9 +319,7 @@ export async function handler(event) {
         agent_level,
         base_commission_rate,
         advance_rate,
-        renewal_commission_rate,
-        renewal_start_year,
-        renewal_end_year,
+        renewal_trail_rule,
         effective_from,
         effective_to,
         notes
@@ -387,7 +416,6 @@ export async function handler(event) {
       for (const row of schedules) {
         // New page if needed
         if (y > pageBottomLimit) {
-          drawFooter(doc, disclaimer);
           doc.addPage();
           y = doc.y;
           header = drawTableHeader(doc, y);
