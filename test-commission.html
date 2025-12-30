@@ -61,6 +61,63 @@
 <button id="create-stripe-btn">Create Stripe Account + Get Onboarding Link</button>
 
 <pre id="stripe-output" style="white-space: pre-wrap; background:#111; color:#ff0; padding:10px; margin-top:20px; min-height:120px;"></pre>
+<!-- -------------------------- -->
+<!--  SEND TEST STRIPE TRANSFER -->
+<!-- -------------------------- -->
+<h2>Send Test Stripe Transfer (Platform ➜ Connected)</h2>
+
+<label>
+  Connected Account ID (acct_...):<br>
+  <input id="test-dest-acct" type="text" style="width: 340px;" placeholder="acct_1234...">
+</label>
+<br><br>
+<label>
+  Amount (USD):<br>
+  <input id="test-amount" type="number" step="0.01" min="0.01" style="width: 200px;" placeholder="10.00">
+</label>
+<br><br>
+
+<!-- Optional: force payout to connected bank (if available in test) -->
+<label>
+  <input id="test-force-payout" type="checkbox">
+  Also create payout from connected account (Connected ➜ Bank)
+</label>
+<br><br>
+
+<button id="send-test-transfer-btn">Send Test Transfer</button>
+
+<pre id="test-transfer-output" style="white-space: pre-wrap; background:#111; color:#0ff; padding:10px; margin-top:20px; min-height:120px;"></pre>
+
+<script>
+document.getElementById('send-test-transfer-btn').addEventListener('click', async () => {
+  const acct = document.getElementById('test-dest-acct').value.trim();
+  const amt  = document.getElementById('test-amount').value.trim();
+  const forcePayout = document.getElementById('test-force-payout').checked;
+  const out  = document.getElementById('test-transfer-output');
+
+  if (!acct) return alert('Enter a connected account id (acct_...)');
+  if (!amt || Number(amt) <= 0) return alert('Enter a valid amount');
+
+  out.textContent = 'Sending test transfer...';
+
+  try {
+    const res = await fetch('/.netlify/functions/sendTestTransfer', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        destination_account_id: acct,
+        amount: Number(amt),
+        force_payout: forcePayout
+      })
+    });
+
+    const text = await res.text();
+    out.textContent = `Status: ${res.status}\n\n${text}`;
+  } catch (err) {
+    out.textContent = 'Error: ' + err.message;
+  }
+});
+</script>
 <script>
   document.getElementById('send-batch-btn').addEventListener('click', async () => {
   const batchId = document.getElementById('batch-id').value.trim();
