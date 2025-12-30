@@ -105,7 +105,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   initPoliciesFilters();
   initPoliciesScopeToggle();
   initFilesChips();
-  initTeamAgentPanelToggle();
   initBalanceScopeToggle();
   // ----- 5. Load REAL lead debts + chargebacks -----
 
@@ -1572,21 +1571,6 @@ function renderPlaceholderTeam() {
         <td>$${r.overrides.toFixed(2)}</td>
       </tr>
     `).join('');
-  }
-
-  // Populate the "Individual Agent" select with the same placeholder names
-  const select = document.getElementById('team-agent-select');
-  if (select) {
-    const keepFirst = select.querySelector('option:first-child');
-    select.innerHTML = '';
-    if (keepFirst) select.appendChild(keepFirst);
-
-    ['Agent Alpha', 'Agent Bravo', 'Agent Charlie'].forEach((name, idx) => {
-      const opt = document.createElement('option');
-      opt.value = `agent-${idx + 1}`;
-      opt.textContent = name;
-      select.appendChild(opt);
-    });
   }
 }
 
