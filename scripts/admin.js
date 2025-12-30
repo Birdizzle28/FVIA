@@ -1884,14 +1884,33 @@ document.addEventListener('DOMContentLoaded', async () => {
   function openOverlay(id){
     const el = document.getElementById(id);
     if (!el) return;
+  
+    // Force it visible even if CSS has display:none
+    el.style.display = 'flex';
+    el.style.position = 'fixed';
+    el.style.inset = '0';
+    el.style.zIndex = '999999';
+  
     el.classList.add('open');
     el.setAttribute('aria-hidden','false');
-    document.body.style.overflow='hidden';
+  
+    // Lock scroll (both html + body for iOS)
+    document.documentElement.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden';
   }
+  
   function closeOverlay(el){
+    if (!el) return;
+  
     el.classList.remove('open');
     el.setAttribute('aria-hidden','true');
-    document.body.style.overflow='';
+  
+    // Hide it even if CSS forgets
+    el.style.display = 'none';
+  
+    // Restore scroll
+    document.documentElement.style.overflow = '';
+    document.body.style.overflow = '';
   }
   document.querySelectorAll('.overlay [data-close], .overlay .overlay-backdrop').forEach(btn=>{
     btn.addEventListener('click', (e)=> {
