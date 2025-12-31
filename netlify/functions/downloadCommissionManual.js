@@ -36,7 +36,7 @@ function tryLoadLogoBuffer() {
   // - /images/logo.png
   const candidates = [
     path.join(process.cwd(), 'assets', 'logo.png'),
-    path.join(process.cwd(), 'Pics', 'logo.png'),
+    path.join(process.cwd(), 'Pics', 'img17.png'),
     path.join(process.cwd(), 'images', 'logo.png'),
     path.join(process.cwd(), 'logo.png'),
   ];
