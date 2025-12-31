@@ -235,11 +235,8 @@ function addDivider(doc) {
  * FIX #2: Start each section on its own page.
  */
 function startNewSectionPage(doc) {
-  // Put footer on the previous page before creating the new one
-  drawFooter(doc);
   doc.addPage();
 }
-
 /* ------------------------ HANDLER ------------------------ */
 
 export async function handler(event) {
