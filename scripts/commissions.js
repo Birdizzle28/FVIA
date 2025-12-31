@@ -1619,18 +1619,44 @@ function renderPlaceholderFiles() {
   `).join('');
 }
 async function loadAndRenderFilesForChip(type) {
+  // Keep schedules special
   if (type === 'schedule') {
     await loadAndRenderPaySchedulesTable();
     return;
   }
 
-  // For now keep your existing placeholder rows for other types
+  // Default placeholder files
   renderPlaceholderFiles();
 
-  // And then apply the filter to those placeholder rows
   const tbody = document.querySelector('#files-table tbody');
   if (!tbody) return;
 
+  // ✅ If user clicked "Other", prepend a Commission Manual row
+  if (type === 'other') {
+    const manualRow = document.createElement('tr');
+    manualRow.setAttribute('data-doc-type', 'other');
+    manualRow.innerHTML = `
+      <td>Commission Manual (PDF)</td>
+      <td>Other</td>
+      <td>—</td>
+      <td>FVG</td>
+      <td>—</td>
+      <td>
+        <button type="button" class="btn-ghost-sm btn-download-manual">
+          Download
+        </button>
+      </td>
+    `;
+    tbody.prepend(manualRow);
+
+    // ✅ Wire click → download function
+    const btn = manualRow.querySelector('.btn-download-manual');
+    btn.addEventListener('click', async () => {
+      await downloadCommissionManualPdf();
+    });
+  }
+
+  // Filter placeholder rows (and the injected row)
   const rows = Array.from(tbody.querySelectorAll('tr'));
   rows.forEach(row => {
     const rowType = row.getAttribute('data-doc-type') || 'other';
@@ -1781,7 +1807,43 @@ async function downloadCarrierPaySchedulePdf(carrierId) {
     alert('Download error. Check console.');
   }
 }
+async function downloadCommissionManualPdf() {
+  try {
+    if (!accessToken) {
+      alert('Missing session token. Please log in again.');
+      return;
+    }
 
+    const res = await fetch(`/.netlify/functions/downloadCommissionManual`, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+
+    if (!res.ok) {
+      const t = await res.text();
+      console.error('Commission Manual download failed:', res.status, t);
+      alert('Download failed.');
+      return;
+    }
+
+    const blob = await res.blob();
+
+    const dispo = res.headers.get('Content-Disposition') || '';
+    const match = dispo.match(/filename="([^"]+)"/i);
+    const filename = match?.[1] || 'Commission-Manual.pdf';
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  } catch (err) {
+    console.error('downloadCommissionManualPdf error:', err);
+    alert('Download error. Check console.');
+  }
+}
 /* ===============================
    Tiny helpers
    =============================== */
