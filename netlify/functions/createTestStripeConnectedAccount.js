@@ -28,7 +28,7 @@ export async function handler(event) {
 
   const agent_id = String(body.agent_id || '').trim();
   const return_url = String(body.return_url || '').trim() || DEFAULT_RETURN_URL;
-  const refresh_url = String(body.refresh_url || '').trim() || DEFAULT_REFRESH_URL;
+  const refresh_url = `https://familyvaluesgroup.com/.netlify/functions/stripeOnboardingRefresh?account_id=${encodeURIComponent(account.id)}`;
 
   if (!agent_id) {
     return { statusCode: 400, body: 'agent_id is required (can be any identifier)' };
