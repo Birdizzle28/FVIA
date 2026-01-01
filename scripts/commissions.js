@@ -73,7 +73,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   try {
     const { data: profile, error: profErr } = await supabase
       .from('agents')
-      .select('id, full_name, agent_id, is_admin, is_active, level')
+      .select('id, full_name, agent_id, is_admin, is_active, level, created_at')
       .eq('id', me.id)
       .single();
 
@@ -1625,6 +1625,12 @@ async function loadAndRenderFilesForChip(type) {
     return;
   }
 
+  // ✅ NEW: 1099s special
+  if (type === '1099') {
+    await loadAndRender1099sTable();
+    return;
+  }
+
   // Default placeholder files
   renderPlaceholderFiles();
 
@@ -1841,6 +1847,123 @@ async function downloadCommissionManualPdf() {
     a.remove();
   } catch (err) {
     console.error('downloadCommissionManualPdf error:', err);
+    alert('Download error. Check console.');
+  }
+}
+async function loadAndRender1099sTable() {
+  const tbody = document.querySelector('#files-table tbody');
+  if (!tbody) return;
+
+  if (!me || !myProfile) {
+    tbody.innerHTML = `<tr><td colspan="6">Loading…</td></tr>`;
+    return;
+  }
+
+  // Must have created_at to determine start year
+  const createdAt = myProfile.created_at ? new Date(myProfile.created_at) : null;
+  if (!createdAt || Number.isNaN(createdAt.getTime())) {
+    tbody.innerHTML = `<tr><td colspan="6">Missing agent start date (agents.created_at).</td></tr>`;
+    return;
+  }
+
+  const startYear = createdAt.getFullYear();
+  const currentYear = new Date().getFullYear();
+  const lastCompletedTaxYear = currentYear - 1; // only years that have fully passed
+
+  if (lastCompletedTaxYear < startYear) {
+    tbody.innerHTML = `<tr><td colspan="6">No 1099s yet (no completed tax years).</td></tr>`;
+    return;
+  }
+
+  tbody.innerHTML = `<tr><td colspan="6">Loading 1099s…</td></tr>`;
+
+  // Load totals that exist (only includes paid/sent batches because your view filters status='sent')
+  const { data, error } = await supabase
+    .from('agent_1099_totals')
+    .select('tax_year, nonemployee_comp')
+    .eq('agent_id', me.id)
+    .order('tax_year', { ascending: false });
+
+  if (error) {
+    console.error('Error loading agent_1099_totals:', error);
+    tbody.innerHTML = `<tr><td colspan="6">Failed to load 1099 totals.</td></tr>`;
+    return;
+  }
+
+  const totalsByYear = {};
+  (data || []).forEach(r => {
+    totalsByYear[Number(r.tax_year)] = Number(r.nonemployee_comp || 0);
+  });
+
+  const years = [];
+  for (let y = lastCompletedTaxYear; y >= startYear; y--) years.push(y);
+
+  tbody.innerHTML = years.map(y => {
+    const amt = Number(totalsByYear[y] || 0);
+    const period = `Tax Year ${y}`;
+    const readyLabel = amt > 0 ? 'Ready' : 'No paid payouts';
+
+    return `
+      <tr data-doc-type="1099" data-tax-year="${y}">
+        <td>1099-NEC - ${y}</td>
+        <td>1099</td>
+        <td>${escapeHtml(period)}</td>
+        <td>FVG</td>
+        <td>${escapeHtml(readyLabel)} (${formatMoney(amt)})</td>
+        <td>
+          <button type="button" class="btn-ghost-sm btn-download-1099" data-tax-year="${y}">
+            Download
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+
+  // Wire buttons
+  tbody.querySelectorAll('.btn-download-1099').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const taxYear = Number(btn.getAttribute('data-tax-year'));
+      if (!taxYear) return;
+      await download1099NecPdf(taxYear);
+    });
+  });
+}
+async function download1099NecPdf(taxYear) {
+  try {
+    if (!accessToken) {
+      alert('Missing session token. Please log in again.');
+      return;
+    }
+
+    const url = `/.netlify/functions/generate1099NEC?tax_year=${encodeURIComponent(String(taxYear))}`;
+
+    const res = await fetch(url, {
+      method: 'GET',
+      headers: { Authorization: `Bearer ${accessToken}` }
+    });
+
+    if (!res.ok) {
+      const t = await res.text();
+      console.error('1099 download failed:', res.status, t);
+      alert('1099 download failed.');
+      return;
+    }
+
+    const blob = await res.blob();
+
+    const dispo = res.headers.get('Content-Disposition') || '';
+    const match = dispo.match(/filename="([^"]+)"/i);
+    const filename = match?.[1] || `1099-NEC-${taxYear}.pdf`;
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  } catch (err) {
+    console.error('download1099NecPdf error:', err);
     alert('Download error. Check console.');
   }
 }
