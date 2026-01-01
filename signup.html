@@ -124,226 +124,143 @@
 	  });
 	</script>
     <script>
-document.addEventListener('DOMContentLoaded', () => {
-  const supabase = window.supabaseClient;
-
-  const form    = document.getElementById('signup-form');
-  const status  = document.getElementById('status');
-  const message = document.getElementById('message');
-
-  console.log('[signup] script loaded', { hasSupabaseClient: !!supabase, hasForm: !!form });
-  if (!form) return;
-
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
-    status.textContent = '⏳ Signing up...';
-    message.textContent = '';
-
-    if (!supabase) {
-      status.textContent = '❌ Supabase client not loaded.';
-      return;
-    }
-
-    const agentId   = document.getElementById('agent-id').value.trim();
-    const password  = document.getElementById('password').value;
-    const confirmPw = document.getElementById('confirm-password').value;
-    const ssnRaw    = document.getElementById('ssn').value.trim();
-    const ssnDigits = ssnRaw.replace(/\D/g, '');
-
-    if (ssnDigits.length !== 9) {
-      status.textContent = '⚠️ Enter a valid 9-digit SSN.';
-      return;
-    }
-    if (!agentId || !password) {
-      status.textContent = '⚠️ Enter Agent ID and password.';
-      return;
-    }
-    if (password !== confirmPw) {
-      status.textContent = '⚠️ Passwords do not match.';
-      return;
-    }
-
-    // 1) Check approved_agents
-    const { data: approved, error: checkErr } = await supabase
-      .from('approved_agents')
-      .select(`
-        id,
-        agent_id,
-        is_registered,
-        email,
-        first_name,
-        last_name,
-        phone,
-        level,
-        recruiter_id,
-        stripe_account_id
-      `)
-      .eq('agent_id', agentId)
-      .maybeSingle();
-
-    if (checkErr) {
-      console.error('approved_agents lookup error:', checkErr);
-      status.textContent = '❌ Error checking Agent ID.';
-      return;
-    }
-    if (!approved) {
-      status.textContent = '❌ Agent ID not pre-approved.';
-      return;
-    }
-    if (!approved.email) {
-      status.textContent = '❌ No email on file.';
-      return;
-    }
-
-    const authEmail = approved.email.trim();
-
-    // 2) Create auth user
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-      email: authEmail,
-      password,
-      options: {
-        emailRedirectTo: 'https://familyvaluesgroup.com/confirmed.html',
-        data: {
-          agent_id: approved.agent_id,
-          first_name: approved.first_name || '',
-          last_name: approved.last_name || '',
-          phone: approved.phone || null,
-          level: approved.level || null,
-          recruiter_id: approved.recruiter_id || null
-        }
-      }
-    });
-
-    if (signUpError) {
-      console.error('signUp error:', signUpError);
-      status.textContent = '❌ Signup failed: ' + signUpError.message;
-      return;
-    }
-
-    const userId = signUpData?.user?.id;
-    if (!userId) {
-      status.textContent = '❌ Missing user ID.';
-      return;
-    }
-
-    // 3) Ensure agents row exists (and backfill missing fields if it already exists)
-	try {
-	  const { data: existingAgent, error: agentCheckErr } = await supabase
-	    .from('agents')
-	    .select('id, created_at, show_on_about, phone, level, stripe_account_id')
-	    .eq('id', userId)
-	    .maybeSingle();
+	document.addEventListener('DOMContentLoaded', () => {
+	  const supabase = window.supabaseClient;
 	
-	  if (agentCheckErr) {
-	    console.error('agents check error:', agentCheckErr);
-	  }
+	  const form    = document.getElementById('signup-form');
+	  const status  = document.getElementById('status');
+	  const message = document.getElementById('message');
 	
-	  const fullName =
-	    [approved.first_name, approved.last_name].filter(Boolean).join(' ') ||
-	    approved.agent_id;
+	  console.log('[signup] script loaded', { hasSupabaseClient: !!supabase, hasForm: !!form });
+	  if (!form) return;
 	
-	  if (!existingAgent) {
-	    // INSERT (new)
-	    const { error: insertErr } = await supabase.from('agents').insert({
-	      id: userId,
-	      email: authEmail,
-	      agent_id: approved.agent_id,
-	      full_name: fullName,
+	  form.addEventListener('submit', async (event) => {
+	    event.preventDefault();
+	    status.textContent = '⏳ Signing up...';
+	    message.textContent = '';
 	
-	      // ✅ fields you care about
-	      created_at: new Date().toISOString(),
-	      show_on_about: false,
-	      phone: approved.phone || null,
-	      level: approved.level || null,
-	      stripe_account_id: approved.stripe_account_id || null,
-	
-	      // rest
-	      first_name: approved.first_name || null,
-	      last_name: approved.last_name || null,
-	      recruiter_id: approved.recruiter_id || null,
-	      is_active: true,
-	      is_admin: false,
-	      profile_picture_url: null,
-	      companies: null,
-	      product_types: null,
-	      licensed_states_by_line: {},
-	      is_available: false
-	      // last_assigned_at intentionally not set
-	    });
-	
-	    if (insertErr) {
-	      console.error('agents insert error:', insertErr);
-	      status.textContent = '❌ Failed creating agent profile.';
+	    if (!supabase) {
+	      status.textContent = '❌ Supabase client not loaded.';
 	      return;
 	    }
-	  } else {
-	    // UPDATE (existing) — backfill missing fields + make active
-	    const patch = {
-	      is_active: true,
 	
-	      // always keep these synced from approved_agents
-	      phone: approved.phone || null,
-	      level: approved.level || null,
-	      stripe_account_id: approved.stripe_account_id || null
-	    };
+	    const agentId   = document.getElementById('agent-id').value.trim();
+	    const password  = document.getElementById('password').value;
+	    const confirmPw = document.getElementById('confirm-password').value;
+	    const ssnRaw    = document.getElementById('ssn').value.trim();
+	    const ssnDigits = ssnRaw.replace(/\D/g, '');
 	
-	    // only set defaults if missing
-	    if (!existingAgent.created_at) patch.created_at = new Date().toISOString();
-	    if (existingAgent.show_on_about == null) patch.show_on_about = false;
+	    if (ssnDigits.length !== 9) return void (status.textContent = '⚠️ Enter a valid 9-digit SSN.');
+	    if (!agentId || !password)  return void (status.textContent = '⚠️ Enter Agent ID and password.');
+	    if (password !== confirmPw) return void (status.textContent = '⚠️ Passwords do not match.');
 	
-	    const { error: updErr } = await supabase
-	      .from('agents')
-	      .update(patch)
-	      .eq('id', userId);
+	    // 1) Check approved_agents
+	    const { data: approved, error: checkErr } = await supabase
+	      .from('approved_agents')
+	      .select('id, agent_id, is_registered, email, first_name, last_name, phone, level, recruiter_id, stripe_account_id')
+	      .eq('agent_id', agentId)
+	      .maybeSingle();
 	
-	    if (updErr) console.error('agents update error:', updErr);
-	  }
-	} catch (err) {
-	  console.error(err);
-	  status.textContent = '❌ Agent setup failed.';
-	  return;
-	}
-
-    // 4) Store SSN (server)
-    try {
-      const ssnRes = await fetch('/.netlify/functions/storeSignupSSN', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          agent_id: approved.agent_id,
-          email: authEmail,
-          user_id: userId,
-          ssn: ssnDigits
-        })
-      });
-
-      const ssnText = await ssnRes.text();
-      if (!ssnRes.ok) {
-        console.error('SSN error:', ssnText);
-        status.textContent = '❌ SSN storage failed: ' + ssnText;
-        return;
-      }
-    } catch (e) {
-      console.error(e);
-      status.textContent = '❌ SSN storage failed.';
-      return;
-    }
-
-    // 5) Mark approved_agents complete (best-effort)
-    try {
-      const { error: apprUpdErr } = await supabase
-        .from('approved_agents')
-        .update({ is_registered: true, onboarding_stage: 'signup_completed' })
-        .eq('id', approved.id);
-
-      if (apprUpdErr) console.error('approved_agents update error:', apprUpdErr);
-    } catch (e) {
-      console.error(e);
-    }
-
-    status.textContent = '✅ Account created. Check ' + authEmail;
-  });
-});
-</script>
+	    if (checkErr) {
+	      console.error('approved_agents lookup error:', checkErr);
+	      status.textContent = '❌ Error checking Agent ID.';
+	      return;
+	    }
+	    if (!approved) return void (status.textContent = '❌ Agent ID not pre-approved.');
+	    if (!approved.email) return void (status.textContent = '❌ No email on file.');
+	
+	    const authEmail = approved.email.trim();
+	
+	    // 2) Create auth user
+	    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+	      email: authEmail,
+	      password,
+	      options: {
+	        emailRedirectTo: 'https://familyvaluesgroup.com/confirmed.html',
+	        data: {
+	          agent_id: approved.agent_id,
+	          first_name: approved.first_name || '',
+	          last_name: approved.last_name || '',
+	          phone: approved.phone || null,
+	          level: approved.level || null,
+	          recruiter_id: approved.recruiter_id || null
+	        }
+	      }
+	    });
+	
+	    if (signUpError) {
+	      console.error('signUp error:', signUpError);
+	      status.textContent = '❌ Signup failed: ' + signUpError.message;
+	      return;
+	    }
+	
+	    const userId = signUpData?.user?.id;
+	    if (!userId) return void (status.textContent = '❌ Missing user ID.');
+	
+	    // ✅ 3) Create/Update agents row SERVER-SIDE (so RLS can’t block it)
+	    try {
+	      const profRes = await fetch('/.netlify/functions/upsertAgentFromApproval', {
+	        method: 'POST',
+	        headers: { 'Content-Type': 'application/json' },
+	        body: JSON.stringify({
+	          user_id: userId,
+	          agent_id: approved.agent_id,
+	          email: authEmail
+	        })
+	      });
+	
+	      const profText = await profRes.text();
+	      if (!profRes.ok) {
+	        console.error('upsertAgentFromApproval failed:', profText);
+	        status.textContent = '❌ Signup created, but agent profile failed: ' + profText;
+	        return;
+	      }
+	    } catch (e) {
+	      console.error(e);
+	      status.textContent = '❌ Signup created, but agent profile failed.';
+	      return;
+	    }
+	
+	    // 4) Store SSN (server)
+	    try {
+	      const ssnRes = await fetch('/.netlify/functions/storeSignupSSN', {
+	        method: 'POST',
+	        headers: { 'Content-Type': 'application/json' },
+	        body: JSON.stringify({
+	          agent_id: approved.agent_id,
+	          email: authEmail,
+	          user_id: userId,
+	          ssn: ssnDigits
+	        })
+	      });
+	
+	      const ssnText = await ssnRes.text();
+	      if (!ssnRes.ok) {
+	        console.error('SSN error:', ssnText);
+	        status.textContent = '❌ SSN storage failed: ' + ssnText;
+	        return;
+	      }
+	    } catch (e) {
+	      console.error(e);
+	      status.textContent = '❌ SSN storage failed.';
+	      return;
+	    }
+	
+	    // 5) Mark approved_agents complete (best-effort)
+	    try {
+	      const { error: apprUpdErr } = await supabase
+	        .from('approved_agents')
+	        .update({ is_registered: true, onboarding_stage: 'signup_completed' })
+	        .eq('id', approved.id);
+	
+	      if (apprUpdErr) console.error('approved_agents update error:', apprUpdErr);
+	    } catch (e) {
+	      console.error(e);
+	    }
+	
+	    status.textContent = '✅ Account created. Check ' + authEmail;
+	  });
+	});
+	</script>
 </body>
 </html>
