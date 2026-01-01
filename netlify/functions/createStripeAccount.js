@@ -98,6 +98,7 @@ export async function handler(event) {
     });
 
     const onboardingUrl = link.url;
+    const redirectUrl = `https://familyvaluesgroup.com/.netlify/functions/stripeOnboardingRefresh?account_id=${encodeURIComponent(stripeAccountId)}`;
 
     // 4) Save to agent_waitlist
     const { error: updateErr } = await supabase
@@ -129,10 +130,10 @@ export async function handler(event) {
     const subject = 'Finish your Stripe onboarding (Family Values Group)';
     const html = `
       <p>Hey! Your Stripe onboarding link is ready.</p>
-      <p><a href="${onboardingUrl}">Click here to finish onboarding</a></p>
+      <p><a href="${redirectUrl}">Click here to finish onboarding</a></p>
       <p>If the link expires, just request a new one and we’ll generate a fresh link automatically.</p>
     `;
-    const text = `Your Stripe onboarding link: ${onboardingUrl}\n\nIf the link expires, request a new one and we’ll generate a fresh link automatically.`;
+    const text = `Your Stripe onboarding link: ${redirectUrl}\n\nIf the link expires, request a new one and we’ll generate a fresh link automatically.`;
 
     await transporter.sendMail({
       from: fromEmail,
@@ -147,7 +148,8 @@ export async function handler(event) {
       body: JSON.stringify({
         agent_id,
         stripe_account_id: stripeAccountId,
-        onboarding_url: onboardingUrl,
+        onboarding_url: onboardingUrl,   // for debugging
+        redirect_url: redirectUrl,       // use this in the real world
         emailed_to: waitRow.email,
       }),
     };
