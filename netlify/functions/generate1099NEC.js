@@ -26,31 +26,67 @@ function pdfToBase64(doc) {
   });
 }
 
+function parseQueryString(qs = '') {
+  const out = {};
+  const s = String(qs || '').replace(/^\?/, '');
+  if (!s) return out;
+  s.split('&').forEach(pair => {
+    const [k, v] = pair.split('=');
+    if (!k) return;
+    out[decodeURIComponent(k)] = decodeURIComponent(v || '');
+  });
+  return out;
+}
+
 export async function handler(event) {
   try {
-    if (event.httpMethod !== 'POST') {
-      return { statusCode: 405, body: 'Use POST' };
-    }
-
     if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
       return { statusCode: 500, body: 'Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY' };
     }
 
-    const body = JSON.parse(event.body || '{}');
-
-    // You can call with either:
-    // { agent_user_id: "<uuid>", tax_year: 2025 }
-    // or { agent_user_id: "<uuid>", tax_year: 2025, amount: 12345.67 }
-    const agentUserId = safeText(body.agent_user_id);
-    const taxYear = Number(body.tax_year || new Date().getFullYear() - 1);
-    const amountFromCaller = body.amount;
-
-    if (!agentUserId) {
-      return { statusCode: 400, body: 'agent_user_id is required' };
+    // ✅ Accept GET (download-style) and POST (json-style)
+    if (event.httpMethod !== 'GET' && event.httpMethod !== 'POST') {
+      return { statusCode: 405, body: 'Use GET or POST' };
     }
-    if (!Number.isFinite(taxYear)) {
-      return { statusCode: 400, body: 'tax_year must be a number' };
+
+    // Pull inputs from either:
+    // GET  /.netlify/functions/generate1099NEC?tax_year=2024  (agent id inferred from auth)
+    // POST { agent_user_id, tax_year, amount }
+    let agentUserId = '';
+    let taxYear = Number(new Date().getFullYear() - 1);
+    let amountFromCaller = null;
+
+    // If GET: infer agent from Authorization Bearer token (safer; no user can request others)
+    if (event.httpMethod === 'GET') {
+      const q = parseQueryString(event.queryStringParameters ? '' : event.rawQuery || '');
+      // Netlify provides queryStringParameters normally:
+      const qp = event.queryStringParameters || q;
+
+      taxYear = Number(qp.tax_year || taxYear);
+
+      const auth = event.headers?.authorization || event.headers?.Authorization || '';
+      const m = String(auth).match(/^Bearer\s+(.+)$/i);
+      const token = m ? m[1] : null;
+
+      if (!token) return { statusCode: 401, body: 'Missing Authorization bearer token' };
+
+      const { data: userData, error: userErr } = await supabase.auth.getUser(token);
+      if (userErr || !userData?.user?.id) {
+        return { statusCode: 401, body: 'Invalid session token' };
+      }
+      agentUserId = userData.user.id;
     }
+
+    // If POST: use body values
+    if (event.httpMethod === 'POST') {
+      const body = JSON.parse(event.body || '{}');
+      agentUserId = safeText(body.agent_user_id);
+      taxYear = Number(body.tax_year || taxYear);
+      amountFromCaller = body.amount;
+    }
+
+    if (!agentUserId) return { statusCode: 400, body: 'agent_user_id is required' };
+    if (!Number.isFinite(taxYear)) return { statusCode: 400, body: 'tax_year must be a number' };
 
     // 1) Load agent (recipient)
     const { data: agent, error: agentErr } = await supabase
@@ -59,14 +95,10 @@ export async function handler(event) {
       .eq('id', agentUserId)
       .maybeSingle();
 
-    if (agentErr) {
-      return { statusCode: 500, body: `Error loading agent: ${agentErr.message}` };
-    }
-    if (!agent) {
-      return { statusCode: 404, body: 'Agent not found' };
-    }
+    if (agentErr) return { statusCode: 500, body: `Error loading agent: ${agentErr.message}` };
+    if (!agent) return { statusCode: 404, body: 'Agent not found' };
 
-    // 2) Try to load totals from a view (recommended)
+    // 2) Try to load totals from view
     let nonemployeeComp = null;
 
     const { data: totalsRow, error: totalsErr } = await supabase
@@ -76,7 +108,6 @@ export async function handler(event) {
       .eq('tax_year', taxYear)
       .maybeSingle();
 
-    // If the view doesn't exist or no row, we fall back to amount passed in
     if (!totalsErr && totalsRow && totalsRow.nonemployee_comp != null) {
       nonemployeeComp = totalsRow.nonemployee_comp;
     } else if (amountFromCaller != null) {
@@ -84,30 +115,27 @@ export async function handler(event) {
     } else {
       return {
         statusCode: 400,
-        body:
-          'No totals found. Create agent_1099_totals view or pass { amount } in request body.'
+        body: 'No totals found. Create agent_1099_totals view or pass { amount } in request body.'
       };
     }
 
-    // 3) Payer info (YOU — update these once and you’re done)
+    // 3) Payer info
     const payer = {
       name: 'Family Values Group',
       address1: '29 N Lafayette Ave',
       address2: 'Brownsville, TN 38012',
       phone: '+1-629-243-7980',
-      tin_last4: 'XXXX' // optional display-only
+      tin_last4: 'XXXX'
     };
 
-    // 4) Build PDF (Recipient statement style)
+    // 4) Build PDF
     const doc = new PDFDocument({ size: 'LETTER', margin: 42 });
 
-    // Header bar
     doc.rect(42, 36, 528, 50).stroke();
     doc.fontSize(18).text(`1099-NEC STATEMENT (Tax Year ${taxYear})`, 56, 50);
 
     doc.moveDown(2);
 
-    // Disclaimer
     doc
       .fontSize(9)
       .fillColor('#333333')
@@ -120,7 +148,6 @@ export async function handler(event) {
     doc.moveDown(1);
     doc.fillColor('#000000');
 
-    // Two columns: Payer / Recipient
     const topY = doc.y + 8;
     const leftX = 42;
     const rightX = 320;
@@ -149,14 +176,12 @@ export async function handler(event) {
       topY + 18
     );
 
-    // Amount box
     doc.moveDown(6);
     const boxY = doc.y;
     doc.rect(42, boxY, 528, 90).stroke();
     doc.fontSize(12).text('Box 1 — Nonemployee compensation', 56, boxY + 14);
     doc.fontSize(22).text(money(nonemployeeComp), 56, boxY + 40);
 
-    // Footer notes
     doc.moveDown(8);
     doc.fontSize(9).fillColor('#333333').text(
       'If you believe any amount is incorrect, contact support. Keep this statement with your tax records.',
@@ -164,7 +189,6 @@ export async function handler(event) {
     );
 
     const base64 = await pdfToBase64(doc);
-    const pdfBuffer = Buffer.from(base64, 'base64');
 
     return {
       statusCode: 200,
@@ -172,7 +196,7 @@ export async function handler(event) {
         'Content-Type': 'application/pdf',
         'Content-Disposition': `attachment; filename="1099-NEC-${taxYear}-${agent.id}.pdf"`
       },
-      body: pdfBuffer.toString('base64'),
+      body: base64,
       isBase64Encoded: true
     };
   } catch (err) {
