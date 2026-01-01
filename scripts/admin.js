@@ -3940,7 +3940,6 @@ async function approveWaitlistEntry(row) {
   const recruiterId = row.getAttribute('data-recruiter-id') || '';
   const level       = row.getAttribute('data-level') || '';
   const recruitId   = row.getAttribute('data-recruit-id') || null;
-  const stripeAccountId = row.getAttribute('data-stripe-account-id') || null;
 
   const msgEl  = row.querySelector('.wait-msg');
   const licCb  = row.querySelector('.wait-lic');
@@ -3948,6 +3947,11 @@ async function approveWaitlistEntry(row) {
   const bankCb = row.querySelector('.wait-bank');
 
   if (msgEl) msgEl.textContent = '';
+
+  if (!rowId) {
+    if (msgEl) msgEl.textContent = '❌ Missing waitlist row id.';
+    return;
+  }
 
   if (!agentId || !email || !recruiterId || !level) {
     if (msgEl) msgEl.textContent =
@@ -3958,6 +3962,30 @@ async function approveWaitlistEntry(row) {
   if (!licCb?.checked || !icaCb?.checked || !bankCb?.checked) {
     if (msgEl) msgEl.textContent =
       '⚠️ Check licensing, ICA signed, and banking/Stripe ok before approving.';
+    return;
+  }
+
+  // ✅ ALWAYS fetch the freshest stripe_account_id from agent_waitlist
+  if (msgEl) msgEl.textContent = 'Checking Stripe status…';
+
+  const { data: wl, error: wlErr } = await supabase
+    .from('agent_waitlist')
+    .select('stripe_account_id')
+    .eq('id', rowId)
+    .maybeSingle();
+
+  if (wlErr) {
+    console.error('waitlist stripe lookup error:', wlErr);
+    if (msgEl) msgEl.textContent = '❌ Could not verify Stripe status: ' + wlErr.message;
+    return;
+  }
+
+  const stripeAccountId = (wl?.stripe_account_id || '').trim() || null;
+
+  // ✅ hard stop if “Banking/Stripe ok” is checked but no Stripe account exists
+  if (!stripeAccountId) {
+    if (msgEl) msgEl.textContent =
+      '❌ No Stripe Account ID found for this agent. Run Stripe onboarding first (createStripeAccount) and reload.';
     return;
   }
 
@@ -3974,7 +4002,7 @@ async function approveWaitlistEntry(row) {
     ica_signed: true,
     banking_approved: true,
     licensing_approved: true,
-    stripe_account_id: stripeAccountId || null
+    stripe_account_id: stripeAccountId
   };
 
   if (msgEl) msgEl.textContent = 'Saving to approved_agents…';
@@ -4006,11 +4034,11 @@ async function approveWaitlistEntry(row) {
       console.error('Error updating recruit stage:', recErr);
       if (msgEl) msgEl.textContent =
         '⚠️ Agent approved, but could not update recruit stage.';
-      // keep going, approval already happened
+      // keep going
     }
   }
 
-  // 3) Update waitlist flags (for consistency if anything looks later)
+  // 3) Update waitlist flags
   const { error: wErr } = await supabase
     .from('agent_waitlist')
     .update({
@@ -4028,7 +4056,7 @@ async function approveWaitlistEntry(row) {
     msgEl.textContent = '✅ Agent approved and added to approved_agents.';
   }
 
-  // 4) Now remove them from the waitlist table entirely
+  // 4) Remove from waitlist
   const { error: delErr } = await supabase
     .from('agent_waitlist')
     .delete()
@@ -4036,14 +4064,12 @@ async function approveWaitlistEntry(row) {
 
   if (delErr) {
     console.error('Error deleting from waitlist:', delErr);
-    if (msgEl) {
-      msgEl.textContent += '\n⚠️ Approved, but could not remove from waitlist.';
-    }
+    if (msgEl) msgEl.textContent += '\n⚠️ Approved, but could not remove from waitlist.';
   } else if (msgEl) {
     msgEl.textContent += '\n✅ Removed from waitlist.';
   }
 
-  // 5) Reload list to reflect current status
+  // 5) Reload list
   try {
     await loadWaitlist();
   } catch (err) {
