@@ -43,7 +43,14 @@
 		    <input id="agent-id" type="text" placeholder=" " required>
 		    <label for="agent-id">Agent ID (NPN)</label>
 		  </div>
-		
+			<!-- SSN (for 1099) -->
+		<div class="float-field pw-field">
+		  <input id="ssn" type="password" placeholder=" " inputmode="numeric" autocomplete="off" required>
+		  <label for="ssn">SSN</label>
+		  <button type="button" class="pw-toggle" aria-label="Show SSN">
+			<i class="fa-regular fa-eye"></i>
+		  </button>
+		</div>
 		  <!-- Password -->
 		  <div class="float-field pw-field">
 		    <input id="password" type="password" placeholder=" " required>
@@ -130,7 +137,12 @@
 	    const agentId   = document.getElementById('agent-id').value.trim();
 	    const password  = document.getElementById('password').value;
 	    const confirmPw = document.getElementById('confirm-password').value;
-	
+		const ssnRaw = document.getElementById('ssn').value.trim();
+		const ssnDigits = ssnRaw.replace(/\D/g, '');
+		if (ssnDigits.length !== 9) {
+		  status.textContent = '⚠️ Enter a valid 9-digit SSN.';
+		  return;
+		}
 	    if (!agentId || !password) {
 	      status.textContent = '⚠️ Enter your Agent ID and password.';
 	      return;
@@ -209,7 +221,35 @@
 	      status.textContent = '❌ Signup failed: ' + signUpError.message;
 	      return;
 	    }
-	
+		const newUserId = signUpData?.user?.id;
+		if (!newUserId) {
+		  status.textContent = '❌ Signup created, but missing user id. Contact support.';
+		  return;
+		}
+		
+		try {
+		  const ssnRes = await fetch('/.netlify/functions/storeSignupSSN', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({
+			  agent_id: approved.agent_id,
+			  email: authEmail,
+			  user_id: newUserId,
+			  ssn: ssnDigits
+			})
+		  });
+		
+		  const ssnText = await ssnRes.text();
+		  if (!ssnRes.ok) {
+			console.error('storeSignupSSN failed:', ssnText);
+			status.textContent = '❌ Signup created, but SSN storage failed. Contact admin.';
+			return;
+		  }
+		} catch (e) {
+		  console.error('storeSignupSSN error:', e);
+		  status.textContent = '❌ Signup created, but SSN storage failed. Contact admin.';
+		  return;
+		}
 	    // At this point, auth user creation worked. Everything else is bookkeeping.
 	
 	    // 3) Ensure agents row exists / is active
@@ -228,6 +268,7 @@
 	          .join(' ') || approved.agent_id;
 	
 	        const agentPayload = {
+				id: newUserId,
 	          email: authEmail,
 	          agent_id: approved.agent_id,
 			  stripe_account_id: approved.stripe_account_id || null,
