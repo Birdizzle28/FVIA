@@ -88,6 +88,77 @@
 
 <pre id="test-transfer-output" style="white-space: pre-wrap; background:#111; color:#0ff; padding:10px; margin-top:20px; min-height:120px;"></pre>
 
+<!-- -------------------------- -->
+<!--  RESEND STRIPE ONBOARDING  -->
+<!-- -------------------------- -->
+<h2>Resend Stripe Onboarding Link (Account Links API)</h2>
+
+<label>
+  Connected Account ID (acct_...):<br>
+  <input id="onboard-acct-id" type="text" style="width: 340px;" placeholder="acct_1234...">
+</label>
+<br><br>
+
+<label>
+  Return URL (optional):<br>
+  <input id="onboard-return-url" type="text" style="width: 500px;" placeholder="(leave blank to use server default)">
+</label>
+<br><br>
+
+<label>
+  Refresh URL (optional):<br>
+  <input id="onboard-refresh-url" type="text" style="width: 500px;" placeholder="(leave blank to use server default)">
+</label>
+<br><br>
+
+<button id="create-onboarding-link-btn">Generate New Onboarding Link</button>
+
+<pre id="onboarding-link-output" style="white-space: pre-wrap; background:#111; color:#ffb; padding:10px; margin-top:20px; min-height:120px;"></pre>
+
+<script>
+document.getElementById('create-onboarding-link-btn').addEventListener('click', async () => {
+  const acctId = document.getElementById('onboard-acct-id').value.trim();
+  const returnUrl = document.getElementById('onboard-return-url').value.trim();
+  const refreshUrl = document.getElementById('onboard-refresh-url').value.trim();
+  const out = document.getElementById('onboarding-link-output');
+
+  if (!acctId || !acctId.startsWith('acct_')) {
+    alert('Paste a valid connected account id (acct_...)');
+    return;
+  }
+
+  out.textContent = 'Generating onboarding link...';
+
+  try {
+    const res = await fetch('/.netlify/functions/createOnboardingLink', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        account_id: acctId,
+        return_url: returnUrl || undefined,
+        refresh_url: refreshUrl || undefined
+      })
+    });
+
+    const text = await res.text();
+
+    // Try JSON pretty print
+    try {
+      const json = JSON.parse(text);
+      out.textContent = `Status: ${res.status}\n\n` + JSON.stringify(json, null, 2);
+
+      if (json.url) {
+        out.textContent += `\n\nOnboarding URL:\n${json.url}`;
+      }
+    } catch {
+      out.textContent = `Status: ${res.status}\n\n${text}`;
+    }
+  } catch (err) {
+    out.textContent = 'Error: ' + err.message;
+  }
+});
+</script>
+
 <script>
 document.getElementById('send-test-transfer-btn').addEventListener('click', async () => {
   const acct = document.getElementById('test-dest-acct').value.trim();
