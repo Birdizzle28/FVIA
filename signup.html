@@ -186,10 +186,27 @@
 	      status.textContent = '❌ Agent ID not pre-approved.';
 	      return;
 	    }
-	    if (approved.is_registered) {
-	      status.textContent = '❌ Agent already registered.';
-	      return;
-	    }
+	    // If already registered, still allow SSN storage ONLY if the agents row matches this user/email/agent_id
+		if (approved.is_registered) {
+		  const { data: agentRow, error: agentErr } = await supabase
+		    .from('agents')
+		    .select('id, email, agent_id')
+		    .eq('id', user_id)
+		    .maybeSingle();
+		
+		  if (agentErr) {
+		    return { statusCode: 500, body: `Error reading agents: ${agentErr.message}` };
+		  }
+		
+		  if (
+		    !agentRow ||
+		    String(agentRow.agent_id || '').trim() !== agent_id ||
+		    String(agentRow.email || '').trim().toLowerCase() !== email
+		  ) {
+		    return { statusCode: 409, body: 'Agent already registered' };
+		  }
+		  // else: same agent/user — continue and store SSN
+		}
 	    if (!approved.email) {
 	      status.textContent = '❌ No email on file.';
 	      return;
