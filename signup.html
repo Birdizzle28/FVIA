@@ -242,31 +242,6 @@
         return;
       }
 
-      // 2.5) Store SSN via Netlify function
-      try {
-        const ssnRes = await fetch('/.netlify/functions/storeSignupSSN', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            agent_id: approved.agent_id,
-            email: authEmail,
-            user_id: newUserId,
-            ssn: ssnDigits
-          })
-        });
-
-        const ssnText = await ssnRes.text();
-        if (!ssnRes.ok) {
-          console.error('storeSignupSSN failed:', ssnText);
-          status.textContent = '❌ Signup created, but SSN storage failed. Contact admin.';
-          return;
-        }
-      } catch (e) {
-        console.error('storeSignupSSN error:', e);
-        status.textContent = '❌ Signup created, but SSN storage failed. Contact admin.';
-        return;
-      }
-
       // 3) Ensure agents row exists / is active
       try {
         const { data: existingAgent, error: agentCheckErr } = await supabase
@@ -302,16 +277,48 @@
             created_at: new Date().toISOString()
           };
 
-          const { error: agentInsertErr } = await supabase.from('agents').insert(agentPayload);
-          if (agentInsertErr) console.error('Error inserting into agents:', agentInsertErr);
-        } else {
-          const { error: agentUpdateErr } = await supabase
-            .from('agents')
-            .update({ is_active: true })
-            .eq('id', existingAgent.id);
-
-          if (agentUpdateErr) console.error('Error updating existing agent row:', agentUpdateErr);
-        }
+          const { error: agentInsertErr } = await supabase
+			  .from('agents')
+			  .insert(agentPayload);
+			
+			if (agentInsertErr) {
+			  console.error('Error inserting into agents:', agentInsertErr);
+			  status.textContent = '❌ Signup created, but profile creation failed. Contact admin.';
+			  return;
+			}
+			
+			// ✅ NOW that the agents row exists, store SSN
+			try {
+			  const ssnRes = await fetch('/.netlify/functions/storeSignupSSN', {
+			    method: 'POST',
+			    headers: { 'Content-Type': 'application/json' },
+			    body: JSON.stringify({
+			      agent_id: approved.agent_id,
+			      email: authEmail,
+			      user_id: newUserId,
+			      ssn: ssnDigits
+			    })
+			  });
+			
+			  const ssnText = await ssnRes.text();
+			  if (!ssnRes.ok) {
+			    console.error('storeSignupSSN failed:', ssnText);
+			    status.textContent = '❌ Signup created, but SSN storage failed. Contact admin.';
+			    return;
+			  }
+			} catch (e) {
+			  console.error('storeSignupSSN error:', e);
+			  status.textContent = '❌ Signup created, but SSN storage failed. Contact admin.';
+			  return;
+			}
+	    } else {
+	          const { error: agentUpdateErr } = await supabase
+	            .from('agents')
+	            .update({ is_active: true })
+	            .eq('id', existingAgent.id);
+	
+	          if (agentUpdateErr) console.error('Error updating existing agent row:', agentUpdateErr);
+	        }
       } catch (err) {
         console.error('Unexpected error handling agents table:', err);
       }
