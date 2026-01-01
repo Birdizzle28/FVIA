@@ -42,7 +42,7 @@ export async function handler(event) {
   if (!user_id)  return { statusCode: 400, body: 'user_id is required' };
   if (ssn.length !== 9) return { statusCode: 400, body: 'SSN must be 9 digits' };
 
-  // 1) Verify agent is pre-approved, email matches, not registered
+  // 1) Verify agent is pre-approved, email matches
   const { data: approved, error: apprErr } = await supabase
     .from('approved_agents')
     .select('id, agent_id, email, is_registered')
@@ -58,12 +58,32 @@ export async function handler(event) {
   if ((approved.email || '').toLowerCase().trim() !== email) {
     return { statusCode: 403, body: 'Email does not match pre-approval record' };
   }
+
+  // ✅ If already registered, only allow SSN storage if THIS request matches the real agent row
   if (approved.is_registered) {
-    return { statusCode: 409, body: 'Agent already registered' };
+    const { data: agentRow, error: agentErr } = await supabase
+      .from('agents')
+      .select('id, agent_id, email')
+      .eq('id', user_id)
+      .maybeSingle();
+
+    if (agentErr) {
+      return { statusCode: 500, body: `Error reading agents: ${agentErr.message}` };
+    }
+
+    const agentOk =
+      agentRow &&
+      String(agentRow.id) === user_id &&
+      String(agentRow.agent_id || '').trim() === agent_id &&
+      String(agentRow.email || '').trim().toLowerCase() === email;
+
+    if (!agentOk) {
+      return { statusCode: 409, body: 'Agent already registered' };
+    }
+    // else: same agent/user/email → allow SSN storage
   }
 
   // 2) Update agents row with encrypted SSN (server-side encryption via pgcrypto)
-  // NOTE: We do NOT return SSN or allow any reads back.
   const { error: updErr } = await supabase.rpc('fvia_store_agent_ssn', {
     p_user_id: user_id,
     p_agent_id: agent_id,
