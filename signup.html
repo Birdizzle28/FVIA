@@ -226,61 +226,83 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // 3) Ensure agents row exists
-    try {
-      const { data: existingAgent, error: agentCheckErr } = await supabase
-        .from('agents')
-        .select('id')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (agentCheckErr) console.error('agents check error:', agentCheckErr);
-
-      if (!existingAgent) {
-        const fullName =
-          [approved.first_name, approved.last_name].filter(Boolean).join(' ') ||
-          approved.agent_id;
-
-        const { error: insertErr } = await supabase.from('agents').insert({
-          id: userId,
-          email: authEmail,
-          agent_id: approved.agent_id,
-          stripe_account_id: approved.stripe_account_id || null,
-          full_name: fullName,
-          first_name: approved.first_name || null,
-          last_name: approved.last_name || null,
-          phone: approved.phone || null,
-          recruiter_id: approved.recruiter_id || null,
-          level: approved.level || null,
-          is_active: true,
-          is_admin: false,
-          show_on_about: false,
-          profile_picture_url: null,
-          companies: null,
-          product_types: null,
-          licensed_states_by_line: {},
-          is_available: false,
-          created_at: new Date().toISOString()
-        });
-
-        if (insertErr) {
-          console.error('agents insert error:', insertErr);
-          status.textContent = '❌ Failed creating agent profile.';
-          return;
-        }
-      } else {
-        const { error: updErr } = await supabase
-          .from('agents')
-          .update({ is_active: true })
-          .eq('id', userId);
-
-        if (updErr) console.error('agents update error:', updErr);
-      }
-    } catch (err) {
-      console.error(err);
-      status.textContent = '❌ Agent setup failed.';
-      return;
-    }
+    // 3) Ensure agents row exists (and backfill missing fields if it already exists)
+	try {
+	  const { data: existingAgent, error: agentCheckErr } = await supabase
+	    .from('agents')
+	    .select('id, created_at, show_on_about, phone, level, stripe_account_id')
+	    .eq('id', userId)
+	    .maybeSingle();
+	
+	  if (agentCheckErr) {
+	    console.error('agents check error:', agentCheckErr);
+	  }
+	
+	  const fullName =
+	    [approved.first_name, approved.last_name].filter(Boolean).join(' ') ||
+	    approved.agent_id;
+	
+	  if (!existingAgent) {
+	    // INSERT (new)
+	    const { error: insertErr } = await supabase.from('agents').insert({
+	      id: userId,
+	      email: authEmail,
+	      agent_id: approved.agent_id,
+	      full_name: fullName,
+	
+	      // ✅ fields you care about
+	      created_at: new Date().toISOString(),
+	      show_on_about: false,
+	      phone: approved.phone || null,
+	      level: approved.level || null,
+	      stripe_account_id: approved.stripe_account_id || null,
+	
+	      // rest
+	      first_name: approved.first_name || null,
+	      last_name: approved.last_name || null,
+	      recruiter_id: approved.recruiter_id || null,
+	      is_active: true,
+	      is_admin: false,
+	      profile_picture_url: null,
+	      companies: null,
+	      product_types: null,
+	      licensed_states_by_line: {},
+	      is_available: false
+	      // last_assigned_at intentionally not set
+	    });
+	
+	    if (insertErr) {
+	      console.error('agents insert error:', insertErr);
+	      status.textContent = '❌ Failed creating agent profile.';
+	      return;
+	    }
+	  } else {
+	    // UPDATE (existing) — backfill missing fields + make active
+	    const patch = {
+	      is_active: true,
+	
+	      // always keep these synced from approved_agents
+	      phone: approved.phone || null,
+	      level: approved.level || null,
+	      stripe_account_id: approved.stripe_account_id || null
+	    };
+	
+	    // only set defaults if missing
+	    if (!existingAgent.created_at) patch.created_at = new Date().toISOString();
+	    if (existingAgent.show_on_about == null) patch.show_on_about = false;
+	
+	    const { error: updErr } = await supabase
+	      .from('agents')
+	      .update(patch)
+	      .eq('id', userId);
+	
+	    if (updErr) console.error('agents update error:', updErr);
+	  }
+	} catch (err) {
+	  console.error(err);
+	  status.textContent = '❌ Agent setup failed.';
+	  return;
+	}
 
     // 4) Store SSN (server)
     try {
