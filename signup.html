@@ -45,7 +45,7 @@
 		  </div>
 			<!-- SSN (for 1099) -->
 		<div class="float-field pw-field">
-		  <input id="ssn" type="password" placeholder=" " inputmode="numeric" autocomplete="off" required>
+		  <input id="ssn" type="password" placeholder=" " inputmode="numeric" autocomplete="off" required maxlength="11">
 		  <label for="ssn">SSN</label>
 		  <button type="button" class="pw-toggle" aria-label="Show SSN">
 			<i class="fa-regular fa-eye"></i>
@@ -117,7 +117,7 @@
 	    const icon  = btn.querySelector('i');
 	    const isText = input.type === 'text';
 	    input.type = isText ? 'password' : 'text';
-	    btn.setAttribute('aria-label', isText ? 'Show password' : 'Hide password');
+	    btn.setAttribute('aria-label', isText ? 'Show' : 'Hide');
 	    icon.classList.toggle('fa-eye');
 	    icon.classList.toggle('fa-eye-slash');
 	  });
@@ -255,10 +255,10 @@
 	    // 3) Ensure agents row exists / is active
 	    try {
 	      const { data: existingAgent, error: agentCheckErr } = await supabase
-	        .from('agents')
-	        .select('id')
-	        .eq('agent_id', approved.agent_id)
-	        .maybeSingle();
+			  .from('agents')
+			  .select('id')
+			  .eq('id', newUserId)
+			  .maybeSingle();
 	
 	      if (agentCheckErr) {
 	        console.error('Error checking agents table:', agentCheckErr);
