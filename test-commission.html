@@ -114,7 +114,64 @@
 <button id="create-onboarding-link-btn">Generate New Onboarding Link</button>
 
 <pre id="onboarding-link-output" style="white-space: pre-wrap; background:#111; color:#ffb; padding:10px; margin-top:20px; min-height:120px;"></pre>
+<!-- -------------------------- -->
+<!--  CREATE TEST STRIPE ACCOUNT -->
+<!-- -------------------------- -->
+<h2>Create Test Stripe Connected Account (No Waitlist)</h2>
 
+<label>
+  Agent ID / Label (metadata only):<br>
+  <input id="test-agent-id" type="text" style="width: 300px;" placeholder="agent_123 or email">
+</label>
+<br><br>
+
+<button id="create-test-stripe-acct-btn">
+  Create Stripe Connected Account
+</button>
+
+<script>
+document.getElementById('create-test-stripe-acct-btn').addEventListener('click', async () => {
+  const agentId = document.getElementById('test-agent-id').value.trim();
+  const out = document.getElementById('test-stripe-acct-output');
+
+  if (!agentId) {
+    alert('Enter an agent id / label');
+    return;
+  }
+
+  out.textContent = 'Creating Stripe connected account...';
+
+  try {
+    const res = await fetch('/.netlify/functions/createTestStripeConnectedAccount', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ agent_id: agentId })
+    });
+
+    const text = await res.text();
+
+    try {
+      const json = JSON.parse(text);
+      out.textContent =
+        `Status: ${res.status}\n\n` +
+        JSON.stringify(json, null, 2);
+
+      if (json.stripe_account_id) {
+        out.textContent +=
+          `\n\nStripe Account ID:\n${json.stripe_account_id}`;
+      }
+    } catch {
+      out.textContent = `Status: ${res.status}\n\n${text}`;
+    }
+  } catch (err) {
+    out.textContent = 'Error: ' + err.message;
+  }
+});
+</script>
+
+<pre id="test-stripe-acct-output"
+     style="white-space: pre-wrap; background:#111; color:#9f9; padding:10px; margin-top:20px; min-height:120px;">
+</pre>
 <script>
 document.getElementById('create-onboarding-link-btn').addEventListener('click', async () => {
   const acctId = document.getElementById('onboard-acct-id').value.trim();
