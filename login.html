@@ -33,19 +33,35 @@
 		    <a href="careers.html">Careers</a>
 		    <a href="login.html"  id="active-nav">Login</a>
 		</div>
- <div class="auth-container">
-    <h2>Agent Login</h2>
-    <form id="login-form">
-      <input type="email" id="email" placeholder="Email" required>
-      <div class="password-wrapper">
-  <input type="password" id="password" placeholder="Password" required>
-  <span toggle="#password" class="fa fa-eye toggle-password"></span>
-</div>
-      <button type="submit">Login</button>
-    </form>
-    <p class="switch-auth">Don’t have an account? <a href="signup.html">Sign up</a></p>
-    <p id="login-message"></p>
-  </div>
+	 <div class="auth-container">
+	  <h2>Agent Login</h2>
+	
+	  <form id="login-form">
+	    <input type="email" id="email" placeholder="Email" required>
+	
+	    <div class="password-wrapper">
+	      <input type="password" id="password" placeholder="Password" required>
+	      <span toggle="#password" class="fa fa-eye toggle-password"></span>
+	    </div>
+	
+	    <!-- Forgot password link -->
+	    <p style="margin: 6px 0 0; text-align: right;">
+	      <a href="#" id="forgot-password-link" style="font-size: 0.95rem;">Forgot password?</a>
+	    </p>
+	
+	    <!-- Hidden reset panel -->
+	    <div id="forgot-password-panel" style="display:none; margin-top: 12px;">
+	      <input type="email" id="forgot-email" placeholder="Enter your email to reset" />
+	      <button type="button" id="send-reset-email">Send Reset Email</button>
+	      <p id="forgot-message" style="margin-top: 8px;"></p>
+	    </div>
+	
+	    <button type="submit">Login</button>
+	  </form>
+	
+	  <p class="switch-auth">Don’t have an account? <a href="signup.html">Sign up</a></p>
+	  <p id="login-message"></p>
+	</div>
 	<footer class="index-grid-footer">
 		<img id="footerlogo" src="Pics/img6.png">
 		<hr class="footerhr">
