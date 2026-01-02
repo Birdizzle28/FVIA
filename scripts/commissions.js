@@ -20,6 +20,10 @@ let policiesFilters = {
 // Cache so we don't re-fetch names every toggle
 let agentNameMapCache = {}; // { [agentId]: full_name }
 let policiesScope = 'me'; // 'me' | 'team'
+// ---- Commission Reports Picker state ----
+let reportsFp = null;
+let reportsStartISO = null;
+let reportsEndISO = null;
 
 async function getAgentNameMap(agentIds = []) {
   const ids = (agentIds || []).filter(Boolean);
@@ -105,6 +109,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   initPoliciesFilters();
   initPoliciesScopeToggle();
   initFilesChips();
+  initCommissionReportsPicker();
   initBalanceScopeToggle();
   // ----- 5. Load REAL lead debts + chargebacks -----
 
@@ -1611,6 +1616,15 @@ function renderPlaceholderFiles() {
   `).join('');
 }
 async function loadAndRenderFilesForChip(type) {
+  // ✅ If user selected "Commission Reports", show picker UI and hide table
+  if (type === 'reports') {
+    showCommissionReportsPicker(true);
+    return;
+  }
+
+  // Otherwise: show normal table
+  showCommissionReportsPicker(false);
+
   // Keep schedules special
   if (type === 'schedule') {
     await loadAndRenderPaySchedulesTable();
@@ -1641,7 +1655,6 @@ async function loadAndRenderFilesForChip(type) {
     `;
     tbody.prepend(manualRow);
 
-    // ✅ Wire click → download function
     const btn = manualRow.querySelector('.btn-download-manual');
     btn.addEventListener('click', async () => {
       await downloadCommissionManualPdf();
@@ -1834,6 +1847,113 @@ async function downloadCommissionManualPdf() {
   } catch (err) {
     console.error('downloadCommissionManualPdf error:', err);
     alert('Download error. Check console.');
+  }
+}
+function initCommissionReportsPicker() {
+  const input = document.getElementById('commission-report-range');
+  if (!input) return;
+
+  if (window.flatpickr) {
+    reportsFp = window.flatpickr(input, {
+      mode: 'range',
+      dateFormat: 'Y-m-d',
+      allowInput: false,
+      onChange: (selectedDates) => {
+        if (Array.isArray(selectedDates) && selectedDates.length) {
+          const start = selectedDates[0] ? toISODate(selectedDates[0]) : null;
+          const end = selectedDates[1] ? toISODate(selectedDates[1]) : start; // if only one clicked
+          reportsStartISO = start;
+          reportsEndISO = end;
+        } else {
+          reportsStartISO = null;
+          reportsEndISO = null;
+        }
+      }
+    });
+  } else {
+    input.addEventListener('change', () => {
+      const { startISO, endISO } = parseDateRangeInput(input.value);
+      reportsStartISO = startISO;
+      reportsEndISO = endISO;
+    });
+  }
+
+  const btn = document.getElementById('btn-download-commission-report');
+  if (btn) {
+    btn.addEventListener('click', async () => {
+      await downloadCommissionReportPdf();
+    });
+  }
+}
+
+function showCommissionReportsPicker(show) {
+  const picker = document.getElementById('commission-reports-picker');
+  const table = document.getElementById('files-table');
+  if (picker) picker.hidden = !show;
+  if (table) table.style.display = show ? 'none' : '';
+}
+
+async function downloadCommissionReportPdf() {
+  try {
+    if (!accessToken) {
+      alert('Missing session token. Please log in again.');
+      return;
+    }
+
+    // Must have at least a start date; if user picked 1 day, end is auto-set to start
+    if (!reportsStartISO) {
+      alert('Select a date range first.');
+      return;
+    }
+    const start_date = reportsStartISO;
+    const end_date = reportsEndISO || reportsStartISO;
+
+    const btn = document.getElementById('btn-download-commission-report');
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Generating…`;
+    }
+
+    const res = await fetch('/.netlify/functions/generateCommissionReport', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ start_date, end_date })
+    });
+
+    if (!res.ok) {
+      const t = await res.text();
+      console.error('Commission report download failed:', res.status, t);
+      alert('Report generation failed. Check console.');
+      return;
+    }
+
+    const blob = await res.blob();
+
+    // filename from header if present
+    const dispo = res.headers.get('Content-Disposition') || '';
+    const match = dispo.match(/filename="([^"]+)"/i);
+    const filename =
+      match?.[1] || `Commission-Statement-${start_date}_to_${end_date}.pdf`;
+
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    URL.revokeObjectURL(a.href);
+    a.remove();
+  } catch (err) {
+    console.error('downloadCommissionReportPdf error:', err);
+    alert('Download error. Check console.');
+  } finally {
+    const btn = document.getElementById('btn-download-commission-report');
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = `<i class="fa-solid fa-download"></i> Download`;
+    }
   }
 }
 /* ===============================
