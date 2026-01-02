@@ -1,84 +1,249 @@
-/* Profile section card */
-.profile-section {
-  max-width: 75%;
-  margin: 20px auto;
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  padding-bottom: 30px;
-  background-color: white;
-  border-radius: 0;
+/* styles/profile.css
+   Profile page – match Recruiting “shiny grey / rounded card” look
+   Header/footer untouched.
+*/
+
+/* ---------- Design tokens (same language as recruiting.css) ---------- */
+:root{
+  --ink: #2a274a;
+  --muted: #5f5a84;
+  --brand: #353468;
+  --brand-ink: #242247;
+
+  --panel-bg: #ffffff;
+  --soft: #f5f4fa;
+  --line: #dcd9e8;
+
+  --success: #2a8f6d;
+  --danger: #b22424;
+
+  --radius: 12px;
+  --shadow-1: 0 4px 14px rgba(37, 36, 80, .06);
+  --shadow-2: 0 10px 30px rgba(37, 36, 80, .10);
 }
-.profile-picture-wrapper {
-  display: flex;
-  justify-content: center;
-  margin-top: 30px;
+
+/* ---------- Page shell ---------- */
+body#dashboardbody{
+  background: linear-gradient(180deg, #f9fbff 0%, #f5f7fb 100%);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
-.profile-picture-placeholder {
+
+/* Your <main class="auth-container"> becomes the page container */
+main.auth-container{
+  max-width: 1100px;
+  margin: 24px auto 64px;
+  padding: 0 16px;
+  background: transparent;
+}
+
+/* ---------- Main profile card ---------- */
+.profile-section{
+  background: var(--panel-bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-2);
+  padding: 18px 16px 16px;
+  display:flex;
+  flex-direction:column;
+  gap: 18px;
+}
+
+/* subtle “shiny” header vibe inside the card */
+.profile-section::before{
+  content:"";
+  display:block;
+  height: 10px;
+  border-radius: 999px;
+  background: radial-gradient(circle at left,
+              rgba(53,52,104,.16) 0,
+              rgba(255,255,255,0) 70%);
+}
+
+/* ---------- Profile photo ---------- */
+.profile-picture-wrapper{
+  display:flex;
+  justify-content:center;
+  margin-top: 6px;
+}
+
+.profile-picture-placeholder{
   position: relative;
-  width: 140px;
-  height: 140px;
-  border-radius: 50%;
+  width: 150px;
+  height: 150px;
+  border-radius: 999px;
   overflow: hidden;
-  background-color: #f0f0f0;
-  border: 2px solid #ccc;
-  text-align: center;
-  cursor: pointer;
+  background: radial-gradient(circle at top left,
+              rgba(53,52,104,.10) 0,
+              #ffffff 58%);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-1);
+  text-align:center;
+  cursor:pointer;
 }
-.profile-picture-placeholder img {
+
+.profile-picture-placeholder img{
   width: 100%;
   height: 100%;
   object-fit: cover;
-  opacity: 0.5;
-}
-.upload-text {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  color: #555;
-  font-size: 14px;
-  font-weight: bold;
-  pointer-events: none;
+  opacity: .92;
 }
 
-/* Profile form styles */
-#profile-form {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-  width: 90%;
-  margin: auto;
+.upload-text{
+  position:absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(255,255,255,.88);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow-1);
+  color: var(--muted);
+  font-size: 0.85rem;
+  font-weight: 800;
+  padding: 8px 10px;
+  border-radius: 999px;
+  pointer-events:none;
+  max-width: 90%;
 }
-.form-group {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
+
+/* ---------- Form ---------- */
+#profile-form{
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+  display:flex;
+  flex-direction:column;
+  gap: 12px;
 }
-.form-group label {
-  font-weight: bold;
-  margin-bottom: 5px;
+
+.form-group{
+  display:flex;
+  flex-direction:column;
+  gap: 6px;
 }
+
+.form-group label{
+  font-weight: 700;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
 .form-group input,
 .form-group textarea,
-.form-group select {
+.form-group select{
   width: 100%;
-  padding: 10px;
-  border-radius: 0;
-  font-size: 1rem;
-  border: 1px solid #ccc;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  padding: 10px 12px;
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: #fff;
 }
-#profile-form button {
-  width: 100%;
-  padding: 10px;
-  background-color: #5e2a4b;
-  color: white;
-  border: none;
-  border-radius: 0;
-  font-weight: bold;
+
+.form-group textarea{
+  min-height: 90px;
+  resize: vertical;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus{
+  outline: 2px solid rgba(53,52,104,.32);
+  border-color: var(--brand);
+}
+
+/* disabled fields look intentional */
+.form-group input:disabled{
+  background: var(--soft);
+  color: #777;
+}
+
+/* ---------- Buttons ---------- */
+#profile-form button{
+  appearance:none;
+  border-radius: 10px;
+  border: 1px solid transparent;
+  padding: 11px 14px;
+  font-weight: 800;
   cursor: pointer;
+  background: var(--brand);
+  color: #fff;
+  box-shadow: 0 4px 10px rgba(53,52,104,.22);
+  transition: transform .02s ease,
+              background .15s ease,
+              box-shadow .15s ease;
 }
-#edit-profile-message {
-  font-weight: bold;
-  margin-top: 10px;
+
+#profile-form button:hover{
+  background: #2f2e5d;
+}
+
+#profile-form button:active{
+  transform: translateY(1px);
+  background: var(--brand-ink);
+}
+
+/* logout button (yours is a button but styled like a link currently) */
+#logout-btn{
+  margin: 14px auto 0;
+  display:inline-flex;
+  justify-content:center;
+  align-items:center;
+  gap: 8px;
+
+  width: 100%;
+  max-width: 300px;
+
+  appearance:none;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  padding: 10px 14px;
+  font-weight: 800;
+  cursor: pointer;
+
+  background: #fff;
+  color: var(--muted);
+  box-shadow: var(--shadow-1);
+  transition: background .15s ease, color .15s ease, transform .02s ease;
+}
+
+#logout-btn:hover{
+  background: var(--soft);
+  color: var(--ink);
+}
+
+#logout-btn:active{
+  transform: translateY(1px);
+}
+
+/* message under save */
+#edit-profile-message{
+  margin: 4px 0 0;
+  font-weight: 800;
+  color: var(--muted);
+  text-align:center;
+}
+
+/* ---------- If Personal Information folder section is on this page ---------- */
+/* Keep it visually consistent and give it breathing room */
+#pi-section{
+  max-width: 1100px;
+  margin: 18px auto 0;
+  padding: 0 0;
+}
+
+#pi-section .dash-title{
+  margin: 0 0 10px;
+}
+
+/* ---------- Responsive ---------- */
+@media (max-width: 720px){
+  .profile-section{
+    padding: 16px 14px 14px;
+  }
+  .profile-picture-placeholder{
+    width: 140px;
+    height: 140px;
+  }
 }
