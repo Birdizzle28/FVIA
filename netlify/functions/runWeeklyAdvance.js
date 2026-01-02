@@ -177,7 +177,8 @@ async function applyRepayments(agent_id, chargebackRepay, leadRepay) {
         await supabase.from('chargeback_payments').insert({
           agent_id,
           chargeback_id: cb.id,
-          amount: pay
+          amount: pay,
+          payout_batch_id
         });
 
         // Update chargeback status + remaining amount
