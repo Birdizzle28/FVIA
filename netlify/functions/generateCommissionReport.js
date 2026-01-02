@@ -17,6 +17,7 @@ function money(n) {
   const num = Number(n || 0);
   return num.toLocaleString("en-US", { style: "currency", currency: "USD" });
 }
+
 function safe(v) {
   return String(v ?? "").trim();
 }
@@ -76,13 +77,14 @@ function drawCardRow(doc, cards) {
 function table(doc, { title, columns, rows, note }) {
   ensurePageSpace(doc, 160);
   doc.fillColor("#0f172a").fontSize(12).text(title, 42);
+
+  // NOTE: keep notes agent-friendly; pass null/undefined to hide
   if (note) {
     doc.moveDown(0.4);
     doc.fillColor("#64748b").fontSize(9).text(note, 42, doc.y, { width: 528 });
   }
   doc.moveDown(0.8);
 
-  // column widths (simple proportional)
   const totalWidth = 528;
   const colCount = columns.length;
   const baseW = Math.floor(totalWidth / colCount);
@@ -105,8 +107,8 @@ function table(doc, { title, columns, rows, note }) {
 
   doc.fillColor("#111827").fontSize(9);
 
-  const maxRows = 60; // avoid insane PDFs; you can raise this later
-  const showRows = rows.slice(0, maxRows);
+  const maxRows = 60;
+  const showRows = (rows || []).slice(0, maxRows);
 
   showRows.forEach((r, idx) => {
     ensurePageSpace(doc, 40);
@@ -126,8 +128,8 @@ function table(doc, { title, columns, rows, note }) {
     doc.moveDown(1.1);
   });
 
-  if (rows.length > maxRows) {
-    doc.fillColor("#64748b").fontSize(9).text(`(Showing ${maxRows} of ${rows.length})`, 42);
+  if ((rows || []).length > maxRows) {
+    doc.fillColor("#64748b").fontSize(9).text(`(Showing ${maxRows} of ${(rows || []).length})`, 42);
     doc.moveDown(0.8);
   }
 
@@ -170,7 +172,6 @@ function groupLedgerByPolicy(ledgerRows) {
 
     row.total += amt;
 
-    // optional metadata
     if (r.policyholder_name) row.policyholder = r.policyholder_name;
     if (r.carrier_name) row.carrier = r.carrier_name;
     if (r.product_name) row.product = r.product_name;
@@ -179,44 +180,65 @@ function groupLedgerByPolicy(ledgerRows) {
   return Array.from(out.values()).sort((a, b) => (b.total || 0) - (a.total || 0));
 }
 
+/**
+ * IMPORTANT:
+ * Your policies table has: contact_id, carrier_name, policy_type, product_line [oai_citation:2‡text.txt](file-service://file-Tg7z3nxHpZGxaFPE1PUDpT)
+ * So we enrich from those fields and join contacts through the FK.
+ */
 async function fetchPoliciesForIds(policyIds) {
-  // Try to enrich with policies table if it exists / columns exist.
-  // If your schema differs, the PDF still works; it will just show policy_id only.
   if (!policyIds.length) return new Map();
 
-  // chunk to avoid URL too long
   const chunks = [];
   for (let i = 0; i < policyIds.length; i += 200) chunks.push(policyIds.slice(i, i + 200));
 
   const map = new Map();
 
   for (const chunk of chunks) {
+    // Explicit FK join name is the safest way to make Supabase do the right join.
+    // If your FK name differs, update it to your actual constraint name.
+    // From your schema: policies_contact_id_fkey [oai_citation:3‡text.txt](file-service://file-Tg7z3nxHpZGxaFPE1PUDpT)
     const { data, error } = await supabaseAdmin
       .from("policies")
       .select(`
         id,
         carrier_name,
-        product,
-        product_name,
-        product_type,
-        contact:contacts(first_name,last_name)
+        policy_type,
+        product_line,
+        contacts!policies_contact_id_fkey (
+          first_name,
+          last_name
+        )
       `)
       .in("id", chunk);
 
     if (error || !data) continue;
 
     for (const p of data) {
-      const c = p.contact || {};
+      const c = p.contacts || {};
       const name = [c.first_name, c.last_name].filter(Boolean).join(" ").trim() || "—";
+
+      const product = safe(p.product_line) || safe(p.policy_type) || "—";
+
       map.set(String(p.id), {
         policyholder: name,
         carrier: safe(p.carrier_name) || "—",
-        product: safe(p.product || p.product_name || p.product_type) || "—"
+        product
       });
     }
   }
 
   return map;
+}
+
+// Try multiple possible debt column names without breaking
+function getDebtsFromPayoutRow(p) {
+  return (
+    Number(p?.total_debts ?? 0) ||
+    Number(p?.debts ?? 0) ||
+    Number(p?.debt_amount ?? 0) ||
+    Number(p?.debt_withheld ?? 0) ||
+    0
+  );
 }
 
 export async function handler(event) {
@@ -236,7 +258,7 @@ export async function handler(event) {
     const body = JSON.parse(event.body || "{}");
 
     const requestedAgentId = safe(body.agent_id);
-    let agentId = requestedAgentId || requesterId;
+    const agentId = requestedAgentId || requesterId;
 
     const { data: requesterProfile } = await supabaseAdmin
       .from("agents")
@@ -259,10 +281,6 @@ export async function handler(event) {
     if (agentErr) return { statusCode: 500, body: `Error loading agent: ${agentErr.message}` };
     if (!agent) return { statusCode: 404, body: "Agent not found" };
 
-    // Input modes:
-    // A) { dates: ["YYYY-MM-DD", ...] }  -> sections per pay_date
-    // B) { start_date, end_date }        -> one statement for range
-    // C) { date }                        -> same as range with same date
     const dates = Array.isArray(body.dates) ? body.dates.map(safe).filter(Boolean) : [];
     let startDate = safe(body.start_date) || safe(body.date);
     let endDate = safe(body.end_date) || safe(body.date);
@@ -299,12 +317,10 @@ export async function handler(event) {
       payouts = data || [];
     }
 
-    // We need payout_batch_ids to pull settled ledger rows tied to those batches
     const batchIds = Array.from(
       new Set((payouts || []).map((p) => p.payout_batch_id).filter(Boolean))
     );
 
-    // Pull settled ledger rows for these batches (per-policy breakdown source)
     let ledger = [];
     if (batchIds.length) {
       const { data, error } = await supabaseAdmin
@@ -319,7 +335,6 @@ export async function handler(event) {
       ledger = data || [];
     }
 
-    // Group by pay_date for multi-date mode
     const payoutsByDate = new Map();
     (payouts || []).forEach((p) => {
       const d = safe(p.pay_date);
@@ -327,7 +342,6 @@ export async function handler(event) {
       payoutsByDate.get(d).push(p);
     });
 
-    // We'll also group ledger by payout_batch_id so we can build each date section accurately
     const ledgerByBatch = new Map();
     (ledger || []).forEach((r) => {
       const b = r.payout_batch_id;
@@ -340,15 +354,19 @@ export async function handler(event) {
     const doc = new PDFDocument({ size: "LETTER", margin: 42 });
 
     const title = "Commission Statement";
+
+    // IMPORTANT: ASCII-only subtitle (fixes the weird !’ issue from special glyphs)
     const subtitle = dates.length
       ? `Pay Dates: ${dates.join(", ")}`
-      : (startDate === endDate ? `Pay Date: ${startDate}` : `Pay Date Range: ${startDate} → ${endDate}`);
+      : (startDate === endDate ? `Pay Date: ${startDate}` : `Pay Date Range: ${startDate} to ${endDate}`);
 
     drawHeader(doc, title, subtitle);
 
     doc.fillColor("#111827").fontSize(11).text(safe(agent.full_name) || "Agent", 42, 120);
+
+    // ASCII-only separators
     doc.fillColor("#475569").fontSize(9).text(
-      `Agent ID: ${safe(agent.agent_id) || "—"}   •   Level: ${safe(agent.level) || "—"}   •   Email: ${safe(agent.email) || "—"}`,
+      `Agent ID: ${safe(agent.agent_id) || "-"}  -  Level: ${safe(agent.level) || "-"}  -  Email: ${safe(agent.email) || "-"}`,
       42,
       136
     );
@@ -356,52 +374,50 @@ export async function handler(event) {
     doc.y = 160;
     divider(doc);
 
-    // Overall totals (across all selected payouts)
-    const gross = (payouts || []).reduce((a, r) => a + Number(r.gross_amount || 0), 0);
-    const net = (payouts || []).reduce((a, r) => a + Number(r.net_amount || 0), 0);
+    // Totals
+    const netPaid = (payouts || []).reduce((a, r) => a + Number(r.net_amount || 0), 0);
+    const debtsWithheld = (payouts || []).reduce((a, r) => a + getDebtsFromPayoutRow(r), 0);
+
+    // You said: Gross = debts + net (because payouts already have debts subtracted)
+    const grossBeforeDebts = netPaid + debtsWithheld;
+
     const batchCount = (payouts || []).length;
 
     drawCardRow(doc, [
-      { title: "Gross Paid", value: money(gross), note: "Settled ledger totals" },
-      { title: "Net Paid", value: money(net), note: "Same as gross for now" },
-      { title: "Payout Batches", value: String(batchCount), note: "Batches included" }
+      { title: "Gross (Before Debts)", value: money(grossBeforeDebts) },
+      { title: "Debts Withheld", value: money(debtsWithheld) },
+      { title: "Net Paid", value: money(netPaid) }
     ]);
 
-    // Payout batches table (statement-like)
+    // Payout batches table (agent friendly)
     const payoutRows = (payouts || []).map((p) => ({
       pay_date: safe(p.pay_date),
-      batch_type: safe(p.batch_type),
+      type: safe(p.batch_type),
       status: safe(p.status),
-      payout_batch_id: safe(p.payout_batch_id),
-      gross_amount: money(p.gross_amount || 0),
-      net_amount: money(p.net_amount || 0)
+      gross: money(Number(p.net_amount || 0) + getDebtsFromPayoutRow(p)),
+      debts: money(getDebtsFromPayoutRow(p)),
+      net: money(p.net_amount || 0)
     }));
 
     table(doc, {
-      title: "Payout Batches",
-      note: "Each row is one payout batch (from agent_payouts_view).",
+      title: "Payments Included",
+      note: null,
       columns: [
-        { key: "pay_date", label: "Pay Date", width: 90 },
-        { key: "batch_type", label: "Type", width: 90 },
-        { key: "status", label: "Status", width: 80 },
-        { key: "gross_amount", label: "Gross", width: 85 },
-        { key: "net_amount", label: "Net", width: 85 },
-        { key: "payout_batch_id", label: "Batch ID", width: 98 }
+        { key: "pay_date", label: "Pay Date", width: 92 },
+        { key: "type", label: "Type", width: 95 },
+        { key: "status", label: "Status", width: 82 },
+        { key: "gross", label: "Gross", width: 88 },
+        { key: "debts", label: "Debts", width: 78 },
+        { key: "net", label: "Net", width: 88 }
       ],
       rows: payoutRows
     });
 
-    // Helper to render a policy breakdown section
-    async function renderPolicyBreakdownForBatchIds(sectionTitle, sectionNote, sectionBatchIds) {
+    async function renderPolicyBreakdownForBatchIds(sectionTitle, sectionBatchIds) {
       ensurePageSpace(doc, 160);
       doc.fillColor("#0f172a").fontSize(12).text(sectionTitle, 42);
-      if (sectionNote) {
-        doc.moveDown(0.4);
-        doc.fillColor("#64748b").fontSize(9).text(sectionNote, 42, doc.y, { width: 528 });
-      }
       doc.moveDown(0.8);
 
-      // gather ledger rows from those batch ids
       let sectionLedger = [];
       sectionBatchIds.forEach((bid) => {
         const rows = ledgerByBatch.get(bid) || [];
@@ -409,17 +425,15 @@ export async function handler(event) {
       });
 
       if (!sectionLedger.length) {
-        doc.fillColor("#111827").fontSize(10).text("No settled commission ledger rows found for this section.", 42);
+        doc.fillColor("#111827").fontSize(10).text("No commissions were settled for this pay period.", 42);
         doc.moveDown(1);
         divider(doc);
         return;
       }
 
-      // policy enrichment (optional)
       const policyIds = Array.from(new Set(sectionLedger.map((r) => r.policy_id).filter(Boolean))).map(String);
       const policyInfo = await fetchPoliciesForIds(policyIds);
 
-      // attach enrichment fields to ledger rows so grouping can pick them up
       sectionLedger = sectionLedger.map((r) => {
         const pid = r.policy_id ? String(r.policy_id) : "";
         const info = policyInfo.get(pid);
@@ -433,7 +447,6 @@ export async function handler(event) {
 
       const grouped = groupLedgerByPolicy(sectionLedger);
 
-      // totals
       const totals = grouped.reduce(
         (acc, r) => {
           acc.advance += r.advance;
@@ -449,13 +462,12 @@ export async function handler(event) {
       );
 
       drawCardRow(doc, [
-        { title: "Advance", value: money(totals.advance), note: "Entry type = advance" },
-        { title: "Renewal/Pay-Thru", value: money(totals.renewal + totals.paythru), note: "renewal + paythru" },
-        { title: "Overrides/Bonus", value: money(totals.override + totals.bonus), note: "override + bonus" }
+        { title: "Advance", value: money(totals.advance) },
+        { title: "Renewals / Pay-thru", value: money(totals.renewal + totals.paythru) },
+        { title: "Overrides / Bonus", value: money(totals.override + totals.bonus) }
       ]);
 
       const policyRows = grouped.map((r) => ({
-        policy_id: r.policy_id,
         policyholder: r.policyholder,
         carrier: r.carrier,
         product: r.product,
@@ -463,19 +475,20 @@ export async function handler(event) {
         renewals: money(r.renewal + r.paythru),
         overrides: money(r.override),
         bonus: money(r.bonus),
-        total: money(r.total)
+        total: money(r.total),
+        policy_id: r.policy_id
       }));
 
       table(doc, {
-        title: "Per-Policy Commission Breakdown",
-        note: "Grouped from commission_ledger (settled rows) tied to the payout batch(es).",
+        title: "Commission Detail by Policy",
+        note: null,
         columns: [
-          { key: "policyholder", label: "Policyholder", width: 110 },
-          { key: "carrier", label: "Carrier", width: 95 },
-          { key: "product", label: "Product", width: 85 },
+          { key: "policyholder", label: "Client", width: 120 },
+          { key: "carrier", label: "Carrier", width: 100 },
+          { key: "product", label: "Product", width: 95 },
           { key: "advance", label: "Advance", width: 65 },
-          { key: "renewals", label: "Renew/Thru", width: 70 },
-          { key: "overrides", label: "Override", width: 65 },
+          { key: "renewals", label: "Renew/Thru", width: 72 },
+          { key: "overrides", label: "Override", width: 68 },
           { key: "bonus", label: "Bonus", width: 55 },
           { key: "total", label: "Total", width: 55 },
           { key: "policy_id", label: "Policy ID", width: 78 }
@@ -484,48 +497,37 @@ export async function handler(event) {
       });
     }
 
-    // If dates array provided: create section per pay_date
     if (dates.length) {
       for (const d of dates) {
         const datePayouts = payoutsByDate.get(d) || [];
         const dateBatchIds = Array.from(new Set(datePayouts.map((p) => p.payout_batch_id).filter(Boolean)));
-
         if (!dateBatchIds.length) continue;
 
         ensurePageSpace(doc, 180);
         doc.fillColor("#0f172a").fontSize(14).text(`Pay Date: ${d}`, 42);
         doc.moveDown(0.6);
 
-        const dateGross = datePayouts.reduce((a, r) => a + Number(r.gross_amount || 0), 0);
         const dateNet = datePayouts.reduce((a, r) => a + Number(r.net_amount || 0), 0);
+        const dateDebts = datePayouts.reduce((a, r) => a + getDebtsFromPayoutRow(r), 0);
+        const dateGross = dateNet + dateDebts;
 
         drawCardRow(doc, [
-          { title: "Gross (Date)", value: money(dateGross) },
-          { title: "Net (Date)", value: money(dateNet) },
-          { title: "Batches (Date)", value: String(datePayouts.length) }
+          { title: "Gross (Before Debts)", value: money(dateGross) },
+          { title: "Debts Withheld", value: money(dateDebts) },
+          { title: "Net Paid", value: money(dateNet) }
         ]);
 
-        await renderPolicyBreakdownForBatchIds(
-          `Commission Detail (Pay Date ${d})`,
-          "This section shows the per-policy breakdown for payout batches that paid on this date.",
-          dateBatchIds
-        );
+        await renderPolicyBreakdownForBatchIds("Commission Detail", dateBatchIds);
       }
     } else {
-      // Range mode: one combined policy breakdown across all batches in range
       if (batchIds.length) {
-        await renderPolicyBreakdownForBatchIds(
-          "Commission Detail (Combined)",
-          "This section shows the per-policy breakdown for all payout batches in the selected date range.",
-          batchIds
-        );
+        await renderPolicyBreakdownForBatchIds("Commission Detail", batchIds);
       }
     }
 
-    // Footer note
-    ensurePageSpace(doc, 80);
+    ensurePageSpace(doc, 60);
     doc.fillColor("#64748b").fontSize(8).text(
-      "This statement is for informational purposes and reflects settled ledger entries included in payout batches for the selected pay date(s).",
+      "Statement reflects commissions that were included in settled payments for the selected pay date(s).",
       42,
       doc.y,
       { width: 528 }
