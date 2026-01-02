@@ -247,3 +247,39 @@ main.auth-container{
     height: 140px;
   }
 }
+/* ---------- FIX: stop right-side spill / horizontal scroll ---------- */
+html, body{
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* make padding/border count inside widths (prevents 100% + padding overflow) */
+main.auth-container,
+.profile-section,
+#profile-form,
+.form-group,
+.form-group input,
+.form-group textarea,
+.form-group select,
+#logout-btn{
+  box-sizing: border-box;
+  max-width: 100%;
+}
+
+/* some shared CSS files use 100vw which causes overflow on mobile (because scrollbar/safe-area) */
+main.auth-container{
+  width: 100%;
+}
+
+/* ensure form fields don’t “push” wider than the card */
+.form-group input,
+.form-group textarea,
+.form-group select{
+  width: 100%;
+  min-width: 0;
+}
+
+/* prevent any long text/content from forcing width */
+.profile-section *{
+  max-width: 100%;
+}
