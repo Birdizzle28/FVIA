@@ -1,19 +1,27 @@
-// scripts/login.js (non-module, uses global window.supabase)
+// scripts/login.js (non-module, uses global window.supabase / supabaseClient)
 document.addEventListener('DOMContentLoaded', () => {
   if (!supabase) {
     console.error('Supabase client missing on this page');
     return;
   }
+
   const form = document.getElementById('login-form');
   const emailInput = document.getElementById('email');
   const passwordInput = document.getElementById('password');
   const message = document.getElementById('login-message');
+
+  const forgotLink = document.getElementById('forgot-password-link');
+  const forgotPanel = document.getElementById('forgot-password-panel');
+  const forgotEmail = document.getElementById('forgot-email');
+  const sendResetBtn = document.getElementById('send-reset-email');
+  const forgotMsg = document.getElementById('forgot-message');
 
   if (!form || !emailInput || !passwordInput || !message) {
     console.error('Login page elements not found.');
     return;
   }
 
+  // ---------- LOGIN ----------
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
@@ -58,7 +66,77 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
 
-  // Toggle password visibility
+  // ---------- FORGOT PASSWORD ----------
+  forgotLink?.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (!forgotPanel) return;
+
+    // Prefill reset email with login email if present
+    if (forgotEmail && emailInput?.value && !forgotEmail.value) {
+      forgotEmail.value = emailInput.value.trim();
+    }
+
+    forgotPanel.style.display = (forgotPanel.style.display === 'none' || !forgotPanel.style.display)
+      ? 'block'
+      : 'none';
+
+    if (forgotMsg) {
+      forgotMsg.textContent = '';
+      forgotMsg.style.color = '';
+    }
+  });
+
+  sendResetBtn?.addEventListener('click', async () => {
+    if (!supabaseClient) {
+      if (forgotMsg) {
+        forgotMsg.textContent = 'Reset error: Supabase not available.';
+        forgotMsg.style.color = 'red';
+      }
+      return;
+    }
+
+    const email = (forgotEmail?.value || emailInput?.value || '').trim();
+    if (!email) {
+      if (forgotMsg) {
+        forgotMsg.textContent = 'Please enter your email.';
+        forgotMsg.style.color = 'red';
+      }
+      return;
+    }
+
+    if (forgotMsg) {
+      forgotMsg.textContent = 'Sending reset email...';
+      forgotMsg.style.color = '';
+    }
+
+    try {
+      const redirectTo = `${window.location.origin}/reset-password.html`;
+
+      const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
+
+      if (error) {
+        console.error('Reset email error:', error);
+        if (forgotMsg) {
+          forgotMsg.textContent = 'Could not send reset email: ' + error.message;
+          forgotMsg.style.color = 'red';
+        }
+        return;
+      }
+
+      if (forgotMsg) {
+        forgotMsg.textContent = '✅ Check your email for a password reset link.';
+        forgotMsg.style.color = 'green';
+      }
+    } catch (err) {
+      console.error('Unexpected reset email error:', err);
+      if (forgotMsg) {
+        forgotMsg.textContent = 'Unexpected error sending reset email.';
+        forgotMsg.style.color = 'red';
+      }
+    }
+  });
+
+  // ---------- Toggle password visibility ----------
   document.querySelectorAll('.toggle-password').forEach((icon) => {
     icon.addEventListener('click', () => {
       const selector = icon.getAttribute('toggle');
