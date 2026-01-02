@@ -1,5 +1,6 @@
 // Initialize Supabase client (module-friendly via ESM CDN)
 window.supabase = supabase;
+
 // Turn a stored path into a public URL from the "tasks" bucket.
 // If it's already an http(s) URL, use it as-is.
 function resolveTaskImage(raw) {
@@ -26,8 +27,9 @@ document.addEventListener('DOMContentLoaded', () => {
     console.error('Supabase client missing on this page');
     return;
   }
+
   /* ---------- FOLDER TABS ---------- */
-    function escapeHtml(str) {
+  function escapeHtml(str) {
     if (str === null || str === undefined) return '';
     return String(str).replace(/[&<>"]/g, (c) => {
       switch (c) {
@@ -39,6 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+
   document.addEventListener('click', (e) => {
     const btn = e.target.closest('.folder-tabs .tab');
     if (!btn) return;
@@ -170,16 +173,9 @@ document.addEventListener('DOMContentLoaded', () => {
         this._timer = null;
       }
     }
-    pause() {
-      this.stopAuto();
-    }
-    resume() {
-      this.startAuto();
-    }
-    restartAuto() {
-      this.stopAuto();
-      this.startAuto();
-    }
+    pause() { this.stopAuto(); }
+    resume() { this.startAuto(); }
+    restartAuto() { this.stopAuto(); this.startAuto(); }
     setSlides(newSlides) {
       this.allSlides = Array.from(newSlides);
       this.slides = this.allSlides.slice(0, this.maxVisible);
@@ -188,46 +184,31 @@ document.addEventListener('DOMContentLoaded', () => {
       this.go(0, false);
       this.restartAuto();
     }
-    getAllSlides() {
-      return this.allSlides;
-    }
+    getAllSlides() { return this.allSlides; }
   }
 
   const carousels = Array.from(document.querySelectorAll('.carousel')).map(
     c => new Carousel(c)
   );
 
-    // ---------- SHARED FULL-IMAGE OVERLAY ----------
+  // ---------- SHARED FULL-IMAGE OVERLAY ----------
   const imgOverlay = document.createElement('div');
   imgOverlay.id = 'full-image-overlay';
   imgOverlay.style.cssText = `
-    position:fixed;
-    inset:0;
-    display:none;
-    align-items:center;
-    justify-content:center;
-    background:rgba(0,0,0,0.8);
-    z-index:20000;
+    position:fixed; inset:0; display:none;
+    align-items:center; justify-content:center;
+    background:rgba(0,0,0,0.8); z-index:20000;
   `;
   imgOverlay.innerHTML = `
     <div style="position:relative; max-width:95vw; max-height:95vh;">
       <button type="button" id="full-image-close" style="
-        position:absolute;
-        top:-10px; right:-10px;
-        border:none;
-        background:#000;
-        color:#fff;
-        border-radius:50%;
-        width:28px; height:28px;
-        cursor:pointer;
-        font-size:20px;
-        line-height:1;
+        position:absolute; top:-10px; right:-10px;
+        border:none; background:#000; color:#fff;
+        border-radius:50%; width:28px; height:28px;
+        cursor:pointer; font-size:20px; line-height:1;
       ">&times;</button>
       <img id="full-image-img" src="" alt="" style="
-        max-width:100%;
-        max-height:100%;
-        display:block;
-        border-radius:6px;
+        max-width:100%; max-height:100%; display:block; border-radius:6px;
       "/>
     </div>
   `;
@@ -242,23 +223,17 @@ document.addEventListener('DOMContentLoaded', () => {
     imgOverlay.style.display = 'flex';
     document.body.style.overflow = 'hidden';
   }
-
   function closeFullImage() {
     imgOverlay.style.display = 'none';
     fullImgEl.src = '';
     document.body.style.overflow = '';
   }
-
   fullImgClose.addEventListener('click', closeFullImage);
-  imgOverlay.addEventListener('click', (e) => {
-    if (e.target === imgOverlay) closeFullImage();
-  });
+  imgOverlay.addEventListener('click', (e) => { if (e.target === imgOverlay) closeFullImage(); });
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && imgOverlay.style.display === 'flex') {
-      closeFullImage();
-    }
+    if (e.key === 'Escape' && imgOverlay.style.display === 'flex') closeFullImage();
   });
-  
+
   /* ---------- SEE ALL OVERLAY (generic) ---------- */
   const overlay = document.getElementById('dash-overlay');
   const overlayGrid = document.getElementById('overlay-grid');
@@ -280,12 +255,12 @@ document.addEventListener('DOMContentLoaded', () => {
       items.forEach((el, idx) => {
         const card = document.createElement('div');
         card.className = 'overlay-item';
-      
+
         const imgEl = el.querySelector('img');
         const imgHtml = imgEl
           ? `<div class="overlay-thumb"><img src="${imgEl.src}" alt=""></div>`
           : '';
-      
+
         card.innerHTML = `
           ${imgHtml}
           <div class="overlay-text">
@@ -293,7 +268,7 @@ document.addEventListener('DOMContentLoaded', () => {
             <p>${el.querySelector('p')?.textContent || ''}</p>
           </div>
         `;
-      
+
         card.addEventListener('click', () => {
           if (activeCarousel && idx < activeCarousel.slides.length) {
             activeCarousel.go(idx);
@@ -323,66 +298,15 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && overlay.classList.contains('open')) {
-      closeOverlay();
-    }
+    if (e.key === 'Escape' && overlay.classList.contains('open')) closeOverlay();
   });
 
   /* ---------- Announcement DETAIL overlay ---------- */
   const detailOverlay = document.getElementById('annc-detail-overlay');
-  if (!detailOverlay) return; // or wrap all detail functions in a guard
-  
+  if (!detailOverlay) return;
+
   const detailBody = detailOverlay.querySelector('.annc-detail-body');
   const detailTitle = detailOverlay.querySelector('#annc-detail-title');
-
-    function openDetail(annc) {
-      detailTitle.textContent = annc.title || 'Announcement';
-      detailBody.innerHTML = `
-        <div class="hero"
-          style="
-            background-image:url('${(annc.image_url || '').replace(/'/g,"\\'")}');
-            background-size:contain;
-            background-position:center;
-            background-repeat:no-repeat;
-            background-color:#f3f3fb;
-          "></div>
-        <div class="meta">
-          <h3>${annc.title || 'Untitled'}</h3>
-          <p>${(annc.body || '').replace(/\n/g,'<br>')}</p>
-          <div class="row"><strong>Visible:</strong> ${formatRange(annc.publish_at, annc.expires_at)}</div>
-          ${audienceLine(annc)}
-          <div class="cta">
-            ${annc.link_url ? `<a href="${annc.link_url}" target="_blank" rel="noopener"><i class="fa-solid fa-link"></i> Open link</a>` : ''}
-          </div>
-        </div>
-      `;
-  
-      const heroEl = detailBody.querySelector('.hero');
-      if (heroEl && annc.image_url) {
-        heroEl.style.cursor = 'zoom-in';
-        heroEl.addEventListener('click', () => openFullImage(annc.image_url), { once: true });
-      }
-  
-      detailOverlay.classList.add('open');
-      detailOverlay.setAttribute('aria-hidden','false');
-      document.body.style.overflow = 'hidden';
-    }
-
-  function closeDetail() {
-    detailOverlay.classList.remove('open');
-    detailOverlay.setAttribute('aria-hidden','true');
-    document.body.style.overflow = '';
-  }
-
-  detailOverlay.addEventListener('click', (e) => {
-    if (e.target.matches('[data-close], .overlay-backdrop')) closeDetail();
-  });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape' && detailOverlay.classList.contains('open')) {
-      closeDetail();
-    }
-  });
 
   function formatRange(pub, exp){
     const f = (d)=> d ? new Date(d).toLocaleString() : 'Now';
@@ -406,37 +330,91 @@ document.addEventListener('DOMContentLoaded', () => {
     return `<div class="row"><strong>Audience:</strong> ${label}</div>`;
   }
 
-    // “See all” button handlers (Announcements & Tasks get custom renderers)
-    document.querySelectorAll('.see-all').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const key  = btn.dataset.overlay;
-        const host = btn.closest('.carousel');
-        const inst = host ? carousels.find(c => c.root === host) : null;
-        const titleMap = {
-          announcements: 'All Announcements',
-          sales: 'All Sales Entries',
-          reminders: 'All Tasks & Reminders'
-        };
-  
-        if (key === 'announcements') {
-          openAnnouncementsOverlay(inst);
-        } else if (key === 'reminders') {
-          openTasksOverlay(inst);
-        } else {
-          const items = inst ? inst.getAllSlides() : [];
-          openOverlay(titleMap[key] || 'All Items', items, inst);
-        }
-      });
+  function openDetail(annc) {
+    detailTitle.textContent = annc.title || 'Announcement';
+    detailBody.innerHTML = `
+      <div class="hero"
+        style="
+          background-image:url('${(annc.image_url || '').replace(/'/g,"\\'")}');
+          background-size:contain;
+          background-position:center;
+          background-repeat:no-repeat;
+          background-color:#f3f3fb;
+        "></div>
+      <div class="meta">
+        <h3>${annc.title || 'Untitled'}</h3>
+        <p>${(annc.body || '').replace(/\n/g,'<br>')}</p>
+        <div class="row"><strong>Visible:</strong> ${formatRange(annc.publish_at, annc.expires_at)}</div>
+        ${audienceLine(annc)}
+        <div class="cta">
+          ${annc.link_url ? `<a href="${annc.link_url}" target="_blank" rel="noopener"><i class="fa-solid fa-link"></i> Open link</a>` : ''}
+        </div>
+      </div>
+    `;
+
+    const heroEl = detailBody.querySelector('.hero');
+    if (heroEl && annc.image_url) {
+      heroEl.style.cursor = 'zoom-in';
+      heroEl.addEventListener('click', () => openFullImage(annc.image_url), { once: true });
+    }
+
+    detailOverlay.classList.add('open');
+    detailOverlay.setAttribute('aria-hidden','false');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeDetail() {
+    detailOverlay.classList.remove('open');
+    detailOverlay.setAttribute('aria-hidden','true');
+    document.body.style.overflow = '';
+  }
+
+  detailOverlay.addEventListener('click', (e) => {
+    if (e.target.matches('[data-close], .overlay-backdrop')) closeDetail();
+  });
+
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && detailOverlay.classList.contains('open')) closeDetail();
+  });
+
+  // “See all” button handlers (Announcements & Tasks get custom renderers)
+  document.querySelectorAll('.see-all').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key  = btn.dataset.overlay;
+
+      // SALES: go straight to Commissions page (no overlay)
+      if (key === 'sales') {
+        window.location.href = 'commissions.html';
+        return;
+      }
+
+      const host = btn.closest('.carousel');
+      const inst = host ? carousels.find(c => c.root === host) : null;
+      const titleMap = {
+        announcements: 'All Announcements',
+        sales: 'All Sales Entries',
+        reminders: 'All Tasks & Reminders'
+      };
+
+      if (key === 'announcements') {
+        openAnnouncementsOverlay(inst);
+      } else if (key === 'reminders') {
+        openTasksOverlay(inst);
+      } else {
+        const items = inst ? inst.getAllSlides() : [];
+        openOverlay(titleMap[key] || 'All Items', items, inst);
+      }
     });
+  });
 
   /* ---------- ANNOUNCEMENTS (live from Supabase) ---------- */
-  let _announcements = []; // filtered list for overlays
-  let _tasks = []; // tasks assigned to this user, for overlays
+  let _announcements = [];
+  let _tasks = [];
 
   async function getMyAgentMini() {
     const { data: { session } } = await supabase.auth.getSession();
     const myId = session?.user?.id || null;
-  
+
     const me = {
       id: myId,
       is_admin: false,
@@ -444,32 +422,30 @@ document.addEventListener('DOMContentLoaded', () => {
       npn: null,
       licenses: []
     };
-  
+
     if (!myId) return me;
-  
-    // load base agent info
+
     const { data: agent } = await supabase
       .from('agents')
       .select('is_admin, level, agent_id')
       .eq('id', myId)
       .single();
-  
+
     if (agent) {
       me.is_admin = !!agent.is_admin;
       me.level    = agent.level || null;
       me.npn      = agent.agent_id || null;
     }
-  
-    // load NIPR licenses for this agent (by NPN)
+
     if (me.npn) {
       const { data: licRows } = await supabase
         .from('agent_nipr_licenses')
         .select('state, active, license_class, loa_names, loa_details')
         .eq('agent_id', me.npn);
-  
+
       me.licenses = licRows || [];
     }
-  
+
     return me;
   }
 
@@ -535,18 +511,15 @@ document.addEventListener('DOMContentLoaded', () => {
       if (exp && exp <= now) return false;
       return true;
     };
+
     const showsForMe = (r) => {
       const aud   = r.audience || { scope: 'all' };
       const scope = aud.scope || 'all';
       const licenses = me.licenses || [];
-    
-      // Admin-only
+
       if (scope === 'admins') return me.is_admin;
-    
-      // Everyone
       if (scope === 'all') return true;
-    
-      // Helpers that ALWAYS respect active === true
+
       const hasState = (target) => {
         if (!target) return false;
         const T = String(target).toUpperCase();
@@ -555,7 +528,7 @@ document.addEventListener('DOMContentLoaded', () => {
           String(lic.state || '').toUpperCase() === T
         );
       };
-    
+
       const hasProduct = (prod) => {
         if (!prod) return false;
         const p = String(prod).toLowerCase();
@@ -569,33 +542,29 @@ document.addEventListener('DOMContentLoaded', () => {
           return false;
         });
       };
-    
-      // By state only
+
       if (scope === 'by_state') {
         const states = aud.states || [];
         if (!states.length) return false;
         return states.some(s => hasState(s));
       }
-    
-      // By product only
+
       if (scope === 'by_product') {
         const products = aud.products || [];
         if (!products.length) return false;
         return products.some(p => hasProduct(p));
       }
-    
-      // By product AND state (THIS WAS BUGGY BEFORE)
+
       if (scope === 'by_product_state') {
         const states   = (aud.states   || []).map(s => String(s).toUpperCase());
         const products = (aud.products || []).map(p => String(p).toLowerCase());
         if (!states.length || !products.length) return false;
-    
+
         return licenses.some(lic => {
           if (!lic.active) return false;
-    
           const licState = String(lic.state || '').toUpperCase();
           if (!states.includes(licState)) return false;
-    
+
           const loas = lic.loa_names || [];
           const productOk = products.some(p => {
             if (p === 'life')     return loas.includes('Life');
@@ -604,17 +573,15 @@ document.addEventListener('DOMContentLoaded', () => {
             if (p === 'casualty') return loas.includes('Casualty');
             return false;
           });
-    
+
           return productOk;
         });
       }
-    
-      // Custom specific agents
+
       if (scope === 'custom_agents') {
         return me.id && (aud.agent_ids || []).includes(me.id);
       }
-    
-      // Anything unknown → hide
+
       return false;
     };
 
@@ -688,6 +655,7 @@ document.addEventListener('DOMContentLoaded', () => {
     overlay.querySelector('.overlay-close')?.focus();
     document.body.style.overflow = 'hidden';
   }
+
   function openTasksOverlay(inst) {
     const title = 'All Tasks & Reminders';
     activeCarousel = inst || null;
@@ -702,7 +670,6 @@ document.addEventListener('DOMContentLoaded', () => {
       overlayGrid.appendChild(empty);
     } else {
       _tasks.forEach((task) => {
-        // parse metadata for image + notes
         const meta = (() => {
           const raw = task.metadata;
           if (!raw) return {};
@@ -712,12 +679,7 @@ document.addEventListener('DOMContentLoaded', () => {
           return raw;
         })();
 
-        const rawImg =
-          meta.image_url ||
-          meta.imagePath ||
-          meta.path ||
-          null;
-
+        const rawImg = meta.image_url || meta.imagePath || meta.path || null;
         const imgUrl = resolveTaskImage(rawImg);
         const hasImg = !!imgUrl;
 
@@ -734,14 +696,12 @@ document.addEventListener('DOMContentLoaded', () => {
           : 'No details yet.';
 
         const card = document.createElement('div');
-        // ALWAYS use image-card layout so styling matches announcements
         card.className = 'overlay-item image-card';
         card.setAttribute('data-task-id', String(task.id || ''));
 
         if (hasImg) {
           card.style.backgroundImage = `url("${imgUrl}")`;
         } else {
-          // no image → solid fallback behind gradient
           card.style.backgroundImage = 'none';
           card.style.backgroundColor = '#353468';
         }
@@ -758,7 +718,6 @@ document.addEventListener('DOMContentLoaded', () => {
           </div>
         `;
 
-        // clicking the "View" button → open detail overlay (do NOT close See All)
         const eyeBtn = card.querySelector('.btn-eye');
         if (eyeBtn) {
           eyeBtn.addEventListener('click', (e) => {
@@ -767,15 +726,12 @@ document.addEventListener('DOMContentLoaded', () => {
           });
         }
 
-        // clicking the card background → sync carousel + close See All
         card.addEventListener('click', () => {
           if (activeCarousel) {
             const slides   = activeCarousel.getAllSlides();
             const targetId = String(task.id || '');
             const idx      = slides.findIndex(sl => sl.dataset.taskId === targetId);
-            if (idx >= 0) {
-              activeCarousel.go(idx);
-            }
+            if (idx >= 0) activeCarousel.go(idx);
           }
           closeOverlay();
         });
@@ -804,110 +760,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const taskDetailOverlay = document.getElementById('task-detail-overlay');
   let taskDetailBody = null;
   let taskDetailTitle = null;
-  
+
   if (taskDetailOverlay) {
     taskDetailBody  = taskDetailOverlay.querySelector('.task-detail-body');
     taskDetailTitle = taskDetailOverlay.querySelector('#task-detail-title');
-  
-    taskDetailOverlay.addEventListener('click', (e) => {
-      if (e.target.matches('[data-close], .overlay-backdrop')) {
-        closeTaskDetail();
-      }
-    });
-  
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape' && taskDetailOverlay.classList.contains('open')) {
-        closeTaskDetail();
-      }
-    });
-  }
-  
-      function openTaskDetail(task) {
-        if (!taskDetailOverlay || !taskDetailBody || !taskDetailTitle) return;
-    
-        const meta = (() => {
-          const raw = task.metadata;
-          if (!raw) return {};
-          if (typeof raw === 'string') {
-            try { return JSON.parse(raw); } catch { return {}; }
-          }
-          return raw;
-        })();
-    
-        const notes =
-          meta.notes ||
-          meta.note ||
-          meta.description ||
-          meta.body ||
-          meta.details ||
-          '';
-    
-        const rawImg =
-          meta.image_url ||
-          meta.imagePath ||
-          meta.path ||
-          null;
-    
-        const imgUrl = resolveTaskImage(rawImg);
-    
-        const statusRaw = (task.status || 'open').toLowerCase();
-        let statusLabel = 'Open';
-        if (statusRaw === 'completed') statusLabel = 'Completed';
-        else if (statusRaw === 'cancelled') statusLabel = 'Cancelled';
-    
-        const fmt = (d) => {
-          try { return d ? new Date(d).toLocaleString() : '—'; }
-          catch { return '—'; }
-        };
-    
-        const title = task.title || 'Task';
-        taskDetailTitle.textContent = title;
-    
-        taskDetailBody.innerHTML = `
-          <div class="hero task-hero"
-            style="
-              ${imgUrl ? `background-image:url('${imgUrl.replace(/'/g,"\\'")}');` : ''}
-              background-size:contain;
-              background-position:center;
-              background-repeat:no-repeat;
-              background-color:#f3f3fb;
-            "></div>
-          <div class="meta">
-            <h3>${escapeHtml(title)}</h3>
-            <div class="row"><strong>Status:</strong> ${escapeHtml(statusLabel)}</div>
-            ${task.channel ? `<div class="row"><strong>Channel:</strong> ${escapeHtml(task.channel)}</div>` : ''}
-            ${task.scheduled_at ? `<div class="row"><strong>Scheduled:</strong> ${escapeHtml(fmt(task.scheduled_at))}</div>` : ''}
-            ${task.due_at ? `<div class="row"><strong>Due:</strong> ${escapeHtml(fmt(task.due_at))}</div>` : ''}
-            ${task.completed_at ? `<div class="row"><strong>Completed:</strong> ${escapeHtml(fmt(task.completed_at))}</div>` : ''}
-            ${notes ? `<p class="task-notes"><strong>Notes:</strong> ${escapeHtml(notes)}</p>` : ''}
-          </div>
-        `;
-    
-        const heroEl = taskDetailBody.querySelector('.task-hero');
-        if (heroEl && imgUrl) {
-          heroEl.style.cursor = 'zoom-in';
-          heroEl.addEventListener('click', () => openFullImage(imgUrl), { once: true });
-        }
-    
-        taskDetailOverlay.classList.add('open');
-        taskDetailOverlay.setAttribute('aria-hidden', 'false');
-        document.body.style.overflow = 'hidden';
-      }
-  
-  function closeTaskDetail() {
-    if (!taskDetailOverlay) return;
-    taskDetailOverlay.classList.remove('open');
-    taskDetailOverlay.setAttribute('aria-hidden', 'true');
-    document.body.style.overflow = '';
-  }
-    /* ---------- TASKS / REMINDERS (from public.tasks) ---------- */
 
-  function makeTaskSlide(task) {
-    const art = document.createElement('article');
-    art.className = 'slide task';
-    art.tabIndex = 0;
-    art.dataset.taskId = String(task.id || '');
-    // metadata might be object or JSON string
+    taskDetailOverlay.addEventListener('click', (e) => {
+      if (e.target.matches('[data-close], .overlay-backdrop')) closeTaskDetail();
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && taskDetailOverlay.classList.contains('open')) closeTaskDetail();
+    });
+  }
+
+  function openTaskDetail(task) {
+    if (!taskDetailOverlay || !taskDetailBody || !taskDetailTitle) return;
+
     const meta = (() => {
       const raw = task.metadata;
       if (!raw) return {};
@@ -916,7 +785,7 @@ document.addEventListener('DOMContentLoaded', () => {
       }
       return raw;
     })();
-  
+
     const notes =
       meta.notes ||
       meta.note ||
@@ -924,37 +793,110 @@ document.addEventListener('DOMContentLoaded', () => {
       meta.body ||
       meta.details ||
       '';
-  
+
+    const rawImg = meta.image_url || meta.imagePath || meta.path || null;
+    const imgUrl = resolveTaskImage(rawImg);
+
     const statusRaw = (task.status || 'open').toLowerCase();
     let statusLabel = 'Open';
     if (statusRaw === 'completed') statusLabel = 'Completed';
     else if (statusRaw === 'cancelled') statusLabel = 'Cancelled';
-  
+
+    const fmt = (d) => {
+      try { return d ? new Date(d).toLocaleString() : '—'; }
+      catch { return '—'; }
+    };
+
+    const title = task.title || 'Task';
+    taskDetailTitle.textContent = title;
+
+    taskDetailBody.innerHTML = `
+      <div class="hero task-hero"
+        style="
+          ${imgUrl ? `background-image:url('${imgUrl.replace(/'/g,"\\'")}');` : ''}
+          background-size:contain;
+          background-position:center;
+          background-repeat:no-repeat;
+          background-color:#f3f3fb;
+        "></div>
+      <div class="meta">
+        <h3>${escapeHtml(title)}</h3>
+        <div class="row"><strong>Status:</strong> ${escapeHtml(statusLabel)}</div>
+        ${task.channel ? `<div class="row"><strong>Channel:</strong> ${escapeHtml(task.channel)}</div>` : ''}
+        ${task.scheduled_at ? `<div class="row"><strong>Scheduled:</strong> ${escapeHtml(fmt(task.scheduled_at))}</div>` : ''}
+        ${task.due_at ? `<div class="row"><strong>Due:</strong> ${escapeHtml(fmt(task.due_at))}</div>` : ''}
+        ${task.completed_at ? `<div class="row"><strong>Completed:</strong> ${escapeHtml(fmt(task.completed_at))}</div>` : ''}
+        ${notes ? `<p class="task-notes"><strong>Notes:</strong> ${escapeHtml(notes)}</p>` : ''}
+      </div>
+    `;
+
+    const heroEl = taskDetailBody.querySelector('.task-hero');
+    if (heroEl && imgUrl) {
+      heroEl.style.cursor = 'zoom-in';
+      heroEl.addEventListener('click', () => openFullImage(imgUrl), { once: true });
+    }
+
+    taskDetailOverlay.classList.add('open');
+    taskDetailOverlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeTaskDetail() {
+    if (!taskDetailOverlay) return;
+    taskDetailOverlay.classList.remove('open');
+    taskDetailOverlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  }
+
+  /* ---------- TASKS / REMINDERS (from public.tasks) ---------- */
+  function makeTaskSlide(task) {
+    const art = document.createElement('article');
+    art.className = 'slide task';
+    art.tabIndex = 0;
+    art.dataset.taskId = String(task.id || '');
+
+    const meta = (() => {
+      const raw = task.metadata;
+      if (!raw) return {};
+      if (typeof raw === 'string') {
+        try { return JSON.parse(raw); } catch { return {}; }
+      }
+      return raw;
+    })();
+
+    const notes =
+      meta.notes ||
+      meta.note ||
+      meta.description ||
+      meta.body ||
+      meta.details ||
+      '';
+
+    const statusRaw = (task.status || 'open').toLowerCase();
+    let statusLabel = 'Open';
+    if (statusRaw === 'completed') statusLabel = 'Completed';
+    else if (statusRaw === 'cancelled') statusLabel = 'Cancelled';
+
     const fmt = (d) => {
       try { return d ? new Date(d).toLocaleString() : ''; }
       catch { return ''; }
     };
-  
+
     const bits = [];
     bits.push(`Status: ${statusLabel}`);
     if (task.channel) bits.push(`Channel: ${task.channel}`);
     if (task.scheduled_at) bits.push(`Scheduled: ${fmt(task.scheduled_at)}`);
     if (task.due_at) bits.push(`Due: ${fmt(task.due_at)}`);
-  
+
     let bodyHtml = escapeHtml(bits.join(' • '));
     if (notes) {
       bodyHtml += '<br><strong>Notes:</strong> ' + escapeHtml(notes);
     }
-  
-    const rawImg =
-      meta.image_url ||
-      meta.imagePath ||
-      meta.path ||
-      null;
-  
+
+    const rawImg = meta.image_url || meta.imagePath || meta.path || null;
     const imgUrl = resolveTaskImage(rawImg);
     const hasImg = !!imgUrl;
-  
+
     art.innerHTML = `
       <div class="task-inner">
         <div class="task-text">
@@ -968,7 +910,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </div>
       </div>
     `;
-  
+
     const open = (e) => {
       if (e.target.closest('a,button')) return;
       openTaskDetail(task);
@@ -980,7 +922,7 @@ document.addEventListener('DOMContentLoaded', () => {
         open(e);
       }
     });
-  
+
     return art;
   }
 
@@ -990,7 +932,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const inst = carousels.find((c) => c.root === root);
 
-    // who is logged in?
     let userId = null;
     try {
       const { data: { session } } = await supabase.auth.getSession();
@@ -1012,13 +953,12 @@ document.addEventListener('DOMContentLoaded', () => {
       return;
     }
 
-    // Only tasks for THIS user, and only non-cancelled (you can tighten this to status = open if you want)
     const { data, error } = await supabase
       .from('tasks')
       .select('id, title, scheduled_at, due_at, completed_at, status, channel, metadata, created_at')
       .eq('assigned_to', userId)
       .neq('status', 'cancelled')
-      .order('status', { ascending: true })           // open first, then completed
+      .order('status', { ascending: true })
       .order('due_at', { ascending: true, nullsLast: true })
       .order('created_at', { ascending: false })
       .limit(50);
@@ -1050,6 +990,124 @@ document.addEventListener('DOMContentLoaded', () => {
     const slides = rows.map(makeTaskSlide);
     inst?.setSlides(slides);
   }
+
+  /* ---------- SALES (Top 5 AP from downline this month; NOT clickable; See All -> commissions.html) ---------- */
+  function fmtMoney(n) {
+    const x = Number(n) || 0;
+    return `$${Math.round(x).toLocaleString()}`;
+  }
+
+  function makeSalesSlide(row, agentName) {
+    const art = document.createElement('article');
+    art.className = 'slide';
+    art.tabIndex = 0;
+
+    const ap = Number(row.premium_annual) || 0;
+    const carrier = row.carrier_name || '—';
+    const client = `${row.contact?.first_name || ''} ${row.contact?.last_name || ''}`.trim() || '—';
+    const issued = row.issued_at ? new Date(row.issued_at).toLocaleDateString() : '—';
+
+    art.innerHTML = `
+      <h3>${fmtMoney(ap)} AP • ${escapeHtml(agentName || 'Downline')}</h3>
+      <p>${escapeHtml(carrier)} • ${escapeHtml(client)} • ${escapeHtml(issued)}</p>
+    `;
+
+    // IMPORTANT: not clickable (no handlers)
+    return art;
+  }
+
+  async function loadSalesCarousel() {
+    const root = document.querySelector('.carousel[data-key="sales"]');
+    if (!root) return;
+    const inst = carousels.find(c => c.root === root);
+    if (!inst) return;
+
+    // who is logged in?
+    let userId = null;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      userId = session?.user?.id || null;
+    } catch {}
+
+    if (!userId) {
+      const slide = document.createElement('article');
+      slide.className = 'slide';
+      slide.tabIndex = 0;
+      slide.innerHTML = `<h3>No sales available</h3><p>Log in to see your team’s top AP this month.</p>`;
+      inst.setSlides([slide]);
+      return;
+    }
+
+    // load agents so we can build downline + name map
+    const agentsRes = await supabase
+      .from('agents')
+      .select('id, recruiter_id, full_name');
+
+    if (agentsRes.error) {
+      console.warn('Sales: agents load error:', agentsRes.error);
+      const slide = document.createElement('article');
+      slide.className = 'slide';
+      slide.tabIndex = 0;
+      slide.innerHTML = `<h3>Could not load sales</h3><p>Agents lookup failed.</p>`;
+      inst.setSlides([slide]);
+      return;
+    }
+
+    const agents = agentsRes.data || [];
+    const idToName = new Map(agents.map(a => [a.id, a.full_name || '—']));
+
+    // reuse your exact downline builder (defined later in file)
+    const downlineIds = getDownlineAgentIds(userId, agents);
+
+    // You said “ANY of your downline” → if no downline, show message
+    if (!downlineIds.length) {
+      const slide = document.createElement('article');
+      slide.className = 'slide';
+      slide.tabIndex = 0;
+      slide.innerHTML = `<h3>No downline sales yet</h3><p>You don’t have any downline agents under you yet.</p>`;
+      inst.setSlides([slide]);
+      return;
+    }
+
+    // this month range
+    const now = new Date();
+    const startMonthISO = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+
+    // pull top 5 AP (this month) for ANY downline
+    const polRes = await supabase
+      .from('policies')
+      .select('agent_id, carrier_name, premium_annual, issued_at, contact:contacts(first_name,last_name)')
+      .not('issued_at', 'is', null)
+      .gte('issued_at', startMonthISO)
+      .in('agent_id', downlineIds)
+      .order('premium_annual', { ascending: false, nullsLast: true })
+      .order('issued_at', { ascending: false })
+      .limit(5);
+
+    if (polRes.error) {
+      console.warn('Sales: policies load error:', polRes.error);
+      const slide = document.createElement('article');
+      slide.className = 'slide';
+      slide.tabIndex = 0;
+      slide.innerHTML = `<h3>Could not load sales</h3><p>Policy lookup failed.</p>`;
+      inst.setSlides([slide]);
+      return;
+    }
+
+    const rows = polRes.data || [];
+    if (!rows.length) {
+      const slide = document.createElement('article');
+      slide.className = 'slide';
+      slide.tabIndex = 0;
+      slide.innerHTML = `<h3>No sales this month</h3><p>No issued policies found for your downline yet this month.</p>`;
+      inst.setSlides([slide]);
+      return;
+    }
+
+    const slides = rows.map(r => makeSalesSlide(r, idToName.get(r.agent_id) || 'Downline'));
+    inst.setSlides(slides);
+  }
+
   /* ---------- LEAD SNAPSHOT ---------- */
   (async function initLeadSnapshot(){
     let userId = null;
@@ -1149,84 +1207,78 @@ document.addEventListener('DOMContentLoaded', () => {
     await refresh();
   })();
 
-    /* ---------- AVAILABILITY SWITCH (agents.is_available) ---------- */
-    (async () => {
-      const switchEl = document.getElementById("availabilitySwitch");
-      const statusEl = document.getElementById("availabilityStatus");
-      if (!switchEl || !statusEl) return;
-  
-      let user = null;
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        user = session?.user;
-        if (!user) {
-          console.warn("No user found — redirecting to login");
-          window.location.href = "login.html";
-          return;
-        }
-      } catch (err) {
-        console.error("Error fetching session:", err);
+  /* ---------- AVAILABILITY SWITCH (agents.is_available) ---------- */
+  (async () => {
+    const switchEl = document.getElementById("availabilitySwitch");
+    const statusEl = document.getElementById("availabilityStatus");
+    if (!switchEl || !statusEl) return;
+
+    let user = null;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      user = session?.user;
+      if (!user) {
+        console.warn("No user found — redirecting to login");
+        window.location.href = "login.html";
         return;
       }
-  
-      // Read current availability from agents.is_available
-      let isAvail = false;
-      let hasAgentRow = false;
-      try {
-        const { data: agentRow, error } = await supabase
-          .from("agents")
-          .select("is_available")
-          .eq("id", user.id)
-          .single();
-  
-        if (error && error.code !== "PGRST116") {
-          console.error("Error fetching agent availability:", error);
-        }
-  
-        if (agentRow) {
-          hasAgentRow = true;
-          isAvail = !!agentRow.is_available;
-        }
-      } catch (err) {
-        console.error("Error loading availability:", err);
+    } catch (err) {
+      console.error("Error fetching session:", err);
+      return;
+    }
+
+    let isAvail = false;
+    let hasAgentRow = false;
+    try {
+      const { data: agentRow, error } = await supabase
+        .from("agents")
+        .select("is_available")
+        .eq("id", user.id)
+        .single();
+
+      if (error && error.code !== "PGRST116") {
+        console.error("Error fetching agent availability:", error);
       }
-  
-      // If there's no agents row for this user, disable toggle
-      if (!hasAgentRow) {
-        switchEl.disabled = true;
-        statusEl.textContent = "No agent record";
-        statusEl.style.color = "#b00020";
-        return;
+
+      if (agentRow) {
+        hasAgentRow = true;
+        isAvail = !!agentRow.is_available;
       }
-  
-      // Initialize UI
-      switchEl.checked = isAvail;
-      statusEl.textContent = isAvail ? "I’m Available" : "I’m Offline";
-      statusEl.style.color = isAvail ? "#4caf50" : "#999";
-  
-      // Toggle handler → UPDATE agents.is_available (no upsert)
-      switchEl.addEventListener("change", async () => {
-        const next = switchEl.checked;
-  
-        // optimistic UI
-        statusEl.textContent = next ? "I’m Available" : "I’m Offline";
-        statusEl.style.color = next ? "#4caf50" : "#999";
-  
-        const { error } = await supabase
-          .from("agents")
-          .update({ is_available: next })
-          .eq("id", user.id);
-  
-        if (error) {
-          console.error("Availability update error:", error);
-          alert("Could not update availability: " + (error.message || "Unknown error"));
-          // revert on failure
-          switchEl.checked = !next;
-          statusEl.textContent = switchEl.checked ? "I’m Available" : "I’m Offline";
-          statusEl.style.color = switchEl.checked ? "#4caf50" : "#999";
-        }
-      });
-    })();
+    } catch (err) {
+      console.error("Error loading availability:", err);
+    }
+
+    if (!hasAgentRow) {
+      switchEl.disabled = true;
+      statusEl.textContent = "No agent record";
+      statusEl.style.color = "#b00020";
+      return;
+    }
+
+    switchEl.checked = isAvail;
+    statusEl.textContent = isAvail ? "I’m Available" : "I’m Offline";
+    statusEl.style.color = isAvail ? "#4caf50" : "#999";
+
+    switchEl.addEventListener("change", async () => {
+      const next = switchEl.checked;
+
+      statusEl.textContent = next ? "I’m Available" : "I’m Offline";
+      statusEl.style.color = next ? "#4caf50" : "#999";
+
+      const { error } = await supabase
+        .from("agents")
+        .update({ is_available: next })
+        .eq("id", user.id);
+
+      if (error) {
+        console.error("Availability update error:", error);
+        alert("Could not update availability: " + (error.message || "Unknown error"));
+        switchEl.checked = !next;
+        statusEl.textContent = switchEl.checked ? "I’m Available" : "I’m Offline";
+        statusEl.style.color = switchEl.checked ? "#4caf50" : "#999";
+      }
+    });
+  })();
 
   /* ---------- COMMISSION SNAPSHOT ---------- */
   async function loadCommissionSnapshot(){
@@ -1296,143 +1348,130 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
-/* ---------- RECRUITING SNAPSHOT (FINAL, USING agents.is_active) ---------- */
+  /* ---------- RECRUITING SNAPSHOT (FINAL, USING agents.is_active) ---------- */
+  function getDownlineAgentIds(rootId, agents) {
+    const downline = [];
+    const seen = new Set([rootId]);
+    const queue = [rootId];
 
-function getDownlineAgentIds(rootId, agents) {
-  const downline = [];
-  const seen = new Set([rootId]);
-  const queue = [rootId];
-
-  while (queue.length) {
-    const current = queue.shift();
-    for (const a of agents) {
-      if (a.recruiter_id === current && !seen.has(a.id)) {
-        seen.add(a.id);
-        downline.push(a.id);
-        queue.push(a.id);
+    while (queue.length) {
+      const current = queue.shift();
+      for (const a of agents) {
+        if (a.recruiter_id === current && !seen.has(a.id)) {
+          seen.add(a.id);
+          downline.push(a.id);
+          queue.push(a.id);
+        }
       }
     }
-  }
-  return downline;
-}
-
-function prettyStage(stage) {
-  if (!stage) return '—';
-  const s = String(stage).toLowerCase();
-  return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-async function loadRecruitingSnapshot() {
-  const $ = (id) => document.getElementById(id);
-
-  // Get logged-in agent's ID
-  let userId = null;
-  try {
-    const { data: { session } } = await supabase.auth.getSession();
-    userId = session?.user?.id || null;
-  } catch {}
-  if (!userId) return;
-
-  /* 1) LOAD ALL AGENTS (needed for team & recruiter names) */
-  const agentsRes = await supabase
-    .from('agents')
-    .select('id, recruiter_id, full_name, is_active, created_at');
-
-  if (agentsRes.error) {
-    console.warn('Agents error:', agentsRes.error);
-    return;
-  }
-  const agents = agentsRes.data || [];
-
-  /* Build complete downline tree */
-  const downlineIds = getDownlineAgentIds(userId, agents);
-
-  /* ---------- METRIC 1: TEAM SIZE ---------- */
-  const teamSize = downlineIds.length;
-
-  /* ---------- METRIC 2: ACTIVE AGENTS ---------- */
-  // agents.is_active determines this
-  const activeCount = agents.filter(
-    (a) => downlineIds.includes(a.id) && a.is_active === true
-  ).length;
-
-  /* ---------- METRIC 3/4/5: RECRUITS ---------- */
-
-  // IDs in recruiting scope (you + downline)
-  const recruiterTreeIds = [userId, ...downlineIds];
-
-  const recRes = await supabase
-    .from('recruits')
-    .select('id, first_name, last_name, stage, recruiter_id, stage_updated_at')
-    .in('recruiter_id', recruiterTreeIds)
-    .order('stage_updated_at', { ascending: false })
-    .limit(200);
-
-  let recruits = [];
-  if (!recRes.error && recRes.data) {
-    recruits = recRes.data;
-  } else {
-    recruits = [];
-    console.warn('Recruits query error:', recRes.error);
+    return downline;
   }
 
-  /* ---------- METRIC 3: PIPELINE ---------- */
-  const excludedStages = new Set(['dropped', 'contracting', 'active']);
-  const pipelineCount = recruits.filter((r) => {
-    const s = (r.stage || '').toLowerCase();
-    return !excludedStages.has(s);
-  }).length;
+  function prettyStage(stage) {
+    if (!stage) return '—';
+    const s = String(stage).toLowerCase();
+    return s.charAt(0).toUpperCase() + s.slice(1);
+  }
 
-  /* ---------- METRIC 4: INTERVIEWS (last 30 days) ---------- */
-  const cutoff30 = new Date(Date.now() - 30 * 864e5);
-  const interviews30 = recruits.filter((r) => {
-    const s = (r.stage || '').toLowerCase();
-    if (s !== 'interview') return false;
-    if (!r.stage_updated_at) return false;
-    return new Date(r.stage_updated_at) >= cutoff30;
-  }).length;
+  async function loadRecruitingSnapshot() {
+    const $ = (id) => document.getElementById(id);
 
-  /* ---------- METRIC 5: RECENT RECRUITING ACTIVITY ---------- */
-  const tbody = $('rec-recent-activity');
-  if (tbody) {
-    const idToName = new Map(agents.map((a) => [a.id, a.full_name || '—']));
+    let userId = null;
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      userId = session?.user?.id || null;
+    } catch {}
+    if (!userId) return;
 
-    const recent = recruits.slice(0, 6);
-    if (!recent.length) {
-      tbody.innerHTML = `<tr><td colspan="4">No recruiting activity yet.</td></tr>`;
-    } else {
-      tbody.innerHTML = recent
-        .map((r) => {
-          const name =
-            [r.first_name, r.last_name].filter(Boolean).join(' ') || '—';
-          const recruiterName = idToName.get(r.recruiter_id) || '—';
-          const date = r.stage_updated_at
-            ? new Date(r.stage_updated_at).toLocaleDateString()
-            : '—';
-          return `
-            <tr>
-              <td>${name}</td>
-              <td>${prettyStage(r.stage)}</td>
-              <td>${recruiterName}</td>
-              <td>${date}</td>
-            </tr>
-          `;
-        })
-        .join('');
+    const agentsRes = await supabase
+      .from('agents')
+      .select('id, recruiter_id, full_name, is_active, created_at');
+
+    if (agentsRes.error) {
+      console.warn('Agents error:', agentsRes.error);
+      return;
     }
-  }
+    const agents = agentsRes.data || [];
 
-  /* ---------- WRITE METRIC COUNTS TO UI ---------- */
-  if ($('rec-team')) $('rec-team').textContent = String(teamSize);
-  if ($('rec-active')) $('rec-active').textContent = String(activeCount);
-  if ($('rec-pipeline')) $('rec-pipeline').textContent = String(pipelineCount);
-  if ($('rec-interviews')) $('rec-interviews').textContent = String(interviews30);
-}
+    const downlineIds = getDownlineAgentIds(userId, agents);
+
+    const teamSize = downlineIds.length;
+
+    const activeCount = agents.filter(
+      (a) => downlineIds.includes(a.id) && a.is_active === true
+    ).length;
+
+    const recruiterTreeIds = [userId, ...downlineIds];
+
+    const recRes = await supabase
+      .from('recruits')
+      .select('id, first_name, last_name, stage, recruiter_id, stage_updated_at')
+      .in('recruiter_id', recruiterTreeIds)
+      .order('stage_updated_at', { ascending: false })
+      .limit(200);
+
+    let recruits = [];
+    if (!recRes.error && recRes.data) {
+      recruits = recRes.data;
+    } else {
+      recruits = [];
+      console.warn('Recruits query error:', recRes.error);
+    }
+
+    const excludedStages = new Set(['dropped', 'contracting', 'active']);
+    const pipelineCount = recruits.filter((r) => {
+      const s = (r.stage || '').toLowerCase();
+      return !excludedStages.has(s);
+    }).length;
+
+    const cutoff30 = new Date(Date.now() - 30 * 864e5);
+    const interviews30 = recruits.filter((r) => {
+      const s = (r.stage || '').toLowerCase();
+      if (s !== 'interview') return false;
+      if (!r.stage_updated_at) return false;
+      return new Date(r.stage_updated_at) >= cutoff30;
+    }).length;
+
+    const tbody = $('rec-recent-activity');
+    if (tbody) {
+      const idToName = new Map(agents.map((a) => [a.id, a.full_name || '—']));
+
+      const recent = recruits.slice(0, 6);
+      if (!recent.length) {
+        tbody.innerHTML = `<tr><td colspan="4">No recruiting activity yet.</td></tr>`;
+      } else {
+        tbody.innerHTML = recent
+          .map((r) => {
+            const name =
+              [r.first_name, r.last_name].filter(Boolean).join(' ') || '—';
+            const recruiterName = idToName.get(r.recruiter_id) || '—';
+            const date = r.stage_updated_at
+              ? new Date(r.stage_updated_at).toLocaleDateString()
+              : '—';
+            return `
+              <tr>
+                <td>${name}</td>
+                <td>${prettyStage(r.stage)}</td>
+                <td>${recruiterName}</td>
+                <td>${date}</td>
+              </tr>
+            `;
+          })
+          .join('');
+      }
+    }
+
+    if ($('rec-team')) $('rec-team').textContent = String(teamSize);
+    if ($('rec-active')) $('rec-active').textContent = String(activeCount);
+    if ($('rec-pipeline')) $('rec-pipeline').textContent = String(pipelineCount);
+    if ($('rec-interviews')) $('rec-interviews').textContent = String(interviews30);
+  }
 
   // kick off snapshots
   loadCommissionSnapshot();
   loadRecruitingSnapshot();
   loadTasksCarousel();
+  loadSalesCarousel();
 
   /* ---------- COMPLIANCE CARD (YOUR RULES IMPLEMENTED EXACTLY) ---------- */
   (async function initComplianceCard() {
@@ -1441,77 +1480,63 @@ async function loadRecruitingSnapshot() {
     const uplPhoneEl = document.getElementById('upline-phone');
     const uplEmailEl = document.getElementById('upline-email');
     const listEl     = document.getElementById('license-list');
-  
+
     if (!npnEl || !listEl) return;
-  
+
     const safe = (el, v) => el.textContent = v ? v : '—';
-  
-    // 1) WHO IS LOGGED IN?
+
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
     if (!user) return;
-  
-    // 2) GET AGENT ROW BY EMAIL (YOUR schema)
+
     const { data: me } = await supabase
       .from('agents')
       .select('id, full_name, phone, email, agent_id, recruiter_id')
       .eq('email', user.email)
       .single();
-  
+
     if (!me) {
       safe(npnEl, null);
       listEl.innerHTML = `<p class="muted">No agent entry found for this account.</p>`;
       return;
     }
-  
-    // -----------------------------
-    // 3) NPN = agents.agent_id
-    // -----------------------------
+
     const npn = me.agent_id;
     safe(npnEl, npn);
-  
-    // -----------------------------
-    // 4) UPLINE LOOKUP
-    // recruiter_id → agents.id
-    // -----------------------------
+
     if (me.recruiter_id) {
       const { data: upline } = await supabase
         .from('agents')
         .select('full_name, phone, email')
         .eq('id', me.recruiter_id)
         .single();
-  
+
       safe(uplNameEl,  upline?.full_name);
       safe(uplPhoneEl, upline?.phone);
       safe(uplEmailEl, upline?.email);
-  
+
     } else {
       safe(uplNameEl,  'Not assigned');
       safe(uplPhoneEl, null);
       safe(uplEmailEl, null);
     }
-  
-    // -----------------------------
-    // 5) LICENSES
-    // agent_nipr_licenses.agent_id == agents.agent_id
-    // -----------------------------
+
     const { data: licenses } = await supabase
       .from('agent_nipr_licenses')
       .select('*')
       .eq('agent_id', npn)
       .order('state');
-  
+
     if (!licenses?.length) {
       listEl.innerHTML = `<p class="muted">No NIPR licenses on file yet for this agent.</p>`;
       return;
     }
-  
-    // Build license blocks
+
     listEl.innerHTML = '';
     licenses.forEach(lic => {
       const block = document.createElement('div');
       block.className = 'license-block';
-  
+
       block.innerHTML = `
         <div class="license-header">
           <span class="license-title">${lic.state} — ${lic.license_class || ''}</span>
@@ -1519,19 +1544,19 @@ async function loadRecruitingSnapshot() {
             ${lic.active ? 'Active' : 'Inactive'}
           </span>
         </div>
-  
+
         <div class="license-meta">
           <span><strong>Number:</strong> ${lic.license_number || '—'}</span>
           <span><strong>Issued:</strong> ${lic.date_issue_orig || '—'}</span>
           <span><strong>Expires:</strong> ${lic.date_expire || '—'}</span>
         </div>
-  
+
         <div class="license-loas">
-          ${(lic.loa_names || []).map(l => `<span class="license-chip">${l}</span>`).join('') 
+          ${(lic.loa_names || []).map(l => `<span class="license-chip">${l}</span>`).join('')
             || '<span class="muted">No LOAs listed</span>'}
         </div>
       `;
-  
+
       listEl.appendChild(block);
     });
   })();
@@ -1549,7 +1574,7 @@ async function loadRecruitingSnapshot() {
 
     if (!card || !content) return;
 
-    const TTL_MS = 15 * 60 * 1000; // 15 minutes
+    const TTL_MS = 15 * 60 * 1000;
 
     const setStatus = (msg, isError = false) => {
       if (!statusEl) return;
@@ -1557,7 +1582,6 @@ async function loadRecruitingSnapshot() {
       statusEl.style.color = isError ? "#b00020" : "#2a8f6d";
     };
 
-    // Get logged-in user
     const { data: { session } } = await supabase.auth.getSession();
     const user = session?.user;
     if (!user) {
@@ -1570,18 +1594,13 @@ async function loadRecruitingSnapshot() {
     const unlockKey = `pi-email-unlocked:${userId}`;
 
     const unlock = () => {
-      // Hide the lock card
-      if (card) {
-        card.style.display = "none";
-      }
+      if (card) card.style.display = "none";
 
-      // Try to find a wrapper around the PI section if you have one
       const wrapper =
         document.getElementById("pi-wrapper") ||
         content?.parentElement ||
         null;
 
-      // Remove lock / blur classes from anything in this area
       [wrapper, content].forEach((el) => {
         if (!el) return;
         el.classList.remove("pi-locked", "pi-blur");
@@ -1589,7 +1608,6 @@ async function loadRecruitingSnapshot() {
         el.style.pointerEvents = "auto";
       });
 
-      // Extra safety: clear on any descendants with pi-locked/pi-blur
       document
         .querySelectorAll("#pi-content .pi-locked, #pi-content .pi-blur")
         .forEach((el) => {
@@ -1598,55 +1616,46 @@ async function loadRecruitingSnapshot() {
           el.style.pointerEvents = "auto";
         });
 
-      // store expiration time (now + 15 min)
       const expiresAt = Date.now() + TTL_MS;
       localStorage.setItem(unlockKey, String(expiresAt));
     };
 
-    // Check if already unlocked in this browser AND not expired
     const stored = localStorage.getItem(unlockKey);
     if (stored) {
       const expiresAt = Number(stored);
       if (Number.isFinite(expiresAt) && Date.now() < expiresAt) {
-        // still within 15 minutes → auto-unlock
         unlock();
         return;
       } else {
-        // expired or invalid → clear and require re-verification
         localStorage.removeItem(unlockKey);
       }
     }
 
-    // Prefill email with account email (and lock it)
     if (emailIn) {
       emailIn.value = userEmail;
       emailIn.readOnly = false;
     }
 
-    // This holds the *current* code only while the page is open
     let lastCode = null;
 
-    // SEND CODE
     sendBtn?.addEventListener("click", async () => {
       const typed = (emailIn?.value || "").trim();
-      
+
       if (!typed) {
         setStatus("Enter your email address first.", true);
         return;
       }
-      
+
       if (!userEmail) {
         setStatus("No email found for this account.", true);
         return;
       }
 
-      // core requirement: typed must match auth email
       if (typed.toLowerCase() !== userEmail.toLowerCase()) {
         setStatus("That email doesn’t match the one on your account.", true);
         return;
       }
 
-      // Generate 6-digit code
       const code = Math.floor(100000 + Math.random() * 900000).toString();
       lastCode = code;
       console.log("PI lock code (for debugging):", code);
@@ -1676,7 +1685,6 @@ async function loadRecruitingSnapshot() {
       }
     });
 
-    // VERIFY CODE
     verifyBtn?.addEventListener("click", () => {
       const entered = (codeIn?.value || "").trim();
 
