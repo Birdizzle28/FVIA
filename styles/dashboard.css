@@ -1170,3 +1170,152 @@ main > section.card.stay-white{
   color: var(--ink);
   font-weight: 800;
 }
+/* =========================================================
+   DASHBOARD “Recruiting-style” polish (rounded + shiny grey)
+   Paste at BOTTOM of dashboard.css
+   ========================================================= */
+
+/* Page background like recruiting */
+body#dashboardbody{
+  background: linear-gradient(180deg, #f9fbff 0%, #f5f7fb 100%);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Stop any random right-side spill */
+html, body{ max-width:100%; overflow-x:hidden; }
+*, *::before, *::after{ box-sizing:border-box; }
+
+/* IMPORTANT: don’t make main a giant white slab */
+main{
+  background: transparent !important;
+}
+
+/* your existing container already exists: dash-wrap */
+.dash-wrap{
+  max-width: 1100px;
+  margin: 24px auto 64px;
+  padding: 0 16px;
+}
+
+/* ---------- Folder tabs area: rounded, glossy, “folder” vibe ---------- */
+.folder-tabs .tablist{
+  border-bottom: 1px solid #dcd9e8;
+  background: rgba(53,52,104,.08);
+  padding: 8px 8px 0;
+  border-radius: 14px 14px 0 0;
+  gap: 8px;
+}
+
+/* tab buttons: rounded pills */
+.folder-tabs .tab{
+  border: 1px solid #dcd9e8;
+  background: rgba(255,255,255,.65);
+  color: var(--muted);
+  border-bottom: none;
+  border-radius: 999px;
+  padding: 10px 14px;
+  box-shadow: 0 4px 14px rgba(37,36,80,.06);
+}
+
+/* active tab: cleaner + slightly “lifted” */
+.folder-tabs .tab.is-active{
+  background: #ffffff;
+  color: var(--brand-purple);
+  box-shadow: 0 10px 26px rgba(37,36,80,.10);
+  top: 1px;
+}
+
+/* panels: rounded card shell with subtle shine */
+.folder-tabs .panels{
+  border: 1px solid #dcd9e8;
+  border-top: none;
+  background: radial-gradient(circle at top left,
+            rgba(53,52,104,.10) 0,
+            #ffffff 58%);
+  border-radius: 0 0 14px 14px;
+  box-shadow: 0 10px 30px rgba(37,36,80,.10);
+  padding: 16px;
+}
+
+/* ---------- Cards: rounded + consistent shadow ---------- */
+.card{
+  border: 1px solid #dcd9e8 !important;
+  border-radius: 12px !important;
+  background: #fff;
+  box-shadow: 0 4px 14px rgba(37,36,80,.06) !important;
+}
+
+.panel.is-active .card{ background:#fff; }
+
+/* ---------- Stats & mini tables: match the new look ---------- */
+.stat{
+  border: 1px solid #dcd9e8 !important;
+  border-radius: 12px;
+  background: radial-gradient(circle at top left,
+            rgba(53,52,104,.10) 0,
+            #ffffff 60%) !important;
+  box-shadow: 0 4px 14px rgba(37,36,80,.06);
+}
+
+.mini-table{
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid #dcd9e8 !important;
+  background: #fff;
+}
+
+.mini-table th{
+  background: #f5f4fa !important;
+  color: #1d2433 !important;
+  border-bottom: 1px solid #dcd9e8 !important;
+}
+
+.mini-table td{
+  border-bottom: 1px solid rgba(220,217,232,.75);
+}
+
+/* ---------- Carousel: rounded shell ---------- */
+.carousel{
+  border: 1px solid #dcd9e8 !important;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 4px 14px rgba(37,36,80,.06);
+}
+
+.car-btn{
+  border-radius: 999px;
+  background: rgba(255,255,255,.75);
+  box-shadow: 0 6px 18px rgba(37,36,80,.10);
+}
+
+.car-footer{
+  border-top: 1px solid #dcd9e8 !important;
+}
+
+/* ---------- Overlays: rounded + clean ---------- */
+.overlay-panel{
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 20px 55px rgba(0,0,0,.25);
+  border: 1px solid #dcd9e8 !important;
+}
+
+.overlay-header{
+  background: #f5f4fa;
+  border-bottom: 1px solid #dcd9e8 !important;
+}
+
+/* ---------- Your “stay-white” sections: keep spacing but remove harshness ---------- */
+main > section.card.stay-white{
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.snapshot-head h3{
+  margin: 0 0 14px;
+  color: var(--ink);
+  font-weight: 800;
+}
