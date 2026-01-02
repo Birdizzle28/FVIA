@@ -231,14 +231,63 @@ async function fetchPoliciesForIds(policyIds) {
 }
 
 // Try multiple possible debt column names without breaking
-function getDebtsFromPayoutRow(p) {
-  return (
-    Number(p?.total_debts ?? 0) ||
-    Number(p?.debts ?? 0) ||
-    Number(p?.debt_amount ?? 0) ||
-    Number(p?.debt_withheld ?? 0) ||
-    0
-  );
+async function fetchDebtPaymentsByBatch(agentId, batchIds) {
+  const out = new Map(); // batch_id -> { lead: 0, chargeback: 0, total: 0 }
+
+  function ensure(batchId) {
+    const k = String(batchId);
+    if (!out.has(k)) out.set(k, { lead: 0, chargeback: 0, total: 0 });
+    return out.get(k);
+  }
+
+  if (!batchIds?.length) return out;
+
+  // ---- chargeback payments ----
+  {
+    const { data, error } = await supabaseAdmin
+      .from("chargeback_payments")
+      .select("payout_batch_id, amount")
+      .eq("agent_id", agentId)
+      .in("payout_batch_id", batchIds);
+
+    if (error) throw new Error(`Error loading chargeback_payments: ${error.message}`);
+
+    (data || []).forEach((r) => {
+      if (!r.payout_batch_id) return;
+      const row = ensure(r.payout_batch_id);
+      const amt = Number(r.amount || 0);
+      row.chargeback += amt;
+      row.total += amt;
+    });
+  }
+
+  // ---- lead debt payments ----
+  {
+    const { data, error } = await supabaseAdmin
+      .from("lead_debt_payments")
+      .select("payout_batch_id, amount")
+      .eq("agent_id", agentId)
+      .in("payout_batch_id", batchIds);
+
+    if (error) throw new Error(`Error loading lead_debt_payments: ${error.message}`);
+
+    (data || []).forEach((r) => {
+      if (!r.payout_batch_id) return;
+      const row = ensure(r.payout_batch_id);
+      const amt = Number(r.amount || 0);
+      row.lead += amt;
+      row.total += amt;
+    });
+  }
+
+  // normalize to 2 decimals
+  for (const v of out.values()) {
+    v.lead = Math.round(v.lead * 100) / 100;
+    v.chargeback = Math.round(v.chargeback * 100) / 100;
+    v.total = Math.round(v.total * 100) / 100;
+  }
+
+  return out;
 }
 
 export async function handler(event) {
@@ -320,7 +369,7 @@ export async function handler(event) {
     const batchIds = Array.from(
       new Set((payouts || []).map((p) => p.payout_batch_id).filter(Boolean))
     );
-
+    
     let ledger = [];
     if (batchIds.length) {
       const { data, error } = await supabaseAdmin
@@ -376,8 +425,10 @@ export async function handler(event) {
 
     // Totals
     const netPaid = (payouts || []).reduce((a, r) => a + Number(r.net_amount || 0), 0);
-    const debtsWithheld = (payouts || []).reduce((a, r) => a + getDebtsFromPayoutRow(r), 0);
-
+    const debtsWithheld = batchIds.reduce((sum, bid) => {
+      const d = debtByBatch.get(String(bid));
+      return sum + Number(d?.total || 0);
+    }, 0);
     // You said: Gross = debts + net (because payouts already have debts subtracted)
     const grossBeforeDebts = netPaid + debtsWithheld;
 
@@ -390,14 +441,21 @@ export async function handler(event) {
     ]);
 
     // Payout batches table (agent friendly)
-    const payoutRows = (payouts || []).map((p) => ({
-      pay_date: safe(p.pay_date),
-      type: safe(p.batch_type),
-      status: safe(p.status),
-      gross: money(Number(p.net_amount || 0) + getDebtsFromPayoutRow(p)),
-      debts: money(getDebtsFromPayoutRow(p)),
-      net: money(p.net_amount || 0)
-    }));
+    const payoutRows = (payouts || []).map((p) => {
+      const bid = String(p.payout_batch_id || "");
+      const d = bid ? debtByBatch.get(bid) : null;
+      const debts = Number(d?.total || 0);
+      const net = Number(p.net_amount || 0);
+    
+      return {
+        pay_date: safe(p.pay_date),
+        type: safe(p.batch_type),
+        status: safe(p.status),
+        gross: money(net + debts),
+        debts: money(debts),
+        net: money(net)
+      };
+    });
 
     table(doc, {
       title: "Payments Included",
@@ -508,7 +566,10 @@ export async function handler(event) {
         doc.moveDown(0.6);
 
         const dateNet = datePayouts.reduce((a, r) => a + Number(r.net_amount || 0), 0);
-        const dateDebts = datePayouts.reduce((a, r) => a + getDebtsFromPayoutRow(r), 0);
+        const dateDebts = dateBatchIds.reduce((sum, bid) => {
+          const d = debtByBatch.get(String(bid));
+          return sum + Number(d?.total || 0);
+        }, 0);
         const dateGross = dateNet + dateDebts;
 
         drawCardRow(doc, [
