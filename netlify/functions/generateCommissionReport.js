@@ -78,7 +78,6 @@ function table(doc, { title, columns, rows, note }) {
   ensurePageSpace(doc, 160);
   doc.fillColor("#0f172a").fontSize(12).text(title, 42);
 
-  // NOTE: keep notes agent-friendly; pass null/undefined to hide
   if (note) {
     doc.moveDown(0.4);
     doc.fillColor("#64748b").fontSize(9).text(note, 42, doc.y, { width: 528 });
@@ -180,11 +179,6 @@ function groupLedgerByPolicy(ledgerRows) {
   return Array.from(out.values()).sort((a, b) => (b.total || 0) - (a.total || 0));
 }
 
-/**
- * IMPORTANT:
- * Your policies table has: contact_id, carrier_name, policy_type, product_line [oai_citation:2‡text.txt](file-service://file-Tg7z3nxHpZGxaFPE1PUDpT)
- * So we enrich from those fields and join contacts through the FK.
- */
 async function fetchPoliciesForIds(policyIds) {
   if (!policyIds.length) return new Map();
 
@@ -194,9 +188,6 @@ async function fetchPoliciesForIds(policyIds) {
   const map = new Map();
 
   for (const chunk of chunks) {
-    // Explicit FK join name is the safest way to make Supabase do the right join.
-    // If your FK name differs, update it to your actual constraint name.
-    // From your schema: policies_contact_id_fkey [oai_citation:3‡text.txt](file-service://file-Tg7z3nxHpZGxaFPE1PUDpT)
     const { data, error } = await supabaseAdmin
       .from("policies")
       .select(`
@@ -216,7 +207,6 @@ async function fetchPoliciesForIds(policyIds) {
     for (const p of data) {
       const c = p.contacts || {};
       const name = [c.first_name, c.last_name].filter(Boolean).join(" ").trim() || "—";
-
       const product = safe(p.product_line) || safe(p.policy_type) || "—";
 
       map.set(String(p.id), {
@@ -230,7 +220,6 @@ async function fetchPoliciesForIds(policyIds) {
   return map;
 }
 
-// Try multiple possible debt column names without breaking
 async function fetchDebtPaymentsByBatch(agentId, batchIds) {
   const out = new Map(); // batch_id -> { lead: 0, chargeback: 0, total: 0 }
 
@@ -242,7 +231,7 @@ async function fetchDebtPaymentsByBatch(agentId, batchIds) {
 
   if (!batchIds?.length) return out;
 
-  // ---- chargeback payments ----
+  // chargeback payments
   {
     const { data, error } = await supabaseAdmin
       .from("chargeback_payments")
@@ -261,7 +250,7 @@ async function fetchDebtPaymentsByBatch(agentId, batchIds) {
     });
   }
 
-  // ---- lead debt payments ----
+  // lead debt payments
   {
     const { data, error } = await supabaseAdmin
       .from("lead_debt_payments")
@@ -280,7 +269,6 @@ async function fetchDebtPaymentsByBatch(agentId, batchIds) {
     });
   }
 
-  // normalize to 2 decimals
   for (const v of out.values()) {
     v.lead = Math.round(v.lead * 100) / 100;
     v.chargeback = Math.round(v.chargeback * 100) / 100;
@@ -341,7 +329,7 @@ export async function handler(event) {
       };
     }
 
-    // Fetch payouts for the relevant pay_date(s)
+    // payouts
     let payouts = [];
     if (dates.length) {
       const { data, error } = await supabaseAdmin
@@ -369,7 +357,11 @@ export async function handler(event) {
     const batchIds = Array.from(
       new Set((payouts || []).map((p) => p.payout_batch_id).filter(Boolean))
     );
-    
+
+    // ✅ THIS WAS MISSING (debtByBatch)
+    const debtByBatch = await fetchDebtPaymentsByBatch(agentId, batchIds);
+
+    // ledger rows for those batches
     let ledger = [];
     if (batchIds.length) {
       const { data, error } = await supabaseAdmin
@@ -399,12 +391,10 @@ export async function handler(event) {
       ledgerByBatch.get(b).push(r);
     });
 
-    // Build PDF
+    // PDF
     const doc = new PDFDocument({ size: "LETTER", margin: 42 });
-
     const title = "Commission Statement";
 
-    // IMPORTANT: ASCII-only subtitle (fixes the weird !’ issue from special glyphs)
     const subtitle = dates.length
       ? `Pay Dates: ${dates.join(", ")}`
       : (startDate === endDate ? `Pay Date: ${startDate}` : `Pay Date Range: ${startDate} to ${endDate}`);
@@ -413,7 +403,6 @@ export async function handler(event) {
 
     doc.fillColor("#111827").fontSize(11).text(safe(agent.full_name) || "Agent", 42, 120);
 
-    // ASCII-only separators
     doc.fillColor("#475569").fontSize(9).text(
       `Agent ID: ${safe(agent.agent_id) || "-"}  -  Level: ${safe(agent.level) || "-"}  -  Email: ${safe(agent.email) || "-"}`,
       42,
@@ -423,30 +412,46 @@ export async function handler(event) {
     doc.y = 160;
     divider(doc);
 
-    // Totals
+    // totals
     const netPaid = (payouts || []).reduce((a, r) => a + Number(r.net_amount || 0), 0);
+
+    const leadWithheld = batchIds.reduce((sum, bid) => {
+      const d = debtByBatch.get(String(bid));
+      return sum + Number(d?.lead || 0);
+    }, 0);
+
+    const chargebackWithheld = batchIds.reduce((sum, bid) => {
+      const d = debtByBatch.get(String(bid));
+      return sum + Number(d?.chargeback || 0);
+    }, 0);
+
     const debtsWithheld = batchIds.reduce((sum, bid) => {
       const d = debtByBatch.get(String(bid));
       return sum + Number(d?.total || 0);
     }, 0);
-    // You said: Gross = debts + net (because payouts already have debts subtracted)
+
     const grossBeforeDebts = netPaid + debtsWithheld;
 
-    const batchCount = (payouts || []).length;
-
+    // ✅ summary rows (gross/net/total + split)
     drawCardRow(doc, [
       { title: "Gross (Before Debts)", value: money(grossBeforeDebts) },
-      { title: "Debts Withheld", value: money(debtsWithheld) },
-      { title: "Net Paid", value: money(netPaid) }
+      { title: "Net Paid", value: money(netPaid) },
+      { title: "Total Debts Withheld", value: money(debtsWithheld) }
     ]);
 
-    // Payout batches table (agent friendly)
+    drawCardRow(doc, [
+      { title: "Lead Debt Withheld", value: money(leadWithheld) },
+      { title: "Chargebacks Withheld", value: money(chargebackWithheld) },
+      { title: "Debt Split", value: `${money(leadWithheld)} + ${money(chargebackWithheld)}` }
+    ]);
+
+    // payout table
     const payoutRows = (payouts || []).map((p) => {
       const bid = String(p.payout_batch_id || "");
       const d = bid ? debtByBatch.get(bid) : null;
       const debts = Number(d?.total || 0);
       const net = Number(p.net_amount || 0);
-    
+
       return {
         pay_date: safe(p.pay_date),
         type: safe(p.batch_type),
@@ -561,21 +566,39 @@ export async function handler(event) {
         const dateBatchIds = Array.from(new Set(datePayouts.map((p) => p.payout_batch_id).filter(Boolean)));
         if (!dateBatchIds.length) continue;
 
-        ensurePageSpace(doc, 180);
+        ensurePageSpace(doc, 200);
         doc.fillColor("#0f172a").fontSize(14).text(`Pay Date: ${d}`, 42);
         doc.moveDown(0.6);
 
         const dateNet = datePayouts.reduce((a, r) => a + Number(r.net_amount || 0), 0);
-        const dateDebts = dateBatchIds.reduce((sum, bid) => {
-          const d = debtByBatch.get(String(bid));
-          return sum + Number(d?.total || 0);
+
+        const dateLead = dateBatchIds.reduce((sum, bid) => {
+          const x = debtByBatch.get(String(bid));
+          return sum + Number(x?.lead || 0);
         }, 0);
+
+        const dateCb = dateBatchIds.reduce((sum, bid) => {
+          const x = debtByBatch.get(String(bid));
+          return sum + Number(x?.chargeback || 0);
+        }, 0);
+
+        const dateDebts = dateBatchIds.reduce((sum, bid) => {
+          const x = debtByBatch.get(String(bid));
+          return sum + Number(x?.total || 0);
+        }, 0);
+
         const dateGross = dateNet + dateDebts;
 
         drawCardRow(doc, [
           { title: "Gross (Before Debts)", value: money(dateGross) },
-          { title: "Debts Withheld", value: money(dateDebts) },
-          { title: "Net Paid", value: money(dateNet) }
+          { title: "Net Paid", value: money(dateNet) },
+          { title: "Total Debts Withheld", value: money(dateDebts) }
+        ]);
+
+        drawCardRow(doc, [
+          { title: "Lead Debt Withheld", value: money(dateLead) },
+          { title: "Chargebacks Withheld", value: money(dateCb) },
+          { title: "Debt Split", value: `${money(dateLead)} + ${money(dateCb)}` }
         ]);
 
         await renderPolicyBreakdownForBatchIds("Commission Detail", dateBatchIds);
