@@ -498,21 +498,37 @@ document.addEventListener('DOMContentLoaded', () => {
           return undefined;
         }
         case 'add':   return args.reduce((a,b)=>a+(+b||0),0);
-        case 'mul':   return args.reduce((a,b)=>a*(+b||1),1);
+        case 'mul': {
+          // if any argument is null/undefined/NaN, the product is invalid
+          for (const x of args) {
+            const n = Number(x);
+            if (x === null || x === undefined || Number.isNaN(n)) return null;
+          }
+          return args.reduce((a, b) => a * Number(b), 1);
+        }
         case 'div':   return (+args[0]||0) / (+args[1]||1);
         case 'round': return Math.round((+args[0]||0) * (10**(+args[1]||0))) / (10**(+args[1]||0));
         case 'call': {
           // legacy handler (kept for compatibility)
           if (n.name === 'per1k_rate') {
             const [age, sexIn, smoker, stateIn, planIn] = args;
-            const state = String(stateIn || '').toUpperCase();
+          
+            const state = String(stateIn || '').toUpperCase();   // e.g. TN
             const plan  = String(planIn || 'level').toLowerCase();
-            let sex = String(sexIn || '').toUpperCase();
-            const key = (state === 'MT') ? 'MT_UNISEX' : state;
-            const tables = (metadata?.rates?.[key]?.[plan]) || [];
-            const hasUnisex = tables.some(r => r[1] === 'U');
-            if (hasUnisex) sex = 'U';
-            const row = tables.find(r => (age <= r[0]) && (sex === r[1]) && (Boolean(smoker) === Boolean(r[2])));
+            let sex = String(sexIn || '').toUpperCase();         // M / F
+          
+            // 🔥 IMPORTANT: map state -> tableKey using metadata.states
+            const tableKey =
+              (metadata?.states && (metadata.states[state] || metadata.states.DEFAULT)) || state;
+          
+            const tables = (metadata?.rates?.[tableKey]?.[plan]) || [];
+          
+            const row = tables.find(r =>
+              Number(age) === Number(r[0]) &&
+              sex === r[1] &&
+              Boolean(smoker) === Boolean(r[2])
+            );
+          
             return row ? row[3] : null;
           }
           // new handler: choose table by derived uw_tier
