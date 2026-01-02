@@ -148,7 +148,7 @@ function getRepaymentRate(totalDebt, isActive) {
  * NOTE: we do NOT set run_id here, because run_id on lead_debt_payments
  *       points to commission_runs, not payout_batches.
  */
-async function applyRepayments(agent_id, chargebackRepay, leadRepay) {
+async function applyRepayments(agent_id, chargebackRepay, leadRepay, payout_batch_id) {
   /* ------------------------------
      1. Apply chargeback repayments
      ------------------------------ */
@@ -227,7 +227,8 @@ async function applyRepayments(agent_id, chargebackRepay, leadRepay) {
         await supabase.from('lead_debt_payments').insert({
           lead_debt_id: ld.id,
           agent_id,
-          amount: pay
+          amount: pay,
+          payout_batch_id
         });
 
         // Update lead debt status + remaining amount
@@ -483,7 +484,7 @@ export async function handler(event) {
       const cbRepay  = ps.chargeback_repayment || 0;
       const ldRepay  = ps.lead_repayment || 0;
       if (cbRepay > 0 || ldRepay > 0) {
-        await applyRepayments(ps.agent_id, cbRepay, ldRepay);
+        await applyRepayments(ps.agent_id, cbRepay, ldRepay, batch.id);
       }
     }
 
