@@ -78,9 +78,102 @@
         <button type="submit">Save Changes</button>
         <p id="edit-profile-message"></p>
       </form>
-    </section>
-    <button href="#" id="logout-btn">Logout</a>
-  </main>
+      </section>
+
+		  <!-- Personal Information (moved from dashboard) -->
+		  <section class="dash-wrap" id="pi-section">
+		    <h1 class="dash-title">Personal Information</h1>
+		
+		    <!-- LOCK CARD -->
+		    <div id="pi-lock-card">
+		      <h3>Verify Email to Unlock</h3>
+		
+		      <div id="pi-email-row">
+		        <input id="pi-email-input" placeholder="Your Email">
+		        <button id="pi-email-send" type="button">Send Code</button>
+		      </div>
+		
+		      <div id="pi-code-row" hidden>
+		        <input id="pi-email-code" placeholder="Enter Code">
+		        <button id="pi-email-verify" type="button">Verify</button>
+		      </div>
+		
+		      <p id="pi-lock-status"></p>
+		    </div>
+		
+		    <!-- LOCKED CONTENT -->
+		    <div id="pi-content" class="folder-tabs pi-locked">
+		      <div class="tablist" role="tablist" aria-label="Personal Information">
+		        <button class="tab is-active" id="tab-compliance" data-tab="compliance" role="tab" aria-selected="true" aria-controls="panel-compliance" aria-label="Compliance">
+		          <i class="fa-solid fa-shield-halved icon" aria-hidden="true"></i>
+		          <span class="label">Compliance</span>
+		        </button>
+		        <button class="tab" id="tab-banking" data-tab="banking" role="tab" aria-selected="false" aria-controls="panel-banking" aria-label="Banking Info">
+		          <i class="fa-solid fa-piggy-bank icon" aria-hidden="true"></i>
+		          <span class="label">Banking Info</span>
+		        </button>
+		        <button class="tab" id="tab-docs" data-tab="documents" role="tab" aria-selected="false" aria-controls="panel-documents" aria-label="Documents">
+		          <i class="fa-solid fa-file-lines icon" aria-hidden="true"></i>
+		          <span class="label">Documents</span>
+		        </button>
+		        <button class="tab" id="tab-carriers" data-tab="carriers" role="tab" aria-selected="false" aria-controls="panel-carriers" aria-label="Carrier Credentials">
+		          <i class="fa-solid fa-id-badge icon" aria-hidden="true"></i>
+		          <span class="label">Carrier Credentials</span>
+		        </button>
+		      </div>
+		
+		      <div class="panels">
+		        <!-- Compliance -->
+		        <section id="panel-compliance" class="panel is-active" role="tabpanel" aria-labelledby="tab-compliance">
+		          <div class="card-grid">
+		            <article class="card">
+		              <h3>Licenses &amp; Upline</h3>
+		              <p><strong>NPN:</strong> <span id="npn-value">—</span></p>
+		              <p><strong>Upline Name:</strong> <span id="upline-name">—</span></p>
+		              <p><strong>Upline Phone:</strong> <span id="upline-phone">—</span></p>
+		              <p><strong>Upline Email:</strong> <span id="upline-email">—</span></p>
+		              <div id="license-list" class="license-list">
+		                <p class="muted">No NIPR licenses on file yet for this agent.</p>
+		              </div>
+		            </article>
+		          </div>
+		        </section>
+		
+		        <!-- Banking -->
+		        <section id="panel-banking" class="panel" role="tabpanel" aria-labelledby="tab-banking">
+		          <div class="card-grid">
+		            <article class="card">
+		              <h3>Bank Account</h3>
+		              <p>Add/update your payout info.</p>
+		            </article>
+		          </div>
+		        </section>
+		
+		        <!-- Documents -->
+		        <section id="panel-documents" class="panel" role="tabpanel" aria-labelledby="tab-docs">
+		          <div class="card-grid">
+		            <article class="card">
+		              <h3>Documents</h3>
+		              <p>W-9, E&amp;O, training certs, etc.</p>
+		            </article>
+		          </div>
+		        </section>
+		
+		        <!-- Carrier Credentials -->
+		        <section id="panel-carriers" class="panel" role="tabpanel" aria-labelledby="tab-carriers">
+		          <div class="card-grid">
+		            <article class="card">
+		              <h3>Carrier Logins</h3>
+		              <p>View or request appointments.</p>
+		            </article>
+		          </div>
+		        </section>
+		      </div>
+		    </div>
+		  </section>
+		
+		  <button href="#" id="logout-btn">Logout</button>
+		</main>
 
   <!-- Footer -->
   <footer class="index-grid-footer">
@@ -117,6 +210,7 @@
 	<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 	<script src="scripts/supabase-client.js"></script>
 	<script src="scripts/profile.js"></script>
-  	<script src="scripts/general.js"></script>
+	<script src="scripts/personal-info.js"></script>
+	<script src="scripts/general.js"></script>
 </body>
 </html>
