@@ -16,15 +16,22 @@ function getPayDate(event) {
     const d = new Date(qs.pay_date);
     if (!isNaN(d.getTime())) return d;
   }
+
   const today = new Date();
-  return new Date(today.getFullYear(), today.getMonth(), 5);
+  const thisMonth5 = new Date(today.getFullYear(), today.getMonth(), 5);
+
+  // if we already passed the 5th, default to NEXT month’s 5th
+  if (today > thisMonth5) {
+    return new Date(today.getFullYear(), today.getMonth() + 1, 5);
+  }
+  return thisMonth5;
 }
 
 function getMonthBounds(payDate) {
   const year  = payDate.getFullYear();
   const month = payDate.getMonth();
-  const start = new Date(year, month, 1);
-  const end   = new Date(year, month + 1, 0);
+  const start = new Date(Date.UTC(year, month, 1));
+  const end   = new Date(Date.UTC(year, month + 1, 1)); // EXCLUSIVE
   return { start, end };
 }
 
@@ -96,7 +103,7 @@ function getBaseRenewalRate(schedule, renewalYear) {
 
 // -------------------------------------------
 
-async function applyRepayments(agent_id, chargebackRepay, leadRepay) {
+async function applyRepayments(agent_id, chargebackRepay, leadRepay, payout_batch_id) {
   if (chargebackRepay > 0) {
     let remaining = chargebackRepay;
 
@@ -119,7 +126,8 @@ async function applyRepayments(agent_id, chargebackRepay, leadRepay) {
         await supabase.from('chargeback_payments').insert({
           agent_id,
           chargeback_id: cb.id,
-          amount: pay
+          amount: pay,
+          payout_batch_id
         });
 
         if (pay === outstanding) {
@@ -163,7 +171,8 @@ async function applyRepayments(agent_id, chargebackRepay, leadRepay) {
         await supabase.from('lead_debt_payments').insert({
           lead_debt_id: ld.id,
           agent_id,
-          amount: pay
+          amount: pay,
+          payout_batch_id
         });
 
         if (pay === outstanding) {
@@ -470,7 +479,8 @@ export async function handler(event) {
       .from('commission_ledger')
       .select('id, agent_id, amount')
       .eq('entry_type', 'paythru')
-      .eq('is_settled', false);
+      .eq('is_settled', false)
+      .lte('meta->>pay_month', payMonthKey);
 
     if (unpaidErr) {
       console.error('[runMonthlyPayThru] Error loading unpaid trails:', unpaidErr);
@@ -663,7 +673,8 @@ export async function handler(event) {
       .update({
         is_settled: true,
         payout_batch_id: batch.id,
-        period_end: payDate.toISOString(),
+        period_start: monthStartIso,
+        period_end: monthEndIso,
       })
       .in('id', idsToSettle);
 
@@ -679,7 +690,7 @@ export async function handler(event) {
       const cbRepay = fp.chargeback_repayment || 0;
       const ldRepay = fp.lead_repayment || 0;
       if (cbRepay > 0 || ldRepay > 0) {
-        await applyRepayments(fp.agent_id, cbRepay, ldRepay);
+        await applyRepayments(fp.agent_id, cbRepay, ldRepay, batch.id);
       }
     }
 
