@@ -485,7 +485,6 @@
               <h2>Files & Documents</h2>
               <div class="comm-filters files-filters">
                 <div class="files-chips" id="files-type-chips">
-                  <button type="button" class="chip is-active" data-doc-type="all">All</button>
                   <button type="button" class="chip" data-doc-type="reports">Commission Reports</button>
                   <button type="button" class="chip" data-doc-type="schedule">Pay Schedules</button>
                   <button type="button" class="chip" data-doc-type="other">Other</button>
@@ -500,6 +499,24 @@
                   <!-- Maybe upload button (admin only) later -->
                 </div>
               </header>
+              <!-- Commission Reports Picker (hidden until chip selected) -->
+              <div id="commission-reports-picker" class="comm-reports-picker" hidden>
+                <div class="comm-reports-row">
+                  <label for="commission-report-range"><strong>Report Date Range</strong></label>
+                  <input
+                    type="text"
+                    id="commission-report-range"
+                    placeholder="Select date range"
+                    autocomplete="off"
+                  />
+                  <button type="button" id="btn-download-commission-report" class="btn-primary">
+                    <i class="fa-solid fa-download"></i> Download
+                  </button>
+                </div>
+                <p class="comm-reports-help">
+                  Pick a range. For a single day, click the same day twice.
+                </p>
+              </div>
               <div class="comm-table-scroll">
                 <table id="files-table">
                   <thead>
