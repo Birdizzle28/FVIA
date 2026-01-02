@@ -1591,14 +1591,6 @@ function renderPlaceholderFiles() {
       period: 'Full Year',
       source: 'FVG',
       uploaded: '2025-01-01'
-    },
-    {
-      name: 'Carrier Bonus Flyer',
-      type: 'Other',
-      group: 'other',
-      period: 'Q4 2025',
-      source: 'Carrier',
-      uploaded: '2025-10-01'
     }
   ];
 
@@ -1632,7 +1624,7 @@ async function loadAndRenderFilesForChip(type) {
   }
 
   // Default placeholder files
-  renderPlaceholderFiles();
+  renderPlaceholderFiles(); 
 
   const tbody = document.querySelector('#files-table tbody');
   if (!tbody) return;
