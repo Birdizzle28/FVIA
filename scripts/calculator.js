@@ -138,7 +138,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // ---- index helpers
     const carrierById = new Map((carrierRows || []).map(r => [r.id, r]));
     const prosByCP    = new Map((prosRows || []).map(r => [r.carrier_product_id, r]));
-    const reqsByCP    = cpIds.reduce((m, id) => (m[id] = [], m), {});
+    const eqsByCP = new Map();
+    (eqRows || []).forEach(r => {
+      if (r.is_active === false) return;
+      if (!eqsByCP.has(r.carrier_product_id)) eqsByCP.set(r.carrier_product_id, []);
+      eqsByCP.get(r.carrier_product_id).push(r);
+    });
+    // optional: stable order
+    eqsByCP.forEach(list => list.sort((a,b) => (a.equation_version||0) - (b.equation_version||0)));
     (reqRows || []).forEach(r => reqsByCP[r.carrier_product_id]?.push(r));
   
     const eqByCP      = new Map();
@@ -154,15 +161,17 @@ document.addEventListener('DOMContentLoaded', () => {
     carriers = cps.map(cp => {
       const carrier = carrierById.get(cp.carrier_id) || {};
       const prosRec = prosByCP.get(cp.id) || {};
-      const eq      = eqByCP.get(cp.id) || null;
-      const inputs  = eq ? (inputsByEq.get(eq.id) || []) : [];
+      const eqList  = eqsByCP.get(cp.id) || [];
+    
       return {
         carrier_product_id: cp.id,
         carrier,
         pros: prosRec.pros || [],
         cons: prosRec.cons || [],
-        equation: eq,
-        inputs,
+        equations: eqList.map(eq => ({
+          ...eq,
+          inputs: (inputsByEq.get(eq.id) || [])
+        })),
         requirements: reqsByCP[cp.id] || []
       };
     });
@@ -651,20 +660,29 @@ document.addEventListener('DOMContentLoaded', () => {
       const ready = carrierReady(c);
       if (!ready) return;
 
-      const premium = evalEquation(c.equation, c.inputs, c.equation?.metadata) ?? null;
-
-      const card = document.createElement('div'); card.className = 'c-card';
+      (c.equations || []).forEach(eq => {
+      // Optional: equation-level applicability rule (lets you show Preferred vs Standard automatically)
+      const planOk = evaluateExpr(eq?.metadata?.applicable_expr, answers, true);
+      if (!planOk) return;
+    
+      const premium = evalEquation(eq, eq.inputs, eq.metadata) ?? null;
+    
+      const card = document.createElement('div');
+      card.className = 'c-card';
       card.innerHTML = `
         <div class="meta">
           <img src="${c.carrier.carrier_logo || ''}" alt="${c.carrier.carrier_name}">
           <div>
             <div><strong>${c.carrier.carrier_name}</strong></div>
-            <div class="muted small">${c.pros?.[0] || ''}</div>
+            <div class="muted small">${eq?.metadata?.plan_label || c.pros?.[0] || ''}</div>
           </div>
         </div>
         <div class="c-price">${premium===null ? '—' : money(premium)}</div>
       `;
-      card.addEventListener('click', () => openPlanOverlay(c, premium));
+    
+      card.addEventListener('click', () => openPlanOverlay(c, eq, premium));
+      box.appendChild(card);
+    });
 
       if (derivedCtx.uw_tier === 'Modified') { modWrap.appendChild(card); modCount++; }
       else if (derivedCtx.uw_tier === 'Level') { levelWrap.appendChild(card); levelCount++; }
@@ -729,7 +747,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // ===== Utility UI =====
   function clearSList(){ $('#s-list').innerHTML = '<p class="muted small">Carriers appear here after product selection.</p>'; }
   function clearCList(){ $('#c-list').innerHTML = '<p class="muted center small">Quotes will appear here when a carrier is ready.</p>'; }
-  async function openPlanOverlay(cModel, premium){
+  async function openPlanOverlay(cModel, eqModel, premium){
     const $ov = $('#plan-overlay');
     $ov.setAttribute('aria-hidden','false');
   
@@ -774,7 +792,10 @@ document.addEventListener('DOMContentLoaded', () => {
         metadata: {
           line: chosenLine,
           url: carrier.carrier_url || null,
-          equation_version: cModel?.equation?.equation_version || 1,
+          equation_version: eqModel?.equation_version || 1,
+          equation_id: eqModel?.id || null,
+          plan_label: eqModel?.metadata?.plan_label || null,
+          plan_code: eqModel?.metadata?.plan_code || null,
           uw_tier: derivedCtx.uw_tier || null
         }
       };
