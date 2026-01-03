@@ -197,71 +197,80 @@ document.addEventListener('DOMContentLoaded', () => {
         if (who.length) b.title = `${q.label}\nRequired by: ${who.join(', ')}`;
         else b.title = `${q.label}\n(Optional or N/A)`;
       });
-      b.addEventListener('click', () => scrollToQuestion(q.q_number));
+      b.addEventListener('click', () => {
+        // handled by renderQForm() attaching onclick by index
+      });
       bar.appendChild(b);
     });
   }
 
+  let currentQIndex = 0;
+
   function renderQForm(){
-    const body = $('#q-body'); 
+    const body = $('#q-body');
     body.innerHTML = '';
   
-    questions.forEach(q => {
-      const wrap = document.createElement('div');
-      wrap.className = 'q-row';
+    // wrapper
+    const wrap = document.createElement('div');
+    wrap.className = 'q-carousel';
   
-      // label + id wiring for a11y
-      const inputId = `q_${q.q_number}`;
-      wrap.innerHTML = `<label for="${inputId}"><strong>${q.q_number}. ${q.label}</strong></label>`;
+    // arrows
+    const prev = document.createElement('button');
+    prev.className = 'q-nav q-prev';
+    prev.type = 'button';
+    prev.innerHTML = '<i class="fa-solid fa-chevron-left"></i>';
+  
+    const next = document.createElement('button');
+    next.className = 'q-nav q-next';
+    next.type = 'button';
+    next.innerHTML = '<i class="fa-solid fa-chevron-right"></i>';
+  
+    // viewport + track
+    const viewport = document.createElement('div');
+    viewport.className = 'q-viewport';
+  
+    const track = document.createElement('div');
+    track.className = 'q-track';
+  
+    // slides
+    questions.forEach((q, idx) => {
+      const slide = document.createElement('div');
+      slide.className = 'q-card';
+  
+      slide.innerHTML = `
+        <div class="q-card-head">
+          <div class="q-card-num">${q.q_number}</div>
+          <div class="q-card-title">${q.label}</div>
+        </div>
+      `;
   
       let inputEl;
   
       if (q.type === 'select'){
         inputEl = document.createElement('select');
-        // blank option first so nothing is preselected
-        const blank = document.createElement('option');
-        blank.value = ''; blank.textContent = '— Select —';
-        inputEl.appendChild(blank);
-  
         (q.options_json || []).forEach(opt => {
           const o = document.createElement('option');
           o.value = opt.value;
           o.textContent = opt.label;
           inputEl.appendChild(o);
         });
-  
       } else if (q.type === 'bool'){
         inputEl = document.createElement('select');
-        const blank = document.createElement('option');
-        blank.value = ''; blank.textContent = '— Select —';
-        inputEl.appendChild(blank);
-  
         [{value:true,label:'Yes'},{value:false,label:'No'}].forEach(opt => {
           const o = document.createElement('option');
           o.value = String(opt.value);
           o.textContent = opt.label;
           inputEl.appendChild(o);
         });
-  
       } else {
         inputEl = document.createElement('input');
         inputEl.type = (q.type === 'number' || q.type === 'money') ? 'number' : 'text';
-  
-        // honor validations (min/max/step) if present
-        const v = q.validations_json || {};
-        if (typeof v.min === 'number')  inputEl.min = String(v.min);
-        if (typeof v.max === 'number')  inputEl.max = String(v.max);
-        if (typeof v.step === 'number') inputEl.step = String(v.step);
-        else if (q.type === 'money')    inputEl.step = '1'; // safer than 1000 for odd face amounts
+        if (q.type === 'money') inputEl.step = '100'; // <— change to 1000 if you want strict thousands
       }
   
-      inputEl.id = inputId;
-      inputEl.dataset.qNumber = q.q_number;
-  
-      // prefill from existing answers
-      if (answers[q.q_number] !== undefined && answers[q.q_number] !== null){
-        inputEl.value = String(answers[q.q_number]);
-      }
+      // restore saved answer into field
+      const existing = answers[q.q_number];
+      if (existing !== undefined && existing !== null) inputEl.value = String(existing);
   
       const onField = () => {
         const v = normalizeValue(q, inputEl.value);
@@ -269,13 +278,38 @@ document.addEventListener('DOMContentLoaded', () => {
         updateChipColors();
         recomputeQuotes();
       };
-      inputEl.addEventListener('input', onField);
-      inputEl.addEventListener('change', onField); // important for mobile/selects
   
-      wrap.appendChild(inputEl);
-      body.appendChild(wrap);
+      inputEl.dataset.qNumber = q.q_number;
+      inputEl.addEventListener('input', onField);
+      inputEl.addEventListener('change', onField); // important on mobile selects
+  
+      slide.appendChild(inputEl);
+      track.appendChild(slide);
     });
   
+    viewport.appendChild(track);
+    wrap.appendChild(prev);
+    wrap.appendChild(viewport);
+    wrap.appendChild(next);
+    body.appendChild(wrap);
+  
+    // controls
+    const goTo = (idx) => {
+      currentQIndex = Math.max(0, Math.min(idx, questions.length - 1));
+      track.style.transform = `translateX(-${currentQIndex * 100}%)`;
+      prev.disabled = currentQIndex === 0;
+      next.disabled = currentQIndex === questions.length - 1;
+    };
+  
+    prev.addEventListener('click', () => goTo(currentQIndex - 1));
+    next.addEventListener('click', () => goTo(currentQIndex + 1));
+  
+    // chip click -> slide to question
+    $$('#q-chips .q-chip').forEach((chipEl, idx) => {
+      chipEl.onclick = () => goTo(idx);
+    });
+  
+    goTo(0);
     updateChipColors();
   }
   function normalizeValue(q, raw){
