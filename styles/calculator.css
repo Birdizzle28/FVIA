@@ -360,3 +360,6 @@
   text-shadow:none;
   pointer-events:none;
 }
+.s-chip.disq-x{ position:relative; }
+.s-chip.disq-x::after{ z-index: 5; }
+.s-chip.disq-x::before{ z-index: 4; }
