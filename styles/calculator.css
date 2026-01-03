@@ -340,3 +340,23 @@
 .s-namewrap { display: flex; flex-direction: column; gap: 2px; }
 .s-sub { font-size: 11px; opacity: 0.85; }
 .s-chip { position: relative; }
+.s-chip.disq-x::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background: rgba(178,36,36,.18); /* subtle red tint */
+  border-radius: inherit;
+  pointer-events:none;
+}
+.s-chip.disq-x::after{
+  content:"✕";
+  position:absolute;
+  inset:0;
+  display:grid;
+  place-items:center;
+  font-weight:900;
+  font-size:18px;
+  color:#7a1c1c;                 /* DARK so you can see it */
+  text-shadow:none;
+  pointer-events:none;
+}
