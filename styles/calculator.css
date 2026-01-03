@@ -283,3 +283,22 @@
   overflow-wrap: anywhere;
   word-break: break-word;
 }
+/* S-List scrolling */
+#s-list {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* Wide screens: full-height sidebar feel */
+@media (min-width: 980px) {
+  #s-list {
+    max-height: calc(100vh - 180px); /* adjust if your header/footer spacing differs */
+  }
+}
+
+/* Smaller screens: stacked above Q-List, only 1 card tall */
+@media (max-width: 979px) {
+  #s-list {
+    max-height: 140px; /* ~one carrier tall; adjust if your card is taller */
+  }
+}
