@@ -479,12 +479,14 @@ document.addEventListener('DOMContentLoaded', () => {
         } else if (disq) {
           chip.classList.add('red','disq-x');
         } else if (vcode) {
-          chip.classList.add('red');
-        } else if (required && !answered) {
-          chip.classList.add('red');
-        } else if (answered) {
-          chip.classList.add('green');
-        } else {
+        // answered but invalid (NOT in allowed_values, too_high, too_low, etc) => RED X
+        if (answered) chip.classList.add('red', 'disq-x');
+        else chip.classList.add('red');
+      } else if (required && !answered) {
+        chip.classList.add('red');
+      } else if (answered) {
+        chip.classList.add('green');
+      } else {
           chip.classList.add('grey');
         }
       });
