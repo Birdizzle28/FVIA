@@ -302,3 +302,40 @@
     max-height: 140px; /* ~one carrier tall; adjust if your card is taller */
   }
 }
+.q-row select,
+.q-row input {
+  width: 100%;
+  max-width: 260px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(0,0,0,0.15);
+  background: white;
+  font-size: 16px;
+}
+
+.q-row select:focus,
+.q-row input:focus {
+  outline: none;
+  border-color: rgba(53, 52, 104, 0.55);
+  box-shadow: 0 0 0 3px rgba(53, 52, 104, 0.12);
+}
+/* Red X overlay for disqualifying chip */
+.s-chip.disq-x {
+  position: relative;
+}
+
+.s-chip.disq-x::after {
+  content: "✕";
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 18px;
+  color: rgba(255,255,255,0.95);
+  text-shadow: 0 2px 6px rgba(0,0,0,0.35);
+}
+
+/* Carrier title under name */
+.s-namewrap { display: flex; flex-direction: column; gap: 2px; }
+.s-sub { font-size: 11px; opacity: 0.85; }
