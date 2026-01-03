@@ -739,21 +739,49 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   function validateValue(val, base = {}, override = {}) {
-    const v = val;
-    const rules = { ...base, ...override }; // per-carrier overrides win
-    if (rules.required && (v === null || v === undefined || v === '')) return 'required';
-    // allowed_values check (used for STATE restrictions, etc)
+    const rules = { ...base, ...override }; // carrier overrides win
+  
+    const isEmpty =
+      val === null || val === undefined || val === '';
+  
+    // Required check (only if you use it)
+    if (rules.required && isEmpty) return 'required';
+  
+    // If unanswered and not required, it's not "invalid"
+    if (isEmpty) return null;
+  
+    // ---------- allowed_values ----------
     if (Array.isArray(rules.allowed_values) && rules.allowed_values.length) {
-      if (v === null || v === undefined || v === '') {
-        return rules.required ? 'required' : null;
-      }
-    
-      // normalize case so "tn" === "TN"
-      const vv = String(v).toUpperCase();
+      const vv = String(val).toUpperCase();
       const allowed = rules.allowed_values.map(x => String(x).toUpperCase());
-    
       if (!allowed.includes(vv)) return 'not_allowed';
     }
+  
+    // ---------- numeric bounds ----------
+    // supports: min, max, min_value, max_value
+    // (use whichever naming you already stored)
+    const min = rules.min ?? rules.min_value ?? null;
+    const max = rules.max ?? rules.max_value ?? null;
+  
+    // only enforce bounds if the value is numeric (or can be coerced)
+    const num = (typeof val === 'number') ? val : Number(val);
+    const isNum = Number.isFinite(num);
+  
+    if ((min !== null || max !== null) && isNum) {
+      if (min !== null && num < Number(min)) return 'too_low';
+      if (max !== null && num > Number(max)) return 'too_high';
+    }
+  
+    // ---------- optional: pattern ----------
+    if (rules.pattern) {
+      try {
+        const re = new RegExp(rules.pattern);
+        if (!re.test(String(val))) return 'pattern';
+      } catch (e) {
+        console.warn('Bad validation pattern:', rules.pattern);
+      }
+    }
+  
     return null;
   }
   
