@@ -391,6 +391,25 @@ document.addEventListener('DOMContentLoaded', () => {
     return [pros, cons].filter(Boolean).join(' • ');
   }
 
+  function isDisqualifyingAnswer(qnum, q, req) {
+    const val = answers[qnum];
+  
+    // carrier-level override wins
+    const over = (req?.validation_overrides_json) || {};
+    const base = (q?.validations_json) || {};
+  
+    // If you store disqualify rules like:
+    // { "disqualify_if_true": true }  (for yes/no questions)
+    // or { "disqualify_if_equals": "SomeValue" }
+    const disqTrue = over.disqualify_if_true ?? base.disqualify_if_true;
+    if (disqTrue && val === true) return true;
+  
+    const disqEquals = over.disqualify_if_equals ?? base.disqualify_if_equals;
+    if (disqEquals !== undefined && disqEquals !== null && val === disqEquals) return true;
+  
+    return false;
+  }
+  
   // ===== Chip colors (red/green/grey) per carrier requirements =====
   function updateChipColors(){
     // Q-chip bar (top)
@@ -421,17 +440,36 @@ document.addEventListener('DOMContentLoaded', () => {
         else if (answered) chip.classList.add('green');
         else chip.classList.add('grey');
 
+        const qObj = questions.find(q => q.q_number === i);
         const over = req?.validation_overrides_json || {};
-        const base = (questions.find(q => q.q_number === i)?.validations_json) || {};
+        const base = (qObj?.validations_json) || {};
         const val  = answers[i];
-        const vcode = validateValue(val, base, over);
         
-        chip.classList.remove('red','green','grey');
-        if (!applicable) chip.classList.add('grey');
-        else if (vcode) chip.classList.add('red');
-        else if (required && !answered) chip.classList.add('red');
-        else if (answered) chip.classList.add('green');
-        else chip.classList.add('grey');
+        const vcode = validateValue(val, base, over);
+        const disq  = isDisqualifyingAnswer(i, qObj, req);
+        
+        chip.classList.remove('red','green','grey','disq-x');
+        
+        // priority:
+        // 1) N/A => grey
+        // 2) Disqualifying => red + X
+        // 3) Validation fail => red
+        // 4) Required unanswered => red
+        // 5) Answered => green
+        // 6) Otherwise => grey
+        if (!applicable) {
+          chip.classList.add('grey');
+        } else if (disq) {
+          chip.classList.add('red', 'disq-x');
+        } else if (vcode) {
+          chip.classList.add('red');
+        } else if (required && !answered) {
+          chip.classList.add('red');
+        } else if (answered) {
+          chip.classList.add('green');
+        } else {
+          chip.classList.add('grey');
+        }
       }
     });
   }
