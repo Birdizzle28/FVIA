@@ -230,7 +230,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // viewport + track
     const viewport = document.createElement('div');
     viewport.className = 'q-viewport';
-    window.addEventListener('resize', () => goTo(currentQIndex));
     
     const track = document.createElement('div');
     track.className = 'q-track';
@@ -323,7 +322,7 @@ document.addEventListener('DOMContentLoaded', () => {
       prev.disabled = currentQIndex === 0;
       next.disabled = currentQIndex === questions.length - 1;
     };
-  
+    window.addEventListener('resize', () => goTo(currentQIndex));
     prev.addEventListener('click', () => goTo(currentQIndex - 1));
     next.addEventListener('click', () => goTo(currentQIndex + 1));
   
@@ -448,41 +447,37 @@ document.addEventListener('DOMContentLoaded', () => {
     const cards = $$('#s-list .s-card');
     carriers.forEach((c, ci) => {
       const reqByQ = indexRequirements(c.requirements);
-      for (let i=1; i<=N; i++){
-        const chip = cards[ci].querySelectorAll('.s-chip')[i-1];
-        const req = reqByQ[i];
+      const chips = cards[ci].querySelectorAll('.s-chip');
+
+      questions.forEach((q, idx) => {
+        const qnum = q.q_number;
+        const chip = chips[idx];
+        if (!chip) return;
+      
+        const req = reqByQ[qnum];
+      
         // ✅ If no carrier_requirements row exists, it is NOT applicable to that carrier
         const applicable = req ? evaluateExpr(req.applicable_expr, answers, true) : false;
         const required   = req ? evaluateExpr(req.required_expr,   answers, false) : false;
-        const answered = answers[i] !== undefined && answers[i] !== null && answers[i] !== '';
-
-        chip.classList.remove('red','green','grey');
-        if (!applicable) chip.classList.add('grey');
-        else if (required && !answered) chip.classList.add('red');
-        else if (answered) chip.classList.add('green');
-        else chip.classList.add('grey');
-
-        const qObj = questions.find(q => q.q_number === i);
+      
+        const answered =
+          answers[qnum] !== undefined &&
+          answers[qnum] !== null &&
+          answers[qnum] !== '';
+      
         const over = req?.validation_overrides_json || {};
-        const base = (qObj?.validations_json) || {};
-        const val  = answers[i];
-        
+        const base = q.validations_json || {};
+        const val  = answers[qnum];
+      
         const vcode = validateValue(val, base, over);
-        const disq  = isDisqualifyingAnswer(i, qObj, req);
-        
+        const disq  = isDisqualifyingAnswer(qnum, q, req);
+      
         chip.classList.remove('red','green','grey','disq-x');
-        
-        // priority:
-        // 1) N/A => grey
-        // 2) Disqualifying => red + X
-        // 3) Validation fail => red
-        // 4) Required unanswered => red
-        // 5) Answered => green
-        // 6) Otherwise => grey
+      
         if (!applicable) {
           chip.classList.add('grey');
         } else if (disq) {
-          chip.classList.add('red', 'disq-x');
+          chip.classList.add('red','disq-x');
         } else if (vcode) {
           chip.classList.add('red');
         } else if (required && !answered) {
@@ -492,7 +487,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
           chip.classList.add('grey');
         }
-      }
+      });
     });
   }
 
