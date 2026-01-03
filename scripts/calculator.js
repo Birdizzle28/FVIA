@@ -370,7 +370,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="s-overlay-top">
           <div class="s-namewrap">
             <div class="s-name">${c.carrier.carrier_name || ''}</div>
-            <div class="s-sub">${c.title || ''}</div>
+            <div class="s-sub">${c.plan_title || ''}</div>
           </div>
           <a href="${c.carrier.carrier_url || '#'}" target="_blank" rel="noopener" title="Open carrier site">
             <i class="fa-solid fa-up-right-from-square"></i>
@@ -745,10 +745,17 @@ document.addEventListener('DOMContentLoaded', () => {
     const v = val;
     const rules = { ...base, ...override }; // per-carrier overrides win
     if (rules.required && (v === null || v === undefined || v === '')) return 'required';
-    if (typeof v === 'number') {
-      if (typeof rules.min === 'number' && v < rules.min) return `min:${rules.min}`;
-      if (typeof rules.max === 'number' && v > rules.max) return `max:${rules.max}`;
-      if (typeof rules.step === 'number' && v % rules.step !== 0) return `step:${rules.step}`;
+    // allowed_values check (used for STATE restrictions, etc)
+    if (Array.isArray(rules.allowed_values) && rules.allowed_values.length) {
+      if (v === null || v === undefined || v === '') {
+        return rules.required ? 'required' : null;
+      }
+    
+      // normalize case so "tn" === "TN"
+      const vv = String(v).toUpperCase();
+      const allowed = rules.allowed_values.map(x => String(x).toUpperCase());
+    
+      if (!allowed.includes(vv)) return 'not_allowed';
     }
     return null;
   }
