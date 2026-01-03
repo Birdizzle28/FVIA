@@ -349,7 +349,10 @@ document.addEventListener('DOMContentLoaded', () => {
       card.innerHTML = `
         <img class="logo" src="${c.carrier.carrier_logo || ''}" alt="${c.carrier.carrier_name}">
         <div class="s-overlay-top">
-          <span>${c.carrier.carrier_name || ''}</span>
+          <div class="s-namewrap">
+            <div class="s-name">${c.carrier.carrier_name || ''}</div>
+            <div class="s-sub">${c.title || ''}</div>
+          </div>
           <a href="${c.carrier.carrier_url || '#'}" target="_blank" rel="noopener" title="Open carrier site">
             <i class="fa-solid fa-up-right-from-square"></i>
           </a>
