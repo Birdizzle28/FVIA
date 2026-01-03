@@ -339,3 +339,4 @@
 /* Carrier title under name */
 .s-namewrap { display: flex; flex-direction: column; gap: 2px; }
 .s-sub { font-size: 11px; opacity: 0.85; }
+.s-chip { position: relative; }
