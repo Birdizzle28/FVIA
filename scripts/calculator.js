@@ -455,40 +455,50 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!chip) return;
       
         const req = reqByQ[qnum];
-      
-        // ✅ If no carrier_requirements row exists, it is NOT applicable to that carrier
-        const applicable = req ? evaluateExpr(req.applicable_expr, answers, true) : false;
-        const required   = req ? evaluateExpr(req.required_expr,   answers, false) : false;
-      
+
+        chip.classList.remove('red','green','grey','disq-x');
+        
+        if (!req) {
+          // no carrier_requirements row => not applicable for this carrier_product
+          chip.classList.add('grey');
+          return;
+        }
+        
+        const applicable = evaluateExpr(req.applicable_expr, answers, true);
+        const required   = evaluateExpr(req.required_expr,   answers, false);
+        
         const answered =
           answers[qnum] !== undefined &&
           answers[qnum] !== null &&
           answers[qnum] !== '';
-      
-        const over = req?.validation_overrides_json || {};
-        const base = q.validations_json || {};
-        const val  = answers[qnum];
-      
-        const vcode = validateValue(val, base, over);
-        const disq  = isDisqualifyingAnswer(qnum, q, req);
-      
-        chip.classList.remove('red','green','grey','disq-x');
-      
+        
         if (!applicable) {
           chip.classList.add('grey');
-        } else if (disq) {
-          chip.classList.add('red','disq-x');
-        } else if (vcode) {
-        // answered but invalid (NOT in allowed_values, too_high, too_low, etc) => RED X
-        if (answered) chip.classList.add('red', 'disq-x');
-        else chip.classList.add('red');
-      } else if (required && !answered) {
-        chip.classList.add('red');
-      } else if (answered) {
-        chip.classList.add('green');
-      } else {
-          chip.classList.add('grey');
+          return;
         }
+        
+        const over = req.validation_overrides_json || {};
+        const base = q.validations_json || {};
+        const val  = answers[qnum];
+        
+        const vcode = validateValue(val, base, over);
+        
+        if (answered && vcode) {
+          chip.classList.add('red', 'disq-x'); // ✅ red X when answered but invalid
+          return;
+        }
+        
+        if (required && !answered) {
+          chip.classList.add('red');
+          return;
+        }
+        
+        if (answered) {
+          chip.classList.add('green');
+          return;
+        }
+        
+        chip.classList.add('grey');
       });
     });
   }
