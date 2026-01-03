@@ -392,7 +392,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // Q-chip bar (top)
     const qChips = $$('#q-chips .q-chip');
     qChips.forEach((el, idx) => {
-      const qnum = idx + 1;
+      const qnum = questions[idx]?.q_number;
       const answered = answers[qnum] !== undefined && answers[qnum] !== null && answers[qnum] !== '';
       el.classList.remove('red','green','grey');
       el.classList.add(answered ? 'green' : 'red'); // quick visual for navigation
