@@ -177,6 +177,7 @@ document.addEventListener('DOMContentLoaded', () => {
       .filter(c => {
         const reqByQ = indexRequirements(c.requirements);
         const r = reqByQ[qnum];
+        if (!r) return false;
         const applicable = evaluateExpr(r?.applicable_expr, answers, true);
         const required = evaluateExpr(r?.required_expr, answers, false);
         return applicable && required;
@@ -409,8 +410,9 @@ document.addEventListener('DOMContentLoaded', () => {
       for (let i=1; i<=N; i++){
         const chip = cards[ci].querySelectorAll('.s-chip')[i-1];
         const req = reqByQ[i];
-        const applicable = evaluateExpr(req?.applicable_expr, answers, true);
-        const required = evaluateExpr(req?.required_expr, answers, false);
+        // ✅ If no carrier_requirements row exists, it is NOT applicable to that carrier
+        const applicable = req ? evaluateExpr(req.applicable_expr, answers, true) : false;
+        const required   = req ? evaluateExpr(req.required_expr,   answers, false) : false;
         const answered = answers[i] !== undefined && answers[i] !== null && answers[i] !== '';
 
         chip.classList.remove('red','green','grey');
