@@ -778,6 +778,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const reqByQ = indexRequirements(c.requirements);
     const basicOk = questions.every(q => {
       const r = reqByQ[q.q_number];
+      const baseVal = q.validations_json || {};
+      const overVal = r?.validation_overrides_json || {};
+      const vcode = validateValue(answers[q.q_number], baseVal, overVal);
+      
+      if (applicable && answered && vcode) return false;
       const applicable = evaluateExpr(r?.applicable_expr, answers, true);
       const required = evaluateExpr(r?.required_expr, answers, false);
       const answered = answers[q.q_number] !== undefined && answers[q.q_number] !== null && answers[q.q_number] !== '';
