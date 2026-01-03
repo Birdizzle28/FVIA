@@ -251,6 +251,16 @@ document.addEventListener('DOMContentLoaded', () => {
   
       if (q.type === 'select'){
         inputEl = document.createElement('select');
+
+        // placeholder
+        const ph = document.createElement('option');
+        ph.value = '';
+        ph.textContent = 'Select...';
+        ph.disabled = true;
+        ph.selected = true;
+        inputEl.appendChild(ph);
+        
+        // options
         (q.options_json || []).forEach(opt => {
           const o = document.createElement('option');
           o.value = opt.value;
@@ -259,6 +269,15 @@ document.addEventListener('DOMContentLoaded', () => {
         });
       } else if (q.type === 'bool'){
         inputEl = document.createElement('select');
+
+        // placeholder
+        const ph = document.createElement('option');
+        ph.value = '';
+        ph.textContent = 'Select...';
+        ph.disabled = true;
+        ph.selected = true;
+        inputEl.appendChild(ph);
+        
         [{value:true,label:'Yes'},{value:false,label:'No'}].forEach(opt => {
           const o = document.createElement('option');
           o.value = String(opt.value);
