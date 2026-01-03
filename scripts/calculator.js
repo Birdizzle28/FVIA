@@ -100,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2) carrier_products (ids only)
     const { data: cps, error: e1 } = await supabase
       .from('carrier_products')
-      .select('id, product_id, carrier_id, is_active')
+      .select('id, product_id, carrier_id, plan_title, is_active')
       .eq('product_id', productId)
       .eq('is_active', true);
     if (e1) { console.error('carrier_products list error:', e1); carriers = []; renderSList(); recomputeQuotes(); return; }
@@ -158,6 +158,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const inputs  = eq ? (inputsByEq.get(eq.id) || []) : [];
       return {
         carrier_product_id: cp.id,
+        plan_title: cp.plan_title || 'Base',   // ✅ add this
         carrier,
         pros: prosRec.pros || [],
         cons: prosRec.cons || [],
@@ -658,8 +659,7 @@ document.addEventListener('DOMContentLoaded', () => {
         <div class="meta">
           <img src="${c.carrier.carrier_logo || ''}" alt="${c.carrier.carrier_name}">
           <div>
-            <div><strong>${c.carrier.carrier_name}</strong></div>
-            <div class="muted small">${c.pros?.[0] || ''}</div>
+            <div><strong>${c.carrier.carrier_name}${c.plan_title ? ` • ${c.plan_title}` : ''}</strong></div>
           </div>
         </div>
         <div class="c-price">${premium===null ? '—' : money(premium)}</div>
@@ -735,7 +735,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
     const carrier = cModel.carrier || {};
     // basics
-    $('#po-name').textContent = carrier.carrier_name || '';
+    $('#po-name').textContent = `${carrier.carrier_name || ''}${cModel.plan_title ? ` • ${cModel.plan_title}` : ''}`;
     $('#po-link').href = carrier.carrier_url || '#';
     $('#po-price').textContent = premium == null ? '—' : money(premium);
   
@@ -775,7 +775,8 @@ document.addEventListener('DOMContentLoaded', () => {
           line: chosenLine,
           url: carrier.carrier_url || null,
           equation_version: cModel?.equation?.equation_version || 1,
-          uw_tier: derivedCtx.uw_tier || null
+          uw_tier: derivedCtx.uw_tier || null,
+          plan_title: cModel.plan_title || null
         }
       };
       const { error } = await supabase.from('quotes').insert(payload);
