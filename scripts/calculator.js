@@ -946,12 +946,14 @@ document.addEventListener('DOMContentLoaded', () => {
       const q = questions.find(q => q.q_number === a.q_number) || questions.find(q => q.label === a.label);
       if (q) answers[q.q_number] = a.value;
     });
-    $$('#q-body .q-row').forEach((wrap, idx) => {
+    // populate inputs in the NEW carousel layout
+    $$('#q-body .q-card').forEach((card, idx) => {
       const q = questions[idx];
-      const inputEl = wrap.querySelector('input, select');
+      const inputEl = card.querySelector('input, select');
       if (!q || !inputEl) return;
+    
       const val = answers[q.q_number];
-      if (val !== undefined && val !== null) inputEl.value = String(val);
+      inputEl.value = (val === undefined || val === null) ? '' : String(val);
     });
     updateChipColors();
     recomputeQuotes();
