@@ -800,6 +800,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const issues = []; // [{qnum,label,code}]
     questions.forEach(q => {
       const r = reqByQ[q.q_number];
+      if (!r) return;
       const applicable = evaluateExpr(r?.applicable_expr, answers, true);
       if (!applicable) return;
       const baseVal = q.validations_json || {};
@@ -816,15 +817,31 @@ document.addEventListener('DOMContentLoaded', () => {
     const reqByQ = indexRequirements(c.requirements);
     const basicOk = questions.every(q => {
       const r = reqByQ[q.q_number];
+    
+      // if no requirement row, treat as not applicable
+      if (!r) return true;
+    
+      const applicable = evaluateExpr(r.applicable_expr, answers, true);
+      if (!applicable) return true;
+    
+      const required = evaluateExpr(r.required_expr, answers, false);
+    
+      const answered =
+        answers[q.q_number] !== undefined &&
+        answers[q.q_number] !== null &&
+        answers[q.q_number] !== '';
+    
       const baseVal = q.validations_json || {};
-      const overVal = r?.validation_overrides_json || {};
+      const overVal = r.validation_overrides_json || {};
       const vcode = validateValue(answers[q.q_number], baseVal, overVal);
-      
-      if (applicable && answered && vcode) return false;
-      const applicable = evaluateExpr(r?.applicable_expr, answers, true);
-      const required = evaluateExpr(r?.required_expr, answers, false);
-      const answered = answers[q.q_number] !== undefined && answers[q.q_number] !== null && answers[q.q_number] !== '';
-      return !applicable ? true : (!required || answered);
+    
+      // answered but invalid => NOT ready
+      if (answered && vcode) return false;
+    
+      // required but unanswered => NOT ready
+      if (required && !answered) return false;
+    
+      return true;
     });
     if (!basicOk) return false;
     const issues = violationsForCarrier(c);
