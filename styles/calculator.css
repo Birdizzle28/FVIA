@@ -140,3 +140,48 @@
 
 .sd-empty{ color:#5f5a84; font-size:14px; text-align:center; padding:18px 6px; }
 .s-card.hidden { display: none !important; }
+/* ===== S-List cards: perfect squares ===== */
+#s-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+  gap: 14px;
+}
+
+/* square card */
+.s-card{
+  aspect-ratio: 1 / 1;
+  height: auto;            /* let aspect-ratio control it */
+  min-height: 210px;       /* keeps it from getting tiny */
+  position: relative;
+  overflow: hidden;
+}
+
+/* make sure overlays fit */
+.s-overlay-top{
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  padding: 10px 10px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* chips area gets enough room */
+.s-overlay-bottom{
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  padding: 10px;
+  display: grid;
+  grid-template-columns: repeat(8, 1fr); /* adjust if you want */
+  gap: 6px;
+  align-content: end;
+}
+
+/* smaller chips so more fit */
+.s-chip{
+  font-size: 12px;
+  line-height: 1;
+  padding: 6px 0;
+  text-align: center;
+  border-radius: 6px;
+}
