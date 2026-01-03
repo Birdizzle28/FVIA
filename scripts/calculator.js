@@ -228,7 +228,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // viewport + track
     const viewport = document.createElement('div');
     viewport.className = 'q-viewport';
-  
+    window.addEventListener('resize', () => goTo(currentQIndex));
+    
     const track = document.createElement('div');
     track.className = 'q-track';
   
@@ -296,7 +297,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // controls
     const goTo = (idx) => {
       currentQIndex = Math.max(0, Math.min(idx, questions.length - 1));
-      track.style.transform = `translateX(-${currentQIndex * 100}%)`;
+      const w = viewport.getBoundingClientRect().width;
+      track.style.transform = `translate3d(${-currentQIndex * w}px, 0, 0)`;
       prev.disabled = currentQIndex === 0;
       next.disabled = currentQIndex === questions.length - 1;
     };
