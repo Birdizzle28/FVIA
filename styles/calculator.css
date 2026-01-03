@@ -242,3 +242,44 @@
   border-radius: 12px;
   padding: 0 12px;
 }
+/* ===== HARDEN the carousel so slides never peek or clip ===== */
+
+.q-viewport{
+  overflow: hidden;
+  border-radius: 16px;
+  width: 100%;
+  position: relative;
+}
+
+/* Track must be as wide as all slides, and never wrap */
+.q-track{
+  display: flex;
+  flex-wrap: nowrap;
+  width: 100%;
+  transform: translate3d(0,0,0);
+  transition: transform 280ms ease;
+  will-change: transform;
+}
+
+/* Each slide MUST be exactly the viewport width */
+.q-card{
+  flex: 0 0 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow: hidden;         /* prevents inner stuff from spilling */
+}
+
+/* Prevent inputs/selects from overflowing their card */
+.q-card input,
+.q-card select{
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+/* If long labels are pushing width, force wrapping */
+.q-card-title{
+  min-width: 0;             /* critical in flex layouts */
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
