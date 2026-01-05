@@ -615,9 +615,18 @@ export const handler = async (event) => {
     // Upsert contact
     const { contactId } = await upsertContact(contactInfo);
 
+    // Determine which "lines" are needed (ONLY the 4 we track; legal/id go to life)
+    const normalizeLine = (x) => {
+      const v = String(x || "").toLowerCase().trim();
+      if (v === "legalshield" || v === "idshield") return "life";
+      if (v === "life" || v === "health" || v === "property" || v === "casualty") return v;
+      return null;
+    };
+    
     const neededLines = Array.from(new Set(
-      (requiredLines || []).map(x => String(x || "").toLowerCase().trim()).filter(Boolean)
+      (requiredLines || []).map(normalizeLine).filter(Boolean)
     ));
+    
     if (!neededLines.length) neededLines.push("life");
 
     const pickedAgent = await pickSingleAgentForSubmission(contactId, neededLines);
