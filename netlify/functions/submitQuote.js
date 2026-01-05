@@ -134,9 +134,14 @@ export const handler = async (event) => {
       return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ ok: false, error: "Missing submittedBy" }) };
     }
 
-    // If it’s spammy, don’t “teach” the bot anything: return none_fit (same UX message)
-    if (honeypotHit || suspiciousTiming || gibName || badEmail) {
-      return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, reason: "none_fit" }) };
+    const HARDENING_ACTIVE = (hp.length > 0) || (elapsed > 0); 
+    // Only enforce these checks if the frontend is actually sending hardening fields.
+    // Otherwise you’ll accidentally block legit submissions while testing.
+    
+    if (HARDENING_ACTIVE) {
+      if (honeypotHit || suspiciousTiming || gibName || badEmail) {
+        return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, reason: "none_fit" }) };
+      }
     }
 
     // ---- server-side rate limiting (no extra tables needed) ----
@@ -145,20 +150,6 @@ export const handler = async (event) => {
     const ten = digits10(phone);
     const since15m = new Date(Date.now() - 15 * 60 * 1000).toISOString();
     const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-
-    // 15 min: IP limit (leads table)
-    {
-      const { count, error } = await supabase
-        .from("leads")
-        .select("id", { count: "exact", head: true })
-        .gte("created_at", since15m)
-        .eq("source_ip", ip); // requires you to store it; if you don't have this column, see note below
-
-      // If you don't have leads.source_ip, comment this block out (or add the column)
-      if (!error && typeof count === "number" && count >= 10) {
-        return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, reason: "none_fit" }) };
-      }
-    }
 
     // 24 hr: phone/email limit (contacts table)
     if (ten || email) {
@@ -554,9 +545,6 @@ export const handler = async (event) => {
           assigned_to: agentId,
           assigned_at: agentId ? new Date().toISOString() : null,
           contacted_at: agentId ? new Date().toISOString() : null,
-
-          // ✅ store IP for basic rate limiting (add this column if you don’t have it)
-          source_ip: ip
         };
 
         const { data: one, error: insErr } = await supabase
