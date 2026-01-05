@@ -1115,7 +1115,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const { data: { session } } = await supabase.auth.getSession();
       userId = session?.user?.id || null;
     } catch {}
-
+  
     const rangeSel = document.getElementById('lead-range');
     const scopeRadios = document.querySelectorAll('input[name="lead-scope"]');
     const el = id => document.getElementById(id);
@@ -1123,14 +1123,15 @@ document.addEventListener('DOMContentLoaded', () => {
       const n = el(id);
       if (n) n.textContent = String(v);
     };
-
+  
     function inferStage(row){
-      if (row.closed_at || ['won','lost'].includes((row.closed_status||'').toLowerCase())) return 'closed';
+      const closedByStatus = ['won','lost'].includes((row.closed_status||'').toLowerCase());
+      if (row.closed_at || closedByStatus) return 'closed';
       if (row.quoted_at)     return 'quoted';
       if (row.contacted_at)  return 'contacted';
       return 'new';
     }
-
+  
     function fmtDate(d){
       try {
         return new Date(d).toLocaleDateString(undefined, { month:'short', day:'numeric' });
@@ -1138,49 +1139,121 @@ document.addEventListener('DOMContentLoaded', () => {
         return '';
       }
     }
-
+  
+    // Build full downline (agents of agents of agents...)
+    function getAllDownlineAgentIds(rootId, agents){
+      const downline = [];
+      const seen = new Set([rootId]);
+      const queue = [rootId];
+  
+      while (queue.length) {
+        const current = queue.shift();
+        for (const a of agents) {
+          if (a.recruiter_id === current && !seen.has(a.id)) {
+            seen.add(a.id);
+            downline.push(a.id);
+            queue.push(a.id);
+          }
+        }
+      }
+  
+      // IMPORTANT: Team should NOT include the agent themself
+      return downline.filter(id => id !== rootId);
+    }
+  
     async function fetchLeads(days, scope){
+      // base query
       let q = supabase.from('leads')
         .select('id, first_name, last_name, zip, product_type, notes, created_at, assigned_to, submitted_by, quoted_at, contacted_at, closed_at, closed_status')
         .order('created_at', { ascending:false });
-
-      if (scope === 'mine' && userId) {
-        q = q.or(`assigned_to.eq.${userId},submitted_by.eq.${userId}`);
-      }
+  
+      // Date filter (based on created_at only)
       if (days && Number(days) > 0) {
         const since = new Date();
         since.setDate(since.getDate() - Number(days));
         q = q.gte('created_at', since.toISOString());
       }
+  
+      // Scope filter
+      if (scope === 'mine') {
+        if (userId) {
+          q = q.or(`assigned_to.eq.${userId},submitted_by.eq.${userId}`);
+        } else {
+          // not logged in -> no "mine"
+          return [];
+        }
+      }
+  
+      if (scope === 'team') {
+        if (!userId) return [];
+  
+        // Load agents to build recursive downline
+        const agentsRes = await supabase
+          .from('agents')
+          .select('id, recruiter_id');
+  
+        if (agentsRes.error) {
+          console.warn('Team leads: agents load error:', agentsRes.error);
+          return [];
+        }
+  
+        const downlineIds = getAllDownlineAgentIds(userId, agentsRes.data || []);
+  
+        // If no downline, team should be empty
+        if (!downlineIds.length) return [];
+  
+        // Filter leads to ONLY downline agents (NOT including self)
+        // Any lead assigned_to them OR submitted_by them
+        q = q.or(
+          `assigned_to.in.(${downlineIds.join(',')}),submitted_by.in.(${downlineIds.join(',')})`
+        );
+      }
+  
+      // NOTE: This 200 cap can make counts wrong if you have lots of leads.
+      // Increase if you want more accurate counts.
       const { data, error } = await q.limit(200);
+  
       if (error) {
         console.warn('Lead fetch error:', error);
         return [];
       }
       return data || [];
     }
-
+  
     function renderCounts(rows){
-      const counts = { new:0, contacted:0, quoted:0, closed:0 };
+      // stage counts (exclusive)
+      let newCount = 0;
+      let quotedCount = 0;
+      let closedCount = 0;
+  
       rows.forEach(r => {
-        const k = inferStage(r);
-        counts[k] = (counts[k]||0) + 1;
+        const stage = inferStage(r);
+        if (stage === 'new') newCount++;
+        if (stage === 'quoted') quotedCount++;
+        if (stage === 'closed') closedCount++;
       });
-      setText('stat-new', counts.new);
-      setText('stat-contacted', counts.contacted);
-      setText('stat-quoted', counts.quoted);
-      setText('stat-closed', counts.closed);
+  
+      // CONTACTED should include quoted + closed (i.e. everything except "new")
+      const contactedCount = rows.length - newCount;
+  
+      setText('stat-new', newCount);
+      setText('stat-contacted', contactedCount);
+      setText('stat-quoted', quotedCount);
+      setText('stat-closed', closedCount);
     }
-
+  
     function renderMiniNew(rows){
       const tbody = document.getElementById('mini-new-leads');
       if (!tbody) return;
+  
       tbody.innerHTML = '';
       const newOnes = rows.filter(r => inferStage(r) === 'new').slice(0,5);
+  
       if (newOnes.length === 0) {
         tbody.innerHTML = `<tr><td colspan="4">No new leads in this range.</td></tr>`;
         return;
       }
+  
       newOnes.forEach(r => {
         const tr = document.createElement('tr');
         const name = [r.first_name, r.last_name].filter(Boolean).join(' ') || '—';
@@ -1193,7 +1266,7 @@ document.addEventListener('DOMContentLoaded', () => {
         tbody.appendChild(tr);
       });
     }
-
+  
     async function refresh(){
       const days  = document.getElementById('lead-range')?.value || '30';
       const scope = [...scopeRadios].find(r => r.checked)?.value || 'mine';
@@ -1201,7 +1274,7 @@ document.addEventListener('DOMContentLoaded', () => {
       renderCounts(rows);
       renderMiniNew(rows);
     }
-
+  
     rangeSel?.addEventListener('change', refresh);
     scopeRadios.forEach(r => r.addEventListener('change', refresh));
     await refresh();
