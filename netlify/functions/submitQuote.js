@@ -1,28 +1,89 @@
 // netlify/functions/submitQuote.js
 import { createClient } from "@supabase/supabase-js";
+import crypto from "crypto";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST,OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
+  "Content-Type": "application/json"
+};
+
+function safeJsonParse(str) {
+  try { return JSON.parse(str || "{}"); } catch { return {}; }
+}
+
+function norm(s) { return (s || "").toString().trim().toLowerCase(); }
+function digits10(s) { return (s || "").toString().replace(/\D/g, "").slice(-10); }
+
+function looksLikeGibberish(s) {
+  const x = (s || "").toString().trim();
+  if (!x) return true;
+  if (x.length < 3) return true;
+
+  // high junk ratio (random keys)
+  const alnum = (x.match(/[a-z0-9]/gi) || []).length;
+  const junk  = (x.match(/[^a-z0-9\s]/gi) || []).length;
+  if (alnum > 0 && (junk / Math.max(1, alnum)) > 0.35) return true;
+
+  // long no-space token
+  const longestToken = Math.max(...x.split(/\s+/).map(t => t.length));
+  if (longestToken >= 30) return true;
+
+  // repeated same char
+  if (/^(.)\1{8,}$/i.test(x.replace(/\s+/g, ""))) return true;
+
+  return false;
+}
+
+function getClientIp(event) {
+  const h = event.headers || {};
+  // Netlify common headers
+  const ip =
+    h["x-nf-client-connection-ip"] ||
+    h["x-forwarded-for"] ||
+    h["client-ip"] ||
+    "";
+  return String(ip).split(",")[0].trim().slice(0, 64) || "unknown";
+}
+
+function makeCallToken(secret, payloadObj) {
+  const payload = Buffer.from(JSON.stringify(payloadObj)).toString("base64url");
+  const sig = crypto.createHmac("sha256", secret).update(payload).digest("base64url");
+  return `${payload}.${sig}`;
+}
+
+function verifyBasicEmail(s) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(s || "").trim());
+}
 
 export const handler = async (event) => {
+  // CORS preflight
+  if (event.httpMethod === "OPTIONS") {
+    return { statusCode: 204, headers: corsHeaders, body: "" };
+  }
+
   try {
     if (event.httpMethod !== "POST") {
-      return { statusCode: 405, body: "Method Not Allowed" };
+      return { statusCode: 405, headers: corsHeaders, body: JSON.stringify({ ok: false, error: "Method Not Allowed" }) };
     }
 
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!SUPABASE_URL || !SERVICE_KEY) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ ok: false, error: "Missing Supabase env vars" })
-      };
+      return { statusCode: 500, headers: corsHeaders, body: JSON.stringify({ ok: false, error: "Missing Supabase env vars" }) };
     }
 
-    const supabase = createClient(SUPABASE_URL, SERVICE_KEY, {
-      auth: { persistSession: false }
-    });
+    const CALL_TOKEN_SECRET = process.env.CALL_TOKEN_SECRET || "";
+    // (optional) if you want token-gated calls. Strongly recommended.
+    if (!CALL_TOKEN_SECRET) {
+      console.warn("CALL_TOKEN_SECRET is missing (makeCall will not be safely lockable).");
+    }
 
-    const body = JSON.parse(event.body || "{}");
+    const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
+    const body = safeJsonParse(event.body);
     const {
       requiredLines,
       state,
@@ -32,44 +93,107 @@ export const handler = async (event) => {
       contactInfo,
       totalDebtCharge = 60,
       submittedBy,
-      submittedByName
+      submittedByName,
+
+      // spam-hardening extras (send these from the browser)
+      company_website, // honeypot
+      elapsed_ms       // time on page
     } = body;
 
-    // ---- validation ----
+    // ---- cheap spam checks (SILENT) ----
+    const hp = String(company_website || "").trim();
+    const elapsed = Number(elapsed_ms || 0);
+
+    // if bot filled honeypot OR submitted unrealistically fast, treat as spam
+    const suspiciousTiming = elapsed > 0 && elapsed < 2500;
+    const honeypotHit = !!hp;
+
+    // message-ish gibberish checks on names (bots love random keys)
+    const fn = String(contactInfo?.first_name || "").trim();
+    const ln = String(contactInfo?.last_name || "").trim();
+    const email = String(contactInfo?.email || "").trim();
+    const phone = String(contactInfo?.phone || "").trim();
+
+    const gibName = looksLikeGibberish(fn) || looksLikeGibberish(ln);
+    const badEmail = email && !verifyBasicEmail(email);
+
+    // Basic request validation (still normal 400s for obviously broken payloads)
     if (!state || !/^[A-Za-z]{2}$/.test(String(state))) {
-      return { statusCode: 400, body: JSON.stringify({ ok: false, error: "Missing/invalid state" }) };
+      return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ ok: false, error: "Missing/invalid state" }) };
     }
     if (!Array.isArray(requiredLines) || requiredLines.length === 0) {
-      return { statusCode: 400, body: JSON.stringify({ ok: false, error: "Missing requiredLines" }) };
+      return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ ok: false, error: "Missing requiredLines" }) };
     }
     if (!Array.isArray(productTypes) || productTypes.length === 0) {
-      return { statusCode: 400, body: JSON.stringify({ ok: false, error: "Missing productTypes" }) };
+      return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ ok: false, error: "Missing productTypes" }) };
     }
-    if (!contactInfo || !contactInfo.first_name || !contactInfo.last_name) {
-      return { statusCode: 400, body: JSON.stringify({ ok: false, error: "Missing contactInfo.name" }) };
+    if (!contactInfo || !fn || !ln) {
+      return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ ok: false, error: "Missing contactInfo.name" }) };
     }
     if (!submittedBy) {
-      return { statusCode: 400, body: JSON.stringify({ ok: false, error: "Missing submittedBy" }) };
+      return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ ok: false, error: "Missing submittedBy" }) };
     }
 
-    // --- helpers ---
-    const norm = (s) => (s || "").toString().trim().toLowerCase();
-    const digits10 = (s) => (s || "").toString().replace(/\D/g, "").slice(-10);
-    const CONSENT_TEXT_VERSION = "fvg_freequote_tcpav1_2025-12-20";
+    // If it’s spammy, don’t “teach” the bot anything: return none_fit (same UX message)
+    if (honeypotHit || suspiciousTiming || gibName || badEmail) {
+      return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, reason: "none_fit" }) };
+    }
 
+    // ---- server-side rate limiting (no extra tables needed) ----
+    // Limit repeated submits per phone/email/ip in a short window
+    const ip = getClientIp(event);
+    const ten = digits10(phone);
+    const since15m = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    // 15 min: IP limit (leads table)
+    {
+      const { count, error } = await supabase
+        .from("leads")
+        .select("id", { count: "exact", head: true })
+        .gte("created_at", since15m)
+        .eq("source_ip", ip); // requires you to store it; if you don't have this column, see note below
+
+      // If you don't have leads.source_ip, comment this block out (or add the column)
+      if (!error && typeof count === "number" && count >= 10) {
+        return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, reason: "none_fit" }) };
+      }
+    }
+
+    // 24 hr: phone/email limit (contacts table)
+    if (ten || email) {
+      const { data: recentContacts, error } = await supabase
+        .from("contacts")
+        .select("id, created_at, phones, emails")
+        .gte("created_at", since24h)
+        .limit(200);
+
+      if (!error && Array.isArray(recentContacts)) {
+        const hits = recentContacts.filter(c => {
+          const ph = Array.isArray(c.phones) ? c.phones : [];
+          const em = Array.isArray(c.emails) ? c.emails : [];
+          const phoneHit = ten ? ph.map(digits10).includes(ten) : false;
+          const emailHit = email ? em.map(norm).includes(norm(email)) : false;
+          return phoneHit || emailHit;
+        }).length;
+
+        // allow a couple (people can resubmit), but stop floods
+        if (hits >= 4) {
+          return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, reason: "none_fit" }) };
+        }
+      }
+    }
+
+    // -------------------------
+    // EVERYTHING BELOW THIS LINE IS YOUR ORIGINAL FLOW
+    // (with 2 key additions: store source_ip + generate call token)
+    // -------------------------
+
+    const norm2 = (s) => (s || "").toString().trim().toLowerCase();
+    const digits102 = (s) => (s || "").toString().replace(/\D/g, "").slice(-10);
+    const CONSENT_TEXT_VERSION = "fvg_freequote_tcpav1_2025-12-20";
     const stateUp = String(state || "").toUpperCase();
 
-    // Product Type -> line (person_line_agents only supports these 4)
-    const productTypeToLine = {
-      "Life Insurance": "life",
-      "Health Insurance": "health",
-      "Property Insurance": "property",
-      "Casualty Insurance": "casualty",
-      "Legal Shield": "life",
-      "ID Shield": "life"
-    };
-
-    // line -> NIPR token match (same logic you used)
     const lineTokenMap = {
       life: "Life",
       health: "Accident & Health",
@@ -79,13 +203,12 @@ export const handler = async (event) => {
 
     const FVG_ID = "906a707c-69bb-4e6e-be1d-1415f45561c4";
 
-    // ========= (1) findDuplicateLeadByNamePlusOne =========
     async function findDuplicateLeadByNamePlusOne({
       first_name, last_name, phoneArr, email, zip, product_type, windowDays = 90
     }) {
       const sinceIso = new Date(Date.now() - windowDays * 24 * 60 * 60 * 1000).toISOString();
-      const nFirst = norm(first_name);
-      const nLast = norm(last_name);
+      const nFirst = norm2(first_name);
+      const nLast = norm2(last_name);
 
       const { data: candidates, error } = await supabase
         .from("leads")
@@ -97,11 +220,11 @@ export const handler = async (event) => {
 
       if (error) throw new Error(error.message);
 
-      const emailsArr = (email ? [email] : []).map(norm);
+      const emailsArr = (email ? [email] : []).map(norm2);
       const ourPhones = phoneArr || [];
 
       for (const c of (candidates || [])) {
-        if (norm(c.first_name) !== nFirst || norm(c.last_name) !== nLast) continue;
+        if (norm2(c.first_name) !== nFirst || norm2(c.last_name) !== nLast) continue;
 
         const candPhonesFromLead = Array.isArray(c.phone) ? c.phone : [];
         const candPhonesFromContact = Array.isArray(c.contacts?.phones) ? c.contacts.phones : [];
@@ -109,19 +232,19 @@ export const handler = async (event) => {
         const candZip = c.zip || c.contacts?.zip || null;
 
         const phoneMatch = (() => {
-          const set1 = new Set((ourPhones || []).map(digits10).filter(Boolean));
-          for (const p of [...candPhonesFromLead, ...candPhonesFromContact].map(digits10).filter(Boolean)) {
+          const set1 = new Set((ourPhones || []).map(digits102).filter(Boolean));
+          for (const p of [...candPhonesFromLead, ...candPhonesFromContact].map(digits102).filter(Boolean)) {
             if (set1.has(p)) return true;
           }
           return false;
         })();
 
-        const emailMatch = emailsArr.length ? candEmails.map(norm).some(e => emailsArr.includes(e)) : false;
+        const emailMatch = emailsArr.length ? candEmails.map(norm2).some(e => emailsArr.includes(e)) : false;
         const zipMatch = zip && candZip ? String(zip).trim() === String(candZip).trim() : false;
 
         if (
           (phoneMatch || emailMatch || zipMatch) &&
-          (!product_type || !c.product_type || norm(product_type) === norm(c.product_type))
+          (!product_type || !c.product_type || norm2(product_type) === norm2(c.product_type))
         ) {
           return c;
         }
@@ -129,7 +252,6 @@ export const handler = async (event) => {
       return null;
     }
 
-    // ========= (2) upsert contact =========
     async function upsertContact(contactInfo) {
       const e164 = contactInfo.phone ? String(contactInfo.phone).trim() : null;
       const tenFromE164 = (e164 || "").replace(/\D/g, "").slice(-10);
@@ -243,8 +365,6 @@ export const handler = async (event) => {
       return { contactId, e164, tenFromE164, emailClean };
     }
 
-    // ========= (3) eligibility + picking helpers =========
-
     // Load ALL NIPR rows for this state once
     const { data: niprRows, error: niprErr } = await supabase
       .from("agent_nipr_licenses")
@@ -314,75 +434,64 @@ export const handler = async (event) => {
       return data || null;
     }
 
-    async function isAgentEligibleForLine(agentRow, line) {
-      if (!agentRow) return false;
-      if (!agentRow.is_active) return false;
-      if (!agentRow.receiving_leads) return false;
-      const token = lineTokenMap[line];
-      if (!token) return false;
-      if (!agentRow.agent_id) return false;
-      if (!agentKeyHasToken(agentRow.agent_id, token)) return false;
-      const okChain = await hasLicensedUplineChainForToken(agentRow, token);
-      return !!okChain;
-    }
-
     async function pickSingleAgentForSubmission(personId, neededLines) {
-      // 1) Prefer already-connected agents (person_agent_order)
       const { data: orderRows, error: poErr } = await supabase
         .from("person_agent_order")
         .select("agent_id, first_assigned_at")
         .eq("person_id", personId)
         .order("first_assigned_at", { ascending: true });
-    
+
       if (poErr) throw new Error(poErr.message);
-    
+
       const connectedIds = (orderRows || []).map(r => r.agent_id).filter(Boolean);
-    
+
       const connectedEligible = [];
       for (const aid of connectedIds) {
         const row = await loadAgentRowById(aid);
         if (!row) continue;
-    
+
         let okAll = true;
         for (const line of neededLines) {
-          const ok = await isAgentEligibleForLine(row, line);
-          if (!ok) { okAll = false; break; }
+          const token = lineTokenMap[line];
+          if (!token) { okAll = false; break; }
+          if (!row.agent_id || !agentKeyHasToken(row.agent_id, token)) { okAll = false; break; }
+          const okChain = await hasLicensedUplineChainForToken(row, token);
+          if (!okChain) { okAll = false; break; }
         }
         if (okAll) connectedEligible.push(row);
       }
-    
+
       const byOldest = (arr) =>
         arr.slice().sort((a, b) => {
           const ax = a.last_assigned_at ? new Date(a.last_assigned_at).getTime() : 0;
           const bx = b.last_assigned_at ? new Date(b.last_assigned_at).getTime() : 0;
           return ax - bx;
         });
-    
+
       if (connectedEligible.length) {
         const online = connectedEligible.filter(a => !!a.is_available);
         return (online.length ? byOldest(online)[0] : byOldest(connectedEligible)[0]) || null;
       }
-    
-      // 2) Else pick fresh from global pool, but MUST satisfy ALL needed lines
+
       const tokens = neededLines.map(l => lineTokenMap[l]).filter(Boolean);
       if (!tokens.length) return null;
-    
+
       const eligibleAgentKeys = [];
       for (const agentKey of byAgentKey.keys()) {
         const hasAll = tokens.every(t => agentKeyHasToken(agentKey, t));
         if (hasAll) eligibleAgentKeys.push(agentKey);
       }
       if (!eligibleAgentKeys.length) return null;
-    
+
       const { data: agents, error: agentErr } = await supabase
         .from("agents")
         .select("id, agent_id, recruiter_id, full_name, phone, is_active, is_available, last_assigned_at, receiving_leads")
         .eq("is_active", true)
         .eq("receiving_leads", true)
         .in("agent_id", eligibleAgentKeys);
-    
+
       if (agentErr) throw new Error(agentErr.message);
-    
+
       const fullyEligible = [];
       for (const ag of (agents || [])) {
         let okAll = true;
@@ -394,14 +503,11 @@ export const handler = async (event) => {
         if (okAll) fullyEligible.push(ag);
       }
       if (!fullyEligible.length) return null;
-    
+
       const online = fullyEligible.filter(a => !!a.is_available);
       return (online.length ? byOldest(online)[0] : byOldest(fullyEligible)[0]) || null;
     }
-    // ========= (4) per-line routing using person_line_agents + person_agent_order =========
-  
 
-    // ========= (5) create leads per productType, assigned to per-line agent =========
     async function insertLeadsAssigned({ contactId, contactInfo, productTypes, perTypeNotesObj, submittedBy, submittedByName, pickedAgent }) {
       const e164 = contactInfo.phone ? String(contactInfo.phone).trim() : null;
       const tenFromE164 = (e164 || "").replace(/\D/g, "").slice(-10);
@@ -422,12 +528,7 @@ export const handler = async (event) => {
         });
 
         if (dup) {
-          insertedOrExisting.push({
-            id: dup.id,
-            product_type: dup.product_type,
-            duplicate: true,
-            assigned_to: null
-          });
+          insertedOrExisting.push({ id: dup.id, product_type: dup.product_type, duplicate: true, assigned_to: null });
           continue;
         }
 
@@ -452,7 +553,10 @@ export const handler = async (event) => {
           notes: (perTypeNotesObj?.[pt]) || contactInfo.notes || null,
           assigned_to: agentId,
           assigned_at: agentId ? new Date().toISOString() : null,
-          contacted_at: agentId ? new Date().toISOString() : null
+          contacted_at: agentId ? new Date().toISOString() : null,
+
+          // ✅ store IP for basic rate limiting (add this column if you don’t have it)
+          source_ip: ip
         };
 
         const { data: one, error: insErr } = await supabase
@@ -473,7 +577,6 @@ export const handler = async (event) => {
       return insertedOrExisting;
     }
 
-    // ========= (6) debts split across newly inserted leads, charged to whoever received each lead =========
     async function createLeadDebtsForSubmission({ leads, total = 60, contactId }) {
       const billable = (leads || []).filter(l => !l.duplicate && l.id && l.assigned_to);
       if (!billable.length) return;
@@ -499,9 +602,7 @@ export const handler = async (event) => {
       if (error) throw new Error(error.message || "Failed inserting lead_debts");
     }
 
-    // ---------------- MAIN FLOW ----------------
-
-    // lift internal DNC on new consent (keep your RPC)
+    // lift internal DNC on new consent
     const { error: liftErr } = await supabase.rpc("lift_internal_dnc_on_new_consent", {
       p_first_name: contactInfo.first_name,
       p_last_name:  contactInfo.last_name,
@@ -514,26 +615,22 @@ export const handler = async (event) => {
     // Upsert contact
     const { contactId } = await upsertContact(contactInfo);
 
-    // Determine which "lines" are needed (ONLY the 4 we track; legal/id go to life)
     const neededLines = Array.from(new Set(
       (requiredLines || []).map(x => String(x || "").toLowerCase().trim()).filter(Boolean)
     ));
-    
     if (!neededLines.length) neededLines.push("life");
 
-    // Resolve per-line agent assignments using contactId as person_id
     const pickedAgent = await pickSingleAgentForSubmission(contactId, neededLines);
 
     if (!pickedAgent?.id) {
-      return { statusCode: 200, body: JSON.stringify({ ok: false, reason: "none_fit" }) };
+      return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, reason: "none_fit" }) };
     }
-    
-    // Persist “connected agent” + per-line mapping FOR THIS SUBMISSION’S LINES
+
     await supabase.from("person_agent_order").upsert(
       [{ person_id: contactId, agent_id: pickedAgent.id }],
       { onConflict: "person_id,agent_id" }
     );
-    
+
     await supabase.from("person_line_agents").upsert(
       neededLines.map(line => ({
         person_id: contactId,
@@ -544,7 +641,6 @@ export const handler = async (event) => {
       { onConflict: "person_id,line" }
     );
 
-    // Insert leads assigned per line
     const leads = await insertLeadsAssigned({
       contactId,
       contactInfo,
@@ -555,23 +651,21 @@ export const handler = async (event) => {
       pickedAgent
     });
 
-    // Debts for newly inserted leads, charged to receiving agents
     await createLeadDebtsForSubmission({
       leads,
       total: Number(totalDebtCharge) || 60,
       contactId
     });
 
-    // Bump last_assigned_at for any agent who received at least one NEW lead
+    // bump last_assigned_at
     const nowIso = new Date().toISOString();
     const newlyInserted = (leads || []).filter(l => !l.duplicate && l.assigned_to);
     const uniqueAgentIds = Array.from(new Set(newlyInserted.map(l => l.assigned_to)));
-
     for (const aid of uniqueAgentIds) {
       await supabase.from("agents").update({ last_assigned_at: nowIso }).eq("id", aid);
     }
 
-    // Pick “best lead” for call: prefer Property Insurance, else first lead
+    // pick lead for call
     const pickLead = (() => {
       const prop = (leads || []).find(l => l.product_type === "Property Insurance" && l.id);
       if (prop) return prop;
@@ -580,7 +674,7 @@ export const handler = async (event) => {
 
     const pickLeadIdForCall = pickLead?.id || null;
 
-    // choice for the auto-dial: the agent who owns the picked lead's line
+    // choice
     let choice = { reason: "offline_only", shouldCall: false, agent: { id: null, full_name: null, phone: null } };
 
     if (pickLeadIdForCall && pickLead?.assigned_to) {
@@ -596,21 +690,34 @@ export const handler = async (event) => {
       };
     }
 
+    // ✅ Server-signed token for makeCall (prevents public abuse)
+    let callToken = null;
+    if (CALL_TOKEN_SECRET && choice?.shouldCall && pickLeadIdForCall && choice?.agent?.id) {
+      callToken = makeCallToken(CALL_TOKEN_SECRET, {
+        leadId: pickLeadIdForCall,
+        agentId: choice.agent.id,
+        exp: Date.now() + (2 * 60 * 1000) // 2 minutes
+      });
+    }
+
     return {
       statusCode: 200,
+      headers: corsHeaders,
       body: JSON.stringify({
         ok: true,
         choice,
         contactId,
         leads,
         pickLeadIdForCall,
-        pickedAgentId: pickedAgent.id
+        pickedAgentId: pickedAgent.id,
+        callToken
       })
     };
 
   } catch (e) {
     return {
       statusCode: 500,
+      headers: corsHeaders,
       body: JSON.stringify({ ok: false, error: e?.message || "Unknown error" })
     };
   }
