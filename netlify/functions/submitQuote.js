@@ -178,7 +178,7 @@ export const handler = async (event) => {
         }).length;
 
         // allow a couple (people can resubmit), but stop floods
-        if (hits >= 4) {
+        if (hits >= 400) {
           return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, reason: "none_fit" }) };
         }
       }
