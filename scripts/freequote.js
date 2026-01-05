@@ -1,6 +1,6 @@
 // scripts/freequote.js
 document.addEventListener('DOMContentLoaded', () => {
-
+  const startedAt = Date.now();
   // Panels
   const step1 = document.getElementById('step-1');
   const step2 = document.getElementById('step-2');
@@ -410,7 +410,9 @@ document.addEventListener('DOMContentLoaded', () => {
           // keep these consistent with your existing globals
           totalDebtCharge: 60,
           submittedBy: window.FVG_WEBSITE_SUBMITTER_ID,
-          submittedByName: window.FVG_WEBSITE_SUBMITTER_NAME || 'Website Lead'
+          submittedByName: window.FVG_WEBSITE_SUBMITTER_NAME || 'Website Lead',
+          company_website: document.getElementById('company_website')?.value || '',
+          elapsed_ms: Date.now() - startedAt
         })
       });
 
@@ -464,7 +466,8 @@ document.addEventListener('DOMContentLoaded', () => {
               agentNumber,
               prospectNumber: e164Prospect,
               leadId: pickLeadIdForCall,
-              whisper: `New lead: ${firstName.value.trim()} ${lastName.value.trim()}, wants to cover ${wants}, press 1 to connect`
+              whisper: `New lead: ${firstName.value.trim()} ${lastName.value.trim()}, wants to cover ${wants}, press 1 to connect`,
+              callToken: json?.callToken
             })
           });
           const callBody = await callResp.text();
