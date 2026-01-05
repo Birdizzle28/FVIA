@@ -194,10 +194,6 @@ document.addEventListener('DOMContentLoaded', () => {
           out.add('casualty'); break;
         case 'My Home':
           out.add('property'); break;
-        case 'Legal Protection Plan':
-          out.add('legalshield'); break;
-        case 'My Identity':
-          out.add('idshield'); break;
         case 'My Business':
           // requires BOTH Property & Casualty
           out.add('property'); out.add('casualty'); break;
@@ -214,9 +210,7 @@ document.addEventListener('DOMContentLoaded', () => {
     life: 'Life Insurance',
     health: 'Health Insurance',
     property: 'Property Insurance',
-    casualty: 'Casualty Insurance',
-    legalshield: 'Legal Shield',
-    idshield: 'ID Shield'
+    casualty: 'Casualty Insurance'
   };
 
   // --- Create per-product notes honoring the Business+Home rule ---
