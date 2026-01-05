@@ -338,10 +338,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (raw === '') return null;
     if (q.type === 'number' || q.type === 'money') return Number(raw);
     if (q.type === 'bool') return raw === 'true';
-    if (q.type === 'select') {
-      const n = Number(raw);
-      return Number.isNaN(n) ? raw : n;
-    }
+  
+    // ✅ IMPORTANT: keep selects as strings
+    if (q.type === 'select') return raw;
+  
     return raw;
   }
 
