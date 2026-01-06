@@ -418,14 +418,18 @@ document.addEventListener('DOMContentLoaded', () => {
         throw new Error(json?.error || `submitQuote failed (${resp.status})`);
       }
 
-      // If server says none_fit, mirror old behavior
+      // If server says none_fit, show WHY (dev)
       if (!json.ok || json.reason === 'none_fit' || json?.choice?.reason === 'none_fit') {
-        alert('We’re sorry — we don’t currently have a licensed agent for your selection in your state.');
+        const dbgText = json?.dbg ? JSON.stringify(json.dbg) : '(no dbg returned)';
+        const verText = json?.ver ? `ver=${json.ver}` : '(no ver)';
+        alert(
+          'We’re sorry — we don’t currently have a licensed agent for your selection in your state.\n\n' +
+          `DEBUG:\n${verText}\n${dbgText}`
+        );
         btnSubmit.disabled = false;
         btnSubmit.textContent = prev;
         return;
       }
-
       const leads = Array.isArray(json.leads) ? json.leads : [];
       const pickLeadIdForCall = json.pickLeadIdForCall || (leads[0]?.id ?? null);
 
