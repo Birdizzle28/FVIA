@@ -63,13 +63,17 @@ function getSelectedLeadIds() {
 function updateLeadBulkUi() {
   const count = getSelectedLeadIds().length;
 
-  // OPTIONAL: if you have a label like "3 selected"
-  const countEl = $("#selected-count");
-  if (countEl) countEl.textContent = String(count);
+  // Your actual bulk controls in HTML
+  const archiveBtn = $("#agent-archive-btn");
+  const exportWrap = $("#agent-export-wrap");
+  const exportMenu = $("#agent-export-menu");
 
-  // OPTIONAL: if you have a bulk actions bar to show/hide
-  const bulkBar = $("#lead-bulk-actions");
-  if (bulkBar) bulkBar.style.display = count > 0 ? "flex" : "none";
+  // Show/hide based on selection
+  if (archiveBtn) archiveBtn.style.display = count > 0 ? "inline-flex" : "none";
+  if (exportWrap) exportWrap.style.display = count > 0 ? "inline-block" : "none";
+
+  // If nothing selected, force-close the export dropdown
+  if (count === 0 && exportMenu) exportMenu.style.display = "none";
 
   // Keep master checkbox accurate
   const master = $("#select-all");
@@ -77,29 +81,25 @@ function updateLeadBulkUi() {
   if (master) master.checked = boxes.length > 0 && boxes.every(b => b.checked);
 }
 
-function initLeadExportButtons() {
-  const map = [
-    ["pdf",  "#export-pdf,  [data-export='pdf'],  [data-export-format='pdf']"],
-    ["csv",  "#export-csv,  [data-export='csv'],  [data-export-format='csv']"],
-    ["print","#export-print,[data-export='print'],[data-export-format='print']"],
-  ];
+function initExportDropdown() {
+  const wrap = $("#agent-export-wrap");
+  const btn  = $("#agent-export-btn");
+  const menu = $("#agent-export-menu");
+  if (!wrap || !btn || !menu) return;
 
-  map.forEach(([fmt, selector]) => {
-    $$(selector).forEach(btn => {
-      // prevent double-binding if load happens multiple times
-      if (btn.dataset.boundExport === "1") return;
-      btn.dataset.boundExport = "1";
+  if (btn.dataset.bound === "1") return;
+  btn.dataset.bound = "1";
 
-      btn.addEventListener("click", async (e) => {
-        e.preventDefault();
-        const ids = getSelectedLeadIds();
-        if (!ids.length) {
-          alert("Select at least one lead first.");
-          return;
-        }
-        await exportSelectedLeads(fmt);
-      });
-    });
+  btn.addEventListener("click", (e) => {
+    e.preventDefault();
+    // only allow opening if something is selected
+    if (getSelectedLeadIds().length === 0) return;
+    menu.style.display = (menu.style.display === "block") ? "none" : "block";
+  });
+
+  // click outside closes it
+  document.addEventListener("click", (e) => {
+    if (!wrap.contains(e.target)) menu.style.display = "none";
   });
 }
 
@@ -642,11 +642,11 @@ async function loadAgentLeads() {
       });
     });
   }
-    // Keep bulk UI accurate when user checks/unchecks any row
+  // Keep bulk UI accurate when user checks/unchecks any row
   $$(".lead-checkbox").forEach(cb => {
     cb.addEventListener("change", updateLeadBulkUi);
   });
-  $("#select-all")?.addEventListener("change", updateLeadBulkUi);
+  
   updateLeadBulkUi();
   updatePaginationControls();
 }
@@ -655,9 +655,12 @@ function initSelectAll() {
   const master = $("#select-all");
   if (!master) return;
 
+  if (master.dataset.bound === "1") return;
+  master.dataset.bound = "1";
+
   master.addEventListener("change", () => {
     const on = master.checked;
-    $$(".lead-checkbox").forEach((cb) => (cb.checked = on));
+    $$(".lead-checkbox").forEach(cb => (cb.checked = on));
     updateLeadBulkUi();
   });
 }
