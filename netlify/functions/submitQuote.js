@@ -144,8 +144,12 @@ export const handler = async (event) => {
     const HARDENING_ACTIVE = true;
 
     if (HARDENING_ACTIVE && (honeypotHit || suspiciousTiming || gibName || badEmail)) {
-      const dbg = DEBUG_NONE_FIT ? { why: "hardening", honeypotHit, suspiciousTiming, gibName, badEmail, elapsed, hpLen: hp.length } : undefined;
-      return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, reason: "none_fit", dbg }) };
+      const dbg = { why: "hardening", honeypotHit, suspiciousTiming, gibName, badEmail, elapsed, hpLen: hp.length };
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({ ok: false, reason: "none_fit", ver: VER, dbg })
+      };
     }
 
     // ---- Server-side rate limiting (NO extra DB columns) ----
@@ -172,7 +176,7 @@ export const handler = async (event) => {
 
         // allow a few resubmits, stop floods
         if (hits >= 400) {
-          const dbg = { why: "hardening", honeypotHit, suspiciousTiming, gibName, badEmail, elapsed, hpLen: hp.length };
+          const dbg = { why: "rate_limit_contacts", hits, ip, ten, email: email ? norm(email) : null };
           return {
             statusCode: 200,
             headers: corsHeaders,
@@ -625,7 +629,16 @@ export const handler = async (event) => {
     const pickedAgent = await pickSingleAgentForSubmission(contactId, neededLines);
 
     if (!pickedAgent?.id) {
-      return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, reason: "none_fit" }) };
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          ok: false,
+          reason: "none_fit",
+          ver: VER,
+          dbg: { why: "no_agent_found", state: stateUp, neededLines }
+        })
+      };
     }
 
     await supabase.from("person_agent_order").upsert(
