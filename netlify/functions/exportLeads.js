@@ -198,8 +198,8 @@ function buildCsv(leads) {
 }
 
 function leadToPrettyHtml(lead, pageNum, total) {
-  const phones = joinPhones(lead.phone);
-  const email = Array.isArray(lead.email) ? (lead.email[0] || "") : (lead.email || "");
+  const phones = prettyLines(lead.phone);
+  const email  = prettyLines(lead.email);
 
   const addrLine = [lead.address, lead.city, lead.state, lead.zip].filter(Boolean).join(", ");
 
@@ -216,10 +216,10 @@ function leadToPrettyHtml(lead, pageNum, total) {
       <div class="meta">
         <div><strong>Date:</strong> ${formatDate(lead.created_at)}</div>
         <div><strong>Lead ID:</strong> ${lead.id}</div>
-        <div class="small">Page ${pageNum} of ${total}</div>
       </div>
     </div>
-
+    <div class="pagecount">Page ${pageNum} of ${total}</div>
+    
     <div class="card">
       <div class="row">
         <div class="field"><div class="k">Client</div><div class="v">${(lead.first_name||"")} ${(lead.last_name||"")}</div></div>
@@ -302,7 +302,7 @@ function buildPrintHtml(leads) {
       background: rgba(237,158,165,.10);
     }
     .k{ font-size:11px; letter-spacing:.02em; text-transform:uppercase; opacity:.85; margin-bottom:6px; }
-    .v{ font-size:14px; font-weight:700; color:${BRAND.ink}; overflow-wrap:anywhere; word-break:break-word; }
+    .v{ font-size:14px; font-weight:700; color:${BRAND.ink}; overflow-wrap:anywhere; word-break:break-word; line-height:1.25; }
 
     .notes{
       border:1px solid rgba(0,0,0,.08);
@@ -369,10 +369,15 @@ function drawLeadPagePdf(doc, lead, logoBuf, pageNum, total) {
   // Meta right
   const metaX = w - margin - 210;
   doc.fillColor("#111").fontSize(10).font("Helvetica");
-  doc.text(`Date: ${formatDate(lead.created_at)}`, metaX, margin + 20, { width: 200, align: "right" });
+  doc.text(`Date: ${formatDate(leadDate(lead))}`, metaX, margin + 20, { width: 200, align: "right" });
   doc.text(`Lead ID: ${lead.id}`, metaX, margin + 36, { width: 200, align: "right", lineBreak: false, ellipsis: true });
-  doc.fillColor("#444").text(`Page ${pageNum} of ${total}`, metaX, margin + 52, { width: 200, align: "right" });
-
+  
+  // ✅ Page number moved OUT of the meta column so it can never collide
+  doc.fillColor("#444").fontSize(10).font("Helvetica")
+    .text(`Page ${pageNum} of ${total}`, margin, margin + headerH + 6, {
+      width: w - margin * 2,
+      align: "center"
+    });
   // Card
   const cardY = margin + headerH + 18;
   const cardW = w - margin*2;
@@ -402,7 +407,8 @@ function drawLeadPagePdf(doc, lead, logoBuf, pageNum, total) {
   }
 
   const colGap = 12;
-  const colW = (cardW - colGap) / 2;
+  const innerW = cardW - pad * 2;     // ✅ account for inner padding
+  const colW = (innerW - colGap) / 2; // ✅ correct usable width
 
   field("Client", `${lead.first_name || ""} ${lead.last_name || ""}`.trim(), margin + pad, colW);
   field("Age", (lead.age ?? "").toString() || "—", margin + pad + colW + colGap, colW);
