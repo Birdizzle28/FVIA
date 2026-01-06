@@ -9,6 +9,8 @@ const corsHeaders = {
   "Content-Type": "application/json"
 };
 
+const VER = "submitQuote_2026-01-05a";
+
 function safeJsonParse(str) {
   try { return JSON.parse(str || "{}"); } catch { return {}; }
 }
@@ -170,8 +172,12 @@ export const handler = async (event) => {
 
         // allow a few resubmits, stop floods
         if (hits >= 400) {
-          const dbg = DEBUG_NONE_FIT ? { why: "rate_limit_contacts", hits, ip, ten, email: email ? norm(email) : null } : undefined;
-          return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, reason: "none_fit", dbg }) };
+          const dbg = { why: "hardening", honeypotHit, suspiciousTiming, gibName, badEmail, elapsed, hpLen: hp.length };
+          return {
+            statusCode: 200,
+            headers: corsHeaders,
+            body: JSON.stringify({ ok: false, reason: "none_fit", ver: VER, dbg })
+          };
         }
       }
     }
