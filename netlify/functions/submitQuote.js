@@ -143,7 +143,7 @@ export const handler = async (event) => {
     // This replaces the bad "elapsed > 0" activation logic that could cause confusion.
     const HARDENING_ACTIVE = true;
 
-    if (HARDENING_ACTIVE && (honeypotHit || suspiciousTiming || gibName || badEmail)) {
+    if (HARDENING_ACTIVE && ((suspiciousTiming && (gibName || badEmail)) || (gibName && badEmail))) {
       const dbg = { why: "hardening", honeypotHit, suspiciousTiming, gibName, badEmail, elapsed, hpLen: hp.length };
       return {
         statusCode: 200,
