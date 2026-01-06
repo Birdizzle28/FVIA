@@ -8,6 +8,101 @@ const PAGE_SIZE = 25;
 let contactChoices = null;
 
 // ---------- helpers ----------
+async function exportSelectedLeads(format) {
+  const ids = $$(".lead-checkbox:checked").map(cb => cb.dataset.id).filter(Boolean);
+  if (!ids.length) return;
+
+  const { data: { session } } = await supabase.auth.getSession();
+  const token = session?.access_token;
+  if (!token) {
+    alert("Please log in again.");
+    return;
+  }
+
+  const url = `/.netlify/functions/exportLeads?format=${encodeURIComponent(format)}&ids=${encodeURIComponent(JSON.stringify(ids))}`;
+
+  const resp = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  if (!resp.ok) {
+    const txt = await resp.text();
+    alert(txt || `Export failed (${resp.status})`);
+    return;
+  }
+
+  if (format === "print") {
+    const html = await resp.text();
+    const w = window.open("", "_blank");
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    return;
+  }
+
+  const blob = await resp.blob();
+  const blobUrl = URL.createObjectURL(blob);
+
+  // Download for pdf/csv
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = (format === "csv")
+    ? `FVIA_Leads_${ids.length}.csv`
+    : `FVIA_Leads_${ids.length}.pdf`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
+}
+
+function getSelectedLeadIds() {
+  return $$(".lead-checkbox:checked").map(cb => cb.dataset.id).filter(Boolean);
+}
+
+function updateLeadBulkUi() {
+  const count = getSelectedLeadIds().length;
+
+  // OPTIONAL: if you have a label like "3 selected"
+  const countEl = $("#selected-count");
+  if (countEl) countEl.textContent = String(count);
+
+  // OPTIONAL: if you have a bulk actions bar to show/hide
+  const bulkBar = $("#lead-bulk-actions");
+  if (bulkBar) bulkBar.style.display = count > 0 ? "flex" : "none";
+
+  // Keep master checkbox accurate
+  const master = $("#select-all");
+  const boxes = $$(".lead-checkbox");
+  if (master) master.checked = boxes.length > 0 && boxes.every(b => b.checked);
+}
+
+function initLeadExportButtons() {
+  const map = [
+    ["pdf",  "#export-pdf,  [data-export='pdf'],  [data-export-format='pdf']"],
+    ["csv",  "#export-csv,  [data-export='csv'],  [data-export-format='csv']"],
+    ["print","#export-print,[data-export='print'],[data-export-format='print']"],
+  ];
+
+  map.forEach(([fmt, selector]) => {
+    $$(selector).forEach(btn => {
+      // prevent double-binding if load happens multiple times
+      if (btn.dataset.boundExport === "1") return;
+      btn.dataset.boundExport = "1";
+
+      btn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const ids = getSelectedLeadIds();
+        if (!ids.length) {
+          alert("Select at least one lead first.");
+          return;
+        }
+        await exportSelectedLeads(fmt);
+      });
+    });
+  });
+}
+
 function escapeHtml(str) {
   if (str == null) return "";
   return String(str)
@@ -547,16 +642,23 @@ async function loadAgentLeads() {
       });
     });
   }
-
+    // Keep bulk UI accurate when user checks/unchecks any row
+  $$(".lead-checkbox").forEach(cb => {
+    cb.addEventListener("change", updateLeadBulkUi);
+  });
+  $("#select-all")?.addEventListener("change", updateLeadBulkUi);
+  updateLeadBulkUi();
   updatePaginationControls();
 }
 
 function initSelectAll() {
   const master = $("#select-all");
   if (!master) return;
+
   master.addEventListener("change", () => {
     const on = master.checked;
     $$(".lead-checkbox").forEach((cb) => (cb.checked = on));
+    updateLeadBulkUi();
   });
 }
 
@@ -1218,6 +1320,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   initAgentHubMenu();
   closeOverlaysOnClicks();
   initFloatingLabels(document);
+  initLeadExportButtons();
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
