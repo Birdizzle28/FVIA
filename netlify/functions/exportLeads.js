@@ -369,7 +369,7 @@ function drawLeadPagePdf(doc, lead, logoBuf, pageNum, total) {
   // Meta right
   const metaX = w - margin - 210;
   doc.fillColor("#111").fontSize(10).font("Helvetica");
-  doc.text(`Date: ${formatDate(leadDate(lead))}`, metaX, margin + 20, { width: 200, align: "right" });
+  doc.text(`Date: ${formatDate(lead.created_at)}`, metaX, margin + 20, { width: 200, align: "right" });
   doc.text(`Lead ID: ${lead.id}`, metaX, margin + 36, { width: 200, align: "right", lineBreak: false, ellipsis: true });
   
   // ✅ Page number moved OUT of the meta column so it can never collide
