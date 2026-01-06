@@ -103,6 +103,33 @@ function initExportDropdown() {
   });
 }
 
+function initLeadExportButtons() {
+  const map = [
+    ["pdf",  "#export-pdf,  [data-export='pdf'],  [data-export-format='pdf']"],
+    ["csv",  "#export-csv,  [data-export='csv'],  [data-export-format='csv']"],
+    ["print","#export-print,[data-export='print'],[data-export-format='print']"],
+  ];
+
+  map.forEach(([fmt, selector]) => {
+    $$(selector).forEach(btn => {
+      // prevent double-binding if load happens multiple times
+      if (btn.dataset.boundExport === "1") return;
+      btn.dataset.boundExport = "1";
+
+      btn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        const ids = getSelectedLeadIds();
+        if (!ids.length) {
+          alert("Select at least one lead first.");
+          return;
+        }
+        await exportSelectedLeads(fmt);
+        $("#agent-export-menu") && ($("#agent-export-menu").style.display = "none");
+      });
+    });
+  });
+}
+
 function escapeHtml(str) {
   if (str == null) return "";
   return String(str)
@@ -1324,6 +1351,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   closeOverlaysOnClicks();
   initFloatingLabels(document);
   initLeadExportButtons();
+  initExportDropdown();
+  initSelectAll();
 
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) {
