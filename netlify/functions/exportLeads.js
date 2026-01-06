@@ -12,8 +12,8 @@ const BRAND = {
   logoUrl: process.env.BRAND_LOGO_URL || "",
 
   // Your brand colors (adjust if you want)
-  ink: "#353468",
-  accent: "#ed9ea5",
+  ink: "#6B5BD6",     // purple
+  accent: "#5FB7D4",  // blue
   light: "#f7f7fb",
   text: "#111111"
 };
@@ -36,6 +36,31 @@ function asArrayIds(idsParam) {
     return Array.isArray(arr) ? arr.filter(Boolean) : [];
   }
   return idsParam.split(",").map(x => x.trim()).filter(Boolean);
+}
+
+function prettyList(v) {
+  if (v == null) return "";
+  if (Array.isArray(v)) return v.filter(Boolean).join(", ");
+
+  if (typeof v === "string") {
+    const s = v.trim();
+    // handle JSON array strings like '["a@b.com","c@d.com"]'
+    if (s.startsWith("[") && s.endsWith("]")) {
+      try {
+        const arr = JSON.parse(s);
+        if (Array.isArray(arr)) return arr.filter(Boolean).join(", ");
+      } catch {}
+    }
+    return s;
+  }
+
+  return String(v);
+}
+
+function prettyLines(v) {
+  const s = prettyList(v);
+  if (!s) return "";
+  return s.split(",").map(x => x.trim()).filter(Boolean).join("<br>");
 }
 
 function escCsv(v) {
@@ -257,6 +282,8 @@ function buildPrintHtml(leads) {
     .brandname{ font-size:18px; font-weight:800; color:${BRAND.ink}; }
     .subtitle{ font-size:12px; opacity:.85; }
     .meta{ text-align:right; font-size:12px; line-height:1.35; }
+    .meta{ max-width:260px; }
+    .meta > div{ white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
     .small{ font-size:11px; opacity:.8; }
 
     .card{
@@ -269,12 +296,13 @@ function buildPrintHtml(leads) {
     .row{ display:flex; gap:12px; margin-bottom:12px; flex-wrap:wrap; }
     .field{
       flex: 1 1 200px;
+      min-width: 0;
       border:1px solid rgba(0,0,0,.08);
       padding:10px 10px;
       background: rgba(237,158,165,.10);
     }
     .k{ font-size:11px; letter-spacing:.02em; text-transform:uppercase; opacity:.85; margin-bottom:6px; }
-    .v{ font-size:14px; font-weight:700; color:${BRAND.ink}; word-break:break-word; }
+    .v{ font-size:14px; font-weight:700; color:${BRAND.ink}; overflow-wrap:anywhere; word-break:break-word; }
 
     .notes{
       border:1px solid rgba(0,0,0,.08);
@@ -342,7 +370,7 @@ function drawLeadPagePdf(doc, lead, logoBuf, pageNum, total) {
   const metaX = w - margin - 210;
   doc.fillColor("#111").fontSize(10).font("Helvetica");
   doc.text(`Date: ${formatDate(lead.created_at)}`, metaX, margin + 20, { width: 200, align: "right" });
-  doc.text(`Lead ID: ${lead.id}`, metaX, margin + 36, { width: 200, align: "right" });
+  doc.text(`Lead ID: ${lead.id}`, metaX, margin + 36, { width: 200, align: "right", lineBreak: false, ellipsis: true });
   doc.fillColor("#444").text(`Page ${pageNum} of ${total}`, metaX, margin + 52, { width: 200, align: "right" });
 
   // Card
@@ -365,7 +393,12 @@ function drawLeadPagePdf(doc, lead, logoBuf, pageNum, total) {
     doc.restore();
 
     doc.fillColor("#333").fontSize(9).font("Helvetica").text(label.toUpperCase(), x + 10, y + 8, { width: width - 20 });
-    doc.fillColor(BRAND.ink).fontSize(13).font("Helvetica-Bold").text(value || "—", x + 10, y + 22, { width: width - 20 });
+    const val = (value || "—").toString();
+    doc.fillColor(BRAND.ink).fontSize(11).font("Helvetica-Bold").text(val, x + 10, y + 22, {
+       width: width - 20,
+       lineBreak: false,
+       ellipsis: true
+    });
   }
 
   const colGap = 12;
@@ -376,8 +409,7 @@ function drawLeadPagePdf(doc, lead, logoBuf, pageNum, total) {
   y += 62;
 
   field("Phones", joinPhones(lead.phone), margin + pad, colW);
-  const email = Array.isArray(lead.email) ? (lead.email[0] || "") : (lead.email || "");
-  field("Email", email, margin + pad + colW + colGap, colW);
+  field("Email", prettyList(lead.email), margin + pad + colW + colGap, colW);
   y += 62;
 
   const addr = [lead.address, lead.city, lead.state, lead.zip].filter(Boolean).join(", ");
