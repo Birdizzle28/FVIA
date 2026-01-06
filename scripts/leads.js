@@ -660,23 +660,19 @@ async function loadAgentLeads() {
     tbody.appendChild(tr);
   });
 
-  const master = $("#select-all");
-  if (master) {
-    $$(".lead-checkbox").forEach((cb) => {
-      cb.addEventListener("change", () => {
-        const boxes = $$(".lead-checkbox");
-        master.checked = boxes.length > 0 && boxes.every((b) => b.checked);
-      });
-    });
-  }
   // Keep bulk UI accurate when user checks/unchecks any row
   $$(".lead-checkbox").forEach(cb => {
-    cb.addEventListener("change", updateLeadBulkUi);
+    cb.addEventListener("change", () => {
+      if (bulkSelecting) return;
+      updateLeadBulkUi();
+    });
   });
   
   updateLeadBulkUi();
   updatePaginationControls();
 }
+
+let bulkSelecting = false;
 
 function initSelectAll() {
   const master = $("#select-all");
@@ -686,8 +682,12 @@ function initSelectAll() {
   master.dataset.bound = "1";
 
   master.addEventListener("change", () => {
+    bulkSelecting = true;
+
     const on = master.checked;
-    $$(".lead-checkbox").forEach(cb => (cb.checked = on));
+    $$(".lead-checkbox").forEach(cb => { cb.checked = on; });
+
+    bulkSelecting = false;
     updateLeadBulkUi();
   });
 }
@@ -1397,7 +1397,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   });
 
-  initSelectAll();
   $("#agent-archive-btn")?.addEventListener("click", archiveSelectedLeads);
 
   // Contacts wiring
