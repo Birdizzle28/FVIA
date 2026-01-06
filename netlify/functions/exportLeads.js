@@ -83,13 +83,38 @@ function joinPhones(p) {
 }
 
 async function fetchLogoBuffer(url) {
+  console.log("BRAND_LOGO_URL =", url);
+
   if (!url) return null;
+
   try {
-    const r = await fetch(url);
+    const r = await fetch(url, {
+      redirect: "follow",
+      headers: {
+        // Some hosts block “unknown” user agents or require Accept
+        "User-Agent": "Mozilla/5.0 (Netlify Function)",
+        "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+      },
+    });
+
+    const ct = (r.headers.get("content-type") || "").toLowerCase();
+    console.log("logo fetch status =", r.status, "content-type =", ct);
+
     if (!r.ok) return null;
+
+    // If the server sends HTML instead of the PNG, you’ll see it here.
+    if (!ct.startsWith("image/")) {
+      const peek = await r.text();
+      console.log("logo NOT image, first 120 chars:", peek.slice(0, 120));
+      return null;
+    }
+
     const ab = await r.arrayBuffer();
-    return Buffer.from(ab);
-  } catch {
+    const buf = Buffer.from(ab);
+    console.log("logo bytes =", buf.length, "sig =", buf.slice(0, 8).toString("hex")); // PNG should start 89504e470d0a1a0a
+    return buf;
+  } catch (e) {
+    console.log("logo fetch error =", e?.message || e);
     return null;
   }
 }
@@ -351,14 +376,14 @@ function drawLeadPagePdf(doc, lead, logoBuf, pageNum, total) {
   const logoX = margin + 14;
   const logoY = margin + 18;
   if (logoBuf) {
-    try {
-      doc.image(logoBuf, logoX, logoY, { fit: [logoSize, logoSize], align: "center", valign: "center" });
-      // border
-      doc.roundedRect(logoX, logoY, logoSize, logoSize, 10).lineWidth(2).stroke(BRAND.accent);
-    } catch {
-      // ignore
-    }
-  } else {
+  try {
+    doc.image(logoBuf, logoX, logoY, { fit: [logoSize, logoSize], align: "center", valign: "center" });
+    doc.roundedRect(logoX, logoY, logoSize, logoSize, 10).lineWidth(2).stroke(BRAND.accent);
+  } catch (e) {
+    console.log("PDFKit doc.image failed:", e?.message || e);
+    doc.roundedRect(logoX, logoY, logoSize, logoSize, 10).fill(BRAND.accent);
+  }
+} else {
     doc.roundedRect(logoX, logoY, logoSize, logoSize, 10).fill(BRAND.accent);
   }
 
