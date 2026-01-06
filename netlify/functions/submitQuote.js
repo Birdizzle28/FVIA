@@ -131,7 +131,7 @@ export const handler = async (event) => {
     const hp = String(company_website || "").trim();
     const elapsed = Number(elapsed_ms || 0);
 
-    const suspiciousTiming = elapsed > 0 && elapsed < 2500;
+    const suspiciousTiming = elapsed > 0 && elapsed < 900;
     const honeypotHit = !!hp;
 
     const gibName = looksLikeGibberish(fn) || looksLikeGibberish(ln);
@@ -169,7 +169,7 @@ export const handler = async (event) => {
         }).length;
 
         // allow a few resubmits, stop floods
-        if (hits >= 4) {
+        if (hits >= 400) {
           const dbg = DEBUG_NONE_FIT ? { why: "rate_limit_contacts", hits, ip, ten, email: email ? norm(email) : null } : undefined;
           return { statusCode: 200, headers: corsHeaders, body: JSON.stringify({ ok: false, reason: "none_fit", dbg }) };
         }
