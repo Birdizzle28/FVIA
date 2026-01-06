@@ -641,6 +641,12 @@ export const handler = async (event) => {
       };
     }
 
+    // Ensure contact has an owning agent
+    await supabase
+      .from("contacts")
+      .update({ owning_agent_id: pickedAgent.id })
+      .eq("id", contactId);
+    
     await supabase.from("person_agent_order").upsert(
       [{ person_id: contactId, agent_id: pickedAgent.id }],
       { onConflict: "person_id,agent_id" }
