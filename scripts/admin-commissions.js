@@ -920,123 +920,124 @@ function wireAdjustmentDependencies() {
 function wirePolicySubmit() {
   document.getElementById('policy-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-
+  
     const errEl = document.getElementById('policy-error');
     if (errEl) errEl.textContent = '';
-
+  
     try {
-      const agentId = document.getElementById('policy-agent')?.value || '';
-      const contactIdSel = document.getElementById('policy-contact')?.value || '';
-      const carrierId = document.getElementById('policy-carrier')?.value || '';
-      const productLine = document.getElementById('policy-product-line')?.value || '';
-      const policyType = document.getElementById('policy-policy-type')?.value || '';
-
-      const policyNumber = document.getElementById('policy-number')?.value?.trim() || '';
-      const annualPremium = safeNum(document.getElementById('policy-annual-premium')?.value);
-      const issueDate = document.getElementById('policy-issue-date')?.value || null;
-      const status = document.getElementById('policy-status')?.value || 'in_force';
-
-      if (!agentId || !carrierId || !productLine || !policyType || !policyNumber || !issueDate) {
+      const policy_agent_id = document.getElementById('policy-agent')?.value || null;
+      const contact_id_sel  = document.getElementById('policy-contact')?.value || null;
+  
+      const carrierSel = document.getElementById('policy-carrier');
+      const carrier_name = carrierSel?.options?.[carrierSel.selectedIndex]?.text || null;
+  
+      const product_line  = document.getElementById('policy-product-line')?.value || null;
+      const policy_type   = document.getElementById('policy-policy-type')?.value || null;
+      const policy_number = document.getElementById('policy-number')?.value?.trim() || null;
+  
+      const premium_annual = Number(document.getElementById('policy-annual-premium')?.value || 0);
+  
+      const issue_date_raw = document.getElementById('policy-issue-date')?.value || null;
+      const issue_date = issue_date_raw ? new Date(issue_date_raw).toISOString() : null;
+  
+      const status = document.getElementById('policy-status')?.value || 'pending';
+  
+      if (!policy_agent_id || !carrier_name || !product_line || !policy_type || !policy_number || !premium_annual || !issue_date) {
         if (errEl) errEl.textContent = 'Please complete all required fields.';
         return;
       }
-
-      let contactId = contactIdSel;
-
-      // Create new contact if requested (matches admin.js structure: phones/emails arrays, owning_agent_id)
-      if (contactIdSel === '__new__') {
-        const first = document.getElementById('policy-contact-first')?.value?.trim() || '';
-        const last  = document.getElementById('policy-contact-last')?.value?.trim() || '';
-
-        const phone1 = document.getElementById('policy-contact-phone')?.value?.trim() || '';
-        const phone2 = document.getElementById('policy-contact-phone2')?.value?.trim() || '';
-        const email1 = document.getElementById('policy-contact-email')?.value?.trim() || '';
-        const email2 = document.getElementById('policy-contact-email2')?.value?.trim() || '';
-
-        const addr1 = document.getElementById('policy-contact-address1')?.value?.trim() || '';
-        const addr2 = document.getElementById('policy-contact-address2')?.value?.trim() || '';
+  
+      let contact_id = contact_id_sel;
+  
+      if (contact_id_sel === '__new__') {
+        const first_name = document.getElementById('policy-contact-first')?.value?.trim() || '';
+        const last_name  = document.getElementById('policy-contact-last')?.value?.trim() || '';
+  
+        const phone = document.getElementById('policy-contact-phone')?.value?.trim() || '';
+        const email = document.getElementById('policy-contact-email')?.value?.trim() || '';
+  
+        const address_line1 = document.getElementById('policy-contact-address1')?.value?.trim() || '';
+        const address_line2 = document.getElementById('policy-contact-address2')?.value?.trim() || '';
         const city  = document.getElementById('policy-contact-city')?.value?.trim() || '';
         const state = document.getElementById('policy-contact-state')?.value?.trim() || '';
         const zip   = document.getElementById('policy-contact-zip')?.value?.trim() || '';
-
-        if (!first || !last) {
+  
+        if (!first_name || !last_name) {
           if (errEl) errEl.textContent = 'New contact requires first + last name.';
           return;
         }
-
+  
         const { data: newContact, error: cErr } = await sb
           .from('contacts')
           .insert([{
-            owning_agent_id: agentId,
-            first_name: first,
-            last_name: last,
-            phones: [phone1, phone2].filter(Boolean),
-            emails: [email1, email2].filter(Boolean),
-            address1: addr1,
-            address2: addr2,
+            owning_agent_id: policy_agent_id,
+            first_name,
+            last_name,
+            phones: [phone].filter(Boolean),
+            emails: [email].filter(Boolean),
+            address_line1,
+            address_line2,
             city,
             state,
             zip
           }])
           .select('id')
           .single();
-
+  
         if (cErr) {
           console.error('Create contact error', cErr);
           if (errEl) errEl.textContent = 'Could not create contact.';
           return;
         }
-
-        contactId = newContact?.id || null;
+  
+        contact_id = newContact?.id || null;
       }
-
-      if (!contactId) {
+  
+      if (!contact_id) {
         if (errEl) errEl.textContent = 'Please select or create a contact.';
         return;
       }
-
-      // Get carrier name (admin.js stores carrier_name on policy for easy display)
-      let carrier_name = null;
-      try {
-        const { data: carrierRow } = await sb
-          .from('carriers')
-          .select('carrier_name')
-          .eq('id', carrierId)
-          .maybeSingle();
-        carrier_name = carrierRow?.carrier_name || null;
-      } catch (_) {}
-
-      const { error: pErr } = await sb
+  
+      const { data: newPolicy, error: pErr } = await sb
         .from('policies')
         .insert([{
-          agent_id: agentId,
-          contact_id: contactId,
-          carrier_id: carrierId,
+          policy_agent_id,
+          contact_id,
           carrier_name,
-          product_line: productLine,
-          policy_type: policyType,
-          policy_number: policyNumber,
-          premium_annual: annualPremium,
-          issued_at: issueDate,
-          status,
-          created_by: userId
-        }]);
-
+          product_line,
+          policy_type,
+          policy_number,
+          premium_annual,
+          issue_date,
+          status
+        }])
+        .select('id')
+        .single();
+  
       if (pErr) {
         console.error('Create policy error', pErr);
         if (errEl) errEl.textContent = 'Could not save policy.';
         return;
       }
-
+  
+      // IMPORTANT: admin.js does this right after creating the policy
+      if (typeof window.runPolicyCommissionFlow === 'function') {
+        await window.runPolicyCommissionFlow(newPolicy.id);
+      } else if (typeof runPolicyCommissionFlow === 'function') {
+        await runPolicyCommissionFlow(newPolicy.id);
+      }
+  
+      alert('Policy created + commissions processed.');
+  
       closeModal(document.getElementById('policy-modal'));
       document.getElementById('policy-form')?.reset();
+  
       const wrap = document.getElementById('policy-new-contact-wrap');
       if (wrap) wrap.style.display = 'none';
-
+  
       await loadPoliciesIntoList();
     } catch (ex) {
       console.error('policy submit error', ex);
-      const errEl = document.getElementById('policy-error');
       if (errEl) errEl.textContent = 'Could not save policy.';
     }
   });
