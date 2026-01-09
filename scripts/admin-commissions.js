@@ -438,7 +438,7 @@ async function loadAdjustmentsIntoList() {
 
 async function loadPayoutBatchesIntoList() {
   const list = document.getElementById("batch-list");
-  if (!supabase || !list) return;
+  if (!sb || !list) return;
 
   const money = (v) => {
     const n = Number(v);
