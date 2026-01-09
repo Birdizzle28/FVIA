@@ -299,41 +299,45 @@ async function loadPoliciesIntoList() {
 }
 
 async function loadAdjustmentsIntoList() {
-  const list = document.getElementById('debit-credit-list');
-  if (!list) return;
-
-  list.innerHTML = `<div style="padding:10px;">Loading…</div>`;
+  const container = document.getElementById('debit-credit-list');
+  if (!container) return;
+  container.textContent = 'Loading...';
 
   const { data, error } = await sb
-    .from('agent_adjustments')
-    .select('id, agent_id, type, category, amount, effective_date, description, created_at')
-    .order('created_at', { ascending: false })
+    .from('commission_ledger')
+    .select('id, agent_id, amount, category, period_start')
+    .order('period_start', { ascending: false })
     .limit(50);
 
   if (error) {
-    console.error('Error loading adjustments list', error);
-    list.innerHTML = `<div style="padding:10px;">Error loading debits/credits.</div>`;
+    console.error('Error loading debits/credits', error);
+    container.textContent = 'Error loading debits / credits.';
     return;
   }
 
-  const rows = data || [];
-  if (!rows.length) {
-    list.innerHTML = `<div style="padding:10px;">No debits/credits yet.</div>`;
+  if (!data || data.length === 0) {
+    container.textContent = 'No debits or credits yet.';
     return;
   }
 
-  list.innerHTML = rows.map(a => {
-    const amt = Number(a.amount || 0).toFixed(2);
-    const t = a.type || '—';
-    const c = a.category || '—';
-    const dt = a.effective_date ? String(a.effective_date) : '—';
-    return `
-      <div class="mini-row">
-        <div><strong>${String(t).toUpperCase()}</strong> • ${c}</div>
-        <div>$${amt} • ${dt}</div>
-      </div>
-    `;
-  }).join('');
+  container.innerHTML = '';
+  data.forEach(row => {
+    const div = document.createElement('div');
+    div.className = 'mini-row';
+
+    const amtNumber = Number(row.amount || 0);
+
+    // Determine sign just from the stored amount
+    const sign = amtNumber >= 0 ? '+' : '-';
+    const amt = Math.abs(amtNumber).toFixed(2);
+    const cat = row.category || '';
+    const date = row.period_start
+      ? new Date(row.period_start).toLocaleDateString()
+      : '';
+
+    div.textContent = `${sign}$${amt} — ${cat} (${date})`;
+    container.appendChild(div);
+  });
 }
 
 async function loadPayoutBatchesIntoList() {
@@ -344,7 +348,7 @@ async function loadPayoutBatchesIntoList() {
 
   const { data, error } = await sb
     .from('payout_batches')
-    .select('id, run_date, status, created_at')
+    .select('*')
     .order('created_at', { ascending: false })
     .limit(25);
 
@@ -361,7 +365,7 @@ async function loadPayoutBatchesIntoList() {
   }
 
   list.innerHTML = rows.map(b => {
-    const dt = b.run_date ? String(b.run_date) : '—';
+    const dt = b.pay_date ? String(b.pay_date) : '—';
     const st = b.status ? String(b.status).replace(/_/g, ' ') : '—';
     return `
       <div class="mini-row">
