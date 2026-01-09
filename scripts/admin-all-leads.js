@@ -1,5 +1,5 @@
 // scripts/admin-all-leads.js
-const supabase = window.supabaseClient;
+
 
 const PAGE_SIZE = 25;
 
