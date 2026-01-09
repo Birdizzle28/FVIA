@@ -80,7 +80,9 @@ async function loadContactsForPolicy() {
     const opt = document.createElement('option');
     opt.value = c.id;
     const name = `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unnamed';
-    opt.textContent = `${name}${c.phone ? ` • ${c.phone}` : ''}${c.email ? ` • ${c.email}` : ''}`;
+    const phone = Array.isArray(c.phone) ? c.phone.filter(Boolean).join(', ') : (c.phone || '');
+    const email = Array.isArray(c.email) ? c.email.filter(Boolean).join(', ') : (c.email || '');
+    opt.textContent = `${name}${phone ? ` • ${phone}` : ''}${email ? ` • ${email}` : ''}`;
     sel.appendChild(opt);
   });
 
@@ -151,11 +153,13 @@ async function loadCarrierDependentPolicySelects(carrierId) {
   const productLines = Array.from(new Set((cps || []).map(r => r.product_line).filter(Boolean))).sort();
   const policyTypes  = Array.from(new Set((cps || []).map(r => r.policy_type).filter(Boolean))).sort();
 
-  productLineSel.innerHTML = `<option value="">Select product line…</option>` + productLines
-    .map(v => `<option value="${v}">${v}</option>`).join('');
+  productLineSel.innerHTML =
+    `<option value="">Select product line…</option>` +
+    productLines.map(v => `<option value="${v}">${v}</option>`).join('');
 
-  policyTypeSel.innerHTML = `<option value="">Select policy type…</option>` + policyTypes
-    .map(v => `<option value="${v}">${v}</option>`).join('');
+  policyTypeSel.innerHTML =
+    `<option value="">Select policy type…</option>` +
+    policyTypes.map(v => `<option value="${v}">${v}</option>`).join('');
 
   productLineSel.disabled = false;
   policyTypeSel.disabled = false;
@@ -311,10 +315,7 @@ async function loadPoliciesForChargeback(agentId) {
     return;
   }
 
-  const rows = (data || []).map(p => ({
-    value: p.id,
-    label: p.policy_number || p.id
-  }));
+  const rows = (data || []).map(p => ({ value: p.id, label: p.policy_number || p.id }));
 
   if (window.Choices) {
     if (adjustmentPolicyChoices) adjustmentPolicyChoices.destroy();
