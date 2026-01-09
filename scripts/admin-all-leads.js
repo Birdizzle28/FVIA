@@ -309,15 +309,15 @@ async function assignLeads(agentId) {
 
 async function doAssign(agentId) {
   const leadIds = Array.from(selectedLeads);
-  const assignedToName = agentNameById[agentId] || null;
 
-  const { error: upErr } = await supabase
-  .from('leads')
-  .update({
-    assigned_to: agentId,
-    assigned_at: new Date().toISOString()
-  })
-  .in('id', leadIds);
+  // IMPORTANT: use sb (your actual client)
+  const { error: upErr } = await sb
+    .from('leads')
+    .update({
+      assigned_to: agentId,
+      assigned_at: new Date().toISOString()
+    })
+    .in('id', leadIds);
 
   if (upErr) {
     console.warn('assign update error:', upErr);
