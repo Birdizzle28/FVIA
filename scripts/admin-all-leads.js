@@ -1,5 +1,5 @@
 // scripts/admin-all-leads.js
-const supabase = window.supabaseClient;
+const sb = window.supabaseClient || window.supabase;
 
 const PAGE_SIZE = 25;
 
@@ -46,7 +46,6 @@ function normalizePhones(phoneField) {
 }
 
 function isoEndExclusive(endISO) {
-  // inclusive end date -> exclusive timestamp (end date + 1 day at 00:00)
   const d = new Date(endISO + 'T00:00:00');
   d.setDate(d.getDate() + 1);
   return d.toISOString();
@@ -65,26 +64,13 @@ function clearSelectionUI() {
   setSelectedCountUI();
 }
 
-function wireAdminNavLinks() {
-  const navIds = ['nav-all','nav-requests','nav-history','nav-stats','nav-commissions','nav-content'];
-  navIds.forEach(id => {
-    const btn = $(id);
-    if (!btn) return;
-    btn.addEventListener('click', () => {
-      const href = btn.getAttribute('data-href');
-      if (href) location.href = href;
-    });
-  });
-}
-
 async function loadMe() {
-  const { data: { session } = {} } = await supabase.auth.getSession();
+  const { data: { session } = {} } = await sb.auth.getSession();
   me = session?.user || null;
 }
 
 async function loadAgentsForDropdowns() {
-  // used for agent-filter + bulk-assign-agent
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('agents')
     .select('id, full_name')
     .order('full_name', { ascending: true });
@@ -102,7 +88,6 @@ async function loadAgentsForDropdowns() {
   const bulkAgent = $('bulk-assign-agent');
 
   if (agentFilter) {
-    // keep "All Agents" option
     agentFilter.innerHTML = `<option value="">All Agents</option>` + allAgents
       .map(a => `<option value="${escapeHtml(a.id)}">${escapeHtml(a.full_name || '—')}</option>`)
       .join('');
@@ -129,10 +114,8 @@ function initDateRangePicker() {
         return;
       }
       const [start, end] = dates;
-      const s = new Date(start);
-      const e = new Date(end);
-      dateStartISO = s.toISOString().slice(0, 10);
-      dateEndISO = e.toISOString().slice(0, 10);
+      dateStartISO = new Date(start).toISOString().slice(0, 10);
+      dateEndISO = new Date(end).toISOString().slice(0, 10);
     }
   });
 }
@@ -159,24 +142,21 @@ async function loadLeads() {
 
   const f = getFilters();
 
-  let q = supabase
+  let q = sb
     .from('leads')
     .select('*', { count: 'exact' });
 
-  // date range
   if (dateStartISO && dateEndISO) {
     q = q.gte('created_at', dateStartISO)
          .lt('created_at', isoEndExclusive(dateEndISO));
   }
 
-  // assigned_to filter = agent selected
+  // NOTE: your original UI label says "Agent" but this filters by assigned_to (same as your code)
   if (f.agentId) q = q.eq('assigned_to', f.agentId);
 
-  // assigned yes/no
   if (f.assigned === 'true') q = q.not('assigned_to', 'is', null);
   if (f.assigned === 'false') q = q.is('assigned_to', null);
 
-  // simple text filters
   if (f.zip) q = q.ilike('zip', `%${f.zip}%`);
   if (f.city) q = q.ilike('city', `%${f.city}%`);
   if (f.state) q = q.eq('state', f.state);
@@ -184,7 +164,6 @@ async function loadLeads() {
   if (f.last) q = q.ilike('last_name', `%${f.last}%`);
   if (f.leadType) q = q.eq('lead_type', f.leadType);
 
-  // order + pagination
   q = q.order('created_at', { ascending: f.order === 'asc' });
 
   const from = (currentPage - 1) * PAGE_SIZE;
@@ -200,18 +179,16 @@ async function loadLeads() {
   }
 
   totalRows = count || 0;
-
   const leads = data || [];
+
   if (!leads.length) {
     tbody.innerHTML = `<tr><td colspan="14" style="text-align:center;">No leads found.</td></tr>`;
     $('current-page').textContent = `Page ${currentPage}`;
     return;
   }
 
-  // keep selection if lead still on page
   const prevSelection = new Set(selectedLeads);
   selectedLeadRows = {};
-
   tbody.innerHTML = '';
 
   for (const lead of leads) {
@@ -240,7 +217,6 @@ async function loadLeads() {
 
     const cb = tr.querySelector('.lead-checkbox');
     if (cb) {
-      // restore selection
       if (prevSelection.has(id)) {
         cb.checked = true;
         selectedLeads.add(id);
@@ -305,19 +281,12 @@ function getSelectedLeadsData() {
 }
 
 async function assignLeads(agentId) {
-  if (!agentId) {
-    alert('Select an agent first.');
-    return;
-  }
-  if (!selectedLeads.size) {
-    alert('Select at least one lead.');
-    return;
-  }
+  if (!agentId) { alert('Select an agent first.'); return; }
+  if (!selectedLeads.size) { alert('Select at least one lead.'); return; }
 
   const leadIds = Array.from(selectedLeads);
 
-  // check if any are already assigned
-  const { data: existingAssigned, error: checkErr } = await supabase
+  const { data: existingAssigned, error: checkErr } = await sb
     .from('leads')
     .select('id, assigned_to')
     .in('id', leadIds);
@@ -342,12 +311,10 @@ async function doAssign(agentId) {
   const leadIds = Array.from(selectedLeads);
   const assignedToName = agentNameById[agentId] || null;
 
-  // update leads
   const updatePayload = { assigned_to: agentId };
-  // if your table uses assigned_to_name, keep it in sync
   if (assignedToName != null) updatePayload.assigned_to_name = assignedToName;
 
-  const { error: upErr } = await supabase
+  const { error: upErr } = await sb
     .from('leads')
     .update(updatePayload)
     .in('id', leadIds);
@@ -358,7 +325,6 @@ async function doAssign(agentId) {
     return;
   }
 
-  // assignment history (if you have lead_assignments)
   if (me?.id) {
     const historyRows = leadIds.map(id => ({
       lead_id: id,
@@ -366,14 +332,11 @@ async function doAssign(agentId) {
       assigned_by: me.id
     }));
 
-    const { error: histErr } = await supabase
+    const { error: histErr } = await sb
       .from('lead_assignments')
       .insert(historyRows);
 
-    if (histErr) {
-      // don’t block assignment if history insert fails
-      console.warn('lead_assignments insert error:', histErr);
-    }
+    if (histErr) console.warn('lead_assignments insert error:', histErr);
   }
 
   clearSelectionUI();
@@ -560,10 +523,7 @@ function exportPDF() {
       ];
 
       let y = 75;
-      lines.forEach(t => {
-        doc.text(String(t), 20, y);
-        y += 8;
-      });
+      lines.forEach(t => { doc.text(String(t), 20, y); y += 8; });
 
       doc.setFontSize(10);
       doc.text(`Generated on ${new Date().toLocaleDateString()}`, 105, 285, { align: 'center' });
@@ -573,7 +533,6 @@ function exportPDF() {
   };
 
   logoImg.onerror = () => {
-    // still generate without logo
     leads.forEach((lead, i) => {
       if (i) doc.addPage();
       doc.setFontSize(16);
@@ -586,12 +545,10 @@ function exportPDF() {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  if (!supabase) {
-    console.warn('window.supabaseClient missing on admin-all-leads.js');
+  if (!sb) {
+    console.warn('Supabase client missing (window.supabaseClient/window.supabase).');
     return;
   }
-
-  wireAdminNavLinks();
 
   await loadMe();
 
