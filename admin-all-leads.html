@@ -16,21 +16,8 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
 
-    <!-- Lock visual display until we confirm admin -->
     <style>
       html { visibility: hidden; }
-      /* Make the admin page nav work with <a> links (your CSS was originally for buttons) */
-      #admin-page-nav a{
-        border: none;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-      }
-      #admin-page-nav a.active{
-        /* if your CSS already styles .active, this is harmless */
-      }
     </style>
 
     <noscript>
@@ -40,7 +27,7 @@
 
   <body id="dashboardbody">
 
-    <!-- Header (unchanged) -->
+    <!-- Header -->
     <header class="index-grid-header">
       <div id="logofvcontainer">
         <div id="logodiv">
@@ -61,7 +48,7 @@
       </div>
     </header>
 
-    <!-- Mobile Menu (unchanged) -->
+    <!-- Mobile Menu -->
     <div id="mobile-menu">
       <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
 
@@ -87,14 +74,14 @@
 
     <main class="auth-container">
 
-      <!-- Admin page navigation (now links) -->
+      <!-- Admin page navigation (KEEP AS BUTTONS so admin.css styles it the same) -->
       <nav id="admin-page-nav">
-        <a href="admin-all-leads.html" class="active" id="nav-all">All Leads</a>
-        <a href="admin-lead-requests.html" id="nav-requests">Lead Requests</a>
-        <a href="admin-assignment-history.html" id="nav-history">Assignment History</a>
-        <a href="admin-agent-stats.html" id="nav-stats">Agent Stats</a>
-        <a href="admin-commissions.html" id="nav-commissions">Commissions</a>
-        <a href="admin-content.html" id="nav-content" class="admin-nav-btn">Content</a>
+        <button id="nav-all" class="active" data-href="admin-all-leads.html">All Leads</button>
+        <button id="nav-requests" data-href="admin-lead-requests.html">Lead Requests</button>
+        <button id="nav-history" data-href="admin-assignment-history.html">Assignment History</button>
+        <button id="nav-stats" data-href="admin-agent-stats.html">Agent Stats</button>
+        <button id="nav-commissions" data-href="admin-commissions.html">Commissions</button>
+        <button id="nav-content" class="admin-nav-btn" data-href="admin-content.html">Content</button>
       </nav>
 
       <!-- ONLY: All Leads Section -->
@@ -190,7 +177,6 @@
             </div>
           </div>
 
-          <!-- (kept hidden like you had it) -->
           <select id="sort-by" style="display:none;">
             <option value="created_at">created_at</option>
             <option value="first_name">first_name</option>
@@ -260,8 +246,8 @@
       </section>
     </main>
 
-    <!-- Reassignment Warning Modal (kept) -->
-    <div id="reassign-warning-modal" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
+    <!-- Reassignment Warning Modal -->
+    <div id="reassign-warning-modal" style="display:none; position: fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:9999; align-items:center; justify-content:center;">
       <div style="background:white; padding:20px; border-radius:10px; max-width:90vw; width:300px; text-align:center;">
         <p><strong>Warning!</strong> You are about to re-assign one or more leads. Would you still like to submit?</p>
         <div style="margin-top:20px;">
@@ -271,7 +257,7 @@
       </div>
     </div>
 
-    <!-- Footer (unchanged) -->
+    <!-- Footer -->
     <footer class="index-grid-footer">
       <img id="footerlogo" src="Pics/img17.png">
       <hr class="footerhr">
@@ -303,24 +289,32 @@
       <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
     </footer>
 
-    <!-- Scripts (same stack, but replace scripts/admin.js with scripts/admin-all-leads.js) -->
+    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="scripts/supabase-client.js"></script>
+
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.28/jspdf.plugin.autotable.min.js"></script>
+
     <script src="scripts/general.js"></script>
     <script src="scripts/admin-all-leads.js"></script>
 
-    <!-- Admin-only gate (kept same) -->
+    <!-- Admin-only gate -->
     <script>
       (async () => {
         const supabase = window.supabaseClient;
-        if (!supabase) return;
+        if (!supabase) {
+          console.warn("Supabase client missing on admin-all-leads.html");
+          return;
+        }
 
         const { data: { session } = {} } = await supabase.auth.getSession();
-        if (!session) { location.replace('login.html'); return; }
+        if (!session) {
+          location.replace('login.html');
+          return;
+        }
 
         const { data: profile } = await supabase
           .from('agents')
