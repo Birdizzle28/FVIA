@@ -13,6 +13,7 @@ let adjustmentLeadChoices = null;
 
 // Carrier products cache: { carrierId: { lines:Set, typesByLine: Map(line->Set(types)) } }
 let carrierProductCache = {};
+let commissionAgentsLoaded = false;
 
 /* ---------- Helpers ---------- */
 
