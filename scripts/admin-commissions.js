@@ -311,7 +311,7 @@ async function loadAdjustmentsIntoList() {
     .limit(50);
 
   if (error) {
-    console.error('loadAdjustmentsIntoList error', error);
+    console.error('Error loading adjustments list', error);
     list.innerHTML = `<div style="padding:10px;">Error loading debits/credits.</div>`;
     return;
   }
@@ -349,7 +349,7 @@ async function loadPayoutBatchesIntoList() {
     .limit(25);
 
   if (error) {
-    console.error('loadPayoutBatchesIntoList error', error);
+    console.error('Error loading payout batches', error);
     list.innerHTML = `<div style="padding:10px;">Error loading payout batches.</div>`;
     return;
   }
