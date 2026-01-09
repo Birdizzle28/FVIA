@@ -304,7 +304,7 @@
     <!-- Admin-only gate -->
     <script>
       (async () => {
-        
+        const supabase = window.supabaseClient;
         if (!supabase) {
           console.warn("Supabase client missing on admin-all-leads.html");
           return;
