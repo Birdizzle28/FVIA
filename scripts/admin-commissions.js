@@ -816,23 +816,78 @@ async function wireRunPayoutsButton() {
   const status = document.getElementById('run-payouts-status');
   if (!btn) return;
 
+  // --- same helpers as admin.js ---
+  const toIsoDate = (d) => d.toISOString().slice(0, 10);
+
+  // Friday of current week
+  function getWeeklyScheduledDate(today) {
+    const d = new Date(today);
+    const day = d.getDay();            // 0 Sun ... 5 Fri
+    const diffToFriday = (5 - day + 7) % 7;
+    d.setDate(d.getDate() + diffToFriday);
+    return d;
+  }
+
+  // 5th of current month
+  function getMonthlyScheduledDate(today) {
+    return new Date(today.getFullYear(), today.getMonth(), 5);
+  }
+
   btn.addEventListener('click', async () => {
+    const today = new Date();
+    const weeklyDate  = getWeeklyScheduledDate(today);
+    const monthlyDate = getMonthlyScheduledDate(today);
+
+    const weeklyPayDate  = toIsoDate(weeklyDate);
+    const monthlyPayDate = toIsoDate(monthlyDate);
+
+    btn.disabled = true;
+    if (status) status.textContent = 'Running payouts...';
+
+    let statusText = '';
+    const tasks = [];
+
     try {
-      btn.disabled = true;
-      if (status) status.textContent = 'Running…';
+      // Weekly advance
+      tasks.push(
+        fetch(`/.netlify/functions/runWeeklyAdvance?pay_date=${weeklyPayDate}`, { method: 'POST' })
+          .then(res => res.json())
+          .then(data => {
+            statusText += `Weekly advance run for ${weeklyPayDate}: ${data.message || 'OK'}\n`;
+            return { type: 'weekly', data };
+          })
+          .catch(err => {
+            statusText += `Weekly advance error: ${err.message}\n`;
+            return { type: 'weekly', error: err };
+          })
+      );
 
-      // Matches admin.js behavior: run weekly advance, then monthly pay-thru
-      await fetch('/.netlify/functions/runWeeklyAdvance', { method: 'POST' });
-      await fetch('/.netlify/functions/runMonthlyPayThru', { method: 'POST' });
+      // Monthly pay-thru
+      tasks.push(
+        fetch(`/.netlify/functions/runMonthlyPayThru?pay_date=${monthlyPayDate}`, { method: 'POST' })
+          .then(res => res.json())
+          .then(data => {
+            statusText += `Monthly pay-thru run for ${monthlyPayDate}: ${data.message || 'OK'}\n`;
+            return { type: 'monthly', data };
+          })
+          .catch(err => {
+            statusText += `Monthly pay-thru error: ${err.message}\n`;
+            return { type: 'monthly', error: err };
+          })
+      );
 
-      if (status) status.textContent = 'Done.';
+      await Promise.all(tasks);
+
+      if (status) status.textContent = statusText.trim() || 'Done.';
+      
+      // keep your improvement: refresh batches after running
       await loadPayoutBatchesIntoList();
-    } catch (e) {
-      console.error('wireRunPayoutsButton error', e);
-      if (status) status.textContent = 'Failed. Check logs.';
+
+    } catch (err) {
+      console.error('Error running payouts:', err);
+      if (status) status.textContent = `Unexpected error: ${err.message}`;
     } finally {
       btn.disabled = false;
-      setTimeout(() => { if (status) status.textContent = ''; }, 5000);
     }
   });
 }
