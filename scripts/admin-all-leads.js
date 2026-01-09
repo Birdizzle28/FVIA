@@ -387,19 +387,25 @@ function wireFilters() {
 }
 
 function wireAssignAndWarningModal() {
-  $('bulk-assign-btn')?.addEventListener('click', async () => {
+  $('bulk-assign-btn')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     const agentId = $('bulk-assign-agent')?.value || '';
     await assignLeads(agentId);
   });
 
-  $('submit-anyway-btn')?.addEventListener('click', async () => {
+  $('submit-anyway-btn')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     const agentId = pendingAssignAgentId || ($('bulk-assign-agent')?.value || '');
     $('reassign-warning-modal').style.display = 'none';
     pendingAssignAgentId = null;
     await doAssign(agentId);
   });
 
-  $('cancel-reassign-btn')?.addEventListener('click', () => {
+  $('cancel-reassign-btn')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     $('reassign-warning-modal').style.display = 'none';
     pendingAssignAgentId = null;
   });
