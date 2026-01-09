@@ -1,5 +1,5 @@
 // scripts/admin-commissions.js
-const supabase = window.supabaseClient || window.supabase;
+const sb = window.supabaseClient || window.supabase;
 
 let userId = null;
 
@@ -18,19 +18,15 @@ const openAdjustmentBtn = document.getElementById('open-debit-credit-modal');
 const policyCancelBtn = document.getElementById('policy-cancel');
 const adjustmentCancelBtn = document.getElementById('adjustment-cancel');
 
-function openModal(el) {
-  if (el) el.style.display = 'flex';
-}
-function closeModal(el) {
-  if (el) el.style.display = 'none';
-}
+function openModal(el) { if (el) el.style.display = 'flex'; }
+function closeModal(el) { if (el) el.style.display = 'none'; }
 
 let commissionAgentsLoaded = false;
 
 async function loadAgentsForCommissions(force = false) {
   if (commissionAgentsLoaded && !force) return;
 
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('agents')
     .select('id, full_name')
     .eq('is_active', true)
@@ -64,7 +60,7 @@ async function loadContactsForPolicy() {
   const sel = document.getElementById('policy-contact');
   if (!sel) return;
 
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('contacts')
     .select('id, first_name, last_name, phone, email')
     .order('created_at', { ascending: false })
@@ -102,7 +98,7 @@ async function loadCarriersForPolicy() {
   const carrierSel = document.getElementById('policy-carrier');
   if (!carrierSel) return;
 
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('carriers')
     .select('id, name')
     .order('name', { ascending: true });
@@ -142,7 +138,7 @@ async function loadCarrierDependentPolicySelects(carrierId) {
 
   if (!carrierId) return;
 
-  const { data: cps, error } = await supabase
+  const { data: cps, error } = await sb
     .from('carrier_products')
     .select('product_line, policy_type')
     .eq('carrier_id', carrierId);
@@ -187,7 +183,7 @@ async function loadPoliciesIntoList() {
 
   list.innerHTML = `<div style="padding:10px;">Loading…</div>`;
 
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('policies')
     .select('id, policy_number, annual_premium, status, issue_date, agent_id, created_at')
     .order('created_at', { ascending: false })
@@ -224,7 +220,7 @@ async function loadDebitCreditIntoList() {
 
   list.innerHTML = `<div style="padding:10px;">Loading…</div>`;
 
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('agent_adjustments')
     .select('id, agent_id, type, category, amount, effective_date, description, created_at')
     .order('created_at', { ascending: false })
@@ -249,7 +245,7 @@ async function loadDebitCreditIntoList() {
     const dt = a.effective_date ? String(a.effective_date) : '—';
     return `
       <div class="mini-row">
-        <div><strong>${t.toUpperCase()}</strong> • ${c}</div>
+        <div><strong>${String(t).toUpperCase()}</strong> • ${c}</div>
         <div>$${amt} • ${dt}</div>
       </div>
     `;
@@ -262,7 +258,7 @@ async function loadPayoutBatches() {
 
   list.innerHTML = `<div style="padding:10px;">Loading…</div>`;
 
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('payout_batches')
     .select('id, run_date, status, created_at')
     .order('created_at', { ascending: false })
@@ -303,7 +299,7 @@ async function loadPoliciesForChargeback(agentId) {
     return;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('policies')
     .select('id, policy_number')
     .eq('agent_id', agentId)
@@ -349,7 +345,7 @@ async function loadLeadsForLeadDebt(agentId) {
     return;
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from('leads')
     .select('id, first_name, last_name, created_at')
     .eq('assigned_to', agentId)
@@ -403,7 +399,7 @@ async function wireRunPayoutsButton() {
       btn.disabled = true;
       if (status) status.textContent = 'Running…';
 
-      const { data: { session } = {} } = await supabase.auth.getSession();
+      const { data: { session } = {} } = await sb.auth.getSession();
       const token = session?.access_token;
 
       const resp = await fetch('/.netlify/functions/runScheduledPayouts', {
@@ -463,20 +459,16 @@ document.getElementById('policy-contact')?.addEventListener('change', (e) => {
   wrap.style.display = (e.target.value === '__new__') ? 'block' : 'none';
 });
 
-document.getElementById('adjustment-category')?.addEventListener('change', () => {
+document.getElementById('adjustment-category')?.addEventListener('change', async () => {
   syncAdjustmentCategoryUI();
-});
-
-document.getElementById('adjustment-agent')?.addEventListener('change', async (e) => {
-  const agentId = e.target.value || '';
+  const agentId = document.getElementById('adjustment-agent')?.value || '';
   const cat = document.getElementById('adjustment-category')?.value || '';
   if (cat === 'chargeback') await loadPoliciesForChargeback(agentId);
   if (cat === 'lead_debt') await loadLeadsForLeadDebt(agentId);
 });
 
-document.getElementById('adjustment-category')?.addEventListener('change', async () => {
-  syncAdjustmentCategoryUI();
-  const agentId = document.getElementById('adjustment-agent')?.value || '';
+document.getElementById('adjustment-agent')?.addEventListener('change', async (e) => {
+  const agentId = e.target.value || '';
   const cat = document.getElementById('adjustment-category')?.value || '';
   if (cat === 'chargeback') await loadPoliciesForChargeback(agentId);
   if (cat === 'lead_debt') await loadLeadsForLeadDebt(agentId);
@@ -527,7 +519,7 @@ document.getElementById('policy-form')?.addEventListener('submit', async (e) => 
         return;
       }
 
-      const { data: newContact, error: cErr } = await supabase
+      const { data: newContact, error: cErr } = await sb
         .from('contacts')
         .insert([{
           first_name: first,
@@ -557,7 +549,7 @@ document.getElementById('policy-form')?.addEventListener('submit', async (e) => 
       return;
     }
 
-    const { error: pErr } = await supabase
+    const { error: pErr } = await sb
       .from('policies')
       .insert([{
         agent_id: agentId,
@@ -580,12 +572,12 @@ document.getElementById('policy-form')?.addEventListener('submit', async (e) => 
 
     closeModal(policyModal);
     document.getElementById('policy-form')?.reset();
-    document.getElementById('policy-new-contact-wrap').style.display = 'none';
+    const wrap = document.getElementById('policy-new-contact-wrap');
+    if (wrap) wrap.style.display = 'none';
 
     await loadPoliciesIntoList();
   } catch (ex) {
     console.error('policy submit error', ex);
-    const errEl = document.getElementById('policy-error');
     if (errEl) errEl.textContent = 'Could not save policy.';
   }
 });
@@ -622,7 +614,7 @@ document.getElementById('adjustment-form')?.addEventListener('submit', async (e)
       return;
     }
 
-    const { error } = await supabase
+    const { error } = await sb
       .from('agent_adjustments')
       .insert([{
         agent_id: agentId,
@@ -649,21 +641,22 @@ document.getElementById('adjustment-form')?.addEventListener('submit', async (e)
     await loadDebitCreditIntoList();
   } catch (ex) {
     console.error('adjustment submit error', ex);
-    const errEl = document.getElementById('adjustment-error');
     if (errEl) errEl.textContent = 'Could not save debit/credit.';
   }
 });
 
 document.addEventListener('DOMContentLoaded', async () => {
-  if (!supabase) return;
+  if (!sb) {
+    console.warn('Supabase client missing (window.supabaseClient/window.supabase).');
+    return;
+  }
 
-  // session + role (page is already gated by inline script, but we still need userId here)
-  const { data: { session } = {} } = await supabase.auth.getSession();
+  const { data: { session } = {} } = await sb.auth.getSession();
   userId = session?.user?.id || null;
 
   await wireRunPayoutsButton();
 
-  // preload lists (so the commissions page is “alive”)
+  // preload lists
   await loadPoliciesIntoList();
   await loadDebitCreditIntoList();
   await loadPayoutBatches();
