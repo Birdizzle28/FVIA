@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+
+    <title>Admin · Commissions | Family Values Group</title>
+
+    <link rel="stylesheet" href="styles/agentstyle.css" />
+    <link rel="stylesheet" href="styles/admin.css" />
+    <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+
+    <!-- Lock visual display until we confirm admin in script at bottom -->
+    <style>
+      html { visibility: hidden; }
+    </style>
+
+    <noscript>
+      <meta http-equiv="refresh" content="0; url=dashboard.html">
+    </noscript>
+  </head>
+
+  <body id="dashboardbody">
+
+    <!-- Header -->
+    <header class="index-grid-header">
+      <div id="logofvcontainer">
+        <div id="logodiv">
+          <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+        </div>
+        <div id="fvdiv">
+          <p><strong>Family Values Group</strong></p>
+        </div>
+      </div>
+      <div id="navcontainer">
+        <nav class="header-flex-container">
+          <a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
+          <a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
+          <div id="menu-toggle">
+            <i class="fa-solid fa-bars"></i>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu">
+      <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
+
+      <button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
+        <i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
+        <i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
+      </button>
+
+      <div id="toolkit-submenu" class="submenu" hidden>
+        <a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
+        <a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
+        <a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
+        <a href="calculator.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
+        <a href="marketing.html"><i class="fa-solid fa-handshake"></i><span>Marketing</span></a>
+      </div>
+
+      <a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
+      <a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
+      <a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
+      <a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
+
+      <!-- Admin hub link (you can point this to your main admin landing page if you want) -->
+      <a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
+    </div>
+
+    <main class="auth-container">
+
+      <!-- Mini admin nav for this dedicated page -->
+      <nav id="admin-page-nav">
+        <button class="active" type="button">Commissions</button>
+      </nav>
+
+      <!-- Commissions Section ONLY -->
+      <section id="admin-commissions-section" class="admin-section" style="display:block;">
+        <h3>Commissions</h3>
+
+        <div class="comm-grid">
+          <!-- Left: Policies -->
+          <div class="card">
+            <h3>Policies</h3>
+            <p>Add new policies and view recent ones.</p>
+            <button id="open-policy-modal" class="card-link" type="button">Add Policy</button>
+
+            <div id="policy-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
+              <!-- policies load here -->
+            </div>
+          </div>
+
+          <!-- Middle: Debits / Credits -->
+          <div class="card">
+            <h3>Debits &amp; Credits</h3>
+            <p>Add chargebacks, lead debt, or credits to agents.</p>
+            <button id="open-debit-credit-modal" class="card-link" type="button">Add Debit / Credit</button>
+
+            <div id="debit-credit-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
+              <!-- adjustments load here -->
+            </div>
+          </div>
+
+          <!-- Right: Payout controls + batches -->
+          <div class="payout-run-controls">
+            <button id="run-payouts-btn" type="button">Run Scheduled Payouts</button>
+            <small id="run-payouts-status" style="display:block;margin-top:4px;"></small>
+          </div>
+
+          <div class="card">
+            <h3>Payout Batches</h3>
+            <p>Review upcoming payout batches before they run.</p>
+            <div id="batch-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
+              <!-- payout batches load here -->
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Add Policy Modal -->
+      <div id="policy-modal" class="modal-backdrop" style="display:none;">
+        <div class="modal">
+          <h3>Add Policy</h3>
+          <form id="policy-form">
+            <label>
+              Agent
+              <select id="policy-agent" required></select>
+            </label>
+
+            <label>
+              Contact
+              <select id="policy-contact" required>
+                <option value="">Select contact…</option>
+                <option value="__new__">➕ New contact (enter below)</option>
+              </select>
+            </label>
+
+            <div id="policy-new-contact-wrap"
+                 style="display:none; margin-bottom:10px; padding:10px; border:1px solid #ddd; border-radius:8px;">
+              <h4 style="margin-top:0; margin-bottom:8px;">New Contact Details</h4>
+              <label>First Name <input id="policy-contact-first" type="text"></label>
+              <label>Last Name <input id="policy-contact-last" type="text"></label>
+              <label>Phone 1 <input id="policy-contact-phone" type="text" placeholder="Primary phone"></label>
+              <label>Phone 2 (optional) <input id="policy-contact-phone2" type="text" placeholder="Secondary phone"></label>
+              <label>Email 1 <input id="policy-contact-email" type="email" placeholder="Primary email"></label>
+              <label>Email 2 (optional) <input id="policy-contact-email2" type="email" placeholder="Secondary email"></label>
+              <label>Address Line 1 <input id="policy-contact-address1" type="text"></label>
+              <label>Address Line 2 (optional) <input id="policy-contact-address2" type="text"></label>
+              <label>City <input id="policy-contact-city" type="text"></label>
+              <label>State <input id="policy-contact-state" type="text" maxlength="2" placeholder="TN"></label>
+              <label>ZIP <input id="policy-contact-zip" type="text" maxlength="10"></label>
+            </div>
+
+            <label>
+              Carrier
+              <select id="policy-carrier" required>
+                <option value="">Select carrier…</option>
+              </select>
+            </label>
+
+            <label>
+              Product Line
+              <select id="policy-product-line" required disabled>
+                <option value="">Select carrier first…</option>
+              </select>
+            </label>
+
+            <label>
+              Policy Type
+              <select id="policy-policy-type" required disabled>
+                <option value="">Select carrier first…</option>
+              </select>
+            </label>
+
+            <label>
+              Policy #
+              <input id="policy-number" type="text" required>
+            </label>
+
+            <label>
+              Annual Premium
+              <input id="policy-annual-premium" type="number" step="0.01" min="0" required>
+            </label>
+
+            <label>
+              Issue Date
+              <input id="policy-issue-date" type="date" required>
+            </label>
+
+            <label>
+              Status
+              <select id="policy-status">
+                <option value="in_force">Active</option>
+                <option value="pending">Pending</option>
+                <option value="issued">Issued</option>
+                <option value="lapsed">Lapsed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="reinstated">Reinstated</option>
+                <option value="renewed">Renewed</option>
+              </select>
+            </label>
+
+            <div class="modal-actions">
+              <button type="button" id="policy-cancel">Cancel</button>
+              <button type="submit">Save Policy</button>
+            </div>
+
+            <p id="policy-error" class="modal-error"></p>
+          </form>
+        </div>
+      </div>
+
+      <!-- Add Debit / Credit Modal -->
+      <div id="adjustment-modal" class="modal-backdrop" style="display:none;">
+        <div class="modal">
+          <h3>Add Debit / Credit</h3>
+          <form id="adjustment-form">
+            <label>
+              Agent
+              <select id="adjustment-agent" required></select>
+            </label>
+
+            <label>
+              Type
+              <select id="adjustment-type" required>
+                <option value="debit">Debit (chargeback / lead debt)</option>
+                <option value="credit">Credit</option>
+              </select>
+            </label>
+
+            <label>
+              Category
+              <select id="adjustment-category" required>
+                <option value="chargeback">Chargeback</option>
+                <option value="lead_debt">Lead Debt</option>
+                <option value="manual_credit">Manual Credit</option>
+                <option value="other">Other</option>
+              </select>
+            </label>
+
+            <label id="chargeback-policy-wrapper" style="display:none;">
+              Policy (for chargeback)
+              <select id="adjustment-policy">
+                <option value="">Search or select policy…</option>
+              </select>
+              <small style="font-size:11px; color:#666;">
+                Only policies written by the selected agent are listed.
+              </small>
+            </label>
+
+            <label id="lead-debt-lead-wrapper" style="display:none;">
+              Lead (for lead debt)
+              <select id="adjustment-lead">
+                <option value="">Search or select lead…</option>
+              </select>
+              <small style="font-size:11px; color:#666;">
+                Only leads assigned to the selected agent are listed.
+              </small>
+            </label>
+
+            <label>
+              Amount
+              <input id="adjustment-amount" type="number" step="0.01" min="0" required>
+            </label>
+
+            <label>
+              Effective Date
+              <input id="adjustment-date" type="date" required>
+            </label>
+
+            <label>
+              Description
+              <textarea id="adjustment-description" rows="2" placeholder="Optional notes"></textarea>
+            </label>
+
+            <div class="modal-actions">
+              <button type="button" id="adjustment-cancel">Cancel</button>
+              <button type="submit">Save</button>
+            </div>
+
+            <p id="adjustment-error" class="modal-error"></p>
+          </form>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="index-grid-footer">
+      <img id="footerlogo" src="Pics/img17.png">
+      <hr class="footerhr">
+      <div id="footercontact">
+        <a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
+          <span class="fa fa-envelope"></span>
+          <span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+        </a>
+        <p> | </p>
+        <a class="contactcontainer" href="tel:+16292437980">
+          <span class="fa fa-phone"></span>
+          <span class="contactcontcontacts">+1-629-243-7980</span>
+        </a>
+      </div>
+      <hr class="footerhr">
+      <div id="footersocial">
+        <a class="fab fa-facebook-f" href="https://www.facebook.com/familyvaluesgroup"></a>
+        <a class="fab fa-linkedin-in" href="https://www.linkedin.com/in/demisi-johnson-026227391?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"></a>
+        <a class="fab fa-instagram" href="https://www.instagram.com/family.values.group?igsh=OHl3dGdnd3RwMTV0&utm_source=qr"></a>
+        <a class="fab fa-youtube" href="https://youtube.com/@familyvaluesgroup?si=mauqWp5nxyczgCJd"></a>
+        <a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
+      </div>
+      <div id="footerlinks">
+        <a href="faqs.html">FAQs</a>
+        <a href="terms.html">Terms</a>
+        <a href="accessibility.html">Accessibility</a>
+        <a href="privacy.html">Privacy</a>
+      </div>
+      <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="scripts/supabase-client.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+    <script src="scripts/general.js"></script>
+    <script src="scripts/admin-commissions.js"></script>
+
+    <!-- Admin-only gate using shared window.supabaseClient -->
+    <script>
+      (async () => {
+        const supabase = window.supabaseClient;
+        if (!supabase) return;
+
+        const { data: { session } = {} } = await supabase.auth.getSession();
+        if (!session) {
+          location.replace('login.html');
+          return;
+        }
+
+        const { data: profile } = await supabase
+          .from('agents')
+          .select('is_admin')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (profile?.is_admin === true) {
+          document.documentElement.style.visibility = 'visible';
+        } else {
+          location.replace('dashboard.html');
+        }
+      })();
+    </script>
+  </body>
+</html>
