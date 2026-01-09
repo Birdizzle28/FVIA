@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <title>Admin • Agent Stats | Family Values Group</title>
+
+    <link rel="stylesheet" href="styles/agentstyle.css" />
+    <link rel="stylesheet" href="styles/admin.css" />
+    <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+
+    <style>
+      html { visibility: hidden; }
+    </style>
+
+    <noscript>
+      <meta http-equiv="refresh" content="0; url=dashboard.html">
+    </noscript>
+  </head>
+
+  <body id="dashboardbody">
+
+    <!-- Header -->
+    <header class="index-grid-header">
+      <div id="logofvcontainer">
+        <div id="logodiv">
+          <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+        </div>
+        <div id="fvdiv">
+          <p><strong>Family Values Group</strong></p>
+        </div>
+      </div>
+      <div id="navcontainer">
+        <nav class="header-flex-container">
+          <a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
+          <a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
+          <div id="menu-toggle">
+            <i class="fa-solid fa-bars"></i>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu">
+      <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
+
+      <button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
+        <i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
+        <i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
+      </button>
+
+      <div id="toolkit-submenu" class="submenu" hidden>
+        <a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
+        <a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
+        <a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
+        <a href="calculator.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
+        <a href="marketing.html"><i class="fa-solid fa-handshake"></i><span>Marketing</span></a>
+      </div>
+
+      <a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
+      <a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
+      <a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
+      <a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
+      <a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
+    </div>
+
+    <main class="auth-container">
+
+      <!-- Admin page navigation -->
+      <nav id="admin-page-nav">
+        <button id="nav-all" data-href="admin-all-leads.html">All Leads</button>
+        <button id="nav-requests" data-href="admin-lead-requests.html">Lead Requests</button>
+        <button id="nav-history" data-href="admin-assignment-history.html">Assignment History</button>
+        <button id="nav-stats" class="active" data-href="admin-agent-stats.html">Agent Stats</button>
+        <button id="nav-commissions" data-href="admin-commissions.html">Commissions</button>
+        <button id="nav-content" data-href="admin-content.html">Content</button>
+      </nav>
+
+      <!-- Agent Stats Section -->
+      <section id="admin-stats-section" class="admin-section" style="display:none;">
+        <h3>Agent Stats</h3>
+
+        <div class="stats-toolbar">
+          <div class="scope">
+            <label for="stat-agent">Agent</label>
+            <select id="stat-agent">
+              <option value="">All agents</option>
+            </select>
+          </div>
+
+          <div class="range" style="display:flex; align-items:center; gap:10px;">
+            <div id="stat-range-wrap" class="flatpickr-range" data-wrap="true">
+              <input id="stat-range" type="text" placeholder="Select date range" data-input readonly />
+              <button class="calendar-btn" type="button" title="Choose dates" data-toggle>
+                <i class="fa-solid fa-calendar"></i>
+              </button>
+            </div>
+
+            <label style="display:flex; align-items:center; gap:6px; white-space:nowrap;">
+              <input type="checkbox" id="stat-all-time"> All time
+            </label>
+          </div>
+        </div>
+
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <div class="kpi-label">Contact rate</div>
+            <div class="kpi-value" id="kpi-contact">—</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Quote rate</div>
+            <div class="kpi-value" id="kpi-quote">—</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">Close rate</div>
+            <div class="kpi-value" id="kpi-close">—</div>
+          </div>
+
+          <div class="kpi-card">
+            <div class="kpi-label">
+              Persistency <small>(90-day)</small>
+            </div>
+            <div class="kpi-value" id="kpi-persistency">—</div>
+          </div>
+
+          <article class="kpi-card">
+            <div class="kpi-label">New Leads</div>
+            <div class="kpi-value" id="kpi-new">0</div>
+          </article>
+
+          <article class="kpi-card">
+            <div class="kpi-label">Assigned</div>
+            <div class="kpi-value" id="kpi-assigned">0</div>
+          </article>
+
+          <article class="kpi-card">
+            <div class="kpi-label">Avg Age</div>
+            <div class="kpi-value" id="kpi-avg-age">—</div>
+          </article>
+
+          <article class="kpi-card">
+            <div class="kpi-label">Agents Assigned</div>
+            <div class="kpi-value" id="kpi-agents">0</div>
+          </article>
+        </div>
+
+        <div class="chart-grid">
+          <div class="chart-card">
+            <h4 id="chart-weekly-title">Weekly New Leads</h4>
+            <canvas id="chart-weekly"></canvas>
+          </div>
+          <div class="chart-card">
+            <h4>Product Mix</h4>
+            <canvas id="chart-products"></canvas>
+          </div>
+          <div class="chart-card">
+            <h4 id="chart-assign-title">Assignments by Agent</h4>
+            <canvas id="chart-assignments"></canvas>
+          </div>
+        </div>
+
+        <small id="stats-msg" style="display:block; margin-top:10px; color:#666;"></small>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="index-grid-footer">
+      <img id="footerlogo" src="Pics/img17.png">
+      <hr class="footerhr">
+      <div id="footercontact">
+        <a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
+          <span class="fa fa-envelope"></span>
+          <span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+        </a>
+        <p> | </p>
+        <a class="contactcontainer" href="tel:+16292437980">
+          <span class="fa fa-phone"></span>
+          <span class="contactcontcontacts">+1-629-243-7980</span>
+        </a>
+      </div>
+      <hr class="footerhr">
+      <div id="footersocial">
+        <a class="fab fa-facebook-f" href="https://www.facebook.com/familyvaluesgroup"></a>
+        <a class="fab fa-linkedin-in" href="https://www.linkedin.com/in/demisi-johnson-026227391?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"></a>
+        <a class="fab fa-instagram" href="https://www.instagram.com/family.values.group?igsh=OHl3dGdnd3RwMTV0&utm_source=qr"></a>
+        <a class="fab fa-youtube" href="https://youtube.com/@familyvaluesgroup?si=mauqWp5nxyczgCJd"></a>
+        <a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
+      </div>
+      <div id="footerlinks">
+        <a href="faqs.html">FAQs</a>
+        <a href="terms.html">Terms</a>
+        <a href="accessibility.html">Accessibility</a>
+        <a href="privacy.html">Privacy</a>
+      </div>
+      <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="scripts/supabase-client.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="scripts/general.js"></script>
+    <script src="scripts/admin-agent-stats.js"></script>
+
+    <!-- Admin-only gate -->
+    <script>
+      (async () => {
+        const supabase = window.supabaseClient;
+        if (!supabase) return;
+
+        const { data: { session } = {} } = await supabase.auth.getSession();
+        if (!session) { location.replace('login.html'); return; }
+
+        const { data: profile } = await supabase
+          .from('agents')
+          .select('is_admin')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (profile?.is_admin === true) {
+          document.documentElement.style.visibility = 'visible';
+        } else {
+          location.replace('dashboard.html');
+        }
+      })();
+    </script>
+  </body>
+</html>
