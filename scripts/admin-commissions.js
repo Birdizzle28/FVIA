@@ -304,10 +304,9 @@ async function loadAdjustmentsIntoList() {
 
   list.innerHTML = `<div style="padding:10px;">Loading…</div>`;
 
-  // Matches admin.js: uses commission_ledger, not agent_adjustments
   const { data, error } = await sb
-    .from('commission_ledger')
-    .select('id, agent_id, amount, kind, memo, created_at')
+    .from('agent_adjustments')
+    .select('id, agent_id, type, category, amount, effective_date, description, created_at')
     .order('created_at', { ascending: false })
     .limit(50);
 
@@ -323,16 +322,15 @@ async function loadAdjustmentsIntoList() {
     return;
   }
 
-  list.innerHTML = rows.map(r => {
-    const amt = safeNum(r.amount).toFixed(2);
-    const kind = (r.kind || '—').toString();
-    const memo = (r.memo || '').toString();
-    const dt = r.created_at ? new Date(r.created_at).toLocaleDateString() : '—';
-
+  list.innerHTML = rows.map(a => {
+    const amt = Number(a.amount || 0).toFixed(2);
+    const t = a.type || '—';
+    const c = a.category || '—';
+    const dt = a.effective_date ? String(a.effective_date) : '—';
     return `
       <div class="mini-row">
-        <div><strong>${kind}</strong></div>
-        <div>$${amt} • ${dt}${memo ? ` • ${memo}` : ''}</div>
+        <div><strong>${String(t).toUpperCase()}</strong> • ${c}</div>
+        <div>$${amt} • ${dt}</div>
       </div>
     `;
   }).join('');
@@ -346,7 +344,7 @@ async function loadPayoutBatchesIntoList() {
 
   const { data, error } = await sb
     .from('payout_batches')
-    .select('id, batch_key, run_date, status, created_at')
+    .select('id, run_date, status, created_at')
     .order('created_at', { ascending: false })
     .limit(25);
 
@@ -365,10 +363,9 @@ async function loadPayoutBatchesIntoList() {
   list.innerHTML = rows.map(b => {
     const dt = b.run_date ? String(b.run_date) : '—';
     const st = b.status ? String(b.status).replace(/_/g, ' ') : '—';
-    const key = b.batch_key ? String(b.batch_key) : '';
     return `
       <div class="mini-row">
-        <div><strong>${dt}</strong>${key ? ` • ${key}` : ''}</div>
+        <div><strong>${dt}</strong></div>
         <div>${st}</div>
       </div>
     `;
@@ -753,17 +750,15 @@ function wireAdjustmentSubmit() {
       }
 
       // Admin.js commissions uses commission_ledger
-      const kind = (type === 'debit') ? 'debit' : 'credit';
-      const memo = `${category}${description ? ` • ${description}` : ''}`;
-
       const { error } = await sb
-        .from('commission_ledger')
+        .from('agent_adjustments')
         .insert([{
           agent_id: agentId,
+          type,
+          category,
           amount,
-          kind,
-          memo,
           effective_date: effectiveDate,
+          description,
           policy_id: policyId,
           lead_id: leadId,
           created_by: userId
