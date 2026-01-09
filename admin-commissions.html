@@ -3,13 +3,12 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-
     <link rel="apple-touch-icon" href="/apple-touch-icon.png">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
     <link rel="manifest" href="/site.webmanifest">
 
-    <title>Admin Commissions | Family Values Group</title>
+    <title>Admin • Commissions | Family Values Group</title>
 
     <link rel="stylesheet" href="styles/agentstyle.css" />
     <link rel="stylesheet" href="styles/admin.css" />
@@ -17,7 +16,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
 
-    <!-- Lock visual display until we confirm admin -->
+    <!-- Lock visual display until we confirm admin in script at bottom -->
     <style>
       html { visibility: hidden; }
     </style>
@@ -71,23 +70,25 @@
       <a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
       <a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
       <a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
+
+      <!-- Admin hub link (you can point this to your main admin landing page if you want) -->
       <a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
     </div>
 
     <main class="auth-container">
 
-      <!-- Admin page navigation (kept for consistency; Commissions active) -->
+      <!-- Mini admin nav for this dedicated page -->
       <nav id="admin-page-nav">
-        <button id="nav-all" type="button">All Leads</button>
-        <button id="nav-requests" type="button">Lead Requests</button>
-        <button id="nav-history" type="button">Assignment History</button>
-        <button id="nav-stats" type="button">Agent Stats</button>
-        <button id="nav-commissions" type="button" class="active">Commissions</button>
-        <button id="nav-content" type="button" class="admin-nav-btn">Content</button>
+        <button id="nav-all" data-href="admin-all-leads.html">All Leads</button>
+        <button id="nav-requests" data-href="admin-lead-requests.html">Lead Requests</button>
+        <button id="nav-history" data-href="admin-assignment-history.html">Assignment History</button>
+        <button id="nav-stats" data-href="admin-agent-stats.html">Agent Stats</button>
+        <button id="nav-commissions" class="active" data-href="admin-commissions.html">Commissions</button>
+        <button id="nav-content" data-href="admin-content.html">Content</button>
       </nav>
 
-      <!-- Commissions ONLY -->
-      <section id="admin-commissions-section" class="admin-section">
+      <!-- Commissions Section ONLY -->
+      <section id="admin-commissions-section" class="admin-section" style="display:block;">
         <h3>Commissions</h3>
 
         <div class="comm-grid">
@@ -104,16 +105,16 @@
 
           <!-- Middle: Debits / Credits -->
           <div class="card">
-            <h3>Debits & Credits</h3>
+            <h3>Debits &amp; Credits</h3>
             <p>Add chargebacks, lead debt, or credits to agents.</p>
             <button id="open-debit-credit-modal" class="card-link" type="button">Add Debit / Credit</button>
 
             <div id="debit-credit-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
-              <!-- debits/credits load here -->
+              <!-- adjustments load here -->
             </div>
           </div>
 
-          <!-- Right: Payouts -->
+          <!-- Right: Payout controls + batches -->
           <div class="payout-run-controls">
             <button id="run-payouts-btn" type="button">Run Scheduled Payouts</button>
             <small id="run-payouts-status" style="display:block;margin-top:4px;"></small>
@@ -128,8 +129,6 @@
           </div>
         </div>
       </section>
-
-      <!-- ===== Modals used by Commissions ONLY ===== -->
 
       <!-- Add Policy Modal -->
       <div id="policy-modal" class="modal-backdrop" style="display:none;">
@@ -152,16 +151,12 @@
             <div id="policy-new-contact-wrap"
                  style="display:none; margin-bottom:10px; padding:10px; border:1px solid #ddd; border-radius:8px;">
               <h4 style="margin-top:0; margin-bottom:8px;">New Contact Details</h4>
-
               <label>First Name <input id="policy-contact-first" type="text"></label>
               <label>Last Name <input id="policy-contact-last" type="text"></label>
-
               <label>Phone 1 <input id="policy-contact-phone" type="text" placeholder="Primary phone"></label>
               <label>Phone 2 (optional) <input id="policy-contact-phone2" type="text" placeholder="Secondary phone"></label>
-
               <label>Email 1 <input id="policy-contact-email" type="email" placeholder="Primary email"></label>
               <label>Email 2 (optional) <input id="policy-contact-email2" type="email" placeholder="Secondary email"></label>
-
               <label>Address Line 1 <input id="policy-contact-address1" type="text"></label>
               <label>Address Line 2 (optional) <input id="policy-contact-address2" type="text"></label>
               <label>City <input id="policy-contact-city" type="text"></label>
@@ -344,19 +339,19 @@
     <script src="scripts/general.js"></script>
     <script src="scripts/admin-commissions.js"></script>
 
-    <!-- Admin-only gate -->
+    <!-- Admin-only gate using shared window.supabaseClient -->
     <script>
       (async () => {
-        const sb = window.supabaseClient || window.supabase;
-        if (!sb) return;
+        const supabase = window.supabaseClient;
+        if (!supabase) return;
 
-        const { data: { session } = {} } = await sb.auth.getSession();
+        const { data: { session } = {} } = await supabase.auth.getSession();
         if (!session) {
           location.replace('login.html');
           return;
         }
 
-        const { data: profile } = await sb
+        const { data: profile } = await supabase
           .from('agents')
           .select('is_admin')
           .eq('id', session.user.id)
@@ -369,16 +364,5 @@
         }
       })();
     </script>
-
-    <!-- Admin nav routing (ONLY links; no other sections exist on this page) -->
-    <script>
-      document.getElementById('nav-all')?.addEventListener('click', () => location.href = 'admin-all-leads.html');
-      document.getElementById('nav-requests')?.addEventListener('click', () => location.href = 'admin-requests.html');
-      document.getElementById('nav-history')?.addEventListener('click', () => location.href = 'admin-assignment-history.html');
-      document.getElementById('nav-stats')?.addEventListener('click', () => location.href = 'admin-agent-stats.html');
-      document.getElementById('nav-content')?.addEventListener('click', () => location.href = 'admin-content.html');
-      // nav-commissions stays here
-    </script>
-
   </body>
 </html>
