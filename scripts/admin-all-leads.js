@@ -311,13 +311,13 @@ async function doAssign(agentId) {
   const leadIds = Array.from(selectedLeads);
   const assignedToName = agentNameById[agentId] || null;
 
-  const updatePayload = { assigned_to: agentId };
-  if (assignedToName != null) updatePayload.assigned_to_name = assignedToName;
-
-  const { error: upErr } = await sb
-    .from('leads')
-    .update(updatePayload)
-    .in('id', leadIds);
+  const { error: upErr } = await supabase
+  .from('leads')
+  .update({
+    assigned_to: agentId,
+    assigned_at: new Date().toISOString()
+  })
+  .in('id', leadIds);
 
   if (upErr) {
     console.warn('assign update error:', upErr);
