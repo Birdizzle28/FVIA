@@ -549,7 +549,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.warn('Supabase client missing (window.supabaseClient/window.supabase).');
     return;
   }
-
+  const section = $('admin-all-section');
+  if (section) section.style.display = 'block';
   await loadMe();
 
   initDateRangePicker();
