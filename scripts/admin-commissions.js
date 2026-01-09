@@ -3,16 +3,17 @@ const sb = window.supabaseClient || window.supabase;
 
 let userId = null;
 
-// Choices instances (optional)
-let policyAgentChoices = null;
-let adjustmentAgentChoices = null;
-let policyContactChoices = null;
-let policyCarrierChoices = null;
+// Choices instances
 let adjustmentPolicyChoices = null;
 let adjustmentLeadChoices = null;
 
-// Carrier products cache: { carrierId: { lines:Set, typesByLine: Map(line->Set(types)) } }
-let carrierProductCache = {};
+let policyContactChoices = null;
+let policyCarrierChoices = null;
+let policyProductLineChoices = null;
+let policyPolicyTypeChoices = null;
+
+let _carrierScheduleMap = null; // { lines: string[], typesByLine: Map(line->Set(types)) }
+
 let commissionAgentsLoaded = false;
 
 /* ---------- Helpers ---------- */
@@ -20,17 +21,12 @@ let commissionAgentsLoaded = false;
 function openModal(el) { if (el) el.style.display = 'flex'; }
 function closeModal(el) { if (el) el.style.display = 'none'; }
 
-function setText(id, txt) {
-  const el = document.getElementById(id);
-  if (el) el.textContent = txt;
-}
-
 function safeNum(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
 }
 
-/* ---------- Loaders: Agents / Contacts / Carriers / Carrier Products ---------- */
+/* ---------- Loaders: Agents / Contacts / Carriers / Carrier Schedules ---------- */
 
 async function loadAgentsForCommissions(force = false) {
   if (commissionAgentsLoaded && !force) return;
@@ -54,7 +50,7 @@ async function loadAgentsForCommissions(force = false) {
   selects.forEach(sel => {
     if (!sel) return;
     sel.innerHTML = '<option value="">Select agent…</option>';
-    data.forEach(agent => {
+    (data || []).forEach(agent => {
       const opt = document.createElement('option');
       opt.value = agent.id;
       opt.textContent = agent.full_name || agent.id;
@@ -72,66 +68,46 @@ async function loadContactsForPolicy(agentId = null) {
   sel.disabled = true;
   sel.innerHTML = '<option value="">Loading contacts…</option>';
 
-  // Base query
   let query = sb
     .from('contacts')
-    .select(
-      'id, first_name, last_name, phones, emails, email, city, state, zip, address_line1, owning_agent_id'
-    )
+    .select('id, first_name, last_name, phones, emails, email, city, state, zip, address_line1, owning_agent_id')
     .order('created_at', { ascending: false })
     .limit(200);
 
-  // ✅ filter by owning_agent_id (NOT agent_id)
-  if (agentId) {
-    query = query.eq('owning_agent_id', agentId);
-  }
+  // admin.js filters by owning_agent_id
+  if (agentId) query = query.eq('owning_agent_id', agentId);
 
   const { data, error } = await query;
 
   if (error) {
     console.error('Error loading contacts for policy:', error);
     sel.innerHTML = '<option value="">Error loading contacts</option>';
+    sel.disabled = true;
     return;
   }
 
-  // Rebuild options
   sel.innerHTML = '';
 
-  // Placeholder
   const placeholder = document.createElement('option');
   placeholder.value = '';
   placeholder.textContent = 'Select contact…';
   sel.appendChild(placeholder);
 
-  // Existing contacts
-  if (data && data.length) {
-    data.forEach(c => {
-      const opt = document.createElement('option');
-      opt.value = c.id;
+  (data || []).forEach(c => {
+    const opt = document.createElement('option');
+    opt.value = c.id;
 
-      const name = [c.first_name, c.last_name].filter(Boolean).join(' ');
-      const cityState = [c.city, c.state].filter(Boolean).join(', ');
-      const addr = c.address_line1 || '';
-      const phone =
-        Array.isArray(c.phones) && c.phones.length ? c.phones[0] : '';
-      const email =
-        c.email ||
-        (Array.isArray(c.emails) && c.emails.length ? c.emails[0] : '');
+    const name = [c.first_name, c.last_name].filter(Boolean).join(' ');
+    const cityState = [c.city, c.state].filter(Boolean).join(', ');
+    const addr = c.address_line1 || '';
+    const phone = Array.isArray(c.phones) && c.phones.length ? c.phones[0] : '';
+    const email = c.email || (Array.isArray(c.emails) && c.emails.length ? c.emails[0] : '');
 
-      const parts = [
-        name || `Contact ${String(c.id).slice(0, 8)}`,
-        addr,
-        cityState,
-        phone,
-        email
-      ].filter(Boolean);
+    const parts = [name || `Contact ${String(c.id).slice(0, 8)}`, addr, cityState, phone, email].filter(Boolean);
+    opt.textContent = parts.join(' · ');
+    sel.appendChild(opt);
+  });
 
-      opt.textContent = parts.join(' · ');
-      sel.appendChild(opt);
-    });
-  }
-
-  // Always add the "New contact" option at the bottom
   const newOpt = document.createElement('option');
   newOpt.value = '__new__';
   newOpt.textContent = '➕ New contact (enter below)';
@@ -147,32 +123,25 @@ async function loadCarriersForPolicy() {
   sel.disabled = true;
   sel.innerHTML = '<option value="">Loading carriers…</option>';
 
-  let carriers = [];
+  const { data, error } = await sb
+    .from('carriers')
+    .select('id, carrier_name')
+    .order('carrier_name', { ascending: true });
 
-  try {
-    const { data, error } = await sb
-      .from('carriers')
-      .select('id, carrier_name')
-      .order('carrier_name', { ascending: true });
-
-    console.log('Carrier data result:', data, error);
-
-    if (error) {
-      console.error('Error loading carriers:', error);
-    } else {
-      carriers = data || [];
-    }
-  } catch (err) {
-    console.error('Carrier Supabase lookup failed:', err);
+  if (error) {
+    console.error('Error loading carriers:', error);
+    sel.innerHTML = '<option value="">Error loading carriers</option>';
+    sel.disabled = true;
+    return;
   }
 
+  const carriers = data || [];
   if (!carriers.length) {
     sel.innerHTML = '<option value="">No carriers found</option>';
     sel.disabled = true;
     return;
   }
 
-  // Populate
   sel.innerHTML = '';
   carriers.forEach(c => {
     const opt = document.createElement('option');
@@ -189,7 +158,6 @@ async function loadProductLinesAndTypesForCarrier(carrierId) {
   const typeSel = document.getElementById('policy-policy-type');
   if (!lineSel || !typeSel) return;
 
-  // Reset helpers
   const destroyChoices = () => {
     try {
       if (policyProductLineChoices) { policyProductLineChoices.destroy(); policyProductLineChoices = null; }
@@ -213,15 +181,12 @@ async function loadProductLinesAndTypesForCarrier(carrierId) {
     return;
   }
 
-  // Loading state
   destroyChoices();
   lineSel.disabled = true;
   typeSel.disabled = true;
   lineSel.innerHTML = '<option value="">Loading…</option>';
   typeSel.innerHTML = '<option value="">Loading…</option>';
 
-  // Pull schedules for this carrier
-  let rows = [];
   const { data, error } = await sb
     .from('commission_schedules')
     .select('product_line, policy_type')
@@ -233,13 +198,12 @@ async function loadProductLinesAndTypesForCarrier(carrierId) {
     return;
   }
 
-  rows = data || [];
+  const rows = data || [];
   if (!rows.length) {
     resetAll('No schedules configured…');
     return;
   }
 
-  // Build product_line => policy_types map
   const typesByLine = new Map();
   for (const r of rows) {
     const line = (r.product_line || '').trim();
@@ -251,17 +215,13 @@ async function loadProductLinesAndTypesForCarrier(carrierId) {
   }
 
   const productLines = Array.from(typesByLine.keys()).sort((a, b) => a.localeCompare(b));
-  _carrierScheduleMap = {
-    lines: productLines,
-    typesByLine
-  };
+  _carrierScheduleMap = { lines: productLines, typesByLine };
 
-  // Populate Product Lines
   lineSel.innerHTML = '';
-  const linePH = document.createElement('option');
-  linePH.value = '';
-  linePH.textContent = 'Select product line…';
-  lineSel.appendChild(linePH);
+  const ph = document.createElement('option');
+  ph.value = '';
+  ph.textContent = 'Select product line…';
+  lineSel.appendChild(ph);
 
   productLines.forEach(line => {
     const opt = document.createElement('option');
@@ -272,22 +232,16 @@ async function loadProductLinesAndTypesForCarrier(carrierId) {
 
   lineSel.disabled = false;
 
-  // Policy type starts disabled until product line chosen
   typeSel.innerHTML = '<option value="">Select product line first…</option>';
   typeSel.disabled = true;
 
-  // Enhance Product Line dropdown
   try {
     policyProductLineChoices = new Choices(lineSel, {
       searchEnabled: true,
       shouldSort: false,
       itemSelectText: ''
     });
-  } catch (e) {
-    console.warn('Choices init failed for product line:', e);
-  }
-
-  // NOTE: policy types will be hydrated by a separate handler when line changes
+  } catch (_) {}
 }
 
 function hydratePolicyTypesForSelectedLine() {
@@ -295,7 +249,6 @@ function hydratePolicyTypesForSelectedLine() {
   const typeSel = document.getElementById('policy-policy-type');
   if (!lineSel || !typeSel) return;
 
-  // Destroy old Choices for policy type
   try {
     if (policyPolicyTypeChoices) {
       policyPolicyTypeChoices.destroy();
@@ -345,12 +298,10 @@ function hydratePolicyTypesForSelectedLine() {
       shouldSort: false,
       itemSelectText: ''
     });
-  } catch (e) {
-    console.warn('Choices init failed for policy type:', e);
-  }
+  } catch (_) {}
 }
 
-/* ---------- Lists: Policies / Ledger (Debits & Credits) / Batches ---------- */
+/* ---------- Lists ---------- */
 
 async function loadPoliciesIntoList() {
   const list = document.getElementById('policy-list');
@@ -397,6 +348,7 @@ async function loadPoliciesIntoList() {
 async function loadAdjustmentsIntoList() {
   const container = document.getElementById('debit-credit-list');
   if (!container) return;
+
   container.textContent = 'Loading...';
 
   const { data, error } = await sb
@@ -422,19 +374,17 @@ async function loadAdjustmentsIntoList() {
     div.className = 'mini-row';
 
     const amtNumber = Number(row.amount || 0);
-
-    // Determine sign just from the stored amount
     const sign = amtNumber >= 0 ? '+' : '-';
     const amt = Math.abs(amtNumber).toFixed(2);
     const cat = row.category || '';
-    const date = row.period_start
-      ? new Date(row.period_start).toLocaleDateString()
-      : '';
+    const date = row.period_start ? new Date(row.period_start).toLocaleDateString() : '';
 
     div.textContent = `${sign}$${amt} — ${cat} (${date})`;
     container.appendChild(div);
   });
 }
+
+/* ---------- Payout batches (Pay/Edit/Delete) ---------- */
 
 async function loadPayoutBatchesIntoList() {
   const list = document.getElementById("batch-list");
@@ -463,7 +413,6 @@ async function loadPayoutBatchesIntoList() {
 
   list.innerHTML = `<div style="opacity:.8;font-size:13px;">Loading payout batches…</div>`;
 
-  // Load batches
   const { data: batches, error } = await sb
     .from("payout_batches")
     .select("*")
@@ -523,6 +472,12 @@ async function loadPayoutBatchesIntoList() {
     right.style.flexWrap = "wrap";
     right.style.justifyContent = "flex-end";
 
+    const btnPay = document.createElement("button");
+    btnPay.type = "button";
+    btnPay.textContent = "Pay";
+    btnPay.style.padding = "6px 12px";
+    btnPay.style.borderRadius = "8px";
+
     const btnEdit = document.createElement("button");
     btnEdit.type = "button";
     btnEdit.textContent = "Edit";
@@ -536,12 +491,6 @@ async function loadPayoutBatchesIntoList() {
     btnDelete.style.borderRadius = "8px";
     btnDelete.style.borderColor = "#ffb3b3";
 
-    const btnPay = document.createElement("button");
-    btnPay.type = "button";
-    btnPay.textContent = "Pay";
-    btnPay.style.padding = "6px 12px";
-    btnPay.style.borderRadius = "8px";
-
     right.appendChild(btnPay);
     right.appendChild(btnEdit);
     right.appendChild(btnDelete);
@@ -550,7 +499,6 @@ async function loadPayoutBatchesIntoList() {
     row.appendChild(right);
     list.appendChild(row);
 
-    // Elements for editing
     const editWrap = left.querySelector(".edit-wrap");
     const editInput = left.querySelector(".edit-total-net");
     const saveBtn = left.querySelector(".save-edit");
@@ -558,13 +506,11 @@ async function loadPayoutBatchesIntoList() {
     const editMsg = left.querySelector(".edit-msg");
     const totalNetText = left.querySelector(".total-net-text");
 
-    // EDIT toggle
     btnEdit.addEventListener("click", () => {
       const open = editWrap.style.display !== "none";
       editWrap.style.display = open ? "none" : "flex";
       editMsg.textContent = "";
       if (!open) {
-        // reset to current value
         const current = Number(b.total_net);
         editInput.value = Number.isFinite(current) ? String(current) : "";
         editInput.focus();
@@ -576,7 +522,6 @@ async function loadPayoutBatchesIntoList() {
       editMsg.textContent = "";
     });
 
-    // SAVE edit total_net
     saveBtn.addEventListener("click", async () => {
       const nextVal = Number(editInput.value);
       if (!Number.isFinite(nextVal) || nextVal < 0) {
@@ -606,7 +551,6 @@ async function loadPayoutBatchesIntoList() {
         return;
       }
 
-      // update local + UI
       b.total_net = nextVal;
       totalNetText.textContent = money(nextVal);
       editMsg.style.color = "#0a7a0a";
@@ -617,7 +561,6 @@ async function loadPayoutBatchesIntoList() {
       }, 600);
     });
 
-    // DELETE batch row
     btnDelete.addEventListener("click", async () => {
       const ok = confirm("Delete this payout batch? This cannot be undone.");
       if (!ok) return;
@@ -646,7 +589,6 @@ async function loadPayoutBatchesIntoList() {
       }
     });
 
-    // PAY (run Netlify function)
     btnPay.addEventListener("click", async () => {
       const ok = confirm("Run this payout batch now?");
       if (!ok) return;
@@ -667,7 +609,6 @@ async function loadPayoutBatchesIntoList() {
           },
           body: JSON.stringify({
             batch_id: b.id,
-            // optional extras in case your function wants them:
             total_net: b.total_net ?? null,
             run_at: b.run_at ?? null
           })
@@ -681,11 +622,8 @@ async function loadPayoutBatchesIntoList() {
           const msg = payload?.error || payload?.message || text || `HTTP ${res.status}`;
           alert(`Pay failed: ${msg}`);
         } else {
-          const msg = payload?.message || "Batch sent successfully.";
-          alert(msg);
-          // Refresh list so status/paid_at changes show up if your function updates the row
+          alert(payload?.message || "Batch sent successfully.");
           await loadPayoutBatchesIntoList();
-          return;
         }
       } catch (e) {
         alert(`Pay failed: ${e?.message || e}`);
@@ -710,53 +648,75 @@ function syncAdjustmentCategoryUI() {
 }
 
 async function loadPoliciesForChargeback(agentId) {
-  const policySel = document.getElementById('adjustment-policy');
-  if (!policySel) return;
+  const sel = document.getElementById('adjustment-policy');
+  if (!sel) return;
 
-  policySel.innerHTML = `<option value="">Search or select policy…</option>`;
-
-  if (!agentId) {
-    if (adjustmentPolicyChoices) {
-      try { adjustmentPolicyChoices.setChoices([], 'value', 'label', true); } catch (_) {}
-    }
-    return;
-  }
+  sel.disabled = true;
+  sel.innerHTML = '<option value="">Loading policies…</option>';
 
   const { data, error } = await sb
     .from('policies')
-    .select('id, policy_number')
+    .select('id, policy_number, carrier_name, premium_annual, issued_at, status')
     .eq('agent_id', agentId)
-    .order('created_at', { ascending: false })
+    .order('issued_at', { ascending: false })
     .limit(200);
 
   if (error) {
-    console.error('loadPoliciesForChargeback error', error);
+    console.error('Error loading policies for chargeback:', error);
+    sel.innerHTML = '<option value="">Error loading policies</option>';
+    sel.disabled = true;
     return;
   }
 
-  const rows = (data || []).map(p => ({
-    value: p.id,
-    label: p.policy_number || p.id
-  }));
+  sel.innerHTML = '';
 
-  if (window.Choices) {
-    try {
-      if (adjustmentPolicyChoices) adjustmentPolicyChoices.destroy();
-      adjustmentPolicyChoices = new Choices(policySel, {
-        searchEnabled: true,
-        itemSelectText: '',
-        shouldSort: false,
-        choices: rows
-      });
-    } catch (_) {}
-  } else {
-    rows.forEach(r => {
-      const opt = document.createElement('option');
-      opt.value = r.value;
-      opt.textContent = r.label;
-      policySel.appendChild(opt);
-    });
+  if (!data || !data.length) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'No policies found for this agent';
+    sel.appendChild(opt);
+    sel.disabled = true;
+    return;
   }
+
+  const ph = document.createElement('option');
+  ph.value = '';
+  ph.textContent = 'Search or select policy…';
+  sel.appendChild(ph);
+
+  data.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;
+
+    const premium = typeof p.premium_annual === 'number' ? `$${p.premium_annual.toFixed(2)}` : '';
+    const issued = p.issued_at ? new Date(p.issued_at).toLocaleDateString() : '';
+    const status = p.status || '';
+
+    const parts = [
+      p.policy_number || `Policy #${p.id}`,
+      p.carrier_name || '',
+      premium,
+      issued,
+      status
+    ].filter(Boolean);
+
+    opt.textContent = parts.join(' · ');
+    sel.appendChild(opt);
+  });
+
+  sel.disabled = false;
+
+  try {
+    if (adjustmentPolicyChoices) {
+      adjustmentPolicyChoices.destroy();
+      adjustmentPolicyChoices = null;
+    }
+    adjustmentPolicyChoices = new Choices(sel, {
+      searchEnabled: true,
+      shouldSort: false,
+      itemSelectText: ''
+    });
+  } catch (_) {}
 }
 
 async function loadLeadsForLeadDebt(agentId) {
@@ -809,37 +769,31 @@ async function loadLeadsForLeadDebt(agentId) {
   }
 }
 
-/* ---------- Run payouts button (matches admin.js) ---------- */
+/* ---------- Run payouts (admin.js behavior) ---------- */
 
 async function wireRunPayoutsButton() {
   const btn = document.getElementById('run-payouts-btn');
   const status = document.getElementById('run-payouts-status');
   if (!btn) return;
 
-  // --- same helpers as admin.js ---
   const toIsoDate = (d) => d.toISOString().slice(0, 10);
 
-  // Friday of current week
   function getWeeklyScheduledDate(today) {
     const d = new Date(today);
-    const day = d.getDay();            // 0 Sun ... 5 Fri
+    const day = d.getDay();
     const diffToFriday = (5 - day + 7) % 7;
     d.setDate(d.getDate() + diffToFriday);
     return d;
   }
 
-  // 5th of current month
   function getMonthlyScheduledDate(today) {
     return new Date(today.getFullYear(), today.getMonth(), 5);
   }
 
   btn.addEventListener('click', async () => {
     const today = new Date();
-    const weeklyDate  = getWeeklyScheduledDate(today);
-    const monthlyDate = getMonthlyScheduledDate(today);
-
-    const weeklyPayDate  = toIsoDate(weeklyDate);
-    const monthlyPayDate = toIsoDate(monthlyDate);
+    const weeklyPayDate = toIsoDate(getWeeklyScheduledDate(today));
+    const monthlyPayDate = toIsoDate(getMonthlyScheduledDate(today));
 
     btn.disabled = true;
     if (status) status.textContent = 'Running payouts...';
@@ -848,41 +802,24 @@ async function wireRunPayoutsButton() {
     const tasks = [];
 
     try {
-      // Weekly advance
       tasks.push(
         fetch(`/.netlify/functions/runWeeklyAdvance?pay_date=${weeklyPayDate}`, { method: 'POST' })
           .then(res => res.json())
-          .then(data => {
-            statusText += `Weekly advance run for ${weeklyPayDate}: ${data.message || 'OK'}\n`;
-            return { type: 'weekly', data };
-          })
-          .catch(err => {
-            statusText += `Weekly advance error: ${err.message}\n`;
-            return { type: 'weekly', error: err };
-          })
+          .then(data => { statusText += `Weekly advance run for ${weeklyPayDate}: ${data.message || 'OK'}\n`; })
+          .catch(err => { statusText += `Weekly advance error: ${err.message}\n`; })
       );
 
-      // Monthly pay-thru
       tasks.push(
         fetch(`/.netlify/functions/runMonthlyPayThru?pay_date=${monthlyPayDate}`, { method: 'POST' })
           .then(res => res.json())
-          .then(data => {
-            statusText += `Monthly pay-thru run for ${monthlyPayDate}: ${data.message || 'OK'}\n`;
-            return { type: 'monthly', data };
-          })
-          .catch(err => {
-            statusText += `Monthly pay-thru error: ${err.message}\n`;
-            return { type: 'monthly', error: err };
-          })
+          .then(data => { statusText += `Monthly pay-thru run for ${monthlyPayDate}: ${data.message || 'OK'}\n`; })
+          .catch(err => { statusText += `Monthly pay-thru error: ${err.message}\n`; })
       );
 
       await Promise.all(tasks);
 
       if (status) status.textContent = statusText.trim() || 'Done.';
-      
-      // keep your improvement: refresh batches after running
       await loadPayoutBatchesIntoList();
-
     } catch (err) {
       console.error('Error running payouts:', err);
       if (status) status.textContent = `Unexpected error: ${err.message}`;
@@ -905,11 +842,26 @@ function wireModalButtons() {
 
   openPolicyBtn?.addEventListener('click', async () => {
     await loadAgentsForCommissions();
-    await loadCarriersForPolicy();
 
-    // contacts are agent-scoped; if an agent is already selected, load their contacts
     const agentId = document.getElementById('policy-agent')?.value || null;
     await loadContactsForPolicy(agentId);
+    await loadCarriersForPolicy();
+
+    // Reset product dropdowns like admin.js
+    const lineSel = document.getElementById('policy-product-line');
+    const typeSel = document.getElementById('policy-policy-type');
+
+    if (lineSel) { lineSel.innerHTML = '<option value="">Select carrier first…</option>'; lineSel.disabled = true; }
+    if (typeSel) { typeSel.innerHTML = '<option value="">Select carrier first…</option>'; typeSel.disabled = true; }
+
+    try {
+      if (policyProductLineChoices) { policyProductLineChoices.destroy(); policyProductLineChoices = null; }
+      if (policyPolicyTypeChoices) { policyPolicyTypeChoices.destroy(); policyPolicyTypeChoices = null; }
+    } catch (_) {}
+
+    // Reset new contact area
+    const newWrap = document.getElementById('policy-new-contact-wrap');
+    if (newWrap) newWrap.style.display = 'none';
 
     openModal(policyModal);
   });
@@ -924,7 +876,7 @@ function wireModalButtons() {
   adjustmentCancelBtn?.addEventListener('click', () => closeModal(adjustmentModal));
 }
 
-/* ---------- Forms: Policy + Adjustment ---------- */
+/* ---------- Dependencies ---------- */
 
 function wirePolicyContactNewToggle() {
   const policyContactSel = document.getElementById('policy-contact');
@@ -937,19 +889,14 @@ function wirePolicyContactNewToggle() {
 }
 
 function wirePolicyDependencies() {
-  // agent changes -> reload contacts for that agent
   document.getElementById('policy-agent')?.addEventListener('change', (e) => {
-    const agentId = e.target.value || null;
-    loadContactsForPolicy(agentId);
+    loadContactsForPolicy(e.target.value || null);
   });
 
-  // carrier changes -> load product lines / types
   document.getElementById('policy-carrier')?.addEventListener('change', (e) => {
-    const carrierId = e.target.value || null;
-    loadProductLinesAndTypesForCarrier(carrierId);
+    loadProductLinesAndTypesForCarrier(e.target.value || null);
   });
 
-  // product line changes -> hydrate types
   document.getElementById('policy-product-line')?.addEventListener('change', () => {
     hydratePolicyTypesForSelectedLine();
   });
@@ -972,60 +919,61 @@ function wireAdjustmentDependencies() {
   });
 }
 
+/* ---------- Policy submit (FIXED to match admin.js policies table) ---------- */
+
 function wirePolicySubmit() {
   document.getElementById('policy-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
-  
+
     const errEl = document.getElementById('policy-error');
     if (errEl) errEl.textContent = '';
-  
+
     try {
-      const policy_agent_id = document.getElementById('policy-agent')?.value || null;
-      const contact_id_sel  = document.getElementById('policy-contact')?.value || null;
-  
+      const agent_id = document.getElementById('policy-agent')?.value || null;
+      const contact_id_sel = document.getElementById('policy-contact')?.value || null;
+
       const carrierSel = document.getElementById('policy-carrier');
       const carrier_name = carrierSel?.options?.[carrierSel.selectedIndex]?.text || null;
-  
-      const product_line  = document.getElementById('policy-product-line')?.value || null;
-      const policy_type   = document.getElementById('policy-policy-type')?.value || null;
+
+      const product_line = document.getElementById('policy-product-line')?.value || null;
+      const policy_type = document.getElementById('policy-policy-type')?.value || null;
       const policy_number = document.getElementById('policy-number')?.value?.trim() || null;
-  
+
       const premium_annual = Number(document.getElementById('policy-annual-premium')?.value || 0);
-  
+
       const issue_date_raw = document.getElementById('policy-issue-date')?.value || null;
-      const issue_date = issue_date_raw ? new Date(issue_date_raw).toISOString() : null;
-  
+      const issued_at = issue_date_raw ? new Date(issue_date_raw).toISOString() : null;
+
       const status = document.getElementById('policy-status')?.value || 'pending';
-  
-      if (!policy_agent_id || !carrier_name || !product_line || !policy_type || !policy_number || !premium_annual || !issue_date) {
+
+      if (!agent_id || !carrier_name || !product_line || !policy_type || !policy_number || !(premium_annual > 0) || !issued_at) {
         if (errEl) errEl.textContent = 'Please complete all required fields.';
         return;
       }
-  
+
       let contact_id = contact_id_sel;
-  
+
       if (contact_id_sel === '__new__') {
         const first_name = document.getElementById('policy-contact-first')?.value?.trim() || '';
-        const last_name  = document.getElementById('policy-contact-last')?.value?.trim() || '';
-  
+        const last_name = document.getElementById('policy-contact-last')?.value?.trim() || '';
         const phone = document.getElementById('policy-contact-phone')?.value?.trim() || '';
         const email = document.getElementById('policy-contact-email')?.value?.trim() || '';
-  
+
         const address_line1 = document.getElementById('policy-contact-address1')?.value?.trim() || '';
         const address_line2 = document.getElementById('policy-contact-address2')?.value?.trim() || '';
-        const city  = document.getElementById('policy-contact-city')?.value?.trim() || '';
+        const city = document.getElementById('policy-contact-city')?.value?.trim() || '';
         const state = document.getElementById('policy-contact-state')?.value?.trim() || '';
-        const zip   = document.getElementById('policy-contact-zip')?.value?.trim() || '';
-  
+        const zip = document.getElementById('policy-contact-zip')?.value?.trim() || '';
+
         if (!first_name || !last_name) {
           if (errEl) errEl.textContent = 'New contact requires first + last name.';
           return;
         }
-  
+
         const { data: newContact, error: cErr } = await sb
           .from('contacts')
           .insert([{
-            owning_agent_id: policy_agent_id,
+            owning_agent_id: agent_id,
             first_name,
             last_name,
             phones: [phone].filter(Boolean),
@@ -1038,65 +986,69 @@ function wirePolicySubmit() {
           }])
           .select('id')
           .single();
-  
+
         if (cErr) {
           console.error('Create contact error', cErr);
           if (errEl) errEl.textContent = 'Could not create contact.';
           return;
         }
-  
+
         contact_id = newContact?.id || null;
       }
-  
+
       if (!contact_id) {
         if (errEl) errEl.textContent = 'Please select or create a contact.';
         return;
       }
-  
+
+      // ✅ MATCH admin.js schema: agent_id + issued_at
       const { data: newPolicy, error: pErr } = await sb
         .from('policies')
         .insert([{
-          policy_agent_id,
+          agent_id,
           contact_id,
           carrier_name,
           product_line,
           policy_type,
           policy_number,
           premium_annual,
-          issue_date,
+          issued_at,
           status
         }])
         .select('id')
         .single();
-  
+
       if (pErr) {
         console.error('Create policy error', pErr);
         if (errEl) errEl.textContent = 'Could not save policy.';
         return;
       }
-  
-      // IMPORTANT: admin.js does this right after creating the policy
+
+      // admin.js runs the commission flow right after policy create
       if (typeof window.runPolicyCommissionFlow === 'function') {
         await window.runPolicyCommissionFlow(newPolicy.id);
       } else if (typeof runPolicyCommissionFlow === 'function') {
         await runPolicyCommissionFlow(newPolicy.id);
       }
-  
+
       alert('Policy created + commissions processed.');
-  
+
       closeModal(document.getElementById('policy-modal'));
       document.getElementById('policy-form')?.reset();
-  
+
       const wrap = document.getElementById('policy-new-contact-wrap');
       if (wrap) wrap.style.display = 'none';
-  
+
       await loadPoliciesIntoList();
     } catch (ex) {
       console.error('policy submit error', ex);
+      const errEl = document.getElementById('policy-error');
       if (errEl) errEl.textContent = 'Could not save policy.';
     }
   });
 }
+
+/* ---------- Adjustment submit (your version matches admin.js) ---------- */
 
 function wireAdjustmentSubmit() {
   document.getElementById('adjustment-form')?.addEventListener('submit', async (e) => {
@@ -1106,40 +1058,27 @@ function wireAdjustmentSubmit() {
     if (errorEl) errorEl.textContent = '';
 
     try {
-      const agent_id       = document.getElementById('adjustment-agent')?.value || null;
-      const type           = document.getElementById('adjustment-type')?.value || '';      // Debit / Credit
-      const category       = document.getElementById('adjustment-category')?.value || '';  // lead_debt / chargeback / other
-      const rawAmount      = parseFloat(document.getElementById('adjustment-amount')?.value || '0');
-      const effective_date = document.getElementById('adjustment-date')?.value || '';      // YYYY-MM-DD
-      const description    = document.getElementById('adjustment-description')?.value?.trim() || '';
+      const agent_id = document.getElementById('adjustment-agent')?.value || null;
+      const type = document.getElementById('adjustment-type')?.value || '';
+      const category = document.getElementById('adjustment-category')?.value || '';
+      const rawAmount = parseFloat(document.getElementById('adjustment-amount')?.value || '0');
+      const effective_date = document.getElementById('adjustment-date')?.value || '';
+      const description = document.getElementById('adjustment-description')?.value?.trim() || '';
 
-      const policy_id = (category === 'chargeback')
-        ? (document.getElementById('adjustment-policy')?.value || null)
-        : null;
-
-      const lead_id = (category === 'lead_debt')
-        ? (document.getElementById('adjustment-lead')?.value || null)
-        : null;
+      const policy_id = (category === 'chargeback') ? (document.getElementById('adjustment-policy')?.value || null) : null;
+      const lead_id = (category === 'lead_debt') ? (document.getElementById('adjustment-lead')?.value || null) : null;
 
       if (!agent_id || !type || !category || !effective_date || !Number.isFinite(rawAmount) || rawAmount <= 0) {
         if (errorEl) errorEl.textContent = 'Please fill in all required fields.';
         return;
       }
 
-      const normType = String(type).toLowerCase(); // 'debit' or 'credit'
+      const normType = String(type).toLowerCase();
+      const signedAmount = normType === 'debit' ? -Math.abs(rawAmount) : Math.abs(rawAmount);
 
-      // signed amount like admin.js
-      const signedAmount = normType === 'debit'
-        ? -Math.abs(rawAmount)
-        :  Math.abs(rawAmount);
-
-      // entry_type mapping like admin.js
       let entry_type;
-      if (normType === 'debit') {
-        entry_type = (category === 'chargeback') ? 'chargeback' : 'lead_charge';
-      } else {
-        entry_type = 'override';
-      }
+      if (normType === 'debit') entry_type = (category === 'chargeback') ? 'chargeback' : 'lead_charge';
+      else entry_type = 'override';
 
       const payload = {
         agent_id,
@@ -1170,7 +1109,6 @@ function wireAdjustmentSubmit() {
         return;
       }
 
-      // debit + lead_debt => also create lead_debts row
       if (normType === 'debit' && category === 'lead_debt') {
         if (!lead_id) {
           if (errorEl) errorEl.textContent = 'Please choose a lead for this lead debt.';
@@ -1193,20 +1131,17 @@ function wireAdjustmentSubmit() {
 
         if (ldErr) {
           console.error('Error inserting lead_debts', ldErr);
-          if (errorEl) errorEl.textContent =
-            'Saved to ledger, but lead debt record failed: ' + ldErr.message;
+          if (errorEl) errorEl.textContent = 'Saved to ledger, but lead debt record failed: ' + ldErr.message;
           return;
         }
       }
 
-      // debit + chargeback => also create policy_chargebacks row
       if (normType === 'debit' && category === 'chargeback') {
         if (!policy_id) {
           if (errorEl) errorEl.textContent = 'Please choose a policy for this chargeback.';
           return;
         }
 
-        // load carrier + policyholder name
         const { data: pol, error: polErr } = await sb
           .from('policies')
           .select(`
@@ -1247,8 +1182,7 @@ function wireAdjustmentSubmit() {
 
         if (cbErr) {
           console.error('Error inserting policy_chargebacks', cbErr);
-          if (errorEl) errorEl.textContent =
-            'Saved to ledger, but chargeback record failed: ' + cbErr.message;
+          if (errorEl) errorEl.textContent = 'Saved to ledger, but chargeback record failed: ' + cbErr.message;
           return;
         }
       }
@@ -1274,12 +1208,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
-  // commissions-only pages usually already gate admin in HTML,
-  // but we keep the session read for created_by/userId consistency
   const { data: { session } = {} } = await sb.auth.getSession();
   userId = session?.user?.id || null;
 
-  // Basic wiring
   await wireRunPayoutsButton();
   wireModalButtons();
   wirePolicyContactNewToggle();
@@ -1288,15 +1219,12 @@ document.addEventListener('DOMContentLoaded', async () => {
   wirePolicySubmit();
   wireAdjustmentSubmit();
 
-  // Preload dropdowns + lists (matches commissions behavior)
   await loadAgentsForCommissions();
   await loadCarriersForPolicy();
 
-  // If agent already selected, load their contacts
   const agentId = document.getElementById('policy-agent')?.value || null;
   await loadContactsForPolicy(agentId);
 
-  // Preload lists
   await loadPoliciesIntoList();
   await loadAdjustmentsIntoList();
   await loadPayoutBatchesIntoList();
