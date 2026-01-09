@@ -31,10 +31,8 @@ function safeNum(v) {
 
 /* ---------- Loaders: Agents / Contacts / Carriers / Carrier Products ---------- */
 
-async function loadAgentsForCommissions() {
-  const policyAgentSel = document.getElementById('policy-agent');
-  const adjustmentAgentSel = document.getElementById('adjustment-agent');
-  if (!policyAgentSel && !adjustmentAgentSel) return;
+async function loadAgentsForCommissions(force = false) {
+  if (commissionAgentsLoaded && !force) return;
 
   const { data, error } = await sb
     .from('agents')
@@ -43,142 +41,146 @@ async function loadAgentsForCommissions() {
     .order('full_name', { ascending: true });
 
   if (error) {
-    console.error('loadAgentsForCommissions error', error);
+    console.error('Error loading agents for commissions', error);
     return;
   }
 
-  const agents = data || [];
+  const selects = [
+    document.getElementById('policy-agent'),
+    document.getElementById('adjustment-agent'),
+  ];
 
-  // Fill both selects
-  [policyAgentSel, adjustmentAgentSel].forEach(sel => {
+  selects.forEach(sel => {
     if (!sel) return;
-    sel.innerHTML = `<option value="">Select agent…</option>`;
-    agents.forEach(a => {
+    sel.innerHTML = '<option value="">Select agent…</option>';
+    data.forEach(agent => {
       const opt = document.createElement('option');
-      opt.value = a.id;
-      opt.textContent = a.full_name || a.id;
+      opt.value = agent.id;
+      opt.textContent = agent.full_name || agent.id;
       sel.appendChild(opt);
     });
   });
 
-  // Enhance with Choices (optional)
-  if (window.Choices) {
-    try {
-      if (policyAgentSel) {
-        if (policyAgentChoices) policyAgentChoices.destroy();
-        policyAgentChoices = new Choices(policyAgentSel, {
-          searchEnabled: true,
-          itemSelectText: '',
-          shouldSort: false
-        });
-      }
-    } catch (_) {}
-
-    try {
-      if (adjustmentAgentSel) {
-        if (adjustmentAgentChoices) adjustmentAgentChoices.destroy();
-        adjustmentAgentChoices = new Choices(adjustmentAgentSel, {
-          searchEnabled: true,
-          itemSelectText: '',
-          shouldSort: false
-        });
-      }
-    } catch (_) {}
-  }
+  commissionAgentsLoaded = true;
 }
 
 async function loadContactsForPolicy(agentId = null) {
   const sel = document.getElementById('policy-contact');
   if (!sel) return;
 
-  // Reset
-  sel.innerHTML = `
-    <option value="">Select contact…</option>
-    <option value="__new__">➕ New contact (enter below)</option>
-  `;
+  sel.disabled = true;
+  sel.innerHTML = '<option value="">Loading contacts…</option>';
 
-  // If no agent selected, we still allow manual new contact, but we won’t load the list
-  if (!agentId) {
-    if (window.Choices) {
-      try {
-        if (policyContactChoices) policyContactChoices.destroy();
-        policyContactChoices = new Choices(sel, {
-          searchEnabled: true,
-          itemSelectText: '',
-          shouldSort: false
-        });
-      } catch (_) {}
-    }
-    return;
+  // Base query
+  let query = sb
+    .from('contacts')
+    .select(
+      'id, first_name, last_name, phones, emails, email, city, state, zip, address_line1, owning_agent_id'
+    )
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  // ✅ filter by owning_agent_id (NOT agent_id)
+  if (agentId) {
+    query = query.eq('owning_agent_id', agentId);
   }
 
-  // Matches admin.js: contacts filtered by owning_agent_id
-  const { data, error } = await sb
-    .from('contacts')
-    .select('id, first_name, last_name, phones, emails')
-    .eq('owning_agent_id', agentId)
-    .order('created_at', { ascending: false })
-    .limit(500);
+  const { data, error } = await query;
 
   if (error) {
-    console.error('loadContactsForPolicy error', error);
+    console.error('Error loading contacts for policy:', error);
+    sel.innerHTML = '<option value="">Error loading contacts</option>';
     return;
   }
 
-  (data || []).forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c.id;
-    const name = `${c.first_name || ''} ${c.last_name || ''}`.trim() || 'Unnamed';
-    const phone = Array.isArray(c.phones) && c.phones[0] ? c.phones[0] : '';
-    const email = Array.isArray(c.emails) && c.emails[0] ? c.emails[0] : '';
-    opt.textContent = `${name}${phone ? ` • ${phone}` : ''}${email ? ` • ${email}` : ''}`;
-    sel.appendChild(opt);
-  });
+  // Rebuild options
+  sel.innerHTML = '';
 
-  if (window.Choices) {
-    try {
-      if (policyContactChoices) policyContactChoices.destroy();
-      policyContactChoices = new Choices(sel, {
-        searchEnabled: true,
-        itemSelectText: '',
-        shouldSort: false
-      });
-    } catch (_) {}
+  // Placeholder
+  const placeholder = document.createElement('option');
+  placeholder.value = '';
+  placeholder.textContent = 'Select contact…';
+  sel.appendChild(placeholder);
+
+  // Existing contacts
+  if (data && data.length) {
+    data.forEach(c => {
+      const opt = document.createElement('option');
+      opt.value = c.id;
+
+      const name = [c.first_name, c.last_name].filter(Boolean).join(' ');
+      const cityState = [c.city, c.state].filter(Boolean).join(', ');
+      const addr = c.address_line1 || '';
+      const phone =
+        Array.isArray(c.phones) && c.phones.length ? c.phones[0] : '';
+      const email =
+        c.email ||
+        (Array.isArray(c.emails) && c.emails.length ? c.emails[0] : '');
+
+      const parts = [
+        name || `Contact ${String(c.id).slice(0, 8)}`,
+        addr,
+        cityState,
+        phone,
+        email
+      ].filter(Boolean);
+
+      opt.textContent = parts.join(' · ');
+      sel.appendChild(opt);
+    });
   }
+
+  // Always add the "New contact" option at the bottom
+  const newOpt = document.createElement('option');
+  newOpt.value = '__new__';
+  newOpt.textContent = '➕ New contact (enter below)';
+  sel.appendChild(newOpt);
+
+  sel.disabled = false;
 }
 
 async function loadCarriersForPolicy() {
-  const carrierSel = document.getElementById('policy-carrier');
-  if (!carrierSel) return;
+  const sel = document.getElementById('policy-carrier');
+  if (!sel) return;
 
-  const { data, error } = await sb
-    .from('carriers')
-    .select('id, carrier_name')
-    .order('carrier_name', { ascending: true });
+  sel.disabled = true;
+  sel.innerHTML = '<option value="">Loading carriers…</option>';
 
-  if (error) {
-    console.error('loadCarriersForPolicy error', error);
+  let carriers = [];
+
+  try {
+    const { data, error } = await sb
+      .from('carriers')
+      .select('id, carrier_name')
+      .order('carrier_name', { ascending: true });
+
+    console.log('Carrier data result:', data, error);
+
+    if (error) {
+      console.error('Error loading carriers:', error);
+    } else {
+      carriers = data || [];
+    }
+  } catch (err) {
+    console.error('Carrier Supabase lookup failed:', err);
+  }
+
+  if (!carriers.length) {
+    sel.innerHTML = '<option value="">No carriers found</option>';
+    sel.disabled = true;
     return;
   }
 
-  carrierSel.innerHTML = `<option value="">Select carrier…</option>`;
-  (data || []).forEach(c => {
+  // Populate
+  sel.innerHTML = '';
+  carriers.forEach(c => {
     const opt = document.createElement('option');
     opt.value = c.id;
-    opt.textContent = c.carrier_name || c.id;
-    carrierSel.appendChild(opt);
+    opt.textContent = c.carrier_name;
+    sel.appendChild(opt);
   });
 
-  if (window.Choices) {
-    try {
-      if (policyCarrierChoices) policyCarrierChoices.destroy();
-      policyCarrierChoices = new Choices(carrierSel, {
-        searchEnabled: true,
-        itemSelectText: '',
-        shouldSort: true
-      });
-    } catch (_) {}
-  }
+  sel.disabled = false;
 }
 
 async function loadProductLinesAndTypesForCarrier(carrierId) {
@@ -186,72 +188,165 @@ async function loadProductLinesAndTypesForCarrier(carrierId) {
   const typeSel = document.getElementById('policy-policy-type');
   if (!lineSel || !typeSel) return;
 
-  // reset
+  // Reset helpers
+  const destroyChoices = () => {
+    try {
+      if (policyProductLineChoices) { policyProductLineChoices.destroy(); policyProductLineChoices = null; }
+      if (policyPolicyTypeChoices) { policyPolicyTypeChoices.destroy(); policyPolicyTypeChoices = null; }
+    } catch (_) {}
+  };
+
+  const resetAll = (msg = 'Select carrier first…') => {
+    destroyChoices();
+    _carrierScheduleMap = null;
+
+    lineSel.innerHTML = `<option value="">${msg}</option>`;
+    lineSel.disabled = true;
+
+    typeSel.innerHTML = `<option value="">${msg}</option>`;
+    typeSel.disabled = true;
+  };
+
+  if (!carrierId) {
+    resetAll('Select carrier first…');
+    return;
+  }
+
+  // Loading state
+  destroyChoices();
   lineSel.disabled = true;
   typeSel.disabled = true;
-  lineSel.innerHTML = `<option value="">Select carrier first…</option>`;
-  typeSel.innerHTML = `<option value="">Select product line first…</option>`;
-  carrierProductCache = carrierProductCache || {};
+  lineSel.innerHTML = '<option value="">Loading…</option>';
+  typeSel.innerHTML = '<option value="">Loading…</option>';
 
-  if (!carrierId) return;
-
+  // Pull schedules for this carrier
+  let rows = [];
   const { data, error } = await sb
     .from('commission_schedules')
     .select('product_line, policy_type')
     .eq('carrier_id', carrierId);
 
   if (error) {
-    console.error('loadProductLinesAndTypesForCarrier error', error);
+    console.error('Error loading commission_schedules for carrier:', error);
+    resetAll('Error loading schedules…');
     return;
   }
 
-  const lines = new Set();
+  rows = data || [];
+  if (!rows.length) {
+    resetAll('No schedules configured…');
+    return;
+  }
+
+  // Build product_line => policy_types map
   const typesByLine = new Map();
+  for (const r of rows) {
+    const line = (r.product_line || '').trim();
+    const type = (r.policy_type || '').trim();
+    if (!line) continue;
 
-  (data || []).forEach(r => {
-    const line = r.product_line || null;
-    const type = r.policy_type || null;
-    if (!line) return;
-
-    lines.add(line);
     if (!typesByLine.has(line)) typesByLine.set(line, new Set());
     if (type) typesByLine.get(line).add(type);
+  }
+
+  const productLines = Array.from(typesByLine.keys()).sort((a, b) => a.localeCompare(b));
+  _carrierScheduleMap = {
+    lines: productLines,
+    typesByLine
+  };
+
+  // Populate Product Lines
+  lineSel.innerHTML = '';
+  const linePH = document.createElement('option');
+  linePH.value = '';
+  linePH.textContent = 'Select product line…';
+  lineSel.appendChild(linePH);
+
+  productLines.forEach(line => {
+    const opt = document.createElement('option');
+    opt.value = line;
+    opt.textContent = line;
+    lineSel.appendChild(opt);
   });
 
-  carrierProductCache[carrierId] = { lines, typesByLine };
-
-  // populate product lines
-  const lineArr = Array.from(lines).sort();
-  lineSel.innerHTML = `<option value="">Select product line…</option>` + lineArr
-    .map(v => `<option value="${v}">${v}</option>`)
-    .join('');
-
   lineSel.disabled = false;
-  typeSel.disabled = false;
 
-  // clear policy types until a line is chosen
-  typeSel.innerHTML = `<option value="">Select product line first…</option>`;
+  // Policy type starts disabled until product line chosen
+  typeSel.innerHTML = '<option value="">Select product line first…</option>';
+  typeSel.disabled = true;
+
+  // Enhance Product Line dropdown
+  try {
+    policyProductLineChoices = new Choices(lineSel, {
+      searchEnabled: true,
+      shouldSort: false,
+      itemSelectText: ''
+    });
+  } catch (e) {
+    console.warn('Choices init failed for product line:', e);
+  }
+
+  // NOTE: policy types will be hydrated by a separate handler when line changes
 }
 
 function hydratePolicyTypesForSelectedLine() {
-  const carrierId = document.getElementById('policy-carrier')?.value || '';
   const lineSel = document.getElementById('policy-product-line');
   const typeSel = document.getElementById('policy-policy-type');
   if (!lineSel || !typeSel) return;
 
-  const line = lineSel.value || '';
-  if (!carrierId || !line) {
-    typeSel.innerHTML = `<option value="">Select product line first…</option>`;
+  // Destroy old Choices for policy type
+  try {
+    if (policyPolicyTypeChoices) {
+      policyPolicyTypeChoices.destroy();
+      policyPolicyTypeChoices = null;
+    }
+  } catch (_) {}
+
+  const selectedLine = (lineSel.value || '').trim();
+
+  if (!_carrierScheduleMap || !selectedLine) {
+    typeSel.innerHTML = '<option value="">Select product line first…</option>';
+    typeSel.disabled = true;
     return;
   }
 
-  const cache = carrierProductCache?.[carrierId];
-  const set = cache?.typesByLine?.get(line);
-  const types = set ? Array.from(set).sort() : [];
+  const setOrEmpty = _carrierScheduleMap.typesByLine.get(selectedLine);
+  const types = setOrEmpty ? Array.from(setOrEmpty).sort((a, b) => a.localeCompare(b)) : [];
 
-  typeSel.innerHTML = `<option value="">Select policy type…</option>` + types
-    .map(v => `<option value="${v}">${v}</option>`)
-    .join('');
+  typeSel.innerHTML = '';
+
+  if (!types.length) {
+    const opt = document.createElement('option');
+    opt.value = '';
+    opt.textContent = 'No policy types for this product line';
+    typeSel.appendChild(opt);
+    typeSel.disabled = true;
+    return;
+  }
+
+  const ph = document.createElement('option');
+  ph.value = '';
+  ph.textContent = 'Select policy type…';
+  typeSel.appendChild(ph);
+
+  types.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t;
+    opt.textContent = t;
+    typeSel.appendChild(opt);
+  });
+
+  typeSel.disabled = false;
+
+  try {
+    policyPolicyTypeChoices = new Choices(typeSel, {
+      searchEnabled: true,
+      shouldSort: false,
+      itemSelectText: ''
+    });
+  } catch (e) {
+    console.warn('Choices init failed for policy type:', e);
+  }
 }
 
 /* ---------- Lists: Policies / Ledger (Debits & Credits) / Batches ---------- */
