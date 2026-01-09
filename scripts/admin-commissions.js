@@ -368,7 +368,7 @@ async function loadPayoutBatchesIntoList() {
   list.innerHTML = `<div style="opacity:.8;font-size:13px;">Loading payout batches…</div>`;
 
   // Load batches
-  const { data: batches, error } = await supabase
+  const { data: batches, error } = await sb
     .from("payout_batches")
     .select("*")
     .order("created_at", { ascending: false })
@@ -494,7 +494,7 @@ async function loadPayoutBatchesIntoList() {
       setBusy(btnDelete, true);
       setBusy(btnPay, true);
 
-      const { error: upErr } = await supabase
+      const { error: upErr } = await sb
         .from("payout_batches")
         .update({ total_net: nextVal })
         .eq("id", b.id);
@@ -530,7 +530,7 @@ async function loadPayoutBatchesIntoList() {
       setBusy(btnEdit, true);
       setBusy(btnPay, true);
 
-      const { error: delErr } = await supabase
+      const { error: delErr } = await sb
         .from("payout_batches")
         .delete()
         .eq("id", b.id);
@@ -560,7 +560,7 @@ async function loadPayoutBatchesIntoList() {
       setBusy(btnDelete, true);
 
       try {
-        const { data: { session } = {} } = await supabase.auth.getSession();
+        const { data: { session } = {} } = await sb.auth.getSession();
         const token = session?.access_token;
 
         const res = await fetch("/.netlify/functions/sendPayoutBatch", {
