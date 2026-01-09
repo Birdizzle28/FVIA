@@ -201,7 +201,12 @@ async function loadLeads() {
     tr.innerHTML = `
       <td><input type="checkbox" class="lead-checkbox" data-id="${escapeHtml(id)}"></td>
       <td class="lead-date">${escapeHtml(submitted)}</td>
-      <td class="lead-agent">${escapeHtml(lead.submitted_by_name || '—')}</td>
+      <td class="lead-agent">
+        ${lead.assigned_to
+          ? escapeHtml(agentNameById[lead.assigned_to] || '—')
+          : `Unassigned (by ${escapeHtml(lead.submitted_by_name || '—')})`
+        }
+      </td>
       <td class="lead-name">${escapeHtml(lead.first_name || '')}</td>
       <td class="lead-last">${escapeHtml(lead.last_name || '')}</td>
       <td class="lead-age">${escapeHtml(lead.age ?? '')}</td>
