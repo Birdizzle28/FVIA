@@ -79,12 +79,12 @@
 
       <!-- Mini admin nav for this dedicated page -->
       <nav id="admin-page-nav">
-        <button id="nav-all" data-href="admin-all-leads.html">All Leads</button>
-        <button id="nav-requests" data-href="admin-lead-requests.html">Lead Requests</button>
-        <button id="nav-history" data-href="admin-assignment-history.html">Assignment History</button>
-        <button id="nav-stats" data-href="admin-agent-stats.html">Agent Stats</button>
-        <button id="nav-commissions" class="active" data-href="admin-commissions.html">Commissions</button>
-        <button id="nav-content" data-href="admin-content.html">Content</button>
+        <button type="button" id="nav-all" data-href="admin-all-leads.html">All Leads</button>
+        <button type="button" id="nav-requests" data-href="admin-lead-requests.html">Lead Requests</button>
+        <button type="button" id="nav-history" data-href="admin-assignment-history.html">Assignment History</button>
+        <button type="button" id="nav-stats" data-href="admin-agent-stats.html">Agent Stats</button>
+        <button type="button" id="nav-commissions" class="active" data-href="admin-commissions.html">Commissions</button>
+        <button type="button" id="nav-content" data-href="admin-content.html">Content</button>
       </nav>
 
       <!-- Commissions Section ONLY -->
@@ -363,6 +363,20 @@
           location.replace('dashboard.html');
         }
       })();
+    </script>
+    <script>
+      // Admin mini-nav: buttons with data-href should navigate
+      document.addEventListener('DOMContentLoaded', () => {
+        const nav = document.getElementById('admin-page-nav');
+        if (!nav) return;
+    
+        nav.addEventListener('click', (e) => {
+          const btn = e.target.closest('button[data-href]');
+          if (!btn) return;
+          const href = btn.getAttribute('data-href');
+          if (href) window.location.href = href;
+        });
+      });
     </script>
   </body>
 </html>
