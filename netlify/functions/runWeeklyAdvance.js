@@ -113,11 +113,7 @@ function getPayDateStr(event) {
 }
 
 /**
- * Repayment rate based on:
- * - totalDebt (lead + chargeback)
- * - isActive (agents.is_active)
- *
- * Rules:
+ * Repayment rate rules:
  *   - if not active → 100% of this check (up to remaining debt)
  *   - if active:
  *        < 1000         => 30%
@@ -125,37 +121,20 @@ function getPayDateStr(event) {
  *        >= 2000        => 50%
  */
 function getRepaymentRate(totalDebt, isActive) {
-  if (!isActive) {
-    return 1.0; // 100%
-  }
-  if (totalDebt <= 0) {
-    return 0;
-  }
-  if (totalDebt < 1000) {
-    return 0.30;
-  }
-  if (totalDebt < 2000) {
-    return 0.40;
-  }
-  return 0.50; // 2000+
+  if (!isActive) return 1.0;
+  if (totalDebt <= 0) return 0;
+  if (totalDebt < 1000) return 0.30;
+  if (totalDebt < 2000) return 0.40;
+  return 0.50;
 }
 
 /**
  * Record actual repayment events into DB
- * - chargebackRepay is what we decided to take for chargebacks for this agent this week
- * - leadRepay       is what we decided to take for leads for this agent this week
- *
- * NOTE: we do NOT set run_id here, because run_id on lead_debt_payments
- *       points to commission_runs, not payout_batches.
  */
 async function applyRepayments(agent_id, chargebackRepay, leadRepay, payout_batch_id) {
-  /* ------------------------------
-     1. Apply chargeback repayments
-     ------------------------------ */
   if (chargebackRepay > 0) {
     let remaining = chargebackRepay;
 
-    // Load open chargebacks oldest → newest
     const { data: cbRows, error: cbErr } = await supabase
       .from('policy_chargebacks')
       .select('id, amount, status')
@@ -173,7 +152,6 @@ async function applyRepayments(agent_id, chargebackRepay, leadRepay, payout_batc
         const pay = Math.min(outstanding, remaining);
         remaining -= pay;
 
-        // Insert a payment row
         await supabase.from('chargeback_payments').insert({
           agent_id,
           chargeback_id: cb.id,
@@ -181,7 +159,6 @@ async function applyRepayments(agent_id, chargebackRepay, leadRepay, payout_batc
           payout_batch_id
         });
 
-        // Update chargeback status + remaining amount
         if (pay === outstanding) {
           await supabase
             .from('policy_chargebacks')
@@ -200,9 +177,6 @@ async function applyRepayments(agent_id, chargebackRepay, leadRepay, payout_batc
     }
   }
 
-  /* ------------------------------
-     2. Apply lead debt repayments
-     ------------------------------ */
   if (leadRepay > 0) {
     let remaining = leadRepay;
 
@@ -223,7 +197,6 @@ async function applyRepayments(agent_id, chargebackRepay, leadRepay, payout_batc
         const pay = Math.min(outstanding, remaining);
         remaining -= pay;
 
-        // Insert a payment row
         await supabase.from('lead_debt_payments').insert({
           lead_debt_id: ld.id,
           agent_id,
@@ -231,7 +204,6 @@ async function applyRepayments(agent_id, chargebackRepay, leadRepay, payout_batc
           payout_batch_id
         });
 
-        // Update lead debt status + remaining amount
         if (pay === outstanding) {
           await supabase
             .from('lead_debts')
@@ -262,22 +234,21 @@ export async function handler(event) {
   try {
     const payDateStr = getPayDateStr(event); // YYYY-MM-DD (Friday)
 
-    // NEW RULE WINDOW:
-    // Eligible sales are from (payFriday - 9 days) through (payFriday - 2 days) exclusive
+    // Eligible sales window
     const startYMD = addDaysYMD(payDateStr, -5); // Sunday
     const endYMD   = addDaysYMD(payDateStr, -2); // Wednesday (exclusive)
-    
+
     const startIso = localMidnightToUtcIso(startYMD, PAY_TZ); // inclusive
     const endIso   = localMidnightToUtcIso(endYMD, PAY_TZ);   // exclusive
-    
+
     console.log('[runWeeklyAdvance] pay_date =', payDateStr, 'window =', startYMD, 'to', endYMD, '(end exclusive)');
 
-    // 2) Find all eligible ledger rows (advances + overrides not yet settled)
-    const { data: ledgerRows, error: ledgerErr } = await supabase
+    // 2) Find eligible ledger rows (advances + overrides not yet settled)
+    // ✅ Include policy_id so we can check policies.as_earned and exclude them.
+    const { data: ledgerRowsRaw, error: ledgerErr } = await supabase
       .from('commission_ledger')
-      .select('id, agent_id, amount, entry_type, created_at, is_settled')
+      .select('id, policy_id, agent_id, amount, entry_type, created_at, is_settled')
       .in('entry_type', ['advance', 'override'])
-      // treat NULL as not settled too
       .or('is_settled.is.null,is_settled.eq.false')
       .gte('created_at', startIso)
       .lt('created_at', endIso);
@@ -290,9 +261,10 @@ export async function handler(event) {
       };
     }
 
-    console.log('[runWeeklyAdvance] eligible ledger rows =', ledgerRows.length);
+    const ledgerRowsAll = ledgerRowsRaw || [];
+    console.log('[runWeeklyAdvance] eligible ledger rows (raw) =', ledgerRowsAll.length);
 
-    if (!ledgerRows || ledgerRows.length === 0) {
+    if (ledgerRowsAll.length === 0) {
       return {
         statusCode: 200,
         body: JSON.stringify({
@@ -300,6 +272,53 @@ export async function handler(event) {
           pay_date: payDateStr,
           window_start: startIso,
           window_end_exclusive: endIso,
+        }),
+      };
+    }
+
+    // ✅ 2.5) Exclude any ledger rows whose policy is as_earned = true
+    const policyIds = Array.from(
+      new Set(ledgerRowsAll.map(r => r.policy_id).filter(Boolean))
+    );
+
+    let asEarnedMap = new Map(); // policy_id -> boolean
+    if (policyIds.length > 0) {
+      const { data: polRows, error: polErr } = await supabase
+        .from('policies')
+        .select('id, as_earned')
+        .in('id', policyIds);
+
+      if (polErr) {
+        console.error('[runWeeklyAdvance] Error loading policies.as_earned:', polErr);
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ error: 'Failed to load policies.as_earned', details: polErr }),
+        };
+      }
+
+      (polRows || []).forEach(p => {
+        asEarnedMap.set(p.id, p.as_earned === true);
+      });
+    }
+
+    const ledgerRows = ledgerRowsAll.filter(r => {
+      const pid = r.policy_id;
+      if (!pid) return true; // if no policy_id, we keep it (should be rare)
+      return asEarnedMap.get(pid) !== true; // exclude as-earned
+    });
+
+    const skippedCount = ledgerRowsAll.length - ledgerRows.length;
+    console.log('[runWeeklyAdvance] excluded as-earned rows =', skippedCount, 'remaining =', ledgerRows.length);
+
+    if (ledgerRows.length === 0) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          message: 'All eligible advance/override rows belonged to as-earned policies; nothing to pay.',
+          pay_date: payDateStr,
+          window_start: startIso,
+          window_end_exclusive: endIso,
+          excluded_as_earned_rows: skippedCount,
         }),
       };
     }
@@ -330,6 +349,7 @@ export async function handler(event) {
           pay_date: payDateStr,
           window_start: startIso,
           window_end_exclusive: endIso,
+          excluded_as_earned_rows: skippedCount,
         }),
       };
     }
@@ -373,11 +393,10 @@ export async function handler(event) {
 
     const activeMap = new Map();
     (agentRows || []).forEach(a => {
-      // treat null as active by default
       activeMap.set(a.id, a.is_active !== false);
     });
 
-    // 6) Build payout summary with tiered repayment (30/40/50 or 100% if inactive)
+    // 6) Build payout summary with tiered repayment
     const payoutSummary = [];
     let totalGross  = 0;
     let totalDebits = 0;
@@ -396,10 +415,9 @@ export async function handler(event) {
 
       if (gross > 0 && totalDebt > 0) {
         const rate       = getRepaymentRate(totalDebt, isActive);
-        const maxRepay   = Number((gross * rate).toFixed(2));   // tiered % of this check
-        const toRepay    = Math.min(maxRepay, totalDebt);       // but never more than they owe
+        const maxRepay   = Number((gross * rate).toFixed(2));
+        const toRepay    = Math.min(maxRepay, totalDebt);
 
-        // PRIORITY: chargebacks first, then leads
         let remaining = toRepay;
 
         const chargebackOutstanding = debtInfo.chargeback;
@@ -434,7 +452,7 @@ export async function handler(event) {
     totalDebits = Number(totalDebits.toFixed(2));
     const totalNet = Number((totalGross - totalDebits).toFixed(2));
 
-    // 7) Create a payout batch row in payout_batches
+    // 7) Create a payout batch row
     const { data: batchRows, error: batchErr } = await supabase
       .from('payout_batches')
       .insert({
@@ -458,7 +476,7 @@ export async function handler(event) {
 
     const batch = batchRows && batchRows[0];
 
-    // 8) Mark all those ledger rows as settled + attach batch_id
+    // 8) Mark ledger rows as settled + attach batch_id
     const ledgerIds = ledgerRows.map(r => r.id);
 
     const { error: updErr } = await supabase
@@ -479,7 +497,7 @@ export async function handler(event) {
       };
     }
 
-    // 9) Apply repayments (chargebacks + leads) per agent based on what we calculated
+    // 9) Apply repayments
     for (const ps of payoutSummary) {
       const cbRepay  = ps.chargeback_repayment || 0;
       const ldRepay  = ps.lead_repayment || 0;
@@ -488,7 +506,7 @@ export async function handler(event) {
       }
     }
 
-    // 10) Return a clean summary
+    // 10) Return summary
     return {
       statusCode: 200,
       body: JSON.stringify(
@@ -503,6 +521,7 @@ export async function handler(event) {
           total_net: totalNet,
           agent_payouts: payoutSummary,
           ledger_row_count: ledgerRows.length,
+          excluded_as_earned_rows: skippedCount,
         },
         null,
         2
