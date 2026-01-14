@@ -269,9 +269,10 @@ export async function handler(event) {
       payThruCountMap.set(key, prev + 1);
     });
 
+    // ✅ include as_earned so we can override advance_rate to 0 per policy
     const { data: policies, error: polErr } = await supabase
       .from('policies')
-      .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, created_at')
+      .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, created_at, as_earned')
       .lte('created_at', cutoffIso);
 
     if (polErr) {
@@ -358,9 +359,14 @@ export async function handler(event) {
       const policyYear = getPolicyYear(policy.created_at, payDate);
       if (!policyYear) continue;
 
+      const policyAsEarned = policy.as_earned === true;
+
       const chain = [];
       let current = await getAgent(policy.agent_id);
       const visitedAgents = new Set();
+
+      // globalAdvanceRate is taken from the writing-agent schedule normally,
+      // but if policy is as-earned, force it to 0.
       let globalAdvanceRate = null;
 
       for (let depth = 0; depth < 10 && current; depth++) {
@@ -375,7 +381,7 @@ export async function handler(event) {
         const advRate  = Number(schedule.advance_rate || 0);
 
         if (globalAdvanceRate == null) {
-          globalAdvanceRate = advRate;
+          globalAdvanceRate = policyAsEarned ? 0 : advRate;
         }
 
         chain.push({
@@ -420,6 +426,9 @@ export async function handler(event) {
         if (priorCount >= 12) continue;
 
         let annualAmount = 0;
+
+        // Year 1 trails are reduced by (1 - advance_rate) normally.
+        // If as-earned, globalAdvanceRate is forced to 0 -> no reduction.
         if (policyYear === 1) {
           annualAmount = ap * effectiveRate * (1 - globalAdvanceRate);
         } else {
@@ -455,7 +464,10 @@ export async function handler(event) {
             product_line: policy.product_line,
             policy_type: policy.policy_type,
             ap,
-            rate_portion: effectiveRate
+            rate_portion: effectiveRate,
+            // helpful audit flag:
+            as_earned: policyAsEarned,
+            advance_rate_applied: globalAdvanceRate
           }
         });
       }
