@@ -121,13 +121,14 @@ export async function handler(event) {
     if (!token) {
       return { statusCode: 401, body: JSON.stringify({ error: 'Missing Authorization Bearer token' }) };
     }
-    
+
     const { data: userData, error: userErr } = await supabase.auth.getUser(token);
     if (userErr || !userData?.user?.id) {
       return { statusCode: 401, body: JSON.stringify({ error: 'Invalid session token' }) };
     }
-    
-    const viewerId = userData.user.id
+
+    const viewerId = userData.user.id;
+
     let paythru_total_ever_by_policy = {};
     const agentCache = new Map();
     const schedCache = new Map();
@@ -167,34 +168,34 @@ export async function handler(event) {
     function round2(n) {
       return Math.round((Number(n) || 0) * 100) / 100;
     }
-    
+
     // Load viewer level (so schedule lookup matches their level)
     const { data: viewerAgentRow, error: viewerAgentErr } = await supabase
       .from('agents')
       .select('id, level')
       .eq('id', viewerId)
       .single();
-    
+
     if (viewerAgentErr) {
       console.warn('[previewMonthlyPayThru] Could not load viewer agent level, defaulting to agent:', viewerAgentErr);
     }
-    
+
     const viewerLevel = viewerAgentRow?.level || 'agent';
-    
-    // Load ALL policies for this viewer (no 28-day cutoff, because “ever” shouldn’t be 0 for new policies)
+
+    // ✅ Load ALL policies for this viewer (for "fixed totals ever"), include as_earned
     const { data: viewerPoliciesAll, error: viewerPolErr } = await supabase
       .from('policies')
-      .select('id, premium_annual, carrier_name, product_line, policy_type')
+      .select('id, premium_annual, carrier_name, product_line, policy_type, as_earned')
       .eq('agent_id', viewerId);
-    
+
     if (viewerPolErr) {
       console.error('[previewMonthlyPayThru] Error loading viewer policies for fixed paythru:', viewerPolErr);
     }
-    
+
     // Compute fixed totals
     paythru_total_ever_by_policy = {};
     const paythru_monthly_fixed_by_policy = {};
-    
+
     for (const p of (viewerPoliciesAll || [])) {
       const ap = Number(p.premium_annual || 0);
       if (!p.id || ap <= 0) {
@@ -202,25 +203,26 @@ export async function handler(event) {
         paythru_monthly_fixed_by_policy[p?.id] = 0;
         continue;
       }
-    
-      // Reuse your existing getSchedule(policy, level)
+
       const schedule = await getSchedule(p, viewerLevel);
-    
+
       if (!schedule) {
         paythru_total_ever_by_policy[p.id] = 0;
         paythru_monthly_fixed_by_policy[p.id] = 0;
         continue;
       }
-    
+
       const baseRate = Number(schedule.base_commission_rate || 0);
       const advRate  = Number(schedule.advance_rate || 0);
-    
-      // Fixed total pay-thru EVER for year 1 = AP * baseRate * (1 - advanceRate)
-      // (rounded via monthly cents to keep consistent with your system)
-      const totalEverRaw = ap * baseRate * (1 - advRate);
+
+      // ✅ as_earned override: treat advance_rate as 0 for THIS policy
+      const appliedAdvanceRate = (p.as_earned === true) ? 0 : advRate;
+
+      // Fixed total pay-thru EVER for year 1 = AP * baseRate * (1 - advanceRateApplied)
+      const totalEverRaw = ap * baseRate * (1 - appliedAdvanceRate);
       const monthly = round2(totalEverRaw / 12);
       const totalEver = round2(monthly * 12);
-    
+
       paythru_monthly_fixed_by_policy[p.id] = monthly;
       paythru_total_ever_by_policy[p.id] = totalEver;
     }
@@ -273,7 +275,7 @@ export async function handler(event) {
       .eq('entry_type', 'paythru');
 
     if (priorErr) {
-      console.error('[previewMonthlyPayThru] Error loading prior paythru rows:', priorErr);
+      console.error('[previewMonthlyPayThru] Error loading paythru counts:', priorErr);
       return {
         statusCode: 500,
         body: JSON.stringify({ error: 'Failed to load paythru counts', details: priorErr }),
@@ -289,13 +291,12 @@ export async function handler(event) {
       payThruCountMap.set(key, prev + 1);
     });
 
-    // C) Eligible policies (28-day wait)
+    // ✅ Eligible policies (28-day wait), include as_earned so we can override advance_rate to 0
     const { data: policies, error: polErr } = await supabase
       .from('policies')
-      .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, created_at')
+      .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, created_at, as_earned')
       .eq('agent_id', viewerId)
       .lte('created_at', cutoffIso);
-            
 
     if (polErr) {
       console.error('[previewMonthlyPayThru] Error loading policies:', polErr);
@@ -312,8 +313,6 @@ export async function handler(event) {
           message: 'No policies eligible for THIS MONTHLY RUN (28-day wait), but lifetime paythru totals are included.',
           pay_date: payDateStr,
           pay_month: payMonthKey,
-    
-          // ✅ ALWAYS include the policies table payload
           paythru_by_policy_preview: paythru_total_ever_by_policy || {},
         }),
         headers: { 'Content-Type': 'application/json' },
@@ -340,18 +339,10 @@ export async function handler(event) {
       return data;
     }
 
-    // ================================
-    // NEW: Fixed Pay-Thru totals EVER (per policy) for the logged-in agent
-    // - NOT accrued
-    // - NOT threshold-based
-    // - NOT dependent on commission_ledger
-    // - This value never changes unless schedule/premium changes
-    // ================================
-    
     // E) Build simulated NEW ledger rows (trails + renewals) exactly like runMonthlyPayThru
     const newLedgerRows = [];
     let totalNewGross = 0;
-    
+
     for (const policy of policies) {
       const ap = Number(policy.premium_annual || 0);
       if (!policy.agent_id || ap <= 0) continue;
@@ -360,9 +351,14 @@ export async function handler(event) {
       const policyYear = getPolicyYear(policy.created_at, payDate);
       if (!policyYear) continue;
 
+      const policyAsEarned = policy.as_earned === true;
+
       const chain = [];
       let current = await getAgent(policy.agent_id);
       const visitedAgents = new Set();
+
+      // globalAdvanceRate is writing-agent schedule advance_rate normally,
+      // but if policy is as-earned, force it to 0.
       let globalAdvanceRate = null;
 
       for (let depth = 0; depth < 10 && current; depth++) {
@@ -377,7 +373,7 @@ export async function handler(event) {
         const advRate  = Number(schedule.advance_rate || 0);
 
         if (globalAdvanceRate == null) {
-          globalAdvanceRate = advRate;
+          globalAdvanceRate = policyAsEarned ? 0 : advRate;
         }
 
         chain.push({
@@ -422,6 +418,9 @@ export async function handler(event) {
         if (priorCount >= 12) continue;
 
         let annualAmount = 0;
+
+        // Year 1 trails reduced by (1 - advance_rate) normally.
+        // If as-earned, globalAdvanceRate is forced to 0 -> no reduction.
         if (policyYear === 1) {
           annualAmount = ap * effectiveRate * (1 - globalAdvanceRate);
         } else {
@@ -434,7 +433,7 @@ export async function handler(event) {
 
         payThruCountMap.set(policyAgentYearKey, priorCount + 1);
         totalNewGross += monthly;
-  
+
         newLedgerRows.push({
           agent_id: node.agent.id,
           policy_id: policy.id,
@@ -457,7 +456,10 @@ export async function handler(event) {
             product_line: policy.product_line,
             policy_type: policy.policy_type,
             ap,
-            rate_portion: effectiveRate
+            rate_portion: effectiveRate,
+            // helpful audit:
+            as_earned: policyAsEarned,
+            advance_rate_applied: globalAdvanceRate
           }
         });
       }
@@ -519,7 +521,7 @@ export async function handler(event) {
       if (!agentTotals[aid]) agentTotals[aid] = 0;
       agentTotals[aid] += amt;
     }
-    
+
     const threshold = 100;
     const basePayableAgents = [];
     for (const [aid, sum] of Object.entries(agentTotals)) {
@@ -641,7 +643,7 @@ export async function handler(event) {
     batchTotalGross  = Number(batchTotalGross.toFixed(2));
     batchTotalDebits = Number(batchTotalDebits.toFixed(2));
     const batchTotalNet = Number((batchTotalGross - batchTotalDebits).toFixed(2));
-    
+
     return {
       statusCode: 200,
       body: JSON.stringify(
