@@ -2,19 +2,17 @@
 const sb = window.supabaseClient || window.supabase;
 
 let userId = null;
-
-// Choices instances
 let adjustmentPolicyChoices = null;
 let adjustmentLeadChoices = null;
-
 let policyContactChoices = null;
 let policyCarrierChoices = null;
 let policyProductLineChoices = null;
 let policyPolicyTypeChoices = null;
-
 let _carrierScheduleMap = null; // { lines: string[], typesByLine: Map(line->Set(types)) }
-
 let commissionAgentsLoaded = false;
+let policyAgentChoices = null;
+let policyLeadsChoices = null;
+let adjustmentAgentChoices = null;
 
 /* ---------- Helpers ---------- */
 
@@ -57,7 +55,8 @@ async function loadAgentsForCommissions(force = false) {
       sel.appendChild(opt);
     });
   });
-
+  policyAgentChoices = ensureChoicesForSelect(document.getElementById('policy-agent'), policyAgentChoices);
+  adjustmentAgentChoices = ensureChoicesForSelect(document.getElementById('adjustment-agent'), adjustmentAgentChoices);
   commissionAgentsLoaded = true;
 }
 
@@ -112,8 +111,8 @@ async function loadContactsForPolicy(agentId = null) {
   newOpt.value = '__new__';
   newOpt.textContent = '➕ New contact (enter below)';
   sel.appendChild(newOpt);
-
   sel.disabled = false;
+  policyContactChoices = ensureChoicesForSelect(sel, policyContactChoices);
 }
 
 async function loadCarriersForPolicy() {
@@ -149,8 +148,8 @@ async function loadCarriersForPolicy() {
     opt.textContent = c.carrier_name;
     sel.appendChild(opt);
   });
-
   sel.disabled = false;
+  policyCarrierChoices = ensureChoicesForSelect(sel, policyCarrierChoices);
 }
 
 async function loadProductLinesAndTypesForCarrier(carrierId) {
@@ -343,6 +342,60 @@ async function loadPoliciesIntoList() {
       </div>
     `;
   }).join('');
+}
+
+async function loadLeadsForSelectedContact(contactId) {
+  const wrap = document.getElementById('policy-leads-wrap');
+  const sel = document.getElementById('policy-leads');
+  if (!wrap || !sel) return;
+
+  // Always reset first
+  wrap.style.display = 'none';
+  sel.innerHTML = '';
+  destroyChoicesInstance(policyLeadsChoices);
+  policyLeadsChoices = null;
+
+  if (!contactId || contactId === '__new__') return;
+
+  const { data, error } = await sb
+    .from('leads')
+    .select('id, first_name, last_name, created_at, lead_type, product_type')
+    .eq('contact_id', contactId)
+    .order('created_at', { ascending: false })
+    .limit(200);
+
+  if (error) {
+    console.error('Error loading leads for contact:', error);
+    return;
+  }
+
+  const rows = data || [];
+  if (!rows.length) return;
+
+  // Show wrap only if leads exist
+  wrap.style.display = 'block';
+
+  // Add placeholder option (Choices handles it fine for multi)
+  rows.forEach(l => {
+    const opt = document.createElement('option');
+    opt.value = l.id;
+
+    const name = [l.first_name, l.last_name].filter(Boolean).join(' ').trim() || `Lead ${String(l.id).slice(0, 8)}`;
+    const meta = [
+      l.product_type || '',
+      l.lead_type || '',
+      l.created_at ? new Date(l.created_at).toLocaleDateString() : ''
+    ].filter(Boolean).join(' • ');
+
+    opt.textContent = meta ? `${name} — ${meta}` : name;
+    sel.appendChild(opt);
+  });
+
+  policyLeadsChoices = ensureChoicesForSelect(sel, policyLeadsChoices, {
+    removeItemButton: true,
+    placeholder: true,
+    placeholderValue: 'Select one or more leads…'
+  });
 }
 
 async function loadAdjustmentsIntoList() {
@@ -862,7 +915,27 @@ function wireModalButtons() {
     // Reset new contact area
     const newWrap = document.getElementById('policy-new-contact-wrap');
     if (newWrap) newWrap.style.display = 'none';
-
+    // Reset leads UI every time modal opens
+    const leadsWrap = document.getElementById('policy-leads-wrap');
+    const leadsSel = document.getElementById('policy-leads');
+    if (leadsWrap) leadsWrap.style.display = 'none';
+    if (leadsSel) leadsSel.innerHTML = '';
+    destroyChoicesInstance(policyLeadsChoices);
+    policyLeadsChoices = null;
+    
+    // Default As Earned = false
+    const ae = document.getElementById('policy-as-earned');
+    if (ae) ae.value = 'false';
+    
+    // Default Submitted Date = today (local)
+    const sd = document.getElementById('policy-submitted-date');
+    if (sd) {
+      const today = new Date();
+      const yyyy = today.getFullYear();
+      const mm = String(today.getMonth() + 1).padStart(2, '0');
+      const dd = String(today.getDate()).padStart(2, '0');
+      sd.value = `${yyyy}-${mm}-${dd}`;
+    }
     openModal(policyModal);
   });
 
@@ -883,14 +956,33 @@ function wirePolicyContactNewToggle() {
   const newContactWrap = document.getElementById('policy-new-contact-wrap');
   if (!policyContactSel || !newContactWrap) return;
 
-  policyContactSel.addEventListener('change', () => {
-    newContactWrap.style.display = (policyContactSel.value === '__new__') ? 'block' : 'none';
+  policyContactSel.addEventListener('change', async () => {
+    const v = policyContactSel.value;
+  
+    newContactWrap.style.display = (v === '__new__') ? 'block' : 'none';
+  
+    // Load leads only when an existing contact is selected
+    await loadLeadsForSelectedContact(v);
   });
 }
 
 function wirePolicyDependencies() {
-  document.getElementById('policy-agent')?.addEventListener('change', (e) => {
-    loadContactsForPolicy(e.target.value || null);
+  document.getElementById('policy-agent')?.addEventListener('change', async (e) => {
+    await loadContactsForPolicy(e.target.value || null);
+  
+    // reset leads UI on agent change
+    const leadsWrap = document.getElementById('policy-leads-wrap');
+    const leadsSel = document.getElementById('policy-leads');
+    if (leadsWrap) leadsWrap.style.display = 'none';
+    if (leadsSel) leadsSel.innerHTML = '';
+    destroyChoicesInstance(policyLeadsChoices);
+    policyLeadsChoices = null;
+  
+    // if a contact is already selected (not __new__), reload leads for it
+    const contactId = document.getElementById('policy-contact')?.value || '';
+    if (contactId && contactId !== '__new__') {
+      await loadLeadsForSelectedContact(contactId);
+    }
   });
 
   document.getElementById('policy-carrier')?.addEventListener('change', (e) => {
@@ -941,12 +1033,14 @@ function wirePolicySubmit() {
 
       const premium_annual = Number(document.getElementById('policy-annual-premium')?.value || 0);
 
-      const issue_date_raw = document.getElementById('policy-issue-date')?.value || null;
-      const issued_at = issue_date_raw ? new Date(issue_date_raw).toISOString() : null;
-
+      const submitted_raw = document.getElementById('policy-submitted-date')?.value || null;
+      const submitted_at = submitted_raw ? new Date(submitted_raw).toISOString() : null;
+      const as_earned = (document.getElementById('policy-as-earned')?.value === 'true');
       const status = document.getElementById('policy-status')?.value || 'pending';
-
-      if (!agent_id || !carrier_name || !product_line || !policy_type || !policy_number || !(premium_annual > 0) || !issued_at) {
+      const shouldSetIssued = (status === 'in_force' || status === 'issued');
+      const issued_at = (shouldSetIssued && submitted_at) ? submitted_at : null;
+      
+      if (!agent_id || !carrier_name || !product_line || !policy_type || !policy_number || !(premium_annual > 0) || !submitted_at) {
         if (errEl) errEl.textContent = 'Please complete all required fields.';
         return;
       }
@@ -1012,8 +1106,10 @@ function wirePolicySubmit() {
           policy_type,
           policy_number,
           premium_annual,
+          submitted_at,
           issued_at,
-          status
+          status,
+          as_earned
         }])
         .select('id')
         .single();
@@ -1022,6 +1118,30 @@ function wirePolicySubmit() {
         console.error('Create policy error', pErr);
         if (errEl) errEl.textContent = 'Could not save policy.';
         return;
+      }
+
+      // If admin selected one or more leads, mark them closed/sold
+      const leadsSelEl = document.getElementById('policy-leads');
+      const selectedLeadIds = window.Choices && policyLeadsChoices
+        ? (policyLeadsChoices.getValue(true) || [])
+        : Array.from(leadsSelEl?.selectedOptions || []).map(o => o.value);
+      
+      const leadIds = Array.isArray(selectedLeadIds) ? selectedLeadIds.filter(Boolean) : [];
+      
+      if (leadIds.length) {
+        const { error: leadUpErr } = await sb
+          .from('leads')
+          .update({
+            closed_at: submitted_at,
+            closed_status: 'sold',
+            closed_reason: `Sold policy ${policy_number || ''}`.trim()
+          })
+          .in('id', leadIds);
+      
+        if (leadUpErr) {
+          console.error('Failed updating selected leads to sold:', leadUpErr);
+          // don't block policy save
+        }
       }
 
       // admin.js runs the commission flow right after policy create
@@ -1198,6 +1318,27 @@ function wireAdjustmentSubmit() {
       if (errEl) errEl.textContent = 'Could not save debit/credit.';
     }
   });
+}
+
+function destroyChoicesInstance(inst) {
+  try { inst?.destroy(); } catch (_) {}
+}
+
+function ensureChoicesForSelect(selectEl, existingInstance, opts = {}) {
+  if (!window.Choices || !selectEl) return existingInstance;
+
+  destroyChoicesInstance(existingInstance);
+
+  try {
+    return new Choices(selectEl, {
+      searchEnabled: true,
+      shouldSort: false,
+      itemSelectText: '',
+      ...opts
+    });
+  } catch (_) {
+    return existingInstance;
+  }
 }
 
 /* ---------- Init ---------- */
