@@ -10,9 +10,6 @@ if (!supabaseUrl || !serviceKey) {
 
 const supabase = createClient(supabaseUrl, serviceKey);
 
-/**
- * Helper: get the pay_date (Friday) either from query param or "next Friday from today"
- */
 const PAY_TZ = 'America/Chicago';
 
 /**
@@ -26,9 +23,9 @@ function getLocalYMD(date = new Date(), tz = PAY_TZ) {
     day: '2-digit',
   }).formatToParts(date);
 
-  const y = parts.find(p => p.type === 'year').value;
-  const m = parts.find(p => p.type === 'month').value;
-  const d = parts.find(p => p.type === 'day').value;
+  const y = parts.find(p => p.type === 'year')?.value;
+  const m = parts.find(p => p.type === 'month')?.value;
+  const d = parts.find(p => p.type === 'day')?.value;
   return `${y}-${m}-${d}`;
 }
 
@@ -234,24 +231,93 @@ export async function handler(event) {
   try {
     const payDateStr = getPayDateStr(event); // YYYY-MM-DD (Friday)
 
-    // Eligible sales window
+    // ✅ Issued window rule (the one you asked for):
+    // - Issued Sat/Sun/Mon => paid the coming Friday
+    // - Issued Tue/Wed/Thu/Fri => paid the next Friday
+    //
+    // For a given pay Friday, eligible issued_at dates are:
+    // Tuesday (10 days before) through Monday (4 days before), inclusive.
+    // Implemented as: [TuesdayStart, nextTuesdayStart) i.e. Tue..Mon inclusive.
     const startYMD = addDaysYMD(payDateStr, -10); // Tuesday
     const endYMD   = addDaysYMD(payDateStr, -3);  // Tuesday (exclusive)
 
     const startIso = localMidnightToUtcIso(startYMD, PAY_TZ); // inclusive
     const endIso   = localMidnightToUtcIso(endYMD, PAY_TZ);   // exclusive
 
-    console.log('[runWeeklyAdvance] pay_date =', payDateStr, 'window =', startYMD, 'to', endYMD, '(end exclusive)');
+    console.log(
+      '[runWeeklyAdvance] pay_date =',
+      payDateStr,
+      'ISSUED window =',
+      startYMD,
+      'to',
+      endYMD,
+      '(end exclusive)'
+    );
 
-    // 2) Find eligible ledger rows (advances + overrides not yet settled)
-    // ✅ Include policy_id so we can check policies.as_earned and exclude them.
+    // 2) Find eligible POLICIES by issued_at window (NOT ledger created_at)
+    const { data: policyRows, error: polErr } = await supabase
+      .from('policies')
+      .select('id, as_earned')
+      .in('status', ['issued', 'in_force'])
+      .gte('issued_at', startIso)
+      .lt('issued_at', endIso);
+
+    if (polErr) {
+      console.error('[runWeeklyAdvance] Error loading eligible policies:', polErr);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Failed to load eligible policies', details: polErr }),
+      };
+    }
+
+    const allPolicyIds = (policyRows || []).map(p => p.id);
+    if (allPolicyIds.length === 0) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          message: 'No policies eligible for weekly advances in this issued_at window.',
+          pay_date: payDateStr,
+          window_start: startIso,
+          window_end_exclusive: endIso,
+          eligible_policy_count: 0,
+        }),
+      };
+    }
+
+    // 2.2) Exclude as-earned policies from weekly advance
+    const eligiblePolicyIds = (policyRows || [])
+      .filter(p => p.as_earned !== true)
+      .map(p => p.id);
+
+    const skippedCount = allPolicyIds.length - eligiblePolicyIds.length;
+
+    console.log(
+      '[runWeeklyAdvance] eligible policies total =',
+      allPolicyIds.length,
+      'excluded as-earned policies =',
+      skippedCount
+    );
+
+    if (eligiblePolicyIds.length === 0) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          message: 'All policies in this issued_at window are as-earned; nothing to pay.',
+          pay_date: payDateStr,
+          window_start: startIso,
+          window_end_exclusive: endIso,
+          excluded_as_earned_policies: skippedCount,
+        }),
+      };
+    }
+
+    // 2.3) Load eligible ledger rows for those policies (ignore ledger.created_at completely)
     const { data: ledgerRowsRaw, error: ledgerErr } = await supabase
       .from('commission_ledger')
-      .select('id, policy_id, agent_id, amount, entry_type, created_at, is_settled')
+      .select('id, policy_id, agent_id, amount, entry_type, is_settled')
       .in('entry_type', ['advance', 'override'])
       .or('is_settled.is.null,is_settled.eq.false')
-      .gte('created_at', startIso)
-      .lt('created_at', endIso);
+      .in('policy_id', eligiblePolicyIds);
 
     if (ledgerErr) {
       console.error('[runWeeklyAdvance] Error loading ledger rows:', ledgerErr);
@@ -261,64 +327,19 @@ export async function handler(event) {
       };
     }
 
-    const ledgerRowsAll = ledgerRowsRaw || [];
-    console.log('[runWeeklyAdvance] eligible ledger rows (raw) =', ledgerRowsAll.length);
-
-    if (ledgerRowsAll.length === 0) {
-      return {
-        statusCode: 200,
-        body: JSON.stringify({
-          message: 'No eligible commission_ledger rows to pay for this advance run.',
-          pay_date: payDateStr,
-          window_start: startIso,
-          window_end_exclusive: endIso,
-        }),
-      };
-    }
-
-    // ✅ 2.5) Exclude any ledger rows whose policy is as_earned = true
-    const policyIds = Array.from(
-      new Set(ledgerRowsAll.map(r => r.policy_id).filter(Boolean))
-    );
-
-    let asEarnedMap = new Map(); // policy_id -> boolean
-    if (policyIds.length > 0) {
-      const { data: polRows, error: polErr } = await supabase
-        .from('policies')
-        .select('id, as_earned')
-        .in('id', policyIds);
-
-      if (polErr) {
-        console.error('[runWeeklyAdvance] Error loading policies.as_earned:', polErr);
-        return {
-          statusCode: 500,
-          body: JSON.stringify({ error: 'Failed to load policies.as_earned', details: polErr }),
-        };
-      }
-
-      (polRows || []).forEach(p => {
-        asEarnedMap.set(p.id, p.as_earned === true);
-      });
-    }
-
-    const ledgerRows = ledgerRowsAll.filter(r => {
-      const pid = r.policy_id;
-      if (!pid) return true; // if no policy_id, we keep it (should be rare)
-      return asEarnedMap.get(pid) !== true; // exclude as-earned
-    });
-
-    const skippedCount = ledgerRowsAll.length - ledgerRows.length;
-    console.log('[runWeeklyAdvance] excluded as-earned rows =', skippedCount, 'remaining =', ledgerRows.length);
+    const ledgerRows = ledgerRowsRaw || [];
+    console.log('[runWeeklyAdvance] eligible ledger rows (issued_at-based) =', ledgerRows.length);
 
     if (ledgerRows.length === 0) {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: 'All eligible advance/override rows belonged to as-earned policies; nothing to pay.',
+          message: 'No eligible commission_ledger rows to pay for this advance run (issued_at-based).',
           pay_date: payDateStr,
           window_start: startIso,
           window_end_exclusive: endIso,
-          excluded_as_earned_rows: skippedCount,
+          eligible_policy_count: eligiblePolicyIds.length,
+          excluded_as_earned_policies: skippedCount,
         }),
       };
     }
@@ -332,11 +353,8 @@ export async function handler(event) {
         agentTotals[aid] = { advance: 0, override: 0, gross: 0 };
       }
       const amt = Number(row.amount || 0);
-      if (row.entry_type === 'advance') {
-        agentTotals[aid].advance += amt;
-      } else if (row.entry_type === 'override') {
-        agentTotals[aid].override += amt;
-      }
+      if (row.entry_type === 'advance') agentTotals[aid].advance += amt;
+      if (row.entry_type === 'override') agentTotals[aid].override += amt;
       agentTotals[aid].gross += amt;
     }
 
@@ -349,7 +367,7 @@ export async function handler(event) {
           pay_date: payDateStr,
           window_start: startIso,
           window_end_exclusive: endIso,
-          excluded_as_earned_rows: skippedCount,
+          excluded_as_earned_policies: skippedCount,
         }),
       };
     }
@@ -414,15 +432,15 @@ export async function handler(event) {
       let net = gross;
 
       if (gross > 0 && totalDebt > 0) {
-        const rate       = getRepaymentRate(totalDebt, isActive);
-        const maxRepay   = Number((gross * rate).toFixed(2));
-        const toRepay    = Math.min(maxRepay, totalDebt);
+        const rate     = getRepaymentRate(totalDebt, isActive);
+        const maxRepay = Number((gross * rate).toFixed(2));
+        const toRepay  = Math.min(maxRepay, totalDebt);
 
         let remaining = toRepay;
 
-        const chargebackOutstanding = debtInfo.chargeback;
-        if (chargebackOutstanding > 0 && remaining > 0) {
-          chargebackRepay = Math.min(remaining, chargebackOutstanding);
+        const cbOutstanding = debtInfo.chargeback;
+        if (cbOutstanding > 0 && remaining > 0) {
+          chargebackRepay = Math.min(remaining, cbOutstanding);
           remaining -= chargebackRepay;
         }
 
@@ -462,7 +480,7 @@ export async function handler(event) {
         total_gross: totalGross,
         total_debits: totalDebits,
         total_net: totalNet,
-        note: 'Weekly advance run with tiered debt withholding (30/40/50 or 100% inactive)',
+        note: 'Weekly advance run (issued_at-window) with tiered debt withholding (30/40/50 or 100% inactive)',
       })
       .select('*');
 
@@ -499,8 +517,8 @@ export async function handler(event) {
 
     // 9) Apply repayments
     for (const ps of payoutSummary) {
-      const cbRepay  = ps.chargeback_repayment || 0;
-      const ldRepay  = ps.lead_repayment || 0;
+      const cbRepay = ps.chargeback_repayment || 0;
+      const ldRepay = ps.lead_repayment || 0;
       if (cbRepay > 0 || ldRepay > 0) {
         await applyRepayments(ps.agent_id, cbRepay, ldRepay, batch.id);
       }
@@ -511,7 +529,7 @@ export async function handler(event) {
       statusCode: 200,
       body: JSON.stringify(
         {
-          message: 'Weekly advance run completed (with tiered debt withholding + repayment records).',
+          message: 'Weekly advance run completed (issued_at-window) with tiered debt withholding + repayment records.',
           pay_date: payDateStr,
           window_start: startIso,
           window_end_exclusive: endIso,
@@ -521,7 +539,8 @@ export async function handler(event) {
           total_net: totalNet,
           agent_payouts: payoutSummary,
           ledger_row_count: ledgerRows.length,
-          excluded_as_earned_rows: skippedCount,
+          eligible_policy_count: eligiblePolicyIds.length,
+          excluded_as_earned_policies: skippedCount,
         },
         null,
         2
