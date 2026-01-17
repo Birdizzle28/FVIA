@@ -163,7 +163,18 @@
               <label>State <input id="policy-contact-state" type="text" maxlength="2" placeholder="TN"></label>
               <label>ZIP <input id="policy-contact-zip" type="text" maxlength="10"></label>
             </div>
-
+            
+            <!-- Lead dropdown (only shows when: existing contact selected AND matching leads exist) -->
+            <div id="policy-leads-wrap" style="display:none;">
+              <label>
+                Lead (optional)
+                <select id="policy-leads" multiple></select>
+              </label>
+              <small style="display:block; font-size:11px; color:#666; margin-top:-6px; margin-bottom:8px;">
+                Only appears when the selected contact has leads. You can select multiple.
+              </small>
+            </div>
+            
             <label>
               Carrier
               <select id="policy-carrier" required>
@@ -196,8 +207,16 @@
             </label>
 
             <label>
-              Issue Date
-              <input id="policy-issue-date" type="date" required>
+              As Earned?
+              <select id="policy-as-earned">
+                <option value="false" selected>False</option>
+                <option value="true">True</option>
+              </select>
+            </label>
+            
+            <label>
+              Submitted Date
+              <input id="policy-submitted-date" type="date" required>
             </label>
 
             <label>
