@@ -235,8 +235,8 @@ export async function handler(event) {
     const payDateStr = getPayDateStr(event); // YYYY-MM-DD (Friday)
 
     // Eligible sales window
-    const startYMD = addDaysYMD(payDateStr, -5); // Sunday
-    const endYMD   = addDaysYMD(payDateStr, -2); // Wednesday (exclusive)
+    const startYMD = addDaysYMD(payDateStr, -10); // Tuesday
+    const endYMD   = addDaysYMD(payDateStr, -3);  // Tuesday (exclusive)
 
     const startIso = localMidnightToUtcIso(startYMD, PAY_TZ); // inclusive
     const endIso   = localMidnightToUtcIso(endYMD, PAY_TZ);   // exclusive
