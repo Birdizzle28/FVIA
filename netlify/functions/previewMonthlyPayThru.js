@@ -27,11 +27,12 @@ function getPayDate(event) {
   return new Date(today.getFullYear(), today.getMonth(), 5);
 }
 
+// ✅ Match runMonthlyPayThru: month start/end are UTC, end is EXCLUSIVE
 function getMonthBounds(payDate) {
   const year  = payDate.getFullYear();
   const month = payDate.getMonth();
-  const start = new Date(year, month, 1);
-  const end   = new Date(year, month + 1, 0, 23, 59, 59, 999);
+  const start = new Date(Date.UTC(year, month, 1));
+  const end   = new Date(Date.UTC(year, month + 1, 1)); // EXCLUSIVE
   return { start, end };
 }
 
@@ -45,8 +46,9 @@ function getRepaymentRate(totalDebt, isActive) {
 
 // -------- Helpers copied from runMonthlyPayThru (renewals) --------
 
-function getPolicyYear(policyCreatedAt, asOfDate) {
-  const start = new Date(policyCreatedAt);
+// ✅ Now based on ISSUED_AT (not created_at)
+function getPolicyYear(policyIssuedAt, asOfDate) {
+  const start = new Date(policyIssuedAt);
   if (isNaN(start.getTime())) return null;
 
   let years = asOfDate.getFullYear() - start.getFullYear();
@@ -182,7 +184,9 @@ export async function handler(event) {
 
     const viewerLevel = viewerAgentRow?.level || 'agent';
 
-    // ✅ Load ALL policies for this viewer (for "fixed totals ever"), include as_earned
+    // ✅ Load ALL viewer policies for fixed totals (include as_earned)
+    // We do NOT require issued_at here because "fixed totals ever" should still be safe;
+    // but if issued_at is missing, we still can compute fixed totals from AP + schedule.
     const { data: viewerPoliciesAll, error: viewerPolErr } = await supabase
       .from('policies')
       .select('id, premium_annual, carrier_name, product_line, policy_type, as_earned')
@@ -231,6 +235,7 @@ export async function handler(event) {
     const monthStartIso = monthStart.toISOString();
     const monthEndIso   = monthEnd.toISOString();
 
+    // ✅ 28-day wait is based on ISSUED_AT (not created_at)
     const cutoff = new Date(payDate);
     cutoff.setDate(cutoff.getDate() - 28);
     const cutoffIso = cutoff.toISOString();
@@ -240,7 +245,7 @@ export async function handler(event) {
       payDateStr,
       'pay_month =',
       payMonthKey,
-      'cutoff =',
+      'cutoff(issued_at) =',
       cutoffIso
     );
 
@@ -291,12 +296,14 @@ export async function handler(event) {
       payThruCountMap.set(key, prev + 1);
     });
 
-    // ✅ Eligible policies (28-day wait), include as_earned so we can override advance_rate to 0
+    // ✅ Eligible policies for THIS month run: viewer only, issued_at cutoff, include as_earned
     const { data: policies, error: polErr } = await supabase
       .from('policies')
-      .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, created_at, as_earned')
+      .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, issued_at, as_earned, status')
       .eq('agent_id', viewerId)
-      .lte('created_at', cutoffIso);
+      .in('status', ['issued', 'in_force'])
+      .not('issued_at', 'is', null)
+      .lte('issued_at', cutoffIso);
 
     if (polErr) {
       console.error('[previewMonthlyPayThru] Error loading policies:', polErr);
@@ -310,7 +317,7 @@ export async function handler(event) {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: 'No policies eligible for THIS MONTHLY RUN (28-day wait), but lifetime paythru totals are included.',
+          message: 'No policies eligible for THIS MONTHLY RUN (28-day wait after issued_at), but lifetime paythru totals are included.',
           pay_date: payDateStr,
           pay_month: payMonthKey,
           paythru_by_policy_preview: paythru_total_ever_by_policy || {},
@@ -346,9 +353,9 @@ export async function handler(event) {
     for (const policy of policies) {
       const ap = Number(policy.premium_annual || 0);
       if (!policy.agent_id || ap <= 0) continue;
-      if (!policy.created_at) continue;
+      if (!policy.issued_at) continue;
 
-      const policyYear = getPolicyYear(policy.created_at, payDate);
+      const policyYear = getPolicyYear(policy.issued_at, payDate);
       if (!policyYear) continue;
 
       const policyAsEarned = policy.as_earned === true;
@@ -457,16 +464,15 @@ export async function handler(event) {
             policy_type: policy.policy_type,
             ap,
             rate_portion: effectiveRate,
-            // helpful audit:
             as_earned: policyAsEarned,
-            advance_rate_applied: globalAdvanceRate
+            advance_rate_applied: globalAdvanceRate,
+            issued_at: policy.issued_at
           }
         });
       }
     }
 
     // F) Threshold + debt logic (preview mode)
-    // Load existing unpaid trails from DB, then combine with simulated new rows
     const { data: unpaidTrailsExisting, error: unpaidErr } = await supabase
       .from('commission_ledger')
       .select('id, agent_id, policy_id, amount')
@@ -509,8 +515,9 @@ export async function handler(event) {
           new_trails_created_preview: newLedgerRows.length,
           total_new_trails_gross_preview: Number(totalNewGross.toFixed(2)),
           agents_paid_preview: 0,
-          paythru_by_policy_preview: {},
+          paythru_by_policy_preview: paythru_total_ever_by_policy,
         }),
+        headers: { 'Content-Type': 'application/json' },
       };
     }
 
@@ -545,6 +552,7 @@ export async function handler(event) {
           agents_paid_preview: 0,
           paythru_by_policy_preview: paythru_total_ever_by_policy,
         }),
+        headers: { 'Content-Type': 'application/json' },
       };
     }
 
