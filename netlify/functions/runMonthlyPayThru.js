@@ -43,10 +43,12 @@ function getRepaymentRate(totalDebt, isActive) {
   return 0.50;
 }
 
-// -------- NEW HELPERS FROM RENEWALS --------
+/* ---------------------------
+   PAY-THRU / RENEWAL HELPERS
+   --------------------------- */
 
-function getPolicyYear(policyCreatedAt, asOfDate) {
-  const start = new Date(policyCreatedAt);
+function getPolicyYear(policyIssuedAt, asOfDate) {
+  const start = new Date(policyIssuedAt);
   if (isNaN(start.getTime())) return null;
 
   let years = asOfDate.getFullYear() - start.getFullYear();
@@ -100,8 +102,6 @@ function getBaseRenewalRate(schedule, renewalYear) {
 
   return 0;
 }
-
-// -------------------------------------------
 
 async function applyRepayments(agent_id, chargebackRepay, leadRepay, payout_batch_id) {
   if (chargebackRepay > 0) {
@@ -211,6 +211,7 @@ export async function handler(event) {
     const monthStartIso = monthStart.toISOString();
     const monthEndIso   = monthEnd.toISOString();
 
+    // ✅ 28-day wait is based on ISSUED_AT (not created_at)
     const cutoff = new Date(payDate);
     cutoff.setDate(cutoff.getDate() - 28);
     const cutoffIso = cutoff.toISOString();
@@ -220,10 +221,11 @@ export async function handler(event) {
       payDateStr,
       'pay_month =',
       payMonthKey,
-      'cutoff =',
+      'cutoff(issued_at) =',
       cutoffIso
     );
 
+    // prevent duplicates for the same pay_month + policy_year
     const { data: existingPayThru, error: existingErr } = await supabase
       .from('commission_ledger')
       .select('policy_id, agent_id, meta')
@@ -247,6 +249,7 @@ export async function handler(event) {
       }
     });
 
+    // cap 12 per policy-year per agent across history
     const { data: payThruPrior, error: priorErr } = await supabase
       .from('commission_ledger')
       .select('policy_id, agent_id, meta')
@@ -269,11 +272,14 @@ export async function handler(event) {
       payThruCountMap.set(key, prev + 1);
     });
 
-    // ✅ include as_earned so we can override advance_rate to 0 per policy
+    // ✅ Load policies eligible by issued_at cutoff (and that have issued_at)
+    // (We keep created_at out of eligibility entirely now.)
     const { data: policies, error: polErr } = await supabase
       .from('policies')
-      .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, created_at, as_earned')
-      .lte('created_at', cutoffIso);
+      .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, issued_at, as_earned, status')
+      .in('status', ['issued', 'in_force'])
+      .not('issued_at', 'is', null)
+      .lte('issued_at', cutoffIso);
 
     if (polErr) {
       console.error('[runMonthlyPayThru] Error loading policies:', polErr);
@@ -287,7 +293,7 @@ export async function handler(event) {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: 'No policies eligible for monthly trails/renewals (28-day wait) this run.',
+          message: 'No policies eligible for monthly trails/renewals (28-day wait after issued_at) this run.',
           pay_date: payDateStr,
           pay_month: payMonthKey,
         }),
@@ -354,9 +360,10 @@ export async function handler(event) {
     for (const policy of policies) {
       const ap = Number(policy.premium_annual || 0);
       if (!policy.agent_id || ap <= 0) continue;
-      if (!policy.created_at) continue;
+      if (!policy.issued_at) continue;
 
-      const policyYear = getPolicyYear(policy.created_at, payDate);
+      // ✅ policyYear based on ISSUED_AT
+      const policyYear = getPolicyYear(policy.issued_at, payDate);
       if (!policyYear) continue;
 
       const policyAsEarned = policy.as_earned === true;
@@ -465,9 +472,10 @@ export async function handler(event) {
             policy_type: policy.policy_type,
             ap,
             rate_portion: effectiveRate,
-            // helpful audit flag:
+            // helpful audit flags:
             as_earned: policyAsEarned,
-            advance_rate_applied: globalAdvanceRate
+            advance_rate_applied: globalAdvanceRate,
+            issued_at: policy.issued_at
           }
         });
       }
