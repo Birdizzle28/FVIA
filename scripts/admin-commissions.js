@@ -340,6 +340,7 @@ async function loadPoliciesIntoList() {
   }
 
   list.innerHTML = rows.map(p => {
+    const agentName = p.agent?.full_name || '—';
     const prem = safeNum(p.premium_annual).toFixed(2);
     const dt = p.issued_at ? String(p.issued_at) : '—';
     const st = p.status ? String(p.status).replace(/_/g, ' ') : '—';
@@ -348,10 +349,21 @@ async function loadPoliciesIntoList() {
     const type = p.policy_type || '—';
 
     return `
-      <div class="mini-row">
-        <div><strong>${p.policy_number || '—'}</strong></div>
-        <div>${carrier} • ${line} • ${type}</div>
-        <div>$${prem} • ${st} • Issue: ${dt}</div>
+      <div class="mini-row" style="display:flex; align-items:flex-start; justify-content:space-between; gap:10px;">
+        <div style="min-width:0;">
+          <div><strong>${p.policy_number || '—'}</strong> <span style="opacity:.75;">(${agentName})</span></div>
+          <div>${carrier} • ${line} • ${type}</div>
+          <div>$${prem} • ${st} • Issue: ${dt}</div>
+        </div>
+    
+        <div style="flex:0 0 auto;">
+          <button type="button"
+            class="policy-edit-btn"
+            data-policy-id="${p.id}"
+            style="padding:6px 10px; border-radius:8px;">
+            Edit
+          </button>
+        </div>
       </div>
     `;
   }).join('');
@@ -908,7 +920,139 @@ async function wireRunPayoutsButton() {
   });
 }
 
+async function openEditPolicyModal(policyId) {
+  const modal = document.getElementById('policy-edit-modal');
+  const errEl = document.getElementById('policy-edit-error');
+  if (errEl) errEl.textContent = '';
+
+  const { data: p, error } = await sb
+    .from('policies')
+    .select(`
+      id,
+      agent_id,
+      carrier_name,
+      product_line,
+      policy_type,
+      policy_number,
+      premium_annual,
+      submitted_at,
+      issued_at,
+      status,
+      as_earned
+    `)
+    .eq('id', policyId)
+    .single();
+
+  if (error || !p) {
+    if (errEl) errEl.textContent = error?.message || 'Could not load policy.';
+    return;
+  }
+
+  // fill fields
+  document.getElementById('policy-edit-id').value = p.id;
+
+  // agent dropdown (load agents first so option exists)
+  await loadAgentsForCommissions();
+  const agentSel = document.getElementById('policy-edit-agent');
+  if (agentSel) agentSel.value = p.agent_id || '';
+
+  document.getElementById('policy-edit-number').value = p.policy_number || '';
+  document.getElementById('policy-edit-annual-premium').value = Number(p.premium_annual || 0);
+
+  document.getElementById('policy-edit-carrier').value = p.carrier_name || '';
+  document.getElementById('policy-edit-product-line').value = p.product_line || '';
+  document.getElementById('policy-edit-policy-type').value = p.policy_type || '';
+
+  document.getElementById('policy-edit-as-earned').value = p.as_earned ? 'true' : 'false';
+  document.getElementById('policy-edit-status').value = p.status || 'pending';
+
+  // dates: make them YYYY-MM-DD for <input type="date">
+  const toYMD = (iso) => iso ? String(iso).slice(0, 10) : '';
+  document.getElementById('policy-edit-submitted-date').value = toYMD(p.submitted_at);
+  // optional:
+  const issuedEl = document.getElementById('policy-edit-issued-date');
+  if (issuedEl) issuedEl.value = toYMD(p.issued_at);
+
+  openModal(modal);
+}
+
 /* ---------- Wire modal open/close ---------- */
+
+function wirePolicyEditButtons() {
+  const list = document.getElementById('policy-list');
+  if (!list) return;
+
+  list.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.policy-edit-btn');
+    if (!btn) return;
+
+    const policyId = btn.dataset.policyId;
+    if (!policyId) return;
+
+    await openEditPolicyModal(policyId);
+  });
+}
+
+function wirePolicyEditSubmit() {
+  document.getElementById('policy-edit-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const errEl = document.getElementById('policy-edit-error');
+    if (errEl) errEl.textContent = '';
+
+    const id = document.getElementById('policy-edit-id')?.value;
+    if (!id) return;
+
+    const agent_id = document.getElementById('policy-edit-agent')?.value || null;
+    const policy_number = document.getElementById('policy-edit-number')?.value?.trim() || null;
+    const premium_annual = Number(document.getElementById('policy-edit-annual-premium')?.value || 0);
+
+    const carrier_name = document.getElementById('policy-edit-carrier')?.value?.trim() || null;
+    const product_line = document.getElementById('policy-edit-product-line')?.value?.trim() || null;
+    const policy_type = document.getElementById('policy-edit-policy-type')?.value?.trim() || null;
+
+    const as_earned = (document.getElementById('policy-edit-as-earned')?.value === 'true');
+    const status = document.getElementById('policy-edit-status')?.value || 'pending';
+
+    const submitted_raw = document.getElementById('policy-edit-submitted-date')?.value || null;
+    const submitted_at = submitted_raw ? new Date(submitted_raw).toISOString() : null;
+
+    const issued_raw = document.getElementById('policy-edit-issued-date')?.value || null;
+    const issued_at = issued_raw ? new Date(issued_raw).toISOString() : null;
+
+    if (!agent_id || !carrier_name || !product_line || !policy_type || !policy_number || !(premium_annual > 0) || !submitted_at) {
+      if (errEl) errEl.textContent = 'Please complete all required fields.';
+      return;
+    }
+
+    const updatePayload = {
+      agent_id,
+      carrier_name,
+      product_line,
+      policy_type,
+      policy_number,
+      premium_annual,
+      submitted_at,
+      status,
+      as_earned,
+      // only include issued_at if you actually have that input
+      ...(issued_raw ? { issued_at } : {})
+    };
+
+    const { error } = await sb
+      .from('policies')
+      .update(updatePayload)
+      .eq('id', id);
+
+    if (error) {
+      if (errEl) errEl.textContent = error.message || 'Update failed.';
+      return;
+    }
+
+    closeModal(document.getElementById('policy-edit-modal'));
+    await loadPoliciesIntoList();
+  });
+}
 
 function wireModalButtons() {
   const policyModal = document.getElementById('policy-modal');
@@ -971,6 +1115,13 @@ function wireModalButtons() {
     openModal(adjustmentModal);
   });
 
+  document.getElementById('policy-edit-cancel')?.addEventListener('click', () => {
+    closeModal(document.getElementById('policy-edit-modal'));
+  });
+  document.getElementById('policy-edit-modal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'policy-edit-modal') closeModal(e.currentTarget);
+  });
+  
   policyCancelBtn?.addEventListener('click', () => closeModal(policyModal));
   adjustmentCancelBtn?.addEventListener('click', () => closeModal(adjustmentModal));
 }
@@ -1385,7 +1536,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   wireAdjustmentDependencies();
   wirePolicySubmit();
   wireAdjustmentSubmit();
-
+  wirePolicyEditButtons();
+  wirePolicyEditSubmit();
   await loadAgentsForCommissions();
   await loadCarriersForPolicy();
 
