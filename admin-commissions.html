@@ -15,6 +15,7 @@
     <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
     <!-- Lock visual display until we confirm admin in script at bottom -->
     <style>
@@ -97,7 +98,34 @@
             <h3>Policies</h3>
             <p>Add new policies and view recent ones.</p>
             <button id="open-policy-modal" class="card-link" type="button">Add Policy</button>
-
+            <div class="policy-filters" style="display:flex; gap:8px; align-items:center; margin-top:10px; flex-wrap:wrap;">
+              <input
+                id="policy-search"
+                type="text"
+                placeholder="Search name, policy #, carrier, line, type…"
+                style="flex:1 1 220px; padding:10px 12px; border:1px solid #ddd; border-radius:10px;"
+              />
+            
+              <div style="display:flex; align-items:center; gap:6px;">
+                <i class="fa-solid fa-calendar-days" style="opacity:.7;"></i>
+                <input
+                  id="policy-date-range"
+                  type="text"
+                  placeholder="Submitted date range"
+                  style="width:190px; padding:10px 12px; border:1px solid #ddd; border-radius:10px;"
+                  readonly
+                />
+              </div>
+            
+              <button id="policy-filters-clear" type="button"
+                style="padding:10px 12px; border-radius:10px; border:1px solid #ddd;">
+                Clear
+              </button>
+            </div>
+            
+            <small style="display:block; margin-top:6px; opacity:.7;">
+              Filters update as you type. Date range filters by <strong>Submitted Date</strong>.
+            </small>
             <div id="policy-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
               <!-- policies load here -->
             </div>
@@ -433,6 +461,7 @@
     <script src="scripts/supabase-client.js"></script>
 
     <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
 
     <script src="scripts/general.js"></script>
     <script src="scripts/admin-commissions.js"></script>
