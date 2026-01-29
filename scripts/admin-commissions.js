@@ -14,6 +14,8 @@ let policyAgentChoices = null;
 let policyLeadsChoices = null;
 let adjustmentAgentChoices = null;
 let policyEditAgentChoices = null;
+let _policiesCache = [];
+let _policiesFp = null; // flatpickr instance
 
 /* ---------- Helpers ---------- */
 
@@ -310,65 +312,19 @@ function hydratePolicyTypesForSelectedLine() {
 
 /* ---------- Lists ---------- */
 
-async function loadPoliciesIntoList() {
+function renderPoliciesList(rows) {
   const list = document.getElementById('policy-list');
   if (!list) return;
 
-  list.innerHTML = `<div style="padding:10px;">Loading…</div>`;
-
-  // 1) Load policies (no FK join)
-  const { data: policies, error: pErr } = await sb
-    .from('policies')
-    .select(`
-      id,
-      agent_id,
-      policy_number,
-      carrier_name,
-      policy_type,
-      product_line,
-      premium_annual,
-      issued_at,
-      submitted_at,
-      status,
-      created_at
-    `)
-    .order('created_at', { ascending: false })
-    .limit(50);
-
-  if (pErr) {
-    console.error('loadPoliciesIntoList error', pErr);
-    list.innerHTML = `<div style="padding:10px;">Error loading policies.</div>`;
+  if (!rows || rows.length === 0) {
+    list.innerHTML = `<div style="padding:10px;">No matching policies.</div>`;
     return;
   }
 
-  const rows = policies || [];
-  if (!rows.length) {
-    list.innerHTML = `<div style="padding:10px;">No policies yet.</div>`;
-    return;
-  }
-
-  // 2) Fetch agent names for the policies we loaded
-  const agentIds = Array.from(new Set(rows.map(p => p.agent_id).filter(Boolean)));
-
-  let agentNameMap = {};
-  if (agentIds.length) {
-    const { data: agents, error: aErr } = await sb
-      .from('agents')
-      .select('id, full_name')
-      .in('id', agentIds);
-
-    if (aErr) {
-      console.warn('Could not load agent names:', aErr);
-    } else {
-      agentNameMap = Object.fromEntries((agents || []).map(a => [a.id, a.full_name || a.id]));
-    }
-  }
-
-  // 3) Render with agent names
   list.innerHTML = rows.map(p => {
-    const agentName = agentNameMap[p.agent_id] || '—';
+    const agentName = p.agent?.full_name || '—';
     const prem = safeNum(p.premium_annual).toFixed(2);
-    const dt = p.issued_at ? String(p.issued_at).slice(0,10) : '—';
+    const dt = p.issued_at ? String(p.issued_at).slice(0, 10) : '—';
     const st = p.status ? String(p.status).replace(/_/g, ' ') : '—';
     const carrier = p.carrier_name || '—';
     const line = p.product_line || '—';
@@ -393,6 +349,89 @@ async function loadPoliciesIntoList() {
       </div>
     `;
   }).join('');
+}
+
+function applyPolicyFilters() {
+  const q = (document.getElementById('policy-search')?.value || '').trim().toLowerCase();
+
+  // date range from flatpickr (2 dates) OR empty
+  let start = null;
+  let end = null;
+  if (_policiesFp && Array.isArray(_policiesFp.selectedDates)) {
+    if (_policiesFp.selectedDates[0]) start = new Date(_policiesFp.selectedDates[0]);
+    if (_policiesFp.selectedDates[1]) end = new Date(_policiesFp.selectedDates[1]);
+    if (end) end.setHours(23, 59, 59, 999); // include whole end day
+  }
+
+  const filtered = (_policiesCache || []).filter(p => {
+    // search fields
+    const agentName = (p.agent?.full_name || '').toLowerCase();
+    const policyNum = (p.policy_number || '').toLowerCase();
+    const carrier = (p.carrier_name || '').toLowerCase();
+    const line = (p.product_line || '').toLowerCase();
+    const type = (p.policy_type || '').toLowerCase();
+
+    const matchesText = !q || (
+      agentName.includes(q) ||
+      policyNum.includes(q) ||
+      carrier.includes(q) ||
+      line.includes(q) ||
+      type.includes(q)
+    );
+
+    if (!matchesText) return false;
+
+    // date filter: submitted_at (preferred), fallback created_at
+    if (!start && !end) return true;
+
+    const raw = p.submitted_at || p.created_at;
+    if (!raw) return false;
+
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return false;
+
+    if (start && d < start) return false;
+    if (end && d > end) return false;
+
+    return true;
+  });
+
+  renderPoliciesList(filtered);
+}
+
+async function loadPoliciesIntoList() {
+  const list = document.getElementById('policy-list');
+  if (!list) return;
+
+  list.innerHTML = `<div style="padding:10px;">Loading…</div>`;
+
+  const { data, error } = await sb
+    .from('policies')
+    .select(`
+      id,
+      agent_id,
+      policy_number,
+      carrier_name,
+      policy_type,
+      product_line,
+      premium_annual,
+      issued_at,
+      submitted_at,
+      status,
+      created_at,
+      agent:agents ( full_name )
+    `)
+    .order('created_at', { ascending: false })
+    .limit(50);
+
+  if (error) {
+    console.error('loadPoliciesIntoList error', error);
+    list.innerHTML = `<div style="padding:10px;">Error loading policies.</div>`;
+    return;
+  }
+
+  _policiesCache = data || [];
+  applyPolicyFilters(); // renders filtered view immediately
 }
 
 async function loadLeadsForSelectedContact(contactId) {
@@ -1163,6 +1202,31 @@ function wireModalButtons() {
 
 /* ---------- Dependencies ---------- */
 
+function wirePolicyListFilters() {
+  const searchEl = document.getElementById('policy-search');
+  const rangeEl = document.getElementById('policy-date-range');
+  const clearBtn = document.getElementById('policy-filters-clear');
+
+  if (searchEl) {
+    searchEl.addEventListener('input', () => applyPolicyFilters());
+  }
+
+  if (window.flatpickr && rangeEl) {
+    _policiesFp = flatpickr(rangeEl, {
+      mode: "range",
+      dateFormat: "Y-m-d",
+      allowInput: false,
+      onChange: () => applyPolicyFilters()
+    });
+  }
+
+  clearBtn?.addEventListener('click', () => {
+    if (searchEl) searchEl.value = '';
+    if (_policiesFp) _policiesFp.clear();
+    applyPolicyFilters();
+  });
+}
+
 function wirePolicyContactNewToggle() {
   const policyContactSel = document.getElementById('policy-contact');
   const newContactWrap = document.getElementById('policy-new-contact-wrap');
@@ -1578,7 +1642,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   const agentId = document.getElementById('policy-agent')?.value || null;
   await loadContactsForPolicy(agentId);
-
+  wirePolicyListFilters();
   await loadPoliciesIntoList();
   await loadAdjustmentsIntoList();
   await loadPayoutBatchesIntoList();
