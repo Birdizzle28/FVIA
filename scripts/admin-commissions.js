@@ -308,28 +308,59 @@ async function loadPoliciesIntoList() {
 
   list.innerHTML = `<div style="padding:10px;">Loading…</div>`;
 
-  const { data, error } = await sb
+  // 1) Load policies (no FK join)
+  const { data: policies, error: pErr } = await sb
     .from('policies')
-    .select('id, agent_id, policy_number, carrier_name, policy_type, product_line, premium_annual, issued_at, submitted_at, status, created_at')
+    .select(`
+      id,
+      agent_id,
+      policy_number,
+      carrier_name,
+      policy_type,
+      product_line,
+      premium_annual,
+      issued_at,
+      submitted_at,
+      status,
+      created_at
+    `)
     .order('created_at', { ascending: false })
     .limit(50);
 
-  if (error) {
-    console.error('loadPoliciesIntoList error', error);
+  if (pErr) {
+    console.error('loadPoliciesIntoList error', pErr);
     list.innerHTML = `<div style="padding:10px;">Error loading policies.</div>`;
     return;
   }
 
-  const rows = data || [];
+  const rows = policies || [];
   if (!rows.length) {
     list.innerHTML = `<div style="padding:10px;">No policies yet.</div>`;
     return;
   }
 
+  // 2) Fetch agent names for the policies we loaded
+  const agentIds = Array.from(new Set(rows.map(p => p.agent_id).filter(Boolean)));
+
+  let agentNameMap = {};
+  if (agentIds.length) {
+    const { data: agents, error: aErr } = await sb
+      .from('agents')
+      .select('id, full_name')
+      .in('id', agentIds);
+
+    if (aErr) {
+      console.warn('Could not load agent names:', aErr);
+    } else {
+      agentNameMap = Object.fromEntries((agents || []).map(a => [a.id, a.full_name || a.id]));
+    }
+  }
+
+  // 3) Render with agent names
   list.innerHTML = rows.map(p => {
-    const agentName = p.agent?.full_name || '—';
+    const agentName = agentNameMap[p.agent_id] || '—';
     const prem = safeNum(p.premium_annual).toFixed(2);
-    const dt = p.issued_at ? String(p.issued_at) : '—';
+    const dt = p.issued_at ? String(p.issued_at).slice(0,10) : '—';
     const st = p.status ? String(p.status).replace(/_/g, ' ') : '—';
     const carrier = p.carrier_name || '—';
     const line = p.product_line || '—';
@@ -342,7 +373,7 @@ async function loadPoliciesIntoList() {
           <div>${carrier} • ${line} • ${type}</div>
           <div>$${prem} • ${st} • Issue: ${dt}</div>
         </div>
-    
+
         <div style="flex:0 0 auto;">
           <button type="button"
             class="policy-edit-btn"
