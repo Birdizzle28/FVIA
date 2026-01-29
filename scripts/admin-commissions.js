@@ -518,9 +518,10 @@ async function loadAdjustmentsIntoList() {
 
   container.textContent = 'Loading...';
 
-  const { data, error } = await sb
+  // 1) Pull ledger rows (now includes entry_type + is_settled + policy_id)
+  const { data: rows, error } = await sb
     .from('commission_ledger')
-    .select('id, agent_id, amount, category, period_start')
+    .select('id, agent_id, amount, category, entry_type, is_settled, policy_id, period_start')
     .order('period_start', { ascending: false })
     .limit(50);
 
@@ -530,23 +531,69 @@ async function loadAdjustmentsIntoList() {
     return;
   }
 
-  if (!data || data.length === 0) {
+  if (!rows || rows.length === 0) {
     container.textContent = 'No debits or credits yet.';
     return;
   }
 
+  // 2) Build lookup lists
+  const agentIds = [...new Set(rows.map(r => r.agent_id).filter(Boolean))];
+  const policyIds = [...new Set(rows.map(r => r.policy_id).filter(Boolean))];
+
+  // 3) Fetch agents -> map { id: full_name }
+  let agentNameMap = {};
+  if (agentIds.length) {
+    const { data: agents, error: aErr } = await sb
+      .from('agents')
+      .select('id, full_name')
+      .in('id', agentIds);
+
+    if (aErr) {
+      console.warn('Could not load agent names:', aErr);
+    } else {
+      (agents || []).forEach(a => { agentNameMap[a.id] = a.full_name || a.id; });
+    }
+  }
+
+  // 4) Fetch policies -> map { id: policy_number }
+  let policyNumMap = {};
+  if (policyIds.length) {
+    const { data: policies, error: pErr } = await sb
+      .from('policies')
+      .select('id, policy_number')
+      .in('id', policyIds);
+
+    if (pErr) {
+      console.warn('Could not load policy numbers:', pErr);
+    } else {
+      (policies || []).forEach(p => { policyNumMap[p.id] = p.policy_number || p.id; });
+    }
+  }
+
+  // 5) Render
   container.innerHTML = '';
-  data.forEach(row => {
+
+  rows.forEach(row => {
     const div = document.createElement('div');
     div.className = 'mini-row';
 
     const amtNumber = Number(row.amount || 0);
     const sign = amtNumber >= 0 ? '+' : '-';
     const amt = Math.abs(amtNumber).toFixed(2);
-    const cat = row.category || '';
-    const date = row.period_start ? new Date(row.period_start).toLocaleDateString() : '';
 
-    div.textContent = `${sign}$${amt} — ${cat} (${date})`;
+    const cat = row.category || '';
+    const entryType = row.entry_type || '—';
+    const settled = (row.is_settled === true) ? '✅ Settled' : '⏳ Open';
+
+    const date = row.period_start ? new Date(row.period_start).toLocaleDateString() : '';
+    const agentName = agentNameMap[row.agent_id] || '—';
+    const policyNum = row.policy_id ? (policyNumMap[row.policy_id] || '—') : null;
+
+    const policyPart = policyNum ? ` • Policy: ${policyNum}` : '';
+
+    div.textContent =
+      `${sign}$${amt} — ${cat} • ${entryType} • ${settled} • ${agentName}${policyPart} (${date})`;
+
     container.appendChild(div);
   });
 }
