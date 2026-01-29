@@ -322,7 +322,7 @@ function renderPoliciesList(rows) {
   }
 
   list.innerHTML = rows.map(p => {
-    const agentName = p.agent?.full_name || '—';
+    const agentName = p.agent_name || '—';
     const prem = safeNum(p.premium_annual).toFixed(2);
     const dt = p.issued_at ? String(p.issued_at).slice(0, 10) : '—';
     const st = p.status ? String(p.status).replace(/_/g, ' ') : '—';
@@ -365,7 +365,7 @@ function applyPolicyFilters() {
 
   const filtered = (_policiesCache || []).filter(p => {
     // search fields
-    const agentName = (p.agent?.full_name || '').toLowerCase();
+    const agentName = (p.agent_name || '').toLowerCase();
     const policyNum = (p.policy_number || '').toLowerCase();
     const carrier = (p.carrier_name || '').toLowerCase();
     const line = (p.product_line || '').toLowerCase();
@@ -405,7 +405,8 @@ async function loadPoliciesIntoList() {
 
   list.innerHTML = `<div style="padding:10px;">Loading…</div>`;
 
-  const { data, error } = await sb
+  // 1) get policies WITHOUT embedded join
+  const { data: policies, error } = await sb
     .from('policies')
     .select(`
       id,
@@ -418,8 +419,7 @@ async function loadPoliciesIntoList() {
       issued_at,
       submitted_at,
       status,
-      created_at,
-      agent:agents ( full_name )
+      created_at
     `)
     .order('created_at', { ascending: false })
     .limit(50);
@@ -430,8 +430,32 @@ async function loadPoliciesIntoList() {
     return;
   }
 
-  _policiesCache = data || [];
-  applyPolicyFilters(); // renders filtered view immediately
+  const rows = policies || [];
+
+  // 2) fetch agent names for the agent_ids we see
+  const agentIds = [...new Set(rows.map(r => r.agent_id).filter(Boolean))];
+
+  let agentNameMap = {};
+  if (agentIds.length) {
+    const { data: agents, error: aErr } = await sb
+      .from('agents')
+      .select('id, full_name')
+      .in('id', agentIds);
+
+    if (aErr) {
+      console.warn('Could not load agent names:', aErr);
+    } else {
+      (agents || []).forEach(a => { agentNameMap[a.id] = a.full_name || a.id; });
+    }
+  }
+
+  // 3) attach agent name to each row (no FK needed)
+  _policiesCache = rows.map(p => ({
+    ...p,
+    agent_name: agentNameMap[p.agent_id] || '—'
+  }));
+
+  applyPolicyFilters(); // this will call renderPoliciesList(filtered)
 }
 
 async function loadLeadsForSelectedContact(contactId) {
@@ -1023,10 +1047,10 @@ async function openEditPolicyModal(policyId) {
   if (agentSel) {
     const agentId = p.agent_id || '';
   
+    agentSel.value = agentId; // always set the real select
+
     if (window.Choices && policyEditAgentChoices) {
       policyEditAgentChoices.setChoiceByValue(agentId);
-    } else {
-      agentSel.value = agentId;
     }
   }
 
