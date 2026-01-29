@@ -659,6 +659,9 @@ async function loadPayoutBatchesIntoList() {
   const list = document.getElementById("batch-list");
   if (!sb || !list) return;
 
+  const statusFilterEl = document.getElementById("batch-status-filter");
+  const activeFilter = (statusFilterEl?.value || "both").toLowerCase();
+
   const money = (v) => {
     const n = Number(v);
     if (!Number.isFinite(n)) return "—";
@@ -686,21 +689,31 @@ async function loadPayoutBatchesIntoList() {
     .from("payout_batches")
     .select("*")
     .order("created_at", { ascending: false })
-    .limit(50);
+    .limit(100);
 
   if (error) {
     list.innerHTML = `<div style="color:#b00020;font-size:13px;">Failed to load batches: ${error.message}</div>`;
     return;
   }
 
-  if (!batches || batches.length === 0) {
-    list.innerHTML = `<div style="opacity:.8;font-size:13px;">No payout batches yet.</div>`;
+  let rows = batches || [];
+
+  // ✅ Filter: pending / sent / both
+  if (activeFilter !== "both") {
+    rows = rows.filter(b => String(b.status || "pending").toLowerCase() === activeFilter);
+  }
+
+  if (!rows.length) {
+    list.innerHTML = `<div style="opacity:.8;font-size:13px;">No payout batches found.</div>`;
     return;
   }
 
   list.innerHTML = "";
 
-  for (const b of batches) {
+  for (const b of rows) {
+    const currentStatus = String(b.status || "pending").toLowerCase();
+    const isSent = currentStatus === "sent";
+
     const row = document.createElement("div");
     row.className = "batch-row";
     row.style.display = "grid";
@@ -718,16 +731,22 @@ async function loadPayoutBatchesIntoList() {
         <strong style="font-size:14px;">Batch</strong>
         <span style="font-size:12px; opacity:.75;">${b.id ?? "—"}</span>
       </div>
+
       <div style="margin-top:6px; font-size:13px; line-height:1.35;">
         <div><span style="opacity:.75;">Total Net:</span> <span class="total-net-text">${money(b.total_net)}</span></div>
         <div><span style="opacity:.75;">Created:</span> ${fmtDate(b.created_at)}</div>
         ${b.run_at ? `<div><span style="opacity:.75;">Run At:</span> ${fmtDate(b.run_at)}</div>` : ``}
-        ${b.status ? `<div><span style="opacity:.75;">Status:</span> ${String(b.status)}</div>` : ``}
+        <div><span style="opacity:.75;">Status:</span> <span class="status-text">${currentStatus}</span></div>
       </div>
+
+      <!-- ✅ Edit area now changes STATUS, not total_net -->
       <div class="edit-wrap" style="margin-top:8px; display:none; gap:8px; align-items:center; flex-wrap:wrap;">
-        <input class="edit-total-net" type="number" step="0.01" min="0"
-          value="${Number.isFinite(Number(b.total_net)) ? Number(b.total_net) : ""}"
-          style="width:140px; padding:6px 8px; border:1px solid #ddd; border-radius:8px; font-size:13px;">
+        <label style="font-size:12px; opacity:.8;">Status:</label>
+        <select class="edit-status"
+          style="width:160px; padding:6px 8px; border:1px solid #ddd; border-radius:8px; font-size:13px;">
+          <option value="pending">pending</option>
+          <option value="sent">sent</option>
+        </select>
         <button class="save-edit" type="button" style="padding:6px 10px; border-radius:8px;">Save</button>
         <button class="cancel-edit" type="button" style="padding:6px 10px; border-radius:8px;">Cancel</button>
         <small class="edit-msg" style="display:block; width:100%; font-size:12px; opacity:.75;"></small>
@@ -743,9 +762,10 @@ async function loadPayoutBatchesIntoList() {
 
     const btnPay = document.createElement("button");
     btnPay.type = "button";
-    btnPay.textContent = "Pay";
+    btnPay.textContent = isSent ? "Paid" : "Pay";
     btnPay.style.padding = "6px 12px";
     btnPay.style.borderRadius = "8px";
+    btnPay.disabled = isSent; // ✅ #2 disable if sent
 
     const btnEdit = document.createElement("button");
     btnEdit.type = "button";
@@ -769,20 +789,22 @@ async function loadPayoutBatchesIntoList() {
     list.appendChild(row);
 
     const editWrap = left.querySelector(".edit-wrap");
-    const editInput = left.querySelector(".edit-total-net");
+    const editStatus = left.querySelector(".edit-status");
     const saveBtn = left.querySelector(".save-edit");
     const cancelBtn = left.querySelector(".cancel-edit");
     const editMsg = left.querySelector(".edit-msg");
-    const totalNetText = left.querySelector(".total-net-text");
+    const statusText = left.querySelector(".status-text");
+
+    // set default selection
+    editStatus.value = currentStatus;
 
     btnEdit.addEventListener("click", () => {
       const open = editWrap.style.display !== "none";
       editWrap.style.display = open ? "none" : "flex";
       editMsg.textContent = "";
       if (!open) {
-        const current = Number(b.total_net);
-        editInput.value = Number.isFinite(current) ? String(current) : "";
-        editInput.focus();
+        editStatus.value = String(b.status || "pending").toLowerCase();
+        editStatus.focus();
       }
     });
 
@@ -792,10 +814,10 @@ async function loadPayoutBatchesIntoList() {
     });
 
     saveBtn.addEventListener("click", async () => {
-      const nextVal = Number(editInput.value);
-      if (!Number.isFinite(nextVal) || nextVal < 0) {
+      const nextStatus = String(editStatus.value || "pending").toLowerCase();
+      if (!["pending", "sent"].includes(nextStatus)) {
         editMsg.style.color = "#b00020";
-        editMsg.textContent = "Enter a valid total_net (0 or higher).";
+        editMsg.textContent = "Choose pending or sent.";
         return;
       }
 
@@ -806,28 +828,39 @@ async function loadPayoutBatchesIntoList() {
 
       const { error: upErr } = await sb
         .from("payout_batches")
-        .update({ total_net: nextVal })
+        .update({ status: nextStatus })
         .eq("id", b.id);
 
       setBusy(saveBtn, false);
       setBusy(btnEdit, false);
       setBusy(btnDelete, false);
-      setBusy(btnPay, false);
 
       if (upErr) {
+        setBusy(btnPay, false);
         editMsg.style.color = "#b00020";
         editMsg.textContent = `Save failed: ${upErr.message}`;
         return;
       }
 
-      b.total_net = nextVal;
-      totalNetText.textContent = money(nextVal);
+      // update local
+      b.status = nextStatus;
+      statusText.textContent = nextStatus;
+
+      const nowSent = nextStatus === "sent";
+      btnPay.disabled = nowSent;
+      btnPay.textContent = nowSent ? "Paid" : "Pay";
+
       editMsg.style.color = "#0a7a0a";
       editMsg.textContent = "Saved.";
       setTimeout(() => {
         editWrap.style.display = "none";
         editMsg.textContent = "";
       }, 600);
+
+      // ✅ if filter would hide it now, refresh list
+      if (activeFilter !== "both" && nextStatus !== activeFilter) {
+        await loadPayoutBatchesIntoList();
+      }
     });
 
     btnDelete.addEventListener("click", async () => {
@@ -854,11 +887,18 @@ async function loadPayoutBatchesIntoList() {
 
       row.remove();
       if (!list.querySelector(".batch-row")) {
-        list.innerHTML = `<div style="opacity:.8;font-size:13px;">No payout batches yet.</div>`;
+        list.innerHTML = `<div style="opacity:.8;font-size:13px;">No payout batches found.</div>`;
       }
     });
 
     btnPay.addEventListener("click", async () => {
+      // ✅ #2 hard block even if somehow clicked
+      const statusNow = String(b.status || "pending").toLowerCase();
+      if (statusNow === "sent") {
+        alert("This batch is already marked as sent/paid.");
+        return;
+      }
+
       const ok = confirm("Run this payout batch now?");
       if (!ok) return;
 
@@ -892,6 +932,11 @@ async function loadPayoutBatchesIntoList() {
           alert(`Pay failed: ${msg}`);
         } else {
           alert(payload?.message || "Batch sent successfully.");
+
+          // OPTIONAL: if your function does NOT update status automatically,
+          // we can set status=sent here after success:
+          await sb.from("payout_batches").update({ status: "sent" }).eq("id", b.id);
+
           await loadPayoutBatchesIntoList();
         }
       } catch (e) {
@@ -1039,6 +1084,12 @@ async function loadLeadsForLeadDebt(agentId) {
 }
 
 /* ---------- Run payouts (admin.js behavior) ---------- */
+
+function wirePayoutBatchFilters() {
+  const filter = document.getElementById("batch-status-filter");
+  if (!filter) return;
+  filter.addEventListener("change", () => loadPayoutBatchesIntoList());
+}
 
 function wireAdjustmentListFilters() {
   const searchEl = document.getElementById('debit-credit-search');
@@ -1794,5 +1845,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   wirePolicyListFilters();
   await loadPoliciesIntoList();
   await loadAdjustmentsIntoList();
+  await loadPayoutBatchesIntoList();
+  wirePayoutBatchFilters();
   await loadPayoutBatchesIntoList();
 });
