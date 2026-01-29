@@ -13,6 +13,7 @@ let commissionAgentsLoaded = false;
 let policyAgentChoices = null;
 let policyLeadsChoices = null;
 let adjustmentAgentChoices = null;
+let policyEditAgentChoices = null;
 
 /* ---------- Helpers ---------- */
 
@@ -43,11 +44,14 @@ async function loadAgentsForCommissions(force = false) {
   const selects = [
     document.getElementById('policy-agent'),
     document.getElementById('adjustment-agent'),
+    document.getElementById('policy-edit-agent'), // ✅ ADD THIS
   ];
 
   selects.forEach(sel => {
     if (!sel) return;
+
     sel.innerHTML = '<option value="">Select agent…</option>';
+
     (data || []).forEach(agent => {
       const opt = document.createElement('option');
       opt.value = agent.id;
@@ -55,8 +59,12 @@ async function loadAgentsForCommissions(force = false) {
       sel.appendChild(opt);
     });
   });
+
+  // choices instances
   policyAgentChoices = ensureChoicesForSelect(document.getElementById('policy-agent'), policyAgentChoices);
   adjustmentAgentChoices = ensureChoicesForSelect(document.getElementById('adjustment-agent'), adjustmentAgentChoices);
+  policyEditAgentChoices = ensureChoicesForSelect(document.getElementById('policy-edit-agent'), policyEditAgentChoices); // ✅ ADD THIS
+
   commissionAgentsLoaded = true;
 }
 
@@ -971,8 +979,17 @@ async function openEditPolicyModal(policyId) {
 
   // agent dropdown (load agents first so option exists)
   await loadAgentsForCommissions();
+
   const agentSel = document.getElementById('policy-edit-agent');
-  if (agentSel) agentSel.value = p.agent_id || '';
+  if (agentSel) {
+    const agentId = p.agent_id || '';
+  
+    if (window.Choices && policyEditAgentChoices) {
+      policyEditAgentChoices.setChoiceByValue(agentId);
+    } else {
+      agentSel.value = agentId;
+    }
+  }
 
   document.getElementById('policy-edit-number').value = p.policy_number || '';
   document.getElementById('policy-edit-annual-premium').value = Number(p.premium_annual || 0);
