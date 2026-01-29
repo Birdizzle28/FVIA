@@ -136,7 +136,30 @@
             <h3>Debits &amp; Credits</h3>
             <p>Add chargebacks, lead debt, or credits to agents.</p>
             <button id="open-debit-credit-modal" class="card-link" type="button">Add Debit / Credit</button>
-
+            <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin:10px 0;">
+              <input
+                id="debit-credit-search"
+                type="text"
+                placeholder="Search agent, policy #, entry type…"
+                style="flex:1; min-width:220px; padding:10px 12px; border:1px solid #ddd; border-radius:10px;"
+              />
+            
+              <input
+                id="debit-credit-date-range"
+                type="text"
+                placeholder="Date range…"
+                readonly
+                style="width:180px; padding:10px 12px; border:1px solid #ddd; border-radius:10px;"
+              />
+            
+              <button
+                id="debit-credit-filters-clear"
+                type="button"
+                style="padding:10px 12px; border-radius:10px;"
+              >
+                Clear
+              </button>
+            </div>
             <div id="debit-credit-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
               <!-- adjustments load here -->
             </div>
