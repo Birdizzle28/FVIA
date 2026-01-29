@@ -310,20 +310,7 @@ async function loadPoliciesIntoList() {
 
   const { data, error } = await sb
     .from('policies')
-    .select(`
-      id,
-      agent_id,
-      policy_number,
-      carrier_name,
-      policy_type,
-      product_line,
-      premium_annual,
-      issued_at,
-      submitted_at,
-      status,
-      created_at,
-      agent:agents ( full_name )
-    `)
+    .select('id, agent_id, policy_number, carrier_name, policy_type, product_line, premium_annual, issued_at, submitted_at, status, created_at')
     .order('created_at', { ascending: false })
     .limit(50);
 
