@@ -16,6 +16,8 @@ let adjustmentAgentChoices = null;
 let policyEditAgentChoices = null;
 let _policiesCache = [];
 let _policiesFp = null; // flatpickr instance
+let _ledgerCache = [];
+let _ledgerFp = null; // flatpickr instance for Debits/Credits
 
 /* ---------- Helpers ---------- */
 
@@ -25,6 +27,82 @@ function closeModal(el) { if (el) el.style.display = 'none'; }
 function safeNum(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
+}
+
+function renderAdjustmentsList(rows) {
+  const container = document.getElementById('debit-credit-list');
+  if (!container) return;
+
+  if (!rows || rows.length === 0) {
+    container.innerHTML = `<div style="padding:10px;">No matching debits/credits.</div>`;
+    return;
+  }
+
+  container.innerHTML = '';
+
+  rows.forEach(row => {
+    const div = document.createElement('div');
+    div.className = 'mini-row';
+
+    const amtNumber = Number(row.amount || 0);
+    const sign = amtNumber >= 0 ? '+' : '-';
+    const amt = Math.abs(amtNumber).toFixed(2);
+
+    const cat = row.category || '';
+    const entryType = row.entry_type || '—';
+    const settled = (row.is_settled === true) ? '✅ Settled' : '⏳ Open';
+
+    const date = row.period_start ? new Date(row.period_start).toLocaleDateString() : '';
+    const agentName = row.agent_name || '—';
+    const policyNum = row.policy_number ? ` • Policy: ${row.policy_number}` : '';
+
+    div.textContent = `${sign}$${amt} — ${cat} • ${entryType} • ${settled} • ${agentName}${policyNum} (${date})`;
+    container.appendChild(div);
+  });
+}
+
+function applyAdjustmentFilters() {
+  const q = (document.getElementById('debit-credit-search')?.value || '').trim().toLowerCase();
+
+  // date range from flatpickr (2 dates) OR empty
+  let start = null;
+  let end = null;
+
+  if (_ledgerFp && Array.isArray(_ledgerFp.selectedDates)) {
+    if (_ledgerFp.selectedDates[0]) start = new Date(_ledgerFp.selectedDates[0]);
+    if (_ledgerFp.selectedDates[1]) end = new Date(_ledgerFp.selectedDates[1]);
+    if (end) end.setHours(23, 59, 59, 999); // include whole end day
+  }
+
+  const filtered = (_ledgerCache || []).filter(r => {
+    const agentName = (r.agent_name || '').toLowerCase();
+    const policyNum = (r.policy_number || '').toLowerCase();
+    const entryType = (r.entry_type || '').toLowerCase();
+
+    const matchesText = !q || (
+      agentName.includes(q) ||
+      policyNum.includes(q) ||
+      entryType.includes(q)
+    );
+
+    if (!matchesText) return false;
+
+    // Date filter on period_start
+    if (!start && !end) return true;
+
+    const raw = r.period_start;
+    if (!raw) return false;
+
+    const d = new Date(raw);
+    if (Number.isNaN(d.getTime())) return false;
+
+    if (start && d < start) return false;
+    if (end && d > end) return false;
+
+    return true;
+  });
+
+  renderAdjustmentsList(filtered);
 }
 
 /* ---------- Loaders: Agents / Contacts / Carriers / Carrier Schedules ---------- */
@@ -516,9 +594,9 @@ async function loadAdjustmentsIntoList() {
   const container = document.getElementById('debit-credit-list');
   if (!container) return;
 
-  container.textContent = 'Loading...';
+  container.innerHTML = `<div style="padding:10px;">Loading…</div>`;
 
-  // 1) Pull ledger rows (now includes entry_type + is_settled + policy_id)
+  // 1) Pull ledger rows
   const { data: rows, error } = await sb
     .from('commission_ledger')
     .select('id, agent_id, amount, category, entry_type, is_settled, policy_id, period_start')
@@ -527,20 +605,21 @@ async function loadAdjustmentsIntoList() {
 
   if (error) {
     console.error('Error loading debits/credits', error);
-    container.textContent = 'Error loading debits / credits.';
+    container.innerHTML = `<div style="padding:10px;">Error loading debits / credits.</div>`;
     return;
   }
 
   if (!rows || rows.length === 0) {
-    container.textContent = 'No debits or credits yet.';
+    _ledgerCache = [];
+    container.innerHTML = `<div style="padding:10px;">No debits or credits yet.</div>`;
     return;
   }
 
-  // 2) Build lookup lists
+  // 2) Lookup IDs
   const agentIds = [...new Set(rows.map(r => r.agent_id).filter(Boolean))];
   const policyIds = [...new Set(rows.map(r => r.policy_id).filter(Boolean))];
 
-  // 3) Fetch agents -> map { id: full_name }
+  // 3) Agents map
   let agentNameMap = {};
   if (agentIds.length) {
     const { data: agents, error: aErr } = await sb
@@ -548,14 +627,11 @@ async function loadAdjustmentsIntoList() {
       .select('id, full_name')
       .in('id', agentIds);
 
-    if (aErr) {
-      console.warn('Could not load agent names:', aErr);
-    } else {
-      (agents || []).forEach(a => { agentNameMap[a.id] = a.full_name || a.id; });
-    }
+    if (aErr) console.warn('Could not load agent names:', aErr);
+    else (agents || []).forEach(a => { agentNameMap[a.id] = a.full_name || a.id; });
   }
 
-  // 4) Fetch policies -> map { id: policy_number }
+  // 4) Policies map
   let policyNumMap = {};
   if (policyIds.length) {
     const { data: policies, error: pErr } = await sb
@@ -563,39 +639,18 @@ async function loadAdjustmentsIntoList() {
       .select('id, policy_number')
       .in('id', policyIds);
 
-    if (pErr) {
-      console.warn('Could not load policy numbers:', pErr);
-    } else {
-      (policies || []).forEach(p => { policyNumMap[p.id] = p.policy_number || p.id; });
-    }
+    if (pErr) console.warn('Could not load policy numbers:', pErr);
+    else (policies || []).forEach(p => { policyNumMap[p.id] = p.policy_number || p.id; });
   }
 
-  // 5) Render
-  container.innerHTML = '';
+  // 5) Cache enriched rows
+  _ledgerCache = rows.map(r => ({
+    ...r,
+    agent_name: agentNameMap[r.agent_id] || '—',
+    policy_number: r.policy_id ? (policyNumMap[r.policy_id] || '—') : null
+  }));
 
-  rows.forEach(row => {
-    const div = document.createElement('div');
-    div.className = 'mini-row';
-
-    const amtNumber = Number(row.amount || 0);
-    const sign = amtNumber >= 0 ? '+' : '-';
-    const amt = Math.abs(amtNumber).toFixed(2);
-
-    const cat = row.category || '';
-    const entryType = row.entry_type || '—';
-    const settled = (row.is_settled === true) ? '✅ Settled' : '⏳ Open';
-
-    const date = row.period_start ? new Date(row.period_start).toLocaleDateString() : '';
-    const agentName = agentNameMap[row.agent_id] || '—';
-    const policyNum = row.policy_id ? (policyNumMap[row.policy_id] || '—') : null;
-
-    const policyPart = policyNum ? ` • Policy: ${policyNum}` : '';
-
-    div.textContent =
-      `${sign}$${amt} — ${cat} • ${entryType} • ${settled} • ${agentName}${policyPart} (${date})`;
-
-    container.appendChild(div);
-  });
+  applyAdjustmentFilters();
 }
 
 /* ---------- Payout batches (Pay/Edit/Delete) ---------- */
@@ -984,6 +1039,29 @@ async function loadLeadsForLeadDebt(agentId) {
 }
 
 /* ---------- Run payouts (admin.js behavior) ---------- */
+
+function wireAdjustmentListFilters() {
+  const searchEl = document.getElementById('debit-credit-search');
+  const rangeEl = document.getElementById('debit-credit-date-range');
+  const clearBtn = document.getElementById('debit-credit-filters-clear');
+
+  searchEl?.addEventListener('input', () => applyAdjustmentFilters());
+
+  if (window.flatpickr && rangeEl) {
+    _ledgerFp = flatpickr(rangeEl, {
+      mode: "range",
+      dateFormat: "Y-m-d",
+      allowInput: false,
+      onChange: () => applyAdjustmentFilters()
+    });
+  }
+
+  clearBtn?.addEventListener('click', () => {
+    if (searchEl) searchEl.value = '';
+    if (_ledgerFp) _ledgerFp.clear();
+    applyAdjustmentFilters();
+  });
+}
 
 async function wireRunPayoutsButton() {
   const btn = document.getElementById('run-payouts-btn');
@@ -1710,7 +1788,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   wirePolicyEditSubmit();
   await loadAgentsForCommissions();
   await loadCarriersForPolicy();
-
+  wireAdjustmentListFilters();
   const agentId = document.getElementById('policy-agent')?.value || null;
   await loadContactsForPolicy(agentId);
   wirePolicyListFilters();
