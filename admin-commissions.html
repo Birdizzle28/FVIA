@@ -242,6 +242,85 @@
         </div>
       </div>
 
+      <!-- Edit Policy Modal -->
+      <div id="policy-edit-modal" class="modal-backdrop" style="display:none;">
+        <div class="modal">
+          <h3>Edit Policy</h3>
+      
+          <form id="policy-edit-form">
+            <input id="policy-edit-id" type="hidden">
+      
+            <label>
+              Agent
+              <select id="policy-edit-agent" required></select>
+            </label>
+      
+            <label>
+              Policy #
+              <input id="policy-edit-number" type="text" required>
+            </label>
+      
+            <label>
+              Annual Premium
+              <input id="policy-edit-annual-premium" type="number" step="0.01" min="0" required>
+            </label>
+      
+            <label>
+              Carrier
+              <input id="policy-edit-carrier" type="text" required>
+            </label>
+      
+            <label>
+              Product Line
+              <input id="policy-edit-product-line" type="text" required>
+            </label>
+      
+            <label>
+              Policy Type
+              <input id="policy-edit-policy-type" type="text" required>
+            </label>
+      
+            <label>
+              As Earned?
+              <select id="policy-edit-as-earned">
+                <option value="false">False</option>
+                <option value="true">True</option>
+              </select>
+            </label>
+      
+            <label>
+              Status
+              <select id="policy-edit-status">
+                <option value="in_force">Active</option>
+                <option value="pending">Pending</option>
+                <option value="issued">Issued</option>
+                <option value="lapsed">Lapsed</option>
+                <option value="cancelled">Cancelled</option>
+                <option value="reinstated">Reinstated</option>
+                <option value="renewed">Renewed</option>
+              </select>
+            </label>
+      
+            <label>
+              Submitted Date
+              <input id="policy-edit-submitted-date" type="date" required>
+            </label>
+      
+            <label>
+              Issued Date (optional)
+              <input id="policy-edit-issued-date" type="date">
+            </label>
+      
+            <div class="modal-actions">
+              <button type="button" id="policy-edit-cancel">Cancel</button>
+              <button type="submit">Save Changes</button>
+            </div>
+      
+            <p id="policy-edit-error" class="modal-error"></p>
+          </form>
+        </div>
+      </div>
+
       <!-- Add Debit / Credit Modal -->
       <div id="adjustment-modal" class="modal-backdrop" style="display:none;">
         <div class="modal">
