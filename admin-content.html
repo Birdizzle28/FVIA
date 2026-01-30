@@ -1,0 +1,638 @@
+<!-- admin-content.html -->
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+
+    <title>Admin Content | Family Values Group</title>
+
+    <link rel="stylesheet" href="styles/agentstyle.css" />
+    <link rel="stylesheet" href="styles/admin.css" />
+    <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+
+    <!-- Lock visual display until we confirm admin in script at bottom -->
+    <style>
+      html { visibility: hidden; }
+    </style>
+
+    <noscript>
+      <meta http-equiv="refresh" content="0; url=dashboard.html" />
+    </noscript>
+  </head>
+
+  <body id="dashboardbody">
+    <!-- Header -->
+    <header class="index-grid-header">
+      <div id="logofvcontainer">
+        <div id="logodiv">
+          <a href="../index.html">
+            <img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" />
+          </a>
+        </div>
+        <div id="fvdiv">
+          <p><strong>Family Values Group</strong></p>
+        </div>
+      </div>
+
+      <div id="navcontainer">
+        <nav class="header-flex-container">
+          <a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
+          <a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
+          <div id="menu-toggle">
+            <i class="fa-solid fa-bars"></i>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu">
+      <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
+
+      <!-- Toolkit parent (acts like a toggle, not a link) -->
+      <button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
+        <i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
+        <i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
+      </button>
+
+      <!-- Submenu that expands between Toolkit and Commissions -->
+      <div id="toolkit-submenu" class="submenu" hidden>
+        <a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
+        <a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
+        <a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
+        <a href="calculator.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
+        <a href="marketing.html"><i class="fa-solid fa-handshake"></i><span>Marketing</span></a>
+      </div>
+
+      <a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
+      <a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
+      <a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
+      <a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
+      <a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
+    </div>
+
+    <main class="auth-container">
+      <!-- Admin page navigation (keep same IDs so the JS structure stays consistent) -->
+      <nav id="admin-page-nav">
+        <!-- You can update these hrefs later when the other admin pages exist -->
+        <a id="nav-all" class="admin-nav-link" href="admin.html">All Leads</a>
+        <a id="nav-requests" class="admin-nav-link" href="admin.html">Lead Requests</a>
+        <a id="nav-history" class="admin-nav-link" href="admin.html">Assignment History</a>
+        <a id="nav-stats" class="admin-nav-link" href="admin.html">Agent Stats</a>
+        <a id="nav-commissions" class="admin-nav-link" href="admin.html">Commissions</a>
+        <a id="nav-content" class="admin-nav-link active" href="admin-content.html">Content</a>
+      </nav>
+
+      <!-- Content Section (standalone page version) -->
+      <section id="admin-content-section" class="panel">
+        <h3>Content &amp; Roster</h3>
+
+        <div class="card-grid">
+          <!-- Announcements -->
+          <div class="card">
+            <h3>Announcements</h3>
+            <p>Send a message to specific agents or everyone. Appears on the dashboard.</p>
+
+            <button id="open-annc-modal" class="card-link">Create Announcement</button>
+
+            <button
+              id="toggle-annc-list"
+              type="button"
+              class="see-all"
+              style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;"
+              aria-expanded="false"
+            >
+              <span>Manage announcements</span>
+              <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+
+            <div
+              id="annc-list"
+              class="scroll-container"
+              hidden
+              style="margin-top: 8px; max-height: 260px; overflow-y: auto;"
+            ></div>
+          </div>
+
+          <!-- Training -->
+          <div class="card">
+            <h3>Add Training Material</h3>
+            <p>Publish a new item to the training hub.</p>
+            <button id="open-train-modal" class="card-link">Add Training</button>
+
+            <button
+              id="toggle-training-list"
+              type="button"
+              class="see-all"
+              style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;"
+              aria-expanded="false"
+            >
+              <span>Manage training library</span>
+              <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+
+            <div id="training-manage-panel" hidden style="margin-top: 8px;">
+              <div style="margin-bottom: 8px;">
+                <input
+                  id="training-search"
+                  type="text"
+                  placeholder="Search by title, description, or tags…"
+                  style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;"
+                />
+              </div>
+
+              <div
+                id="training-list"
+                class="scroll-container"
+                style="max-height: 260px; overflow-y: auto;"
+              >
+                <!-- Populated by admin-content.js -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Marketing -->
+          <div class="card">
+            <h3>Add Marketing Asset</h3>
+            <p>Publish a new download/link to the marketing hub.</p>
+            <button id="open-mkt-modal" class="card-link">Add Asset</button>
+
+            <button
+              id="toggle-mkt-list"
+              type="button"
+              class="see-all"
+              style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;"
+              aria-expanded="false"
+            >
+              <span>Manage marketing library</span>
+              <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+
+            <div id="mkt-manage-panel" hidden style="margin-top: 8px;">
+              <div style="margin-bottom: 8px;">
+                <input
+                  id="mkt-search"
+                  type="text"
+                  placeholder="Search by title, description, or tags…"
+                  style="width: 100%; padding: 6px 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;"
+                />
+              </div>
+
+              <div
+                id="mkt-list"
+                class="scroll-container"
+                style="max-height: 260px; overflow-y: auto;"
+              >
+                <!-- Populated by admin-content.js -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Assign Tasks -->
+          <div class="card">
+            <h3>Assign Tasks</h3>
+            <p>Create follow-ups, calls, and reminders for your agents.</p>
+
+            <button id="open-task-modal" class="card-link">Create Task</button>
+
+            <button
+              id="toggle-task-list"
+              type="button"
+              class="see-all"
+              style="margin-top: 8px; display: inline-flex; align-items: center; gap: 6px;"
+              aria-expanded="false"
+            >
+              <span>Manage my sent tasks</span>
+              <i class="fa-solid fa-chevron-down" aria-hidden="true"></i>
+            </button>
+
+            <div id="task-list-panel" hidden style="margin-top: 8px;">
+              <div
+                id="task-list"
+                class="scroll-container"
+                style="max-height: 260px; overflow-y: auto;"
+              >
+                <!-- Populated by admin-content.js -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Agents -->
+          <div class="card">
+            <h3>Pre-approve New Agent</h3>
+            <p>Issue an agent ID + invite so they can sign up.</p>
+            <button id="open-agent-modal" class="card-link">Add Agent</button>
+          </div>
+
+          <!-- Pre-Approval Waitlist -->
+          <div class="card">
+            <h3>Pre-Approval Waitlist</h3>
+            <p>Agents you’ve started onboarding who are waiting for you to review ICA, licenses, and Stripe.</p>
+            <div
+              id="waitlist-container"
+              class="scroll-container"
+              style="max-height: 260px; overflow-y: auto;"
+            >
+              <!-- Filled by admin-content.js -->
+            </div>
+          </div>
+
+          <button id="open-remove-agent-modal" class="content-btn">
+            Remove Agent
+          </button>
+
+          <!-- Remove Agent Modal -->
+          <div id="remove-agent-modal" class="overlay" aria-hidden="true">
+            <div class="overlay-backdrop" data-close></div>
+            <div class="overlay-panel" role="dialog" aria-modal="true">
+              <button class="overlay-close" type="button" data-close>&times;</button>
+              <h2>Remove Agent</h2>
+              <p style="font-size: 13px; color:#555;">
+                Search by NPN (Agent ID) or name. Removing an agent will delete their NIPR
+                records, approved agent record, CRM agent record, matching recruit row,
+                and their login account.
+              </p>
+
+              <div style="margin-top:10px; display:flex; gap:8px;">
+                <input
+                  id="remove-agent-search"
+                  type="text"
+                  placeholder="Search by NPN or name…"
+                  style="flex:1; padding:6px 8px;"
+                />
+                <button id="remove-agent-search-btn" type="button">
+                  Search
+                </button>
+              </div>
+
+              <p id="remove-agent-msg" style="font-size:13px; color:#555; margin-top:8px;"></p>
+
+              <div
+                id="remove-agent-results"
+                style="margin-top:10px; max-height:260px; overflow-y:auto; font-size:13px;"
+              >
+                <!-- results injected here -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ===== Modals (Content page only) ===== -->
+
+      <!-- Announcement Modal -->
+      <div id="annc-modal" class="overlay" aria-hidden="true">
+        <div class="overlay-backdrop" data-close></div>
+        <div class="overlay-panel">
+          <div class="overlay-header">
+            <h2>Create Announcement</h2>
+            <button class="overlay-close" data-close>&times;</button>
+          </div>
+          <div class="overlay-body">
+            <form id="annc-form">
+              <label class="form-group">
+                <span>Title</span>
+                <input id="annc-title" type="text" required />
+              </label>
+
+              <label class="form-group">
+                <span>Message</span>
+                <textarea id="annc-body" rows="4" required></textarea>
+              </label>
+
+              <label class="form-group">
+                <span>Link URL (optional)</span>
+                <input id="annc-link" type="url" placeholder="https://example.com" />
+              </label>
+
+              <label class="form-group">
+                <span>Image (optional)</span>
+                <input id="annc-image" type="file" accept="image/*" />
+                <small>PNG/JPG/GIF. Uploaded to Supabase Storage.</small>
+              </label>
+
+              <div class="form-row" style="display:flex; gap:12px; align-items:flex-end;">
+                <label class="form-group" style="flex:1;">
+                  <span>Audience</span>
+                  <select id="annc-scope">
+                    <option value="all">All users</option>
+                    <option value="admins">Admins only</option>
+                    <option value="by_level">By level</option>
+                    <option value="by_product">By product type</option>
+                    <option value="by_state">By state</option>
+                    <option value="by_product_state">By product &amp; state</option>
+                    <option value="custom_agents">Choose agents…</option>
+                  </select>
+                </label>
+
+                <label class="form-group" style="flex:1; display:none;" id="annc-levels-wrap">
+                  <span>Levels</span>
+                  <select id="annc-levels" multiple></select>
+                </label>
+
+                <label class="form-group" style="flex:1; display:none;" id="annc-products-wrap">
+                  <span>Product types</span>
+                  <select id="annc-products" multiple></select>
+                </label>
+
+                <label class="form-group" style="flex:1; display:none;" id="annc-states-wrap">
+                  <span>States</span>
+                  <select id="annc-states" multiple>
+                    <option>AL</option><option>AK</option><option>AZ</option><option>AR</option>
+                    <option>CA</option><option>CO</option><option>CT</option><option>DC</option>
+                    <option>DE</option><option>FL</option><option>GA</option><option>HI</option>
+                    <option>IA</option><option>ID</option><option>IL</option><option>IN</option>
+                    <option>KS</option><option>KY</option><option>LA</option><option>MA</option>
+                    <option>MD</option><option>ME</option><option>MI</option><option>MN</option>
+                    <option>MO</option><option>MS</option><option>MT</option><option>NC</option>
+                    <option>ND</option><option>NE</option><option>NH</option><option>NJ</option>
+                    <option>NM</option><option>NV</option><option>NY</option><option>OH</option>
+                    <option>OK</option><option>OR</option><option>PA</option><option>RI</option>
+                    <option>SC</option><option>SD</option><option>TN</option><option>TX</option>
+                    <option>UT</option><option>VA</option><option>VT</option><option>WA</option>
+                    <option>WI</option><option>WV</option><option>WY</option>
+                  </select>
+                </label>
+
+                <label class="form-group" style="flex:1; display:none;" id="annc-agents-wrap">
+                  <span>Agents</span>
+                  <select id="annc-agent-ids" multiple></select>
+                </label>
+              </div>
+
+              <div class="form-row" style="display:flex; gap:12px;">
+                <label class="form-group" style="flex:1;">
+                  <span>Publish at (optional)</span>
+                  <input id="annc-publish" type="text" placeholder="Now if empty" />
+                </label>
+                <label class="form-group" style="flex:1;">
+                  <span>Expires at (optional)</span>
+                  <input id="annc-expires" type="text" />
+                </label>
+              </div>
+
+              <div class="form-row" style="display:flex; gap:12px;">
+                <label class="form-group" style="flex:1;">
+                  <span>Repeat</span>
+                  <select id="annc-repeat">
+                    <option value="none">Does not repeat</option>
+                    <option value="daily">Daily</option>
+                    <option value="weekly">Weekly</option>
+                    <option value="monthly">Monthly</option>
+                    <option value="yearly">Yearly</option>
+                  </select>
+                </label>
+                <label class="form-group" style="flex:1;">
+                  <span>Repeat until (optional)</span>
+                  <input id="annc-repeat-end" type="text" placeholder="No end date" />
+                </label>
+              </div>
+
+              <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" data-close>Cancel</button>
+                <button type="submit" class="see-all">Save</button>
+              </div>
+
+              <p id="annc-msg"></p>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Training Modal -->
+      <div id="train-modal" class="overlay" aria-hidden="true">
+        <div class="overlay-backdrop" data-close></div>
+        <div class="overlay-panel">
+          <div class="overlay-header">
+            <h2>Add Training Material</h2>
+            <button class="overlay-close" data-close>&times;</button>
+          </div>
+          <div class="overlay-body">
+            <form id="train-form">
+              <label class="form-group"><span>Title</span><input id="train-title" required /></label>
+              <label class="form-group"><span>Description</span><textarea id="train-desc" rows="3"></textarea></label>
+              <label class="form-group"><span>Link (URL)</span><input id="train-url" type="url" placeholder="https://…" /></label>
+              <label class="form-group"><span>Tags (comma-separated)</span><input id="train-tags" placeholder="Life,P&C,Basics" /></label>
+              <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" data-close>Cancel</button>
+                <button type="submit" class="see-all">Publish</button>
+              </div>
+              <p id="train-msg"></p>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Marketing Modal -->
+      <div id="mkt-modal" class="overlay" aria-hidden="true">
+        <div class="overlay-backdrop" data-close></div>
+        <div class="overlay-panel">
+          <div class="overlay-header">
+            <h2>Add Marketing Asset</h2>
+            <button class="overlay-close" data-close>&times;</button>
+          </div>
+          <div class="overlay-body">
+            <form id="mkt-form">
+              <label class="form-group"><span>Title</span><input id="mkt-title" required /></label>
+              <label class="form-group"><span>Description</span><textarea id="mkt-desc" rows="3"></textarea></label>
+              <label class="form-group"><span>Link (URL)</span><input id="mkt-url" type="url" placeholder="https://…" /></label>
+              <label class="form-group"><span>Tags (comma-separated)</span><input id="mkt-tags" placeholder="Flyer,Facebook,Brand" /></label>
+              <div style="display:flex; gap:10px; justify-content:flex-end;">
+                <button type="button" data-close>Cancel</button>
+                <button type="submit" class="see-all">Publish</button>
+              </div>
+              <p id="mkt-msg"></p>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Task Modal -->
+      <div id="task-modal" class="overlay" aria-hidden="true">
+        <div class="overlay-backdrop" data-close></div>
+        <div class="overlay-panel">
+          <div class="overlay-header">
+            <h2>Create Task</h2>
+            <button class="overlay-close" data-close>&times;</button>
+          </div>
+          <div class="overlay-body">
+            <form id="admin-task-form" class="stacked-form">
+              <div class="float-field">
+                <select id="task-agent" required>
+                  <option value="">Select agent…</option>
+                </select>
+                <label for="task-agent">Assign to</label>
+              </div>
+
+              <div class="float-field">
+                <input id="task-title" type="text" placeholder=" " required />
+                <label for="task-title">Task title</label>
+              </div>
+
+              <div class="float-field">
+                <textarea id="task-body" rows="3" placeholder=" "></textarea>
+                <label for="task-body">Details / notes (optional)</label>
+              </div>
+
+              <div class="float-field">
+                <input id="task-link" type="url" placeholder=" " />
+                <label for="task-link">Link URL (optional)</label>
+              </div>
+
+              <div class="form-group">
+                <span>Image (optional)</span>
+                <input id="task-image" type="file" accept="image/*" />
+                <small>PNG/JPG/GIF. Uploaded to Supabase Storage.</small>
+              </div>
+
+              <div class="float-field">
+                <input id="task-due" type="text" placeholder=" " />
+                <label for="task-due">Due date/time (optional)</label>
+              </div>
+
+              <div style="display:flex; gap:10px; justify-content:flex-end; margin-top: 10px;">
+                <button type="button" data-close>Cancel</button>
+                <button type="submit" class="see-all">Save Task</button>
+              </div>
+
+              <p id="task-msg" class="status-line"></p>
+            </form>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add Agent Modal -->
+      <div id="agent-modal" class="overlay" aria-hidden="true">
+        <div class="overlay-backdrop" data-close></div>
+        <div class="overlay-panel">
+          <div class="overlay-header">
+            <h2>Pre-approve Agent</h2>
+            <button class="overlay-close" data-close>&times;</button>
+          </div>
+          <div class="overlay-body">
+            <form id="agent-form" class="stacked-form">
+              <div class="float-field">
+                <input id="agent-id" type="text" placeholder=" " required />
+                <label for="agent-id">Agent ID (NPN)</label>
+              </div>
+              <div class="float-field">
+                <input id="agent-first-name" type="text" placeholder=" " required />
+                <label for="agent-first-name">First Name</label>
+              </div>
+              <div class="float-field">
+                <input id="agent-last-name" type="text" placeholder=" " required />
+                <label for="agent-last-name">Last Name</label>
+              </div>
+              <div class="float-field">
+                <input id="agent-phone" type="tel" placeholder=" " required />
+                <label for="agent-phone">Phone Number</label>
+              </div>
+              <div class="float-field">
+                <input id="agent-email" type="email" placeholder=" " required />
+                <label for="agent-email">Email (for ICA &amp; login)</label>
+              </div>
+              <div class="float-field">
+                <select id="agent-recruiter" required>
+                  <option value="">Select recruiter…</option>
+                </select>
+                <label for="agent-recruiter">Recruiter / Upline</label>
+              </div>
+              <div class="float-field">
+                <select id="agent-level" required>
+                  <option value="">Select level…</option>
+                  <option value="agent">Agent</option>
+                  <option value="mit">MIT</option>
+                  <option value="manager">Manager</option>
+                  <option value="mga">MGA</option>
+                  <option value="area_manager">Area Manager</option>
+                </select>
+                <label for="agent-level">Starting Level</label>
+              </div>
+              <button type="submit">Pre-Approve Agent</button>
+            </form>
+            <p id="agent-msg" class="status-line"></p>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="index-grid-footer">
+      <img id="footerlogo" src="Pics/img17.png" />
+      <hr class="footerhr" />
+      <div id="footercontact">
+        <a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
+          <span class="fa fa-envelope"></span>
+          <span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+        </a>
+        <p> | </p>
+        <a class="contactcontainer" href="tel:+16292437980">
+          <span class="fa fa-phone"></span>
+          <span class="contactcontcontacts">+1-629-243-7980</span>
+        </a>
+      </div>
+      <hr class="footerhr" />
+      <div id="footersocial">
+        <a class="fab fa-facebook-f" href="https://www.facebook.com/familyvaluesgroup"></a>
+        <a class="fab fa-linkedin-in" href="https://www.linkedin.com/in/demisi-johnson-026227391?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"></a>
+        <a class="fab fa-instagram" href="https://www.instagram.com/family.values.group?igsh=OHl3dGdnd3RwMTV0&utm_source=qr"></a>
+        <a class="fab fa-youtube" href="https://youtube.com/@familyvaluesgroup?si=mauqWp5nxyczgCJd"></a>
+        <a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
+      </div>
+      <div id="footerlinks">
+        <a href="faqs.html">FAQs</a>
+        <a href="terms.html">Terms</a>
+        <a href="accessibility.html">Accessibility</a>
+        <a href="privacy.html">Privacy</a>
+      </div>
+      <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="scripts/supabase-client.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+
+    <script src="scripts/general.js"></script>
+    <script src="scripts/admin-content.js"></script>
+
+    <!-- Admin-only gate using shared window.supabaseClient -->
+    <script>
+      (async () => {
+        const supabase = window.supabaseClient;
+        if (!supabase) {
+          console.warn("Supabase client missing on admin-content.html");
+          return;
+        }
+
+        const { data: { session } = {} } = await supabase.auth.getSession();
+        if (!session) {
+          location.replace("login.html");
+          return;
+        }
+
+        const { data: profile } = await supabase
+          .from("agents")
+          .select("is_admin")
+          .eq("id", session.user.id)
+          .maybeSingle();
+
+        if (profile?.is_admin === true) {
+          document.documentElement.style.visibility = "visible";
+        } else {
+          location.replace("dashboard.html");
+        }
+      })();
+    </script>
+  </body>
+</html>
