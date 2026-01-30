@@ -1010,54 +1010,136 @@ function wireAgentForm() {
 }
 
 async function loadWaitlist() {
-  const container = document.getElementById('waitlist-container');
-  if (!container) return;
+  const listEl = document.getElementById('waitlist-container');
+  if (!listEl) return;
 
-  container.innerHTML = '<p style="font-size:13px; color:#666;">Loading…</p>';
+  listEl.innerHTML = 'Loading…';
 
   const { data, error } = await sb
-    .from('recruits')
-    .select('id, npn, first_name, last_name, email, phone, recruiter_id, level, stage, created_at')
-    .eq('stage', 'waiting_review')
-    .order('created_at', { ascending: false })
-    .limit(200);
+    .from('agent_waitlist')
+    .select('id, agent_id, first_name, last_name, phone, email, recruiter_id, level, recruit_id, licensing_approved, ica_signed, banking_approved, stripe_account_id, created_at')
+    .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('loadWaitlist error:', error);
-    container.innerHTML = '<p style="font-size:13px; color:#c00;">Error loading waitlist.</p>';
+    console.error('Error loading agent waitlist:', error);
+    listEl.innerHTML = '<p>Error loading waitlist.</p>';
     return;
   }
 
-  if (!data?.length) {
-    container.innerHTML = '<p style="font-size:13px; color:#666;">No one is waiting for review.</p>';
+  if (!data || !data.length) {
+    listEl.innerHTML = '<p>No agents in the waitlist yet.</p>';
     return;
   }
 
-  container.innerHTML = '';
-  data.forEach(r => {
-    const recruiterName = allAgents.find(a => a.id === r.recruiter_id)?.full_name || r.recruiter_id;
+  // Map recruiter_id → full_name using allAgents if available
+  const recruiterNameById = new Map(
+    (allAgents || []).map(a => [a.id, a.full_name])
+  );
 
-    const row = document.createElement('div');
-    row.style.border = '1px solid #eee';
-    row.style.borderRadius = '10px';
-    row.style.padding = '10px';
-    row.style.marginBottom = '8px';
+  listEl.innerHTML = data
+    .map(item => {
+      const recruiterName =
+        recruiterNameById.get(item.recruiter_id) || 'Unknown recruiter';
+      const created = item.created_at
+        ? new Date(item.created_at).toLocaleString()
+        : '';
 
-    row.innerHTML = `
-      <div style="display:flex; justify-content:space-between; gap:10px;">
-        <strong style="font-size:14px;">${escapeHtml((r.first_name || '') + ' ' + (r.last_name || ''))}</strong>
-        <span style="font-size:12px; color:#666;">${escapeHtml(r.level || '')}</span>
-      </div>
-      <div style="font-size:12px; color:#666; margin-top:4px;">
-        NPN: ${escapeHtml(r.npn || '')} • Recruiter: ${escapeHtml(recruiterName || '')}
-      </div>
-      <div style="font-size:12px; margin-top:6px;">
-        <div>Email: ${escapeHtml(r.email || '')}</div>
-        <div>Phone: ${escapeHtml(r.phone || '')}</div>
-      </div>
-    `;
+      const licChecked  = item.licensing_approved ? 'checked' : '';
+      const icaChecked  = item.ica_signed ? 'checked' : '';
+      const bankChecked = item.banking_approved ? 'checked' : '';
 
-    container.appendChild(row);
+      return `
+        <div class="wait-row"
+             data-id="${item.id}"
+             data-agent-id="${item.agent_id || ''}"
+             data-first-name="${item.first_name || ''}"
+             data-last-name="${item.last_name || ''}"
+             data-email="${item.email || ''}"
+             data-phone="${item.phone || ''}"
+             data-recruiter-id="${item.recruiter_id || ''}"
+             data-level="${item.level || ''}"
+             data-recruit-id="${item.recruit_id || ''}"
+             data-stripe-account-id="${item.stripe_account_id || ''}"
+             style="border:1px solid #eee; border-radius:6px; padding:10px 12px; margin-bottom:10px; font-size:13px;">
+          <div style="display:flex; justify-content:space-between; gap:8px; flex-wrap:wrap;">
+            <div>
+              <div><strong>${item.first_name || ''} ${item.last_name || ''}</strong> (${item.agent_id || 'No NPN'})</div>
+              <div>Email: ${item.email || '—'}</div>
+              <div>Phone: ${item.phone || '—'}</div>
+              <div>Recruiter: ${recruiterName}</div>
+              <div>Level: ${item.level || '—'}</div>
+              <div style="color:#666; font-size:12px;">Added: ${created}</div>
+            </div>
+            <div style="min-width:220px;">
+              <div style="font-weight:600; margin-bottom:4px;">Checklist</div>
+              <label style="display:block; margin-bottom:2px;">
+                <input type="checkbox" class="wait-lic" ${licChecked}>
+                Licensing approved
+              </label>
+              <label style="display:block; margin-bottom:2px;">
+                <input type="checkbox" class="wait-ica" ${icaChecked}>
+                ICA signed
+              </label>
+              <label style="display:block; margin-bottom:2px;">
+                <input type="checkbox" class="wait-bank" ${bankChecked}>
+                Banking / Stripe ok
+              </label>
+              <button type="button"
+                      class="wait-approve-btn"
+                      style="margin-top:6px; padding:4px 8px; font-size:12px;">
+                Approve & Add to Approved Agents
+              </button>
+              <button type="button"
+                      class="wait-delete-btn"
+                      style="margin-top:4px; padding:4px 8px; font-size:12px; background:#ffe6e6; border:1px solid #ffb3b3;">
+                Delete from Waitlist
+              </button>
+              <div class="wait-msg" style="font-size:12px; margin-top:4px; color:#555;"></div>
+            </div>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  // Wire up Approve buttons
+  listEl.querySelectorAll('.wait-approve-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const row = btn.closest('.wait-row');
+      if (row) approveWaitlistEntry(row);
+    });
+  });
+
+  // Wire up Delete buttons
+  listEl.querySelectorAll('.wait-delete-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const row   = btn.closest('.wait-row');
+      const rowId = row?.getAttribute('data-id');
+      if (!rowId) return;
+
+      if (!confirm('Remove this person from the waitlist? This will NOT change approved_agents.')) {
+        return;
+      }
+
+      const { error: delErr } = await sb
+        .from('agent_waitlist')
+        .delete()
+        .eq('id', rowId);
+
+      if (delErr) {
+        alert('❌ Failed to delete from waitlist.');
+        console.error(delErr);
+        return;
+      }
+
+      // Remove row from DOM
+      row.remove();
+
+      // If no rows left, show empty message
+      if (!document.querySelector('#waitlist-container .wait-row')) {
+        listEl.innerHTML = '<p>No agents in the waitlist yet.</p>';
+      }
+    });
   });
 }
 
