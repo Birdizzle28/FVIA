@@ -485,12 +485,12 @@ function wireAnnouncementForm() {
       const payload = {
         title,
         body,
-        link_url: linkUrl || null,
-        image_url: image_url || null,
-        created_by: me || null,
+        link_url,              // ✅ already null-safe
+        image_url,
+        created_by: me?.id || null,
         audience,
-        publish_at: publishAt ? new Date(publishAt).toISOString() : null,
-        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+        publish_at,            // ✅ already ISO or null
+        expires_at,            // ✅ already ISO or null
         is_active: true
       };
 
@@ -644,11 +644,12 @@ function wireTrainingForm() {
       const tags = parseTags(document.getElementById('train-tags')?.value);
 
       const payload = {
-        assigned_to: agentId,
         title,
-        status: 'open',
-        due_at: dueAt,
-        metadata
+        description,
+        url,
+        tags,
+        created_by: me.id,
+        is_published: true
       };
 
       const { error } = await sb.from('training_library').insert(payload);
@@ -804,7 +805,7 @@ function wireMarketingForm() {
         url: url || null,
         file_url: null,
         tags,
-        created_by,
+        created_by: me.id,
         is_published: true
       };
 
@@ -975,7 +976,7 @@ function wireTaskForm() {
       }
 
       const payload = {
-        assigned_to: agentId,
+        assigned_to,
         title,
         status: 'open',
         due_at: dueAt,
