@@ -291,12 +291,12 @@ function wireContentButtons() {
   const openAgent = document.getElementById('open-agent-modal');
   const openRemove = document.getElementById('open-remove-agent-modal');
 
-  openAnnc?.addEventListener('click', () => openOverlay(document.getElementById('annc-modal')));
-  openTrain?.addEventListener('click', () => openOverlay(document.getElementById('train-modal')));
-  openMkt?.addEventListener('click', () => openOverlay(document.getElementById('mkt-modal')));
-  openTask?.addEventListener('click', () => openOverlay(document.getElementById('task-modal')));
-  openAgent?.addEventListener('click', () => openOverlay(document.getElementById('agent-modal')));
-  openRemove?.addEventListener('click', () => openOverlay(document.getElementById('remove-agent-modal')));
+  openAnnc?.addEventListener('click', () => openOverlay('annc-modal'));
+  openTrain?.addEventListener('click', () => openOverlay('train-modal'));
+  openMkt?.addEventListener('click', () => openOverlay('mkt-modal'));
+  openTask?.addEventListener('click', () => openOverlay('task-modal'));
+  openAgent?.addEventListener('click', () => openOverlay('agent-modal'));
+  openRemove?.addEventListener('click', () => openOverlay('remove-agent-modal'));
 
   // Expand manage lists
   wireExpandableList({
