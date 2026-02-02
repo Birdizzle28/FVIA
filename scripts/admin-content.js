@@ -499,70 +499,102 @@ async function loadAnnouncements() {
   const list = document.getElementById('annc-list');
   if (!list) return;
 
-  list.innerHTML = '<p style="font-size:13px; color:#666;">Loading…</p>';
+  list.innerHTML = 'Loading…';
 
   const { data, error } = await sb
     .from('announcements')
-    .select('id, title, body, link_url, image_url, publish_at, expires_at, repeat, repeat_until, created_at')
-    .order('created_at', { ascending: false })
-    .limit(100);
+    .select('*')
+    .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('loadAnnouncements error:', error);
-    list.innerHTML = '<p style="font-size:13px; color:#c00;">Error loading announcements.</p>';
+    console.error(error);
+    list.innerHTML = '<p>Error loading announcements.</p>';
     return;
   }
 
   if (!data?.length) {
-    list.innerHTML = '<p style="font-size:13px; color:#666;">No announcements yet.</p>';
+    list.innerHTML = '<p>No announcements yet.</p>';
     return;
   }
 
-  list.innerHTML = '';
-  data.forEach(a => {
-    const row = document.createElement('div');
-    row.style.border = '1px solid #eee';
-    row.style.borderRadius = '10px';
-    row.style.padding = '10px';
-    row.style.marginBottom = '8px';
+  list.innerHTML = data.map(a => {
+    const aud = a.audience || {};
+    const repeat = aud.repeat || null;
 
-    const when = a.publish_at ? `Publishes: ${formatDate(a.publish_at)}` : 'Publishes: now';
-    const exp = a.expires_at ? ` • Expires: ${formatDate(a.expires_at)}` : '';
-    const rep = a.repeat && a.repeat !== 'none' ? ` • Repeats: ${a.repeat}` : '';
+    let repeatText = '';
+    if (repeat && repeat.frequency && repeat.frequency !== 'none') {
+      const labels = {
+        daily: 'Daily',
+        weekly: 'Weekly',
+        monthly: 'Monthly',
+        yearly: 'Yearly'
+      };
+      const freqLabel = labels[repeat.frequency] || repeat.frequency;
+      repeatText = ` · Repeats: ${freqLabel}`;
+      if (repeat.until) {
+        repeatText += ` until ${new Date(repeat.until).toLocaleDateString()}`;
+      }
+    }
 
-    row.innerHTML = `
-      <div style="display:flex; justify-content:space-between; gap:10px;">
-        <strong style="font-size:14px;">${escapeHtml(a.title || '(untitled)')}</strong>
-        <button data-del="${a.id}" type="button" style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:4px 8px; cursor:pointer;">
-          Delete
-        </button>
+    return `
+      <div class="annc-row" data-id="${a.id}" style="display:grid; grid-template-columns: 64px 1fr auto; gap:12px; align-items:center; padding:10px; border:1px solid #eee; border-radius:8px; margin-bottom:10px;">
+        <div class="thumb" style="width:64px; height:64px; background:#f7f7f7; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:6px;">
+          ${a.image_url ? `<img src="${a.image_url}" alt="" style="max-width:100%; max-height:100%;">` : `<i class="fa-regular fa-image"></i>`}
+        </div>
+        <div class="meta" style="min-width:0;">
+          <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <strong>${a.title || '(no title)'}</strong>
+            ${a.link_url ? `<a href="${a.link_url}" target="_blank" rel="noopener" style="font-size:12px;"><i class="fa-solid fa-link"></i> Open link</a>` : ''}
+          </div>
+          <div style="font-size:12px; color:#666; margin-top:2px;">
+            Audience: ${summarizeAudience(a.audience)}
+            · Published: ${a.publish_at ? new Date(a.publish_at).toLocaleString() : 'Now'}
+            ${a.expires_at ? ` · Expires: ${new Date(a.expires_at).toLocaleString()}` : ''}
+            ${repeatText}
+          </div>
+          <div style="font-size:13px; margin-top:6px; color:#333; white-space:pre-wrap;">
+            ${(a.body || '').slice(0, 240)}${a.body && a.body.length > 240 ? '…' : ''}
+          </div>
+        </div>
+        <div class="actions" style="display:flex; flex-direction:column; gap:6px;">
+          <button class="annc-copy" title="Copy link JSON" style="padding:6px 10px;">Copy JSON</button>
+          <button class="annc-delete" style="padding:6px 10px; background:#ffe6e6; border:1px solid #ffb3b3;">Delete</button>
+        </div>
       </div>
-      <div style="font-size:12px; color:#666; margin-top:4px;">${when}${exp}${rep}</div>
-      <div style="font-size:13px; margin-top:6px; white-space:pre-wrap;">${escapeHtml(a.body || '')}</div>
-      ${
-        a.link_url
-          ? `<div style="margin-top:6px; font-size:12px;"><a href="${escapeAttr(a.link_url)}" target="_blank" rel="noopener">Open link</a></div>`
-          : ''
-      }
-      ${
-        a.image_url
-          ? `<div style="margin-top:8px;"><img src="${escapeAttr(a.image_url)}" alt="Announcement image" style="max-width:100%; border-radius:10px;"></div>`
-          : ''
-      }
     `;
+  }).join('');
 
-    row.querySelector('[data-del]')?.addEventListener('click', async () => {
+  // Copy JSON
+  list.querySelectorAll('.annc-copy').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const row = e.target.closest('.annc-row');
+      const id = row?.getAttribute('data-id');
+      const a = data.find(x => String(x.id) === String(id));
+      if (!a) return;
+      navigator.clipboard?.writeText(JSON.stringify(a, null, 2));
+      btn.textContent = 'Copied!';
+      setTimeout(() => btn.textContent = 'Copy JSON', 1200);
+    });
+  });
+
+  // Delete
+  list.querySelectorAll('.annc-delete').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const row = e.target.closest('.annc-row');
+      const id = row?.getAttribute('data-id');
+      if (!id) return;
       if (!confirm('Delete this announcement?')) return;
-      const { error: delErr } = await sb.from('announcements').delete().eq('id', a.id);
+      const { error: delErr } = await supabase.from('announcements').delete().eq('id', id);
       if (delErr) {
-        alert('Failed to delete.');
+        alert('❌ Failed to delete.');
         console.error(delErr);
         return;
       }
-      await loadAnnouncements();
+      row.remove();
+      if (!document.querySelector('#annc-list .annc-row')) {
+        document.getElementById('annc-list').innerHTML = '<p>No announcements yet.</p>';
+      }
     });
-
-    list.appendChild(row);
   });
 }
 
