@@ -325,10 +325,16 @@ function wireContentButtons() {
 
   // Search boxes (filter UI only; still loads from DB each time for now)
   const trainingSearch = document.getElementById('training-search');
-  trainingSearch?.addEventListener('input', () => loadTrainingMaterials());
+  trainingSearch?.addEventListener('input', (e) => {
+    window._trainingSearchTerm = e.target.value || '';
+    loadTrainingMaterials();
+  });
 
   const mktSearch = document.getElementById('mkt-search');
-  mktSearch?.addEventListener('input', () => loadMarketingAssets());
+  mktSearch?.addEventListener('input', (e) => {
+    window._marketingSearchTerm = e.target.value || '';
+    loadMarketingAssets();
+  });
 
   // Announcement audience dynamic fields
   const anncScope = document.getElementById('annc-scope');
@@ -1108,7 +1114,7 @@ async function loadMyTasks() {
 
       try {
         const now = new Date().toISOString();
-        const { error: updErr } = await supabase
+        const { error: updErr } = await sb
           .from('tasks')
           .update({ status: 'completed', completed_at: now })
           .eq('id', id);
@@ -1138,7 +1144,7 @@ async function loadMyTasks() {
       if (!confirm('Delete this task?')) return;
 
       try {
-        const { error: delErr } = await supabase
+        const { error: delErr } = await sb
           .from('tasks')
           .delete()
           .eq('id', id);
