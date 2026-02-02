@@ -975,6 +975,14 @@ function wireTaskForm() {
         });
       }
 
+      const metadata = {
+        created_by: me.id,
+        source: 'admin_panel',
+        body,
+        link_url,
+        image_url
+      };
+      
       const payload = {
         assigned_to,
         title,
