@@ -612,7 +612,7 @@ async function loadAnnouncements() {
       const id = row?.getAttribute('data-id');
       if (!id) return;
       if (!confirm('Delete this announcement?')) return;
-      const { error: delErr } = await supabase.from('announcements').delete().eq('id', id);
+      const { error: delErr } = await sb.from('announcements').delete().eq('id', id);
       if (delErr) {
         alert('❌ Failed to delete.');
         console.error(delErr);
@@ -762,7 +762,7 @@ async function loadTrainingMaterials() {
 
       if (!confirm('Delete this training item?')) return;
 
-      const { error: delErr } = await supabase
+      const { error: delErr } = await sb
         .from('training_materials')
         .delete()
         .eq('id', id);
@@ -922,7 +922,7 @@ async function loadMarketingAssets() {
 
       if (!confirm('Delete this marketing asset?')) return;
 
-      const { error: delErr } = await supabase
+      const { error: delErr } = await sb
         .from('marketing_assets')
         .delete()
         .eq('id', id);
