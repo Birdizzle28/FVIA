@@ -652,7 +652,7 @@ function wireTrainingForm() {
         is_published: true
       };
 
-      const { error } = await sb.from('training_library').insert(payload);
+      const { error } = await sb.from('training_materials').insert(payload);
       if (error) throw error;
 
       form.reset();
@@ -809,7 +809,7 @@ function wireMarketingForm() {
         is_published: true
       };
 
-      const { error } = await sb.from('marketing_library').insert(payload);
+      const { error } = await sb.from('marketing_assets').insert(payload);
       if (error) throw error;
 
       form.reset();
@@ -979,7 +979,7 @@ function wireTaskForm() {
         assigned_to,
         title,
         status: 'open',
-        due_at: dueAt,
+        due_at: due_at,
         metadata
       };
 
