@@ -485,14 +485,13 @@ function wireAnnouncementForm() {
       const payload = {
         title,
         body,
-        link_url,
-        image_url,
+        link_url: linkUrl || null,
+        image_url: image_url || null,
+        created_by: me || null,
         audience,
-        publish_at,
-        expires_at,
-        repeat,
-        repeat_until,
-        created_by: me.id
+        publish_at: publishAt ? new Date(publishAt).toISOString() : null,
+        expires_at: expiresAt ? new Date(expiresAt).toISOString() : null,
+        is_active: true
       };
 
       const { error } = await sb.from('announcements').insert(payload);
@@ -645,11 +644,11 @@ function wireTrainingForm() {
       const tags = parseTags(document.getElementById('train-tags')?.value);
 
       const payload = {
+        assigned_to: agentId,
         title,
-        description,
-        url,
-        tags,
-        created_by: me.id
+        status: 'open',
+        due_at: dueAt,
+        metadata
       };
 
       const { error } = await sb.from('training_library').insert(payload);
@@ -801,10 +800,12 @@ function wireMarketingForm() {
 
       const payload = {
         title,
-        description,
-        url,
+        description: description || null,
+        url: url || null,
+        file_url: null,
         tags,
-        created_by: me.id
+        created_by,
+        is_published: true
       };
 
       const { error } = await sb.from('marketing_library').insert(payload);
@@ -974,14 +975,11 @@ function wireTaskForm() {
       }
 
       const payload = {
-        assigned_to,
+        assigned_to: agentId,
         title,
-        body,
-        link_url,
-        image_url,
-        due_at,
-        created_by: me.id,
-        status: 'open'
+        status: 'open',
+        due_at: dueAt,
+        metadata
       };
 
       const { error } = await sb.from('tasks').insert(payload);
