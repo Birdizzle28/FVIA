@@ -1501,3 +1501,30 @@ function escapeHtml(str) {
 function escapeAttr(str) {
   return escapeHtml(str).replaceAll('`', '&#096;');
 }
+
+function summarizeAudience(audience) {
+  if (!audience || !audience.scope) return 'All agents';
+
+  switch (audience.scope) {
+    case 'all':
+      return 'All agents';
+
+    case 'by_level':
+      return `Levels: ${(audience.levels || []).join(', ') || '—'}`;
+
+    case 'by_product':
+      return `Products: ${(audience.products || []).join(', ') || '—'}`;
+
+    case 'by_state':
+      return `States: ${(audience.states || []).join(', ') || '—'}`;
+
+    case 'by_product_state':
+      return `Products: ${(audience.products || []).join(', ')} · States: ${(audience.states || []).join(', ')}`;
+
+    case 'custom_agents':
+      return `Specific agents (${(audience.agent_ids || []).length})`;
+
+    default:
+      return 'Custom audience';
+  }
+}
