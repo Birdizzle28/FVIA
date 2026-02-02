@@ -1012,7 +1012,10 @@ async function loadMyTasks() {
   const { data, error } = await sb
     .from('tasks')
     .select('*')
-    .eq('created_by', me.id)
+    .contains('metadata', {
+      created_by: userId,
+      source: 'admin_panel'
+    })
     .order('created_at', { ascending: false });
 
   if (error) {
