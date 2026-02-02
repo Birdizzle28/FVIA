@@ -1013,7 +1013,7 @@ async function loadMyTasks() {
     .from('tasks')
     .select('*')
     .contains('metadata', {
-      created_by: userId,
+      created_by: me.id,
       source: 'admin_panel'
     })
     .order('created_at', { ascending: false });
