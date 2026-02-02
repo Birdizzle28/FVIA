@@ -1502,4 +1502,3 @@ function escapeHtml(str) {
 function escapeAttr(str) {
   return escapeHtml(str).replaceAll('`', '&#096;');
 }
-It sats userId is not defined
