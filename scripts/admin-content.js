@@ -1008,14 +1008,11 @@ async function loadMyTasks() {
 
   listEl.innerHTML = 'Loading…';
 
-  // Only tasks created from the admin panel by this admin
+  // Tasks created by THIS admin from the content page
   const { data, error } = await sb
     .from('tasks')
     .select('*')
-    .contains('metadata', {
-      created_by: userId,
-      source: 'admin_panel'
-    })
+    .eq('created_by', me.id)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -1034,59 +1031,59 @@ async function loadMyTasks() {
 
   listEl.innerHTML = data
     .map(task => {
-      const meta = task.metadata || {};
       const agentName = nameById.get(task.assigned_to) || 'Unknown agent';
       const status = (task.status || 'open').toLowerCase();
-      const dueText = task.due_at
-        ? new Date(task.due_at).toLocaleString()
-        : 'No due date';
+      const dueText = task.due_at ? new Date(task.due_at).toLocaleString() : 'No due date';
 
-      const notes = (meta.notes || '').toString();
-      const shortNotes =
-        notes.length > 200 ? notes.slice(0, 200) + '…' : notes;
+      const notes = (task.body || '').toString();
+      const shortNotes = notes.length > 200 ? notes.slice(0, 200) + '…' : notes;
 
-      const linkUrl = meta.link_url || null;
+      const linkUrl = task.link_url || null;
 
       return `
         <div class="task-row"
              data-id="${task.id}"
              style="display:grid; grid-template-columns: 64px 1fr auto; gap:8px; padding:8px 10px; border:1px solid #eee; border-radius:6px; margin-bottom:8px; font-size:13px;">
-      
+
           <div class="thumb"
                style="width:64px; height:64px; background:#f7f7f7; display:flex; align-items:center; justify-content:center; overflow:hidden; border-radius:6px;">
             ${
-              meta.image_url
-                ? `<img src="${meta.image_url}" style="max-width:100%; max-height:100%;">`
+              task.image_url
+                ? `<img src="${task.image_url}" style="max-width:100%; max-height:100%;">`
                 : `<i class="fa-regular fa-image"></i>`
             }
           </div>
-      
+
           <div class="meta" style="min-width:0;">
-            <strong>${task.title || '(no title)'}</strong>
+            <strong>${escapeHtml(task.title || '(no title)')}</strong>
             <div style="font-size:12px; color:#666; margin-top:2px;">
-              Assigned to: ${agentName}
-              · Status: ${status}
-              · Due: ${dueText}
+              Assigned to: ${escapeHtml(agentName)}
+              · Status: ${escapeHtml(status)}
+              · Due: ${escapeHtml(dueText)}
             </div>
+
             ${
               shortNotes
-                ? `<div style="font-size:13px; margin-top:4px; white-space:pre-wrap;">${shortNotes}</div>`
+                ? `<div style="font-size:13px; margin-top:4px; white-space:pre-wrap;">${escapeHtml(shortNotes)}</div>`
                 : ''
             }
+
             ${
               linkUrl
                 ? `<div style="margin-top:4px; font-size:13px;">
-                     <a href="${linkUrl}" target="_blank"><i class="fa-solid fa-link"></i> Open link</a>
+                     <a href="${escapeAttr(linkUrl)}" target="_blank" rel="noopener">
+                       <i class="fa-solid fa-link"></i> Open link
+                     </a>
                    </div>`
                 : ''
             }
           </div>
-      
+
           <div class="actions" style="display:flex; flex-direction:column; gap:6px;">
             <button class="task-complete" style="padding:4px 8px; font-size:12px;">Mark done</button>
             <button class="task-delete" style="padding:4px 8px; font-size:12px; background:#ffe6e6; border:1px solid #ffb3b3;">Delete</button>
           </div>
-      
+
         </div>
       `;
     })
@@ -1101,7 +1098,7 @@ async function loadMyTasks() {
 
       try {
         const now = new Date().toISOString();
-        const { error: updErr } = await supabase
+        const { error: updErr } = await sb
           .from('tasks')
           .update({ status: 'completed', completed_at: now })
           .eq('id', id);
@@ -1112,7 +1109,6 @@ async function loadMyTasks() {
           return;
         }
 
-        // Reload list
         await loadMyTasks();
       } catch (err) {
         console.error('Error marking task complete:', err);
@@ -1131,7 +1127,7 @@ async function loadMyTasks() {
       if (!confirm('Delete this task?')) return;
 
       try {
-        const { error: delErr } = await supabase
+        const { error: delErr } = await sb
           .from('tasks')
           .delete()
           .eq('id', id);
