@@ -1171,52 +1171,7 @@ async function loadMyTasks() {
    Pre-approve agent + Waitlist
 ========================= */
 function wireAgentForm() {
-  const form = document.getElementById('agent-form');
-  const msg = document.getElementById('agent-msg');
-  if (!form) return;
-
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    if (msg) msg.textContent = 'Pre-approving...';
-
-    try {
-      const agentId = (document.getElementById('agent-id')?.value || '').trim();
-      const first = (document.getElementById('agent-first-name')?.value || '').trim();
-      const last = (document.getElementById('agent-last-name')?.value || '').trim();
-      const phone = (document.getElementById('agent-phone')?.value || '').trim();
-      const email = (document.getElementById('agent-email')?.value || '').trim();
-      const recruiterId = document.getElementById('agent-recruiter')?.value || '';
-      const level = document.getElementById('agent-level')?.value || '';
-
-      if (!agentId || !first || !last || !phone || !email || !recruiterId || !level) {
-        throw new Error('Please complete all fields.');
-      }
-
-      // This matches the flow you already use: create onboarding record (recruits)
-      const { error } = await sb.from('recruits').insert({
-        npn: agentId,
-        first_name: first,
-        last_name: last,
-        phone,
-        email,
-        recruiter_id: recruiterId,
-        level,
-        stage: 'waiting_review',
-        created_by: me.id
-      });
-
-      if (error) throw error;
-
-      form.reset();
-      if (msg) msg.textContent = 'Added to waitlist ✅';
-
-      closeOverlay(document.getElementById('agent-modal'));
-      await loadWaitlist();
-    } catch (err) {
-      console.error('Pre-approve error:', err);
-      if (msg) msg.textContent = `Error: ${err?.message || 'Failed'}`;
-    }
-  });
+  ...
 }
 
 async function loadWaitlist() {
