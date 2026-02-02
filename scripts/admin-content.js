@@ -643,85 +643,113 @@ function wireTrainingForm() {
 }
 
 async function loadTrainingMaterials() {
-  const list = document.getElementById('training-list');
-  if (!list) return;
+  const listEl = document.getElementById('training-list');
+  if (!listEl) return;
 
-  const q = (document.getElementById('training-search')?.value || '').trim().toLowerCase();
-  list.innerHTML = '<p style="font-size:13px; color:#666;">Loading…</p>';
+  listEl.innerHTML = 'Loading…';
 
   const { data, error } = await sb
-    .from('training_library')
-    .select('id, title, description, url, tags, created_at')
-    .order('created_at', { ascending: false })
-    .limit(200);
+    .from('training_materials')
+    .select('*')
+    .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('loadTrainingMaterials error:', error);
-    list.innerHTML = '<p style="font-size:13px; color:#c00;">Error loading training.</p>';
+    console.error('Error loading training materials:', error);
+    listEl.innerHTML = '<p>Error loading training materials.</p>';
     return;
   }
 
-  let rows = data || [];
-  if (q) {
-    rows = rows.filter(r => {
-      const t = (r.title || '').toLowerCase();
-      const d = (r.description || '').toLowerCase();
-      const tags = (Array.isArray(r.tags) ? r.tags.join(',') : (r.tags || '')).toLowerCase();
-      return t.includes(q) || d.includes(q) || tags.includes(q);
-    });
-  }
-
-  if (!rows.length) {
-    list.innerHTML = '<p style="font-size:13px; color:#666;">No training items found.</p>';
+  if (!data || !data.length) {
+    listEl.innerHTML = '<p>No training items yet.</p>';
     return;
   }
 
-  list.innerHTML = '';
-  rows.forEach(item => {
-    const card = document.createElement('div');
-    card.style.border = '1px solid #eee';
-    card.style.borderRadius = '10px';
-    card.style.padding = '10px';
-    card.style.marginBottom = '8px';
+  // Apply search filter (title, description, tags)
+  const term = (window._trainingSearchTerm || '').trim().toLowerCase();
+  const filtered = term
+    ? data.filter(item => {
+        const tagsText = Array.isArray(item.tags) ? item.tags.join(' ') : '';
+        const haystack = [
+          item.title || '',
+          item.description || '',
+          tagsText
+        ]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(term);
+      })
+    : data;
 
-    const tags = Array.isArray(item.tags) ? item.tags : parseTags(item.tags);
+  if (!filtered.length) {
+    listEl.innerHTML = '<p>No training items match your search.</p>';
+    return;
+  }
 
-    card.innerHTML = `
-      <div style="display:flex; justify-content:space-between; gap:10px;">
-        <strong style="font-size:14px;">${escapeHtml(item.title || '(untitled)')}</strong>
-        <button data-del="${item.id}" type="button" style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:4px 8px; cursor:pointer;">
-          Delete
-        </button>
-      </div>
-      ${
-        item.description
-          ? `<div style="font-size:13px; margin-top:6px; white-space:pre-wrap;">${escapeHtml(item.description)}</div>`
-          : ''
-      }
-      ${
-        item.url
-          ? `<div style="margin-top:6px; font-size:12px;"><a href="${escapeAttr(item.url)}" target="_blank" rel="noopener">Open link</a></div>`
-          : ''
-      }
-      ${
-        tags?.length
-          ? `<div style="margin-top:6px; font-size:12px; color:#666;">Tags: ${escapeHtml(tags.join(', '))}</div>`
-          : ''
-      }
-    `;
+  listEl.innerHTML = filtered
+    .map(item => {
+      const created = item.created_at
+        ? new Date(item.created_at).toLocaleString()
+        : '';
+      const tags = Array.isArray(item.tags) ? item.tags.join(', ') : '';
 
-    card.querySelector('[data-del]')?.addEventListener('click', async () => {
+      return `
+        <div class="training-row" data-id="${item.id}"
+             style="display:grid; grid-template-columns: 1fr auto; gap:8px; padding:8px 10px; border:1px solid #eee; border-radius:6px; margin-bottom:8px;">
+          <div class="meta" style="min-width:0;">
+            <strong>${item.title || '(no title)'}</strong>
+            <div style="font-size:12px; color:#666; margin-top:2px;">
+              ${created ? `Created: ${created}` : ''}
+              ${tags ? ` · Tags: ${tags}` : ''}
+            </div>
+            <div style="font-size:13px; margin-top:4px; color:#333; white-space:pre-wrap;">
+              ${(item.description || '').slice(0, 240)}${item.description && item.description.length > 240 ? '…' : ''}
+            </div>
+            ${
+              item.url
+                ? `
+              <div style="margin-top:4px; font-size:13px;">
+                <a href="${item.url}" target="_blank" rel="noopener">
+                  <i class="fa-solid fa-link"></i> Open link
+                </a>
+              </div>`
+                : ''
+            }
+          </div>
+          <div class="actions" style="display:flex; flex-direction:column; gap:6px;">
+            <button class="train-delete" style="padding:6px 10px; background:#ffe6e6; border:1px solid #ffb3b3;">
+              Delete
+            </button>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  // Wire delete buttons
+  listEl.querySelectorAll('.train-delete').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const row = e.target.closest('.training-row');
+      const id = row?.getAttribute('data-id');
+      if (!id) return;
+
       if (!confirm('Delete this training item?')) return;
-      const { error: delErr } = await sb.from('training_library').delete().eq('id', item.id);
+
+      const { error: delErr } = await supabase
+        .from('training_materials')
+        .delete()
+        .eq('id', id);
+
       if (delErr) {
-        alert('Failed to delete.');
+        alert('❌ Failed to delete training item.');
         console.error(delErr);
         return;
       }
-      await loadTrainingMaterials();
-    });
 
-    list.appendChild(card);
+      row.remove();
+      if (!document.querySelector('#training-list .training-row')) {
+        listEl.innerHTML = '<p>No training items yet.</p>';
+      }
+    });
   });
 }
 
@@ -770,85 +798,118 @@ function wireMarketingForm() {
 }
 
 async function loadMarketingAssets() {
-  const list = document.getElementById('mkt-list');
-  if (!list) return;
+  const listEl = document.getElementById('mkt-list');
+  if (!listEl) return;
 
-  const q = (document.getElementById('mkt-search')?.value || '').trim().toLowerCase();
-  list.innerHTML = '<p style="font-size:13px; color:#666;">Loading…</p>';
+  listEl.innerHTML = 'Loading…';
 
   const { data, error } = await sb
-    .from('marketing_library')
-    .select('id, title, description, url, tags, created_at')
-    .order('created_at', { ascending: false })
-    .limit(200);
+    .from('marketing_assets')
+    .select('*')
+    .eq('is_published', true)
+    .order('created_at', { ascending: false });
 
   if (error) {
-    console.error('loadMarketingAssets error:', error);
-    list.innerHTML = '<p style="font-size:13px; color:#c00;">Error loading marketing assets.</p>';
+    console.error('Error loading marketing assets:', error);
+    listEl.innerHTML = '<p>Error loading marketing assets.</p>';
     return;
   }
 
-  let rows = data || [];
-  if (q) {
-    rows = rows.filter(r => {
-      const t = (r.title || '').toLowerCase();
-      const d = (r.description || '').toLowerCase();
-      const tags = (Array.isArray(r.tags) ? r.tags.join(',') : (r.tags || '')).toLowerCase();
-      return t.includes(q) || d.includes(q) || tags.includes(q);
-    });
-  }
-
-  if (!rows.length) {
-    list.innerHTML = '<p style="font-size:13px; color:#666;">No marketing assets found.</p>';
+  if (!data || !data.length) {
+    listEl.innerHTML = '<p>No marketing assets yet.</p>';
     return;
   }
 
-  list.innerHTML = '';
-  rows.forEach(item => {
-    const card = document.createElement('div');
-    card.style.border = '1px solid #eee';
-    card.style.borderRadius = '10px';
-    card.style.padding = '10px';
-    card.style.marginBottom = '8px';
+  // Apply search filter (title, description, tags)
+  const term = (window._marketingSearchTerm || '').trim().toLowerCase();
+  const filtered = term
+    ? data.filter(item => {
+        const tagsText = Array.isArray(item.tags) ? item.tags.join(' ') : '';
+        const haystack = [
+          item.title || '',
+          item.description || '',
+          tagsText
+        ]
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(term);
+      })
+    : data;
 
-    const tags = Array.isArray(item.tags) ? item.tags : parseTags(item.tags);
+  if (!filtered.length) {
+    listEl.innerHTML = '<p>No marketing assets match your search.</p>';
+    return;
+  }
 
-    card.innerHTML = `
-      <div style="display:flex; justify-content:space-between; gap:10px;">
-        <strong style="font-size:14px;">${escapeHtml(item.title || '(untitled)')}</strong>
-        <button data-del="${item.id}" type="button" style="background:#fff; border:1px solid #ddd; border-radius:8px; padding:4px 8px; cursor:pointer;">
-          Delete
-        </button>
-      </div>
-      ${
-        item.description
-          ? `<div style="font-size:13px; margin-top:6px; white-space:pre-wrap;">${escapeHtml(item.description)}</div>`
-          : ''
-      }
-      ${
-        item.url
-          ? `<div style="margin-top:6px; font-size:12px;"><a href="${escapeAttr(item.url)}" target="_blank" rel="noopener">Open link</a></div>`
-          : ''
-      }
-      ${
-        tags?.length
-          ? `<div style="margin-top:6px; font-size:12px; color:#666;">Tags: ${escapeHtml(tags.join(', '))}</div>`
-          : ''
-      }
-    `;
+  listEl.innerHTML = filtered
+    .map(item => {
+      const created = item.created_at
+        ? new Date(item.created_at).toLocaleString()
+        : '';
+      const tags = Array.isArray(item.tags) ? item.tags.join(', ') : '';
+      const linkUrl = item.url || item.file_url || null;
 
-    card.querySelector('[data-del]')?.addEventListener('click', async () => {
+      let linkHtml = '';
+      if (linkUrl) {
+        linkHtml = `
+          <div style="margin-top:4px; font-size:13px;">
+            <a href="${linkUrl}" target="_blank" rel="noopener">
+              <i class="fa-solid fa-link"></i> Open asset
+            </a>
+          </div>
+        `;
+      }
+
+      return `
+        <div class="mkt-row" data-id="${item.id}"
+             style="display:grid; grid-template-columns: 1fr auto; gap:8px; padding:8px 10px; border:1px solid #eee; border-radius:6px; margin-bottom:8px;">
+          <div class="meta" style="min-width:0;">
+            <strong>${item.title || '(no title)'}</strong>
+            <div style="font-size:12px; color:#666; margin-top:2px;">
+              ${created ? `Created: ${created}` : ''}
+              ${tags ? ` · Tags: ${tags}` : ''}
+            </div>
+            <div style="font-size:13px; margin-top:4px; color:#333; white-space:pre-wrap;">
+              ${(item.description || '').slice(0, 240)}${item.description && item.description.length > 240 ? '…' : ''}
+            </div>
+            ${linkHtml}
+          </div>
+          <div class="actions" style="display:flex; flex-direction:column; gap:6px;">
+            <button class="mkt-delete"
+                    style="padding:6px 10px; background:#ffe6e6; border:1px solid #ffb3b3;">
+              Delete
+            </button>
+          </div>
+        </div>
+      `;
+    })
+    .join('');
+
+  // Wire delete buttons
+  listEl.querySelectorAll('.mkt-delete').forEach(btn => {
+    btn.addEventListener('click', async (e) => {
+      const row = e.target.closest('.mkt-row');
+      const id = row?.getAttribute('data-id');
+      if (!id) return;
+
       if (!confirm('Delete this marketing asset?')) return;
-      const { error: delErr } = await sb.from('marketing_library').delete().eq('id', item.id);
+
+      const { error: delErr } = await supabase
+        .from('marketing_assets')
+        .delete()
+        .eq('id', id);
+
       if (delErr) {
-        alert('Failed to delete.');
+        alert('❌ Failed to delete marketing asset.');
         console.error(delErr);
         return;
       }
-      await loadMarketingAssets();
-    });
 
-    list.appendChild(card);
+      row.remove();
+      if (!document.querySelector('#mkt-list .mkt-row')) {
+        listEl.innerHTML = '<p>No marketing assets yet.</p>';
+      }
+    });
   });
 }
 
