@@ -1475,6 +1475,117 @@ async function loadWaitlist() {
   });
 }
 
+// Approve & Add to Approved Agents (Waitlist)
+async function approveWaitlistEntry(row) {
+  const msgEl = row?.querySelector('.wait-msg') || document.getElementById('agent-msg');
+  const rowId = row?.getAttribute('data-id');
+  if (!rowId) return;
+
+  try {
+    if (msgEl) msgEl.textContent = 'Saving checklist…';
+
+    // Read checkboxes from this row
+    const licensingApproved = !!row.querySelector('.wait-lic')?.checked;
+    const icaSigned         = !!row.querySelector('.wait-ica')?.checked;
+    const bankingApproved   = !!row.querySelector('.wait-bank')?.checked;
+
+    // Persist checklist state to agent_waitlist
+    const { error: updErr } = await sb
+      .from('agent_waitlist')
+      .update({
+        licensing_approved: licensingApproved,
+        ica_signed: icaSigned,
+        banking_approved: bankingApproved
+      })
+      .eq('id', rowId);
+
+    if (updErr) throw updErr;
+
+    // You can enforce checklist completion before approval (recommended)
+    if (!licensingApproved || !icaSigned || !bankingApproved) {
+      if (msgEl) msgEl.textContent = '✅ Checklist saved. Complete all 3 boxes to approve.';
+      return;
+    }
+
+    if (msgEl) msgEl.textContent = 'Approving…';
+
+    // Pull values from data-attributes (already rendered in your HTML)
+    const payload = {
+      waitlist_id: rowId,
+      agent_id: row.getAttribute('data-agent-id') || null,              // NPN / agent id string
+      first_name: row.getAttribute('data-first-name') || null,
+      last_name: row.getAttribute('data-last-name') || null,
+      email: row.getAttribute('data-email') || null,
+      phone: row.getAttribute('data-phone') || null,
+      recruiter_id: row.getAttribute('data-recruiter-id') || null,
+      level: row.getAttribute('data-level') || null,
+      recruit_id: row.getAttribute('data-recruit-id') || null,
+      stripe_account_id: row.getAttribute('data-stripe-account-id') || null
+    };
+
+    // Call the SAME approval function your admin.js uses.
+    // I don’t have your admin.js text in this message, so I’m supporting the 2 most common names:
+    //  - approveWaitlistAgent
+    //  - approveWaitlist
+    // whichever exists in your Netlify functions folder.
+    const endpointsToTry = [
+      '/.netlify/functions/approveWaitlistAgent',
+      '/.netlify/functions/approveWaitlist'
+    ];
+
+    let res = null;
+    let lastText = '';
+
+    for (const url of endpointsToTry) {
+      try {
+        const r = await fetch(url, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            // Keep auth header because your functions likely check admin status.
+            // (If your admin.js didn’t use it, it won’t hurt unless the function rejects extra headers.)
+            'Authorization': `Bearer ${accessToken || ''}`
+          },
+          body: JSON.stringify(payload)
+        });
+
+        if (r.ok) {
+          res = r;
+          break;
+        } else {
+          lastText = await r.text().catch(() => '');
+        }
+      } catch (e) {
+        lastText = e?.message || String(e);
+      }
+    }
+
+    if (!res) {
+      throw new Error(lastText || 'Approval function failed (no endpoint succeeded).');
+    }
+
+    const json = await res.json().catch(() => ({}));
+    console.log('approve waitlist result:', json);
+
+    if (msgEl) msgEl.textContent = '✅ Approved and added to Approved Agents.';
+
+    // Refresh UI
+    await loadWaitlist();
+
+    // Also refresh cached agents so dropdowns include the newly-approved agent (if applicable)
+    try {
+      await loadAgentsForAdminLite();
+      populateRecruiterSelect();
+      populateTaskAgentSelect();
+      hydrateAnnouncementAudienceSelects();
+    } catch (_) {}
+
+  } catch (err) {
+    console.error('approveWaitlistEntry error:', err);
+    if (msgEl) msgEl.textContent = `❌ ${err?.message || 'Approval failed.'}`;
+  }
+}
+
 /* =========================
    Remove agent flow
 ========================= */
