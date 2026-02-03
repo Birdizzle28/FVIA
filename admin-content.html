@@ -83,13 +83,12 @@
     <main class="auth-container">
       <!-- Admin page navigation (keep same IDs so the JS structure stays consistent) -->
       <nav id="admin-page-nav">
-        <!-- You can update these hrefs later when the other admin pages exist -->
-        <a id="nav-all" class="admin-nav-link" href="admin.html">All Leads</a>
-        <a id="nav-requests" class="admin-nav-link" href="admin.html">Lead Requests</a>
-        <a id="nav-history" class="admin-nav-link" href="admin.html">Assignment History</a>
-        <a id="nav-stats" class="admin-nav-link" href="admin.html">Agent Stats</a>
-        <a id="nav-commissions" class="admin-nav-link" href="admin.html">Commissions</a>
-        <a id="nav-content" class="admin-nav-link active" href="admin-content.html">Content</a>
+        <button type="button" id="nav-all" data-href="admin-all-leads.html">All Leads</button>
+        <button type="button" id="nav-requests" data-href="admin-lead-requests.html">Lead Requests</button>
+        <button type="button" id="nav-history" data-href="admin-assignment-history.html">Assignment History</button>
+        <button type="button" id="nav-stats" data-href="admin-agent-stats.html">Agent Stats</button>
+        <button type="button" id="nav-commissions" data-href="admin-commissions.html">Commissions</button>
+        <button type="button" id="nav-content" class="active" data-href="admin-content.html">Content</button>
       </nav>
 
       <!-- Content Section (standalone page version) -->
