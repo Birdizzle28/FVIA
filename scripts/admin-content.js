@@ -22,31 +22,17 @@ document.addEventListener('DOMContentLoaded', async () => {
   // Gate + show page only if admin
   const ok = await gateAdmin();
   if (!ok) return;
-
-  // Basic UI toggles (safe even if general.js also handles it)
+  
+  wireAdminPageNav();
   wireMobileMenu();
-
-  // Overlays (data-close)
   wireOverlayClose();
-
-  // Init date pickers (if flatpickr loaded)
   initPickers();
-
-  // Load agents + hydrate dropdowns
   await loadAgentsForAdminLite();
   populateRecruiterSelect();
   populateTaskAgentSelect();
   hydrateAnnouncementAudienceSelects();
-
-  // Wire Content section actions
   wireContentButtons();
-
-  // Initial data (light)
-  // (Lists only load when "Manage ..." is expanded)
   await loadWaitlist();
-
-  // Make sure content section is visible on this page
-  // (If your admin-content.html already only shows content, this does nothing harmful.)
   showOnlyContentSection();
 });
 
@@ -93,6 +79,34 @@ async function gateAdmin() {
 /* =========================
    UI helpers
 ========================= */
+
+function wireAdminPageNav() {
+  const nav = document.getElementById('admin-page-nav');
+  if (!nav) return;
+
+  // Click → navigate
+  nav.addEventListener('click', (e) => {
+    const btn = e.target.closest('button[data-href]');
+    if (!btn) return;
+
+    const href = btn.getAttribute('data-href');
+    if (!href) return;
+
+    // (optional) prevent double navigation if you're already on the page
+    const current = location.pathname.split('/').pop();
+    if (current === href) return;
+
+    location.href = href;
+  });
+
+  // Set active button based on current page filename
+  const current = location.pathname.split('/').pop() || '';
+  nav.querySelectorAll('button[data-href]').forEach((btn) => {
+    const href = btn.getAttribute('data-href');
+    btn.classList.toggle('active', href === current);
+  });
+}
+
 function wireMobileMenu() {
   const menuToggle = document.getElementById('menu-toggle');
   const mobileMenu = document.getElementById('mobile-menu');
