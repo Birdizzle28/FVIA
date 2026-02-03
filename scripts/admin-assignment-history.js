@@ -38,25 +38,14 @@ async function loadAssignmentHistory(){
 
   tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Loading…</td></tr>`;
 
-  // Try assigned_at first
-  let res = await sb
+  const { data: history, error } = await sb
     .from('lead_assignments')
-    .select(`lead_id, assigned_at, created_at, assigned_to_agent:assigned_to(full_name), assigned_by_agent:assigned_by(full_name)`)
+    .select(`lead_id, assigned_at, assigned_to_agent:assigned_to(full_name), assigned_by_agent:assigned_by(full_name)`)
     .order('assigned_at', { ascending: false });
-
-  // If assigned_at doesn't exist, fallback to created_at
-  if (res.error && String(res.error.message || '').toLowerCase().includes('assigned_at')) {
-    res = await sb
-      .from('lead_assignments')
-      .select(`lead_id, assigned_at, created_at, assigned_to_agent:assigned_to(full_name), assigned_by_agent:assigned_by(full_name)`)
-      .order('created_at', { ascending: false });
-  }
-
-  const { data: history, error } = res;
 
   if (error) {
     console.error('Error loading history:', error);
-    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Error loading history. Check console.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center;">Error loading history.</td></tr>`;
     return;
   }
 
@@ -70,11 +59,10 @@ async function loadAssignmentHistory(){
   history.forEach(entry => {
     const assignedToName = entry.assigned_to_agent?.full_name || '—';
     const assignedByName = entry.assigned_by_agent?.full_name || '—';
-    const dt = entry.assigned_at || entry.created_at;
 
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td>${escapeHtml(formatDate(dt))}</td>
+      <td>${escapeHtml(formatDate(entry.assigned_at))}</td>
       <td style="font-family: monospace; font-size: 12px;">${escapeHtml(entry.lead_id || '—')}</td>
       <td>${escapeHtml(assignedToName)}</td>
       <td>${escapeHtml(assignedByName)}</td>
@@ -84,9 +72,7 @@ async function loadAssignmentHistory(){
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  // IMPORTANT: don't let the page stay hidden forever
   document.documentElement.style.visibility = 'visible';
-
   if (!sb){
     console.warn('Supabase client missing (window.supabaseClient/window.supabase).');
     return;
