@@ -84,44 +84,9 @@
         <button id="nav-content" data-href="admin-content.html">Content</button>
       </nav>
 
-      <!-- Assignment History Section -->
-      <section id="admin-history-section" class="admin-section" style="display:none;">
-        <h3>Assignment History</h3>
-
-        <div class="filter-wrapper" style="margin-bottom:14px;">
-          <div class="filter-group">
-            <label for="hist-date-range">Date Range</label>
-            <input id="hist-date-range" placeholder="Select date range" readonly />
-          </div>
-
-          <div class="filter-group">
-            <label for="hist-order">Order</label>
-            <select id="hist-order">
-              <option value="desc">Most Recent</option>
-              <option value="asc">Oldest</option>
-            </select>
-          </div>
-
-          <div class="filter-group">
-            <label for="hist-assigned-to">Assigned To</label>
-            <select id="hist-assigned-to">
-              <option value="">All Agents</option>
-            </select>
-          </div>
-
-          <div class="filter-group">
-            <label for="hist-assigned-by">Assigned By</label>
-            <select id="hist-assigned-by">
-              <option value="">All Admins/Agents</option>
-            </select>
-          </div>
-
-          <div class="filter-buttons">
-            <button id="hist-apply">Apply Filters</button>
-            <button id="hist-reset">Reset Filters</button>
-          </div>
-        </div>
-
+      <!-- Assignment History Section (MATCHES admin.html) -->
+      <section id="admin-history-section" class="admin-section">
+        <h3 style="margin-top: 30px;">Assignment History</h3>
         <table id="assignment-history-table">
           <thead>
             <tr>
@@ -129,21 +94,12 @@
               <th>Lead ID</th>
               <th>Assigned To</th>
               <th>Assigned By</th>
-              <th>Reason</th>
             </tr>
           </thead>
           <tbody>
-            <!-- rows load here -->
+            <!-- History entries load here -->
           </tbody>
         </table>
-
-        <div id="pagination-controls" style="margin-top: 10px;">
-          <button id="hist-prev">Previous</button>
-          <span id="hist-page">Page 1</span>
-          <button id="hist-next">Next</button>
-        </div>
-
-        <small id="hist-msg" style="display:block; margin-top:10px; color:#666;"></small>
       </section>
 
     </main>
