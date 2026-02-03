@@ -1489,104 +1489,140 @@ async function loadWaitlist() {
   });
 }
 
-// Approve & Add to Approved Agents (Waitlist)
+// Approve & Add to Approved Agents (Option A: direct Supabase like admin.js)
 async function approveWaitlistEntry(row) {
-  const msgEl = row?.querySelector('.wait-msg') || document.getElementById('agent-msg');
-  const rowId = row?.getAttribute('data-id');
-  if (!rowId) return;
+  const msgEl  = row?.querySelector('.wait-msg') || document.getElementById('agent-msg');
+
+  const rowId       = row.getAttribute('data-id');
+  const agentId     = row.getAttribute('data-agent-id') || '';
+  const firstName   = row.getAttribute('data-first-name') || '';
+  const lastName    = row.getAttribute('data-last-name') || '';
+  const email       = row.getAttribute('data-email') || '';
+  const phone       = row.getAttribute('data-phone') || '';
+  const recruiterId = row.getAttribute('data-recruiter-id') || '';
+  const level       = row.getAttribute('data-level') || '';
+  const recruitId   = row.getAttribute('data-recruit-id') || null;
+
+  const licCb  = row.querySelector('.wait-lic');
+  const icaCb  = row.querySelector('.wait-ica');
+  const bankCb = row.querySelector('.wait-bank');
+
+  if (msgEl) msgEl.textContent = '';
+
+  if (!rowId) {
+    if (msgEl) msgEl.textContent = '❌ Missing waitlist row id.';
+    return;
+  }
+
+  if (!agentId || !email || !recruiterId || !level) {
+    if (msgEl) msgEl.textContent =
+      '⚠️ Missing key info (agent ID, email, recruiter, or level). Fix in waitlist first.';
+    return;
+  }
+
+  if (!licCb?.checked || !icaCb?.checked || !bankCb?.checked) {
+    if (msgEl) msgEl.textContent =
+      '⚠️ Check licensing, ICA signed, and banking/Stripe ok before approving.';
+    return;
+  }
 
   try {
-    if (msgEl) msgEl.textContent = 'Saving checklist…';
+    // ✅ ALWAYS fetch the freshest stripe_account_id from agent_waitlist
+    if (msgEl) msgEl.textContent = 'Checking Stripe status…';
 
-    // Read checkboxes from this row
-    const licensingApproved = !!row.querySelector('.wait-lic')?.checked;
-    const icaSigned         = !!row.querySelector('.wait-ica')?.checked;
-    const bankingApproved   = !!row.querySelector('.wait-bank')?.checked;
-
-    // Persist checklist state to agent_waitlist
-    const { error: updErr } = await sb
+    const { data: wl, error: wlErr } = await sb
       .from('agent_waitlist')
-      .update({
-        licensing_approved: licensingApproved,
-        ica_signed: icaSigned,
-        banking_approved: bankingApproved
-      })
-      .eq('id', rowId);
+      .select('stripe_account_id')
+      .eq('id', rowId)
+      .maybeSingle();
 
-    if (updErr) throw updErr;
+    if (wlErr) throw wlErr;
 
-    // You can enforce checklist completion before approval (recommended)
-    if (!licensingApproved || !icaSigned || !bankingApproved) {
-      if (msgEl) msgEl.textContent = '✅ Checklist saved. Complete all 3 boxes to approve.';
+    const stripeAccountId = (wl?.stripe_account_id || '').trim() || null;
+
+    // ✅ hard stop if “Banking/Stripe ok” is checked but no Stripe account exists
+    if (!stripeAccountId) {
+      if (msgEl) msgEl.textContent =
+        '❌ No Stripe Account ID found for this agent. Run Stripe onboarding first (createStripeAccount) and reload.';
       return;
     }
 
-    if (msgEl) msgEl.textContent = 'Approving…';
-
-    // Pull values from data-attributes (already rendered in your HTML)
-    const payload = {
-      waitlist_id: rowId,
-      agent_id: row.getAttribute('data-agent-id') || null,              // NPN / agent id string
-      first_name: row.getAttribute('data-first-name') || null,
-      last_name: row.getAttribute('data-last-name') || null,
-      email: row.getAttribute('data-email') || null,
-      phone: row.getAttribute('data-phone') || null,
-      recruiter_id: row.getAttribute('data-recruiter-id') || null,
-      level: row.getAttribute('data-level') || null,
-      recruit_id: row.getAttribute('data-recruit-id') || null,
-      stripe_account_id: row.getAttribute('data-stripe-account-id') || null
+    // 1) Upsert into approved_agents
+    const approvedPayload = {
+      agent_id: agentId,
+      is_registered: false,
+      email,
+      phone,
+      first_name: firstName,
+      last_name: lastName,
+      recruiter_id: recruiterId,
+      level,
+      ica_signed: true,
+      banking_approved: true,
+      licensing_approved: true,
+      stripe_account_id: stripeAccountId
     };
 
-    // Call the SAME approval function your admin.js uses.
-    // I don’t have your admin.js text in this message, so I’m supporting the 2 most common names:
-    //  - approveWaitlistAgent
-    //  - approveWaitlist
-    // whichever exists in your Netlify functions folder.
-    const endpointsToTry = [
-      '/.netlify/functions/approveWaitlistAgent',
-      '/.netlify/functions/approveWaitlist'
-    ];
+    if (msgEl) msgEl.textContent = 'Saving to approved_agents…';
 
-    let res = null;
-    let lastText = '';
+    const { error: appErr } = await sb
+      .from('approved_agents')
+      .upsert(approvedPayload, { onConflict: 'agent_id' });
 
-    for (const url of endpointsToTry) {
-      try {
-        const r = await fetch(url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            // Keep auth header because your functions likely check admin status.
-            // (If your admin.js didn’t use it, it won’t hurt unless the function rejects extra headers.)
-            'Authorization': `Bearer ${accessToken || ''}`
-          },
-          body: JSON.stringify(payload)
-        });
+    if (appErr) throw appErr;
 
-        if (r.ok) {
-          res = r;
-          break;
-        } else {
-          lastText = await r.text().catch(() => '');
-        }
-      } catch (e) {
-        lastText = e?.message || String(e);
+    // 2) If this came from recruits table, mark them as contracting
+    if (recruitId) {
+      const { error: recErr } = await sb
+        .from('recruits')
+        .update({
+          stage: 'contracting',
+          stage_updated_at: new Date().toISOString()
+        })
+        .eq('id', recruitId);
+
+      if (recErr) {
+        console.error('Error updating recruit stage:', recErr);
+        // non-fatal
       }
     }
 
-    if (!res) {
-      throw new Error(lastText || 'Approval function failed (no endpoint succeeded).');
+    // 3) Update waitlist flags
+    const { error: wErr } = await sb
+      .from('agent_waitlist')
+      .update({
+        licensing_approved: true,
+        ica_signed: true,
+        banking_approved: true
+      })
+      .eq('id', rowId);
+
+    if (wErr) {
+      console.error('Error updating waitlist flags:', wErr);
+      if (msgEl) msgEl.textContent =
+        '⚠️ Agent approved, but failed to update waitlist flags.';
+      // keep going
+    } else {
+      if (msgEl) msgEl.textContent = '✅ Agent approved and added to approved_agents.';
     }
 
-    const json = await res.json().catch(() => ({}));
-    console.log('approve waitlist result:', json);
+    // 4) Remove from waitlist
+    const { error: delErr } = await sb
+      .from('agent_waitlist')
+      .delete()
+      .eq('id', rowId);
 
-    if (msgEl) msgEl.textContent = '✅ Approved and added to Approved Agents.';
+    if (delErr) {
+      console.error('Error deleting from waitlist:', delErr);
+      if (msgEl) msgEl.textContent += '\n⚠️ Approved, but could not remove from waitlist.';
+    } else {
+      if (msgEl) msgEl.textContent += '\n✅ Removed from waitlist.';
+    }
 
-    // Refresh UI
+    // 5) Reload list
     await loadWaitlist();
 
-    // Also refresh cached agents so dropdowns include the newly-approved agent (if applicable)
+    // Optional: refresh cached agents so dropdowns reflect the new approved agent (if you want)
     try {
       await loadAgentsForAdminLite();
       populateRecruiterSelect();
