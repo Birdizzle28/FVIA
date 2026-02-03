@@ -1171,7 +1171,174 @@ async function loadMyTasks() {
    Pre-approve agent + Waitlist
 ========================= */
 function wireAgentForm() {
-  ...
+  const form = document.getElementById('agent-form');
+  const msg = document.getElementById('agent-msg');
+  if (!form) return;
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    if (msg) msg.textContent = '';
+
+    const npn         = document.getElementById('agent-id')?.value.trim() || '';
+    const firstName   = document.getElementById('agent-first-name')?.value.trim() || '';
+    const lastName    = document.getElementById('agent-last-name')?.value.trim() || '';
+    const phone       = document.getElementById('agent-phone')?.value.trim() || '';
+    const email       = document.getElementById('agent-email')?.value.trim() || '';
+    const recruiterId = document.getElementById('agent-recruiter')?.value || '';
+    const level       = document.getElementById('agent-level')?.value || '';
+
+    if (!npn || !firstName || !lastName || !email || !recruiterId || !level) {
+      if (msg) msg.textContent = '⚠️ Fill out NPN, name, email, level, and recruiter.';
+      return;
+    }
+
+    // 1) Try to match a recruit row by recruiter + name
+    let recruitId = null;
+    try {
+      const { data: recruitMatch, error: recErr } = await sb
+        .from('recruits')
+        .select('id')
+        .eq('recruiter_id', recruiterId)
+        .ilike('first_name', firstName)
+        .ilike('last_name', lastName)
+        .maybeSingle();
+
+      if (recErr && recErr.code !== 'PGRST116') {
+        console.error('Error checking recruits:', recErr);
+      }
+      if (recruitMatch?.id) recruitId = recruitMatch.id;
+    } catch (err) {
+      console.error('Unexpected error looking up recruit:', err);
+    }
+
+    // 2) Add/Update in agent_waitlist (ONLY waitlist here)
+    const waitlistPayload = {
+      agent_id: npn,
+      first_name: firstName,
+      last_name: lastName,
+      phone,
+      email,
+      recruiter_id: recruiterId,
+      level,
+      recruit_id: recruitId || null
+      // flags default to false via schema
+    };
+
+    const { error: waitErr } = await sb
+      .from('agent_waitlist')
+      .upsert(waitlistPayload, { onConflict: 'agent_id' });
+
+    if (waitErr) {
+      console.error('Error saving to agent_waitlist:', waitErr);
+      if (msg) msg.textContent = '❌ Could not save to pre-approval waitlist: ' + waitErr.message;
+      return;
+    }
+
+    if (msg) {
+      msg.textContent =
+        '✅ Added to pre-approval waitlist. Syncing NIPR, sending ICA, and starting Stripe onboarding…';
+    }
+
+    // Refresh waitlist UI
+    try { await loadWaitlist(); } catch (_) {}
+
+    // 3) NIPR sync + parse
+    try {
+      const syncRes = await fetch('/.netlify/functions/nipr-sync-agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent_id: npn })
+      });
+
+      if (!syncRes.ok) {
+        const txt = await syncRes.text();
+        console.error('NIPR sync error:', txt);
+        if (msg) msg.textContent = '⚠️ On waitlist, but NIPR sync failed. Check logs.';
+        return;
+      }
+
+      const parseRes = await fetch('/.netlify/functions/nipr-parse-agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ agent_id: npn })
+      });
+
+      if (!parseRes.ok) {
+        const txt = await parseRes.text();
+        console.error('NIPR parse error:', txt);
+        if (msg) msg.textContent = '⚠️ On waitlist & synced, but parse failed. Check logs.';
+        return;
+      }
+    } catch (err) {
+      console.error('Error calling NIPR functions:', err);
+      if (msg) msg.textContent = '⚠️ On waitlist, but there was an error syncing NIPR data.';
+      return;
+    }
+
+    // 4) Send ICA via Netlify + SignWell
+    try {
+      const icaRes = await fetch('/.netlify/functions/send-ica', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_id: npn,
+          email,
+          first_name: firstName,
+          last_name: lastName,
+          level,
+          approved_agent_id: null
+        })
+      });
+
+      if (!icaRes.ok) {
+        const txt = await icaRes.text();
+        console.error('ICA send error:', txt);
+        if (msg) msg.textContent = '⚠️ NIPR ok, but ICA send failed. Check logs.';
+        return;
+      }
+    } catch (err) {
+      console.error('Error calling send-ica:', err);
+      if (msg) msg.textContent = '⚠️ NIPR ok, but there was an error sending ICA.';
+      return;
+    }
+
+    // 5) Create Stripe Connect account + onboarding link
+    try {
+      const stripeRes = await fetch('/.netlify/functions/createStripeAccount', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          agent_id: npn,
+          email,
+          first_name: firstName,
+          last_name: lastName,
+          level,
+          recruiter_id: recruiterId
+        })
+      });
+
+      if (!stripeRes.ok) {
+        const txt = await stripeRes.text();
+        console.error('Stripe onboarding error:', txt);
+        if (msg) msg.textContent = '⚠️ NIPR & ICA done, but Stripe onboarding failed. Check logs.';
+        return;
+      }
+
+      if (msg) msg.textContent = '🎉 Pre-approved, NIPR synced, ICA sent, and Stripe onboarding started.';
+    } catch (err) {
+      console.error('Error calling createStripeAccount:', err);
+      if (msg) msg.textContent = '⚠️ NIPR & ICA done, but there was an error starting Stripe onboarding.';
+      return;
+    }
+
+    // Close modal after a short delay
+    setTimeout(() => {
+      closeOverlay(document.getElementById('agent-modal'));
+    }, 900);
+
+    // Optional: reset form after success
+    form.reset();
+  });
 }
 
 async function loadWaitlist() {
