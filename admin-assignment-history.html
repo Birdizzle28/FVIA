@@ -143,32 +143,50 @@
     <script src="scripts/general.js"></script>
     <script src="scripts/admin-assignment-history.js"></script>
 
-    <!-- Admin-only gate -->
     <script>
       (async () => {
-        const supabase = window.supabaseClient;
+        try {
+          const supabase = window.supabaseClient;
     
-        // IMPORTANT: if supabase client didn't load, don't keep the whole page hidden forever
-        if (!supabase) {
-          console.warn("supabaseClient missing on admin-assignment-history.html");
+          // Always unhide so we can see what's happening
           document.documentElement.style.visibility = 'visible';
-          // Optional: you can also show a message in the UI if you want
-          return;
-        }
     
-        const { data: { session } = {} } = await supabase.auth.getSession();
-        if (!session) { location.replace('login.html'); return; }
+          if (!supabase) {
+            console.warn("supabaseClient missing on admin-assignment-history.html");
+            return;
+          }
     
-        const { data: profile } = await supabase
-          .from('agents')
-          .select('is_admin')
-          .eq('id', session.user.id)
-          .maybeSingle();
+          const { data: { session } = {} } = await supabase.auth.getSession();
+          if (!session) {
+            location.replace('login.html');
+            return;
+          }
     
-        if (profile?.is_admin === true) {
-          document.documentElement.style.visibility = 'visible';
-        } else {
+          const { data: profile, error } = await supabase
+            .from('agents')
+            .select('is_admin')
+            .eq('id', session.user.id)
+            .maybeSingle();
+    
+          if (error) {
+            console.error("Admin gate: agents lookup error:", error);
+            // IMPORTANT: don't redirect on error — it could be RLS
+            alert("Admin check failed due to a database/security error. Open console for details.");
+            return;
+          }
+    
+          if (profile?.is_admin === true) {
+            // ok
+            return;
+          }
+    
+          // only redirect if we DEFINITELY know they're not admin
           location.replace('dashboard.html');
+    
+        } catch (e) {
+          console.error("Admin gate crashed:", e);
+          document.documentElement.style.visibility = 'visible';
+          alert("Admin gate crashed. Open console for details.");
         }
       })();
     </script>
