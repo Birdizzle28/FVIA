@@ -72,7 +72,7 @@ async function loadAssignmentHistory(){
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-  if (!supabase){
+  if (!sb){
     console.warn('Supabase client missing (window.supabaseClient/window.supabase).');
     return;
   }
