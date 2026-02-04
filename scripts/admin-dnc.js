@@ -99,19 +99,16 @@ async function uploadFiles(files){
   const { set: areaCodes, unknown } = collectAreaCodesFromFiles(files);
 
   if (!areaCodes.size){
-    setStatus('I could not detect any area codes from filenames. Rename files to include the 3-digit area code (ex: 615.txt).', true);
+    setStatus('I could not detect any area codes from filenames. Rename files to include the 3-digit area code (ex: 615.xml).', true);
     return;
   }
 
-  // Warn (but allow) if some filenames didn’t match a 3-digit code
   if (unknown.length){
     setStatus(`Detected area codes: ${Array.from(areaCodes).sort().join(', ')} • Note: some files had no detectable 3-digit code.`, false);
   } else {
     setStatus(`Detected area codes: ${Array.from(areaCodes).sort().join(', ')}`, false);
   }
 
-  // This endpoint will be created in Step 3 (Netlify parser).
-  // We are NOT creating it here—this just prepares the frontend to hit it.
   const endpoint = '/.netlify/functions/dnc-import';
 
   const fd = new FormData();
@@ -121,19 +118,31 @@ async function uploadFiles(files){
   setStatus('Uploading…');
 
   try {
-    const res = await fetch(endpoint, { method: 'POST', body: fd });
-    const text = await res.text().catch(() => '');
+    const { data: { session } = {} } = await (window.supabaseClient || window.supabase).auth.getSession();
+    const token = session?.access_token;
 
-    if (!res.ok){
-      // Until Step 3 exists, this will likely error—still show the response cleanly.
-      setStatus(`Upload failed (${res.status}). This is expected until we build the parser function. ${text ? 'Details: ' + text : ''}`, true);
+    if (!token){
+      setStatus('No session token found. Please log in again.', true);
       return;
     }
 
-    // If it returns JSON later, we can display counts, replaced area codes, etc.
-    setStatus('Upload successful. (Parser will enforce upsert/replace by area code.)');
+    const res = await fetch(endpoint, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: fd
+    });
+
+    const text = await res.text().catch(() => '');
+
+    if (!res.ok){
+      setStatus(`Upload failed (${res.status}). ${text ? 'Details: ' + text : ''}`, true);
+      return;
+    }
+
+    // If your function returns JSON later, we can parse it
+    setStatus('Upload successful. Parser replaced the previous list for each uploaded area code.');
   } catch (err){
-    setStatus(`Upload error. This is expected until the parser function exists. ${err?.message || ''}`, true);
+    setStatus(`Upload error: ${err?.message || ''}`, true);
   }
 }
 
