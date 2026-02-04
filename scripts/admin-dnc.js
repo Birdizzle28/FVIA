@@ -96,24 +96,18 @@ async function uploadFiles(files){
     return;
   }
 
-  const { set: areaCodes, unknown } = collectAreaCodesFromFiles(files);
+  // For now: upload ONE at a time (keeps backend simple + reliable)
+  const file = files[0];
 
-  if (!areaCodes.size){
-    setStatus('I could not detect any area codes from filenames. Rename files to include the 3-digit area code (ex: 615.xml).', true);
+  const areaCode = parseAreaCodeFromFilename(file.name);
+  if (!areaCode){
+    setStatus('I could not detect an area code from the filename. Include a 3-digit area code (ex: 423.xml).', true);
     return;
   }
 
-  if (unknown.length){
-    setStatus(`Detected area codes: ${Array.from(areaCodes).sort().join(', ')} • Note: some files had no detectable 3-digit code.`, false);
-  } else {
-    setStatus(`Detected area codes: ${Array.from(areaCodes).sort().join(', ')}`, false);
-  }
+  setStatus(`Detected area code: ${areaCode}`);
 
   const endpoint = '/.netlify/functions/dnc-import';
-
-  const fd = new FormData();
-  Array.from(files).forEach(f => fd.append('files', f, f.name));
-  fd.append('area_codes', JSON.stringify(Array.from(areaCodes)));
 
   setStatus('Uploading…');
 
@@ -126,10 +120,16 @@ async function uploadFiles(files){
       return;
     }
 
+    const xmlText = await file.text();
+
     const res = await fetch(endpoint, {
       method: 'POST',
-      headers: { Authorization: `Bearer ${token}` },
-      body: fd
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'text/xml',
+        'X-Filename': file.name
+      },
+      body: xmlText
     });
 
     const text = await res.text().catch(() => '');
@@ -139,8 +139,7 @@ async function uploadFiles(files){
       return;
     }
 
-    // If your function returns JSON later, we can parse it
-    setStatus('Upload successful. Parser replaced the previous list for each uploaded area code.');
+    setStatus('Upload successful. Parser replaced the previous list for this area code.');
   } catch (err){
     setStatus(`Upload error: ${err?.message || ''}`, true);
   }
