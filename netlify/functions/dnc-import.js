@@ -114,14 +114,24 @@ export async function handler(event) {
     // Extract phone numbers
     // In your DNC XML, phone entries look like: <ph val='0000000' />
     // Full 10-digit phone = areaCode + 7-digit local
-    let phones = list.ph;
-
+    // Extract phone numbers
+    // Some files are: <list><ph .../></list>
+    // Your file is:  <list><ac><ph .../></ac></list>
+    let phones = list.ph || list.ac?.ph || null;
+    
+    // If list.ac is an array (just in case), collect ph from each ac node
+    if (!phones && Array.isArray(list.ac)) {
+      phones = list.ac.flatMap(a => a?.ph || []);
+    }
+    
     if (!phones) {
       return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'No <ph> entries found in XML' }) };
     }
-
+    
+    // Normalize to a flat array
     if (!Array.isArray(phones)) phones = [phones];
-
+    phones = phones.flat().filter(Boolean);
+    
     // Create import record
     const { data: importRow, error: importErr } = await adminClient
       .from(DNC_IMPORTS)
