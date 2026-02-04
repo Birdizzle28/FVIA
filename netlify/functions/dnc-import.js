@@ -64,19 +64,16 @@ export async function handler(event) {
       return { statusCode: 403, body: 'Admin access required' };
     }
 
-    // Decode multipart body (Netlify provides base64)
+    // Decode raw XML body (Netlify provides base64 sometimes)
     const raw = Buffer.from(
-      event.body,
+      event.body || '',
       event.isBase64Encoded ? 'base64' : 'utf8'
     ).toString('utf8');
-
-    // Very simple multipart extraction (single file input)
-    const xmlMatch = raw.match(/<\?xml[\s\S]+$/);
-    if (!xmlMatch) {
+    
+    const xmlText = raw.trim();
+    if (!xmlText || !xmlText.includes('<list')) {
       throw new Error('No XML content found in upload');
     }
-
-    const xmlText = xmlMatch[0];
 
     // Parse XML
     const parsed = await parseStringPromise(xmlText, {
@@ -90,9 +87,8 @@ export async function handler(event) {
     }
 
     const areaCode = String(list.val);
-    const filenameArea = areaCodeFromFilename(
-      event.headers['x-file-name'] || ''
-    );
+    const filename = event.headers['x-filename'] || event.headers['X-Filename'] || '';
+    const filenameArea = areaCodeFromFilename(filename);
 
     if (filenameArea && filenameArea !== areaCode) {
       throw new Error(
@@ -105,7 +101,7 @@ export async function handler(event) {
       .from(DNC_IMPORTS)
       .insert({
         area_code: areaCode,
-        file_name: 'upload.xml',
+        file_name: filename || 'upload.xml',
         uploaded_by: userId
       })
       .select('id')
