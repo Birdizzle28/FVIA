@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <title>Admin • DNC Upload | Family Values Group</title>
+
+    <link rel="stylesheet" href="styles/agentstyle.css" />
+    <link rel="stylesheet" href="styles/admin.css" />
+    <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <!-- Lock visual display until we confirm admin in script at bottom -->
+    <style>
+      html { visibility: hidden; }
+    </style>
+
+    <noscript>
+      <meta http-equiv="refresh" content="0; url=dashboard.html">
+    </noscript>
+  </head>
+
+  <body id="dashboardbody">
+
+    <!-- Header -->
+    <header class="index-grid-header">
+      <div id="logofvcontainer">
+        <div id="logodiv">
+          <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+        </div>
+        <div id="fvdiv">
+          <p><strong>Family Values Group</strong></p>
+        </div>
+      </div>
+      <div id="navcontainer">
+        <nav class="header-flex-container">
+          <a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
+          <a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
+          <div id="menu-toggle">
+            <i class="fa-solid fa-bars"></i>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu">
+      <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
+
+      <button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
+        <i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
+        <i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
+      </button>
+
+      <div id="toolkit-submenu" class="submenu" hidden>
+        <a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
+        <a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
+        <a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
+        <a href="calculator.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
+        <a href="marketing.html"><i class="fa-solid fa-handshake"></i><span>Marketing</span></a>
+      </div>
+
+      <a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
+      <a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
+      <a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
+      <a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
+      <a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
+    </div>
+
+    <main class="auth-container">
+
+      <!-- Admin page navigation -->
+      <nav id="admin-page-nav">
+        <button id="nav-all" data-href="admin-all-leads.html">All Leads</button>
+        <button id="nav-requests" data-href="admin-lead-requests.html">Lead Requests</button>
+        <button id="nav-history" data-href="admin-assignment-history.html">Assignment History</button>
+        <button id="nav-stats" data-href="admin-agent-stats.html">Agent Stats</button>
+        <button id="nav-commissions" data-href="admin-commissions.html">Commissions</button>
+        <button id="nav-content" data-href="admin-content.html">Content</button>
+        <button id="nav-dnc" class="active" data-href="admin-dnc.html">DNC</button>
+      </nav>
+
+      <!-- Page Content -->
+      <section id="admin-dnc-section" style="display:block; margin-top: 14px;">
+        <h2 style="color: var(--indigo); margin: 6px 0 10px;">Do Not Call Registry Upload</h2>
+
+        <div class="lead-request-box" style="padding: 14px;">
+          <p style="margin: 0 0 10px; color:#444; line-height:1.4;">
+            Upload your monthly National DNC files (one file per area code).
+            This page detects which area codes are present based on filenames so later your agent dropdown only shows what you actually have.
+          </p>
+
+          <div style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top: 10px;">
+            <input id="dnc-files" type="file" multiple />
+            <button id="dnc-upload-btn" style="border:0; border-radius:0; padding:10px 14px; font-weight:800; cursor:pointer; background: var(--pink); color: var(--indigo);">
+              <i class="fa-solid fa-upload"></i> Upload
+            </button>
+            <button id="dnc-clear-btn" style="border:1px solid #e5e6ef; border-radius:0; padding:10px 14px; font-weight:800; cursor:pointer; background:#fff; color: var(--indigo);">
+              Clear
+            </button>
+          </div>
+
+          <div style="margin-top: 12px;">
+            <div style="font-weight:800; color: var(--indigo); margin-bottom: 6px;">Detected area codes</div>
+            <div id="dnc-area-codes" style="display:flex; gap:8px; flex-wrap:wrap;"></div>
+            <div id="dnc-area-codes-empty" style="color:#666; margin-top:6px;">No files selected yet.</div>
+          </div>
+
+          <div style="margin-top: 12px;">
+            <div style="font-weight:800; color: var(--indigo); margin-bottom: 6px;">Selected files</div>
+            <ul id="dnc-file-list" style="margin:0; padding-left: 18px; color:#333;"></ul>
+          </div>
+
+          <div id="dnc-status" style="margin-top: 10px; color:#333;"></div>
+
+          <div style="margin-top: 12px; font-size: 12px; color:#666; line-height:1.35;">
+            Upsert behavior will be enforced by the parser (same area code = replace last month’s list).
+          </div>
+        </div>
+      </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="index-grid-footer">
+      <img id="footerlogo" src="Pics/img17.png">
+      <hr class="footerhr">
+      <div id="footercontact">
+        <a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
+          <span class="fa fa-envelope"></span>
+          <span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+        </a>
+        <p> | </p>
+        <a class="contactcontainer" href="tel:+16292437980">
+          <span class="fa fa-phone"></span>
+          <span class="contactcontcontacts">+1-629-243-7980</span>
+        </a>
+      </div>
+      <hr class="footerhr">
+      <div id="footersocial">
+        <a class="fab fa-facebook-f" href="https://www.facebook.com/familyvaluesgroup"></a>
+        <a class="fab fa-linkedin-in" href="https://www.linkedin.com/in/demisi-johnson-026227391?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"></a>
+        <a class="fab fa-instagram" href="https://www.instagram.com/family.values.group?igsh=OHl3dGdnd3RwMTV0&utm_source=qr"></a>
+        <a class="fab fa-youtube" href="https://youtube.com/@familyvaluesgroup?si=mauqWp5nxyczgCJd"></a>
+        <a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
+      </div>
+      <div id="footerlinks">
+        <a href="faqs.html">FAQs</a>
+        <a href="terms.html">Terms</a>
+        <a href="accessibility.html">Accessibility</a>
+        <a href="privacy.html">Privacy</a>
+      </div>
+      <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="scripts/supabase-client.js"></script>
+    <script src="scripts/general.js"></script>
+    <script src="scripts/admin-dnc.js"></script>
+
+    <!-- Admin-only gate -->
+    <script>
+      (async () => {
+        const supabase = window.supabaseClient;
+        if (!supabase) return;
+
+        const { data: { session } = {} } = await supabase.auth.getSession();
+        if (!session) { location.replace('login.html'); return; }
+
+        const { data: profile } = await supabase
+          .from('agents')
+          .select('is_admin')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (profile?.is_admin === true) {
+          document.documentElement.style.visibility = 'visible';
+        } else {
+          location.replace('dashboard.html');
+        }
+      })();
+    </script>
+  </body>
+</html>
