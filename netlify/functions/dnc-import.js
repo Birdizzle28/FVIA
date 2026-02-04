@@ -11,11 +11,6 @@ function getBearerToken(headers = {}) {
   return m ? m[1] : null;
 }
 
-function areaCodeFromFilename(name = '') {
-  const m = name.match(/(^|[^0-9])(\d{3})([^0-9]|$)/);
-  return m ? m[2] : null;
-}
-
 export async function handler(event) {
   try {
     if (event.httpMethod !== 'POST') {
@@ -27,52 +22,80 @@ export async function handler(event) {
     const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!SUPABASE_URL || !ANON_KEY || !SERVICE_KEY) {
-      throw new Error('Missing Supabase environment variables');
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ ok: false, error: 'Missing Supabase environment variables' })
+      };
     }
 
     const token = getBearerToken(event.headers);
     if (!token) {
-      return { statusCode: 401, body: 'Missing auth token' };
+      return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Missing auth token' }) };
     }
 
-    // Verify user session
+    // Verify user session using anon key
     const authClient = createClient(SUPABASE_URL, ANON_KEY, {
       auth: { persistSession: false }
     });
 
-    const { data: userData, error: userErr } =
-      await authClient.auth.getUser(token);
-
+    const { data: userData, error: userErr } = await authClient.auth.getUser(token);
     if (userErr || !userData?.user?.id) {
-      return { statusCode: 401, body: 'Invalid session' };
+      return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Invalid session' }) };
     }
 
     const userId = userData.user.id;
 
-    // Admin check
+    // Service role client (bypasses RLS)
     const adminClient = createClient(SUPABASE_URL, SERVICE_KEY, {
       auth: { persistSession: false }
     });
 
-    const { data: agent } = await adminClient
+    // Admin check
+    const { data: agentRow, error: agentErr } = await adminClient
       .from('agents')
       .select('is_admin')
       .eq('id', userId)
       .maybeSingle();
 
-    if (!agent?.is_admin) {
-      return { statusCode: 403, body: 'Admin access required' };
+    if (agentErr) {
+      return { statusCode: 500, body: JSON.stringify({ ok: false, error: 'Admin check failed' }) };
     }
 
-    // Decode raw XML body (Netlify provides base64 sometimes)
-    const raw = Buffer.from(
-      event.body || '',
-      event.isBase64Encoded ? 'base64' : 'utf8'
-    ).toString('utf8');
-    
-    const xmlText = raw.trim();
+    if (agentRow?.is_admin !== true) {
+      return { statusCode: 403, body: JSON.stringify({ ok: false, error: 'Admin access required' }) };
+    }
+
+    // Parse JSON payload
+    let payload = {};
+    try {
+      payload = JSON.parse(event.body || '{}');
+    } catch {
+      return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Invalid JSON body' }) };
+    }
+
+    const bucket = payload.bucket;
+    const path = payload.path;
+    const originalFilename = payload.original_filename || 'upload.xml';
+
+    if (!bucket || !path) {
+      return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Missing bucket/path' }) };
+    }
+
+    // Download XML from Supabase Storage
+    const { data: fileBlob, error: dlErr } = await adminClient.storage.from(bucket).download(path);
+    if (dlErr || !fileBlob) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ ok: false, error: `Storage download failed: ${dlErr?.message || 'unknown'}` })
+      };
+    }
+
+    // Convert Blob -> string
+    const ab = await fileBlob.arrayBuffer();
+    const xmlText = Buffer.from(ab).toString('utf8').trim();
+
     if (!xmlText || !xmlText.includes('<list')) {
-      throw new Error('No XML content found in upload');
+      return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Downloaded file is not valid XML' }) };
     }
 
     // Parse XML
@@ -83,68 +106,104 @@ export async function handler(event) {
 
     const list = parsed?.list;
     if (!list?.val) {
-      throw new Error('Invalid DNC XML format (missing area code)');
+      return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Invalid DNC XML format (missing list val area code)' }) };
     }
 
     const areaCode = String(list.val);
-    const filename = event.headers['x-filename'] || event.headers['X-Filename'] || '';
-    const filenameArea = areaCodeFromFilename(filename);
 
-    if (filenameArea && filenameArea !== areaCode) {
-      throw new Error(
-        `Filename area code (${filenameArea}) does not match XML (${areaCode})`
-      );
+    // Extract phone numbers
+    // In your DNC XML, phone entries look like: <ph val='0000000' />
+    // Full 10-digit phone = areaCode + 7-digit local
+    let phones = list.ph;
+
+    if (!phones) {
+      return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'No <ph> entries found in XML' }) };
     }
+
+    if (!Array.isArray(phones)) phones = [phones];
 
     // Create import record
     const { data: importRow, error: importErr } = await adminClient
       .from(DNC_IMPORTS)
       .insert({
         area_code: areaCode,
-        file_name: filename || 'upload.xml',
-        uploaded_by: userId
+        file_name: originalFilename,
+        uploaded_by: userId,
+        row_count: 0
       })
       .select('id')
       .single();
 
-    if (importErr) throw importErr;
+    if (importErr || !importRow?.id) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ ok: false, error: `Import row insert failed: ${importErr?.message || 'unknown'}` })
+      };
+    }
 
     const importId = importRow.id;
 
-    // Replace existing data
-    await adminClient
+    // Replace existing numbers for that area code (monthly snapshot)
+    const { error: delErr } = await adminClient
       .from(DNC_NUMBERS)
       .delete()
       .eq('area_code', areaCode);
 
-    // Extract phone numbers
-    const phones = Array.isArray(list.ph) ? list.ph : [list.ph];
-
-    const rows = phones.map(p => {
-      const local7 = String(p.val).padStart(7, '0');
+    if (delErr) {
       return {
-        area_code: areaCode,
-        phone_10: `${areaCode}${local7}`,
-        import_id: importId
+        statusCode: 500,
+        body: JSON.stringify({ ok: false, error: `Delete old numbers failed: ${delErr.message}` })
       };
-    });
-
-    // Insert in chunks
-    const CHUNK = 5000;
-    for (let i = 0; i < rows.length; i += CHUNK) {
-      await adminClient
-        .from(DNC_NUMBERS)
-        .insert(rows.slice(i, i + CHUNK), { returning: 'minimal' });
     }
 
-    // Update import row count
-    await adminClient
+    // Insert in chunks (smaller chunk prevents timeouts/large payload issues)
+    const CHUNK = 500;
+    let inserted = 0;
+
+    for (let i = 0; i < phones.length; i += CHUNK) {
+      const slice = phones.slice(i, i + CHUNK);
+
+      const rows = slice.map(p => {
+        const local7 = String(p?.val ?? '').padStart(7, '0');
+        return {
+          area_code: areaCode,
+          phone_10: `${areaCode}${local7}`,
+          import_id: importId
+        };
+      });
+
+      const { error: insErr } = await adminClient
+        .from(DNC_NUMBERS)
+        .insert(rows, { returning: 'minimal' });
+
+      if (insErr) {
+        return {
+          statusCode: 500,
+          body: JSON.stringify({
+            ok: false,
+            error: `Insert failed near index ${i}: ${insErr.message}`
+          })
+        };
+      }
+
+      inserted += rows.length;
+    }
+
+    // Update import count
+    const { error: updErr } = await adminClient
       .from(DNC_IMPORTS)
-      .update({ row_count: rows.length })
+      .update({ row_count: inserted })
       .eq('id', importId);
 
-    // Mark area code active
-    await adminClient
+    if (updErr) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ ok: false, error: `Update import row_count failed: ${updErr.message}` })
+      };
+    }
+
+    // Upsert area code to mark it active
+    const { error: acErr } = await adminClient
       .from(DNC_AREA_CODES)
       .upsert(
         {
@@ -155,22 +214,27 @@ export async function handler(event) {
         { onConflict: 'area_code' }
       );
 
+    if (acErr) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ ok: false, error: `Upsert area code failed: ${acErr.message}` })
+      };
+    }
+
     return {
       statusCode: 200,
       body: JSON.stringify({
         ok: true,
         area_code: areaCode,
-        imported: rows.length,
-        replaced_previous: true
+        imported: inserted,
+        replaced_previous: true,
+        import_id: importId
       })
     };
   } catch (err) {
     return {
       statusCode: 500,
-      body: JSON.stringify({
-        ok: false,
-        error: err.message
-      })
+      body: JSON.stringify({ ok: false, error: err?.message || String(err) })
     };
   }
 }
