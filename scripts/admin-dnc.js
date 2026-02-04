@@ -96,23 +96,19 @@ async function uploadFiles(files){
     return;
   }
 
-  // For now: upload ONE at a time (keeps backend simple + reliable)
   const file = files[0];
-
   const areaCode = parseAreaCodeFromFilename(file.name);
+
   if (!areaCode){
     setStatus('I could not detect an area code from the filename. Include a 3-digit area code (ex: 423.xml).', true);
     return;
   }
 
-  setStatus(`Detected area code: ${areaCode}`);
-
-  const endpoint = '/.netlify/functions/dnc-import';
-
-  setStatus('Uploading…');
+  setStatus(`Uploading file to storage for area code: ${areaCode}…`);
 
   try {
-    const { data: { session } = {} } = await (window.supabaseClient || window.supabase).auth.getSession();
+    const supabase = window.supabaseClient || window.supabase;
+    const { data: { session } = {} } = await supabase.auth.getSession();
     const token = session?.access_token;
 
     if (!token){
@@ -120,28 +116,46 @@ async function uploadFiles(files){
       return;
     }
 
-    const xmlText = await file.text();
+    // Bucket name (create this in Supabase Storage)
+    const bucket = 'dnc_uploads';
 
-    const res = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'text/xml',
-        'X-Filename': file.name
-      },
-      body: xmlText
-    });
+    // Keep a stable "latest" file path per area code (true upsert behavior)
+    const storagePath = `${areaCode}/latest.xml`;
 
-    const text = await res.text().catch(() => '');
+    const { error: upErr } = await supabase
+      .storage
+      .from(bucket)
+      .upload(storagePath, file, { upsert: true, contentType: 'text/xml' });
 
-    if (!res.ok){
-      setStatus(`Upload failed (${res.status}). ${text ? 'Details: ' + text : ''}`, true);
+    if (upErr){
+      setStatus(`Storage upload failed: ${upErr.message}`, true);
       return;
     }
 
-    setStatus('Upload successful. Parser replaced the previous list for this area code.');
+    setStatus('Storage upload successful. Importing into database…');
+
+    const res = await fetch('/.netlify/functions/dnc-import', {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        bucket,
+        path: storagePath,
+        original_filename: file.name
+      })
+    });
+
+    const text = await res.text().catch(() => '');
+    if (!res.ok){
+      setStatus(`Import failed (${res.status}). ${text ? 'Details: ' + text : ''}`, true);
+      return;
+    }
+
+    setStatus('Import successful. Previous list for this area code was replaced.');
   } catch (err){
-    setStatus(`Upload error: ${err?.message || ''}`, true);
+    setStatus(`Upload/import error: ${err?.message || ''}`, true);
   }
 }
 
