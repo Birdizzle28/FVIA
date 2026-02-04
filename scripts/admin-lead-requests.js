@@ -30,7 +30,7 @@ function setMsg(text){
 }
 
 function wireAdminNavLinks(){
-  const navIds = ['nav-all','nav-requests','nav-history','nav-stats','nav-commissions','nav-content'];
+  const navIds = ['nav-all','nav-requests','nav-history','nav-stats','nav-commissions','nav-content','nav-dnc'];
   navIds.forEach(id => {
     const btn = $(id);
     if (!btn) return;
