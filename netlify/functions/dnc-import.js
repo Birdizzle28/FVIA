@@ -1,14 +1,22 @@
 import { createClient } from '@supabase/supabase-js';
-import { parseStringPromise } from 'xml2js';
 
 const DNC_IMPORTS = 'dnc_imports';
 const DNC_AREA_CODES = 'dnc_area_codes';
-const DNC_NUMBERS = 'dnc_numbers';
+const DNC_RANGES = 'dnc_ranges';
 
 function getBearerToken(headers = {}) {
   const h = headers.authorization || headers.Authorization || '';
   const m = String(h).match(/^Bearer\s+(.+)$/i);
   return m ? m[1] : null;
+}
+
+// Extract area code from <list ... val='423'> OR <ac val='423'>
+function extractAreaCode(xmlText) {
+  const m1 = xmlText.match(/<list[^>]*\bval=['"](\d{3})['"][^>]*>/i);
+  if (m1?.[1]) return m1[1];
+  const m2 = xmlText.match(/<ac[^>]*\bval=['"](\d{3})['"][^>]*>/i);
+  if (m2?.[1]) return m2[1];
+  return null;
 }
 
 export async function handler(event) {
@@ -22,10 +30,7 @@ export async function handler(event) {
     const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!SUPABASE_URL || !ANON_KEY || !SERVICE_KEY) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ ok: false, error: 'Missing Supabase environment variables' })
-      };
+      return { statusCode: 500, body: JSON.stringify({ ok: false, error: 'Missing Supabase env vars' }) };
     }
 
     const token = getBearerToken(event.headers);
@@ -33,22 +38,18 @@ export async function handler(event) {
       return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Missing auth token' }) };
     }
 
-    // Verify user session using anon key
-    const authClient = createClient(SUPABASE_URL, ANON_KEY, {
-      auth: { persistSession: false }
-    });
-
+    // Verify user session (anon key)
+    const authClient = createClient(SUPABASE_URL, ANON_KEY, { auth: { persistSession: false } });
     const { data: userData, error: userErr } = await authClient.auth.getUser(token);
+
     if (userErr || !userData?.user?.id) {
       return { statusCode: 401, body: JSON.stringify({ ok: false, error: 'Invalid session' }) };
     }
 
     const userId = userData.user.id;
 
-    // Service role client (bypasses RLS)
-    const adminClient = createClient(SUPABASE_URL, SERVICE_KEY, {
-      auth: { persistSession: false }
-    });
+    // Service role client
+    const adminClient = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
     // Admin check
     const { data: agentRow, error: agentErr } = await adminClient
@@ -84,54 +85,17 @@ export async function handler(event) {
     // Download XML from Supabase Storage
     const { data: fileBlob, error: dlErr } = await adminClient.storage.from(bucket).download(path);
     if (dlErr || !fileBlob) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ ok: false, error: `Storage download failed: ${dlErr?.message || 'unknown'}` })
-      };
+      return { statusCode: 500, body: JSON.stringify({ ok: false, error: `Storage download failed: ${dlErr?.message || 'unknown'}` }) };
     }
 
-    // Convert Blob -> string
     const ab = await fileBlob.arrayBuffer();
-    const xmlText = Buffer.from(ab).toString('utf8').trim();
+    const xmlText = Buffer.from(ab).toString('utf8');
 
-    if (!xmlText || !xmlText.includes('<list')) {
-      return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Downloaded file is not valid XML' }) };
+    const areaCode = extractAreaCode(xmlText);
+    if (!areaCode) {
+      return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Could not detect area code in XML' }) };
     }
 
-    // Parse XML
-    const parsed = await parseStringPromise(xmlText, {
-      explicitArray: false,
-      mergeAttrs: true
-    });
-
-    const list = parsed?.list;
-    if (!list?.val) {
-      return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'Invalid DNC XML format (missing list val area code)' }) };
-    }
-
-    const areaCode = String(list.val);
-
-    // Extract phone numbers
-    // In your DNC XML, phone entries look like: <ph val='0000000' />
-    // Full 10-digit phone = areaCode + 7-digit local
-    // Extract phone numbers
-    // Some files are: <list><ph .../></list>
-    // Your file is:  <list><ac><ph .../></ac></list>
-    let phones = list.ph || list.ac?.ph || null;
-    
-    // If list.ac is an array (just in case), collect ph from each ac node
-    if (!phones && Array.isArray(list.ac)) {
-      phones = list.ac.flatMap(a => a?.ph || []);
-    }
-    
-    if (!phones) {
-      return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'No <ph> entries found in XML' }) };
-    }
-    
-    // Normalize to a flat array
-    if (!Array.isArray(phones)) phones = [phones];
-    phones = phones.flat().filter(Boolean);
-    
     // Create import record
     const { data: importRow, error: importErr } = await adminClient
       .from(DNC_IMPORTS)
@@ -145,90 +109,112 @@ export async function handler(event) {
       .single();
 
     if (importErr || !importRow?.id) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ ok: false, error: `Import row insert failed: ${importErr?.message || 'unknown'}` })
-      };
+      return { statusCode: 500, body: JSON.stringify({ ok: false, error: `Import row insert failed: ${importErr?.message || 'unknown'}` }) };
     }
 
     const importId = importRow.id;
 
-    // Replace existing numbers for that area code (monthly snapshot)
+    // Replace existing ranges for that area code
     const { error: delErr } = await adminClient
-      .from(DNC_NUMBERS)
+      .from(DNC_RANGES)
       .delete()
       .eq('area_code', areaCode);
 
     if (delErr) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ ok: false, error: `Delete old numbers failed: ${delErr.message}` })
-      };
+      return { statusCode: 500, body: JSON.stringify({ ok: false, error: `Delete old ranges failed: ${delErr.message}` }) };
     }
 
-    // Insert in chunks (smaller chunk prevents timeouts/large payload issues)
-    const CHUNK = 500;
-    let inserted = 0;
+    // Build ranges by scanning <ph val='xxxxxxx' />
+    const PH_RE = /<ph\s+val=['"](\d{1,7})['"]\s*\/>/gi;
 
-    for (let i = 0; i < phones.length; i += CHUNK) {
-      const slice = phones.slice(i, i + CHUNK);
+    let match;
+    let totalPhones = 0;
 
-      const rows = slice.map(p => {
-        const local7 = String(p?.val ?? '').padStart(7, '0');
-        return {
-          area_code: areaCode,
-          phone_10: `${areaCode}${local7}`,
-          import_id: importId
-        };
-      });
+    let rangeStart = null;
+    let prev = null;
 
-      const { error: insErr } = await adminClient
-        .from(DNC_NUMBERS)
-        .insert(rows, { returning: 'minimal' });
+    const RANGE_INSERT_CHUNK = 2000;
+    let rangeRows = [];
+    let totalRanges = 0;
 
-      if (insErr) {
-        return {
-          statusCode: 500,
-          body: JSON.stringify({
-            ok: false,
-            error: `Insert failed near index ${i}: ${insErr.message}`
-          })
-        };
+    async function flushRanges() {
+      if (!rangeRows.length) return;
+      const { error } = await adminClient.from(DNC_RANGES).insert(rangeRows, { returning: 'minimal' });
+      if (error) throw new Error(`Range insert failed: ${error.message}`);
+      totalRanges += rangeRows.length;
+      rangeRows = [];
+    }
+
+    while ((match = PH_RE.exec(xmlText)) !== null) {
+      const local7 = parseInt(match[1], 10);
+      if (Number.isNaN(local7)) continue;
+
+      totalPhones++;
+
+      if (rangeStart === null) {
+        rangeStart = local7;
+        prev = local7;
+        continue;
       }
 
-      inserted += rows.length;
+      if (local7 === prev + 1) {
+        prev = local7;
+        continue;
+      }
+
+      // close previous range
+      rangeRows.push({
+        area_code: areaCode,
+        start_local7: rangeStart,
+        end_local7: prev,
+        import_id: importId
+      });
+
+      if (rangeRows.length >= RANGE_INSERT_CHUNK) {
+        await flushRanges();
+      }
+
+      // start new range
+      rangeStart = local7;
+      prev = local7;
     }
 
-    // Update import count
+    // close final range
+    if (rangeStart !== null) {
+      rangeRows.push({
+        area_code: areaCode,
+        start_local7: rangeStart,
+        end_local7: prev,
+        import_id: importId
+      });
+    }
+
+    await flushRanges();
+
+    if (totalPhones === 0) {
+      return { statusCode: 400, body: JSON.stringify({ ok: false, error: 'No <ph> entries found in XML' }) };
+    }
+
+    // Update import count (phone count)
     const { error: updErr } = await adminClient
       .from(DNC_IMPORTS)
-      .update({ row_count: inserted })
+      .update({ row_count: totalPhones })
       .eq('id', importId);
 
     if (updErr) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ ok: false, error: `Update import row_count failed: ${updErr.message}` })
-      };
+      return { statusCode: 500, body: JSON.stringify({ ok: false, error: `Update import row_count failed: ${updErr.message}` }) };
     }
 
-    // Upsert area code to mark it active
+    // Upsert area code as active
     const { error: acErr } = await adminClient
       .from(DNC_AREA_CODES)
       .upsert(
-        {
-          area_code: areaCode,
-          active_import_id: importId,
-          updated_at: new Date().toISOString()
-        },
+        { area_code: areaCode, active_import_id: importId, updated_at: new Date().toISOString() },
         { onConflict: 'area_code' }
       );
 
     if (acErr) {
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ ok: false, error: `Upsert area code failed: ${acErr.message}` })
-      };
+      return { statusCode: 500, body: JSON.stringify({ ok: false, error: `Upsert area code failed: ${acErr.message}` }) };
     }
 
     return {
@@ -236,7 +222,8 @@ export async function handler(event) {
       body: JSON.stringify({
         ok: true,
         area_code: areaCode,
-        imported: inserted,
+        imported_phones: totalPhones,
+        inserted_ranges: totalRanges,
         replaced_previous: true,
         import_id: importId
       })
