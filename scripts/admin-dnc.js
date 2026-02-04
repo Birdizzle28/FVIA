@@ -134,7 +134,7 @@ async function uploadFiles(files){
 
     setStatus('Storage upload successful. Importing into database…');
 
-    const res = await fetch('/.netlify/functions/dnc-import', {
+    const res = await fetch('/.netlify/functions/dnc-import-background', {
       method: 'POST',
       headers: {
         Authorization: `Bearer ${token}`,
@@ -147,13 +147,13 @@ async function uploadFiles(files){
       })
     });
 
-    const text = await res.text().catch(() => '');
-    if (!res.ok){
+    if (!(res.ok || res.status === 202)) {
+      const text = await res.text().catch(() => '');
       setStatus(`Import failed (${res.status}). ${text ? 'Details: ' + text : ''}`, true);
       return;
     }
-
-    setStatus('Import successful. Previous list for this area code was replaced.');
+    
+    setStatus('Import started (running in background). Refresh in a bit to see results.');
   } catch (err){
     setStatus(`Upload/import error: ${err?.message || ''}`, true);
   }
