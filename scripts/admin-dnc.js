@@ -96,16 +96,6 @@ async function uploadFiles(files){
     return;
   }
 
-  const file = files[0];
-  const areaCode = parseAreaCodeFromFilename(file.name);
-
-  if (!areaCode){
-    setStatus('I could not detect an area code from the filename. Include a 3-digit area code (ex: 423.xml).', true);
-    return;
-  }
-
-  setStatus(`Uploading file to storage for area code: ${areaCode}…`);
-
   try {
     const supabase = window.supabaseClient || window.supabase;
     const { data: { session } = {} } = await supabase.auth.getSession();
@@ -116,44 +106,54 @@ async function uploadFiles(files){
       return;
     }
 
-    // Bucket name (create this in Supabase Storage)
     const bucket = 'dnc_uploads';
 
-    // Keep a stable "latest" file path per area code (true upsert behavior)
-    const storagePath = `${areaCode}/latest.xml`;
+    for (let i = 0; i < files.length; i++){
+      const file = files[i];
+      const areaCode = parseAreaCodeFromFilename(file.name);
 
-    const { error: upErr } = await supabase
-      .storage
-      .from(bucket)
-      .upload(storagePath, file, { upsert: true, contentType: 'text/xml' });
+      if (!areaCode){
+        setStatus(`Skipped ${file.name}: no 3-digit area code found in filename.`, true);
+        continue;
+      }
 
-    if (upErr){
-      setStatus(`Storage upload failed: ${upErr.message}`, true);
-      return;
+      setStatus(`(${i+1}/${files.length}) Uploading ${file.name} to storage (area code ${areaCode})…`);
+
+      const storagePath = `${areaCode}/latest.xml`;
+
+      const { error: upErr } = await supabase
+        .storage
+        .from(bucket)
+        .upload(storagePath, file, { upsert: true, contentType: 'text/xml' });
+
+      if (upErr){
+        setStatus(`Storage upload failed for ${file.name}: ${upErr.message}`, true);
+        continue;
+      }
+
+      setStatus(`(${i+1}/${files.length}) Storage uploaded. Starting background import for ${areaCode}…`);
+
+      const res = await fetch('/.netlify/functions/dnc-import-background', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          bucket,
+          path: storagePath,
+          original_filename: file.name
+        })
+      });
+
+      if (!(res.ok || res.status === 202)) {
+        const text = await res.text().catch(() => '');
+        setStatus(`Import start failed for ${file.name} (${res.status}). ${text ? 'Details: ' + text : ''}`, true);
+        continue;
+      }
     }
 
-    setStatus('Storage upload successful. Importing into database…');
-
-    const res = await fetch('/.netlify/functions/dnc-import-background', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${token}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        bucket,
-        path: storagePath,
-        original_filename: file.name
-      })
-    });
-
-    if (!(res.ok || res.status === 202)) {
-      const text = await res.text().catch(() => '');
-      setStatus(`Import failed (${res.status}). ${text ? 'Details: ' + text : ''}`, true);
-      return;
-    }
-    
-    setStatus('Import started (running in background). Refresh in a bit to see results.');
+    setStatus(`All selected files uploaded. Imports are running in the background. Refresh in a bit to see results.`);
   } catch (err){
     setStatus(`Upload/import error: ${err?.message || ''}`, true);
   }
