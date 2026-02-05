@@ -122,6 +122,10 @@ async function checkNationalDnc() {
 }
 
 function initDncUi() {
+  const btn = $("#dnc-check-btn");
+  if (btn && btn.dataset.bound === "1") return;
+  if (btn) btn.dataset.bound = "1";
+
   const local = $("#dnc-local7");
   local?.addEventListener("input", () => {
     const clean = normalizeLocal7Input(local.value);
@@ -129,7 +133,7 @@ function initDncUi() {
     local.closest(".field")?.classList.toggle("filled", !!clean);
   });
 
-  $("#dnc-check-btn")?.addEventListener("click", checkNationalDnc);
+  btn?.addEventListener("click", checkNationalDnc);
 
   local?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") {
@@ -1504,14 +1508,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Tabs
-  navs.dnc?.addEventListener("click", async () => {
-    showSection("dnc");
-    initDncUi();
-    await loadDncAreaCodesIntoDropdown();
-    setDncMsg("");
-    $("#dnc-result") && ($("#dnc-result").style.display = "none");
-  });
-  
   const navs = getNavButtons();
   navs.view?.addEventListener("click", () => showSection("view"));
   navs.submit?.addEventListener("click", () => showSection("submit"));
@@ -1520,6 +1516,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     showSection("contacts");
     await loadContacts();
   });
+
+  navs.dnc?.addEventListener("click", async () => {
+    showSection("dnc");
+    initDncUi();
+    await loadDncAreaCodesIntoDropdown();
+    setDncMsg("");
+    $("#dnc-result") && ($("#dnc-result").style.display = "none");
+  });
+  
 
   showSection("view");
 
