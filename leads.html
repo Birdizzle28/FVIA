@@ -66,6 +66,7 @@
 				<button id="nav-submit"  class="tab-button">Submit</button>
 				<button id="nav-request" class="tab-button">Request</button>
 				<button id="nav-contacts" class="tab-button">Contacts</button>
+				<button id="nav-dnc" class="tab-button">DNC List</button>
 			</div>
 	
 			<section id="contacts-section" class="lead-section" style="display:none;">
@@ -394,6 +395,41 @@
 						<p id="request-message" style="margin-top:8px;"></p>
 					</form>
 				</div>
+			</section>
+			<section id="dnc-list-section" class="lead-section" style="display:none;">
+			  <h3>National DNC List</h3>
+			
+			  <div class="card">
+			    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;">
+			      <div class="field" style="min-width:260px;flex:1;">
+			        <select id="dnc-area-code">
+			          <option value="" disabled selected hidden></option>
+			        </select>
+			        <label for="dnc-area-code">Area Code (only what we have)</label>
+			      </div>
+			
+			      <div class="field" style="min-width:220px;flex:1;">
+			        <input id="dnc-local7" type="text" inputmode="numeric" maxlength="7" placeholder=" ">
+			        <label for="dnc-local7">Last 7 digits</label>
+			      </div>
+			
+			      <button id="dnc-check-btn" class="btn btn--primary" type="button" style="height:44px;">
+			        <i class="fa-solid fa-magnifying-glass"></i> Check
+			      </button>
+			    </div>
+			
+			    <div style="margin-top:12px;">
+			      <div id="dnc-result" style="display:none;align-items:center;gap:10px;padding:12px;border:1px solid #e9eaf0;background:#fff;">
+			        <span id="dnc-dot" style="width:14px;height:14px;border-radius:999px;display:inline-block;border:1px solid rgba(255,255,255,.25);"></span>
+			        <div>
+			          <div id="dnc-result-title" style="font-weight:800;color:var(--indigo);">Ready</div>
+			          <div id="dnc-result-sub" style="font-size:13px;opacity:.8;">Select an area code and enter 7 digits.</div>
+			        </div>
+			      </div>
+			
+			      <p id="dnc-msg" style="margin-top:10px;"></p>
+			    </div>
+			  </div>
 			</section>
 		</main>
 		
