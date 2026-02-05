@@ -8,6 +8,137 @@ const PAGE_SIZE = 25;
 let contactChoices = null;
 
 // ---------- helpers ----------
+// ---------- DNC (national) ----------
+let dncChoices = null;
+
+function setDncMsg(text, isError = false) {
+  const el = $("#dnc-msg");
+  if (!el) return;
+  el.style.color = isError ? "#b00020" : "";
+  el.textContent = text || "";
+}
+
+function normalizeLocal7Input(v) {
+  return String(v || "").replace(/\D/g, "").slice(0, 7);
+}
+
+function showDncResult({ onList, areaCode, local7 }) {
+  const box = $("#dnc-result");
+  const dot = $("#dnc-dot");
+  const title = $("#dnc-result-title");
+  const sub = $("#dnc-result-sub");
+  if (!box || !dot || !title || !sub) return;
+
+  box.style.display = "flex";
+
+  // Red neon (on list) / Blue neon (not on list)
+  if (onList) {
+    dot.style.background = "#ff2a2a";
+    dot.style.boxShadow = "0 0 10px rgba(255,42,42,.85), 0 0 18px rgba(255,42,42,.6)";
+    title.textContent = "ON NATIONAL DNC (Do NOT call)";
+  } else {
+    dot.style.background = "#27b7ff";
+    dot.style.boxShadow = "0 0 10px rgba(39,183,255,.8), 0 0 18px rgba(39,183,255,.55)";
+    title.textContent = "NOT on our DNC list (OK to call)";
+  }
+
+  sub.textContent = `Checked: (${areaCode}) ${String(local7).padStart(7, "0")}`;
+}
+
+async function loadDncAreaCodesIntoDropdown() {
+  const sel = $("#dnc-area-code");
+  if (!sel) return;
+
+  const { data, error } = await supabase
+    .from("dnc_area_codes")
+    .select("area_code")
+    .order("area_code", { ascending: true });
+
+  if (error) {
+    console.error("load dnc_area_codes error:", error);
+    setDncMsg("Failed to load area codes.", true);
+    return;
+  }
+
+  const codes = (data || [])
+    .map(r => String(r.area_code || "").trim())
+    .filter(Boolean);
+
+  sel.innerHTML = `<option value="" disabled selected hidden></option>`;
+  codes.forEach(code => {
+    const opt = document.createElement("option");
+    opt.value = code;
+    opt.textContent = code;
+    sel.appendChild(opt);
+  });
+
+  if (window.Choices) {
+    if (dncChoices) dncChoices.destroy();
+    dncChoices = new Choices(sel, {
+      searchEnabled: true,
+      shouldSort: true,
+      placeholder: true,
+      placeholderValue: "Search area codes…",
+      itemSelectText: "",
+    });
+  }
+
+  initFloatingLabels(document);
+}
+
+async function checkNationalDnc() {
+  const areaCode = ($("#dnc-area-code")?.value || "").trim();
+  const localRaw = normalizeLocal7Input($("#dnc-local7")?.value);
+
+  setDncMsg("");
+
+  if (!areaCode) {
+    setDncMsg("Pick an area code first (only what we have).", true);
+    return;
+  }
+  if (localRaw.length !== 7) {
+    setDncMsg("Enter exactly 7 digits for the last 7 digits.", true);
+    return;
+  }
+
+  const local7 = parseInt(localRaw, 10);
+
+  const { data, error } = await supabase
+    .from("dnc_ranges")
+    .select("id")
+    .eq("area_code", areaCode)
+    .lte("start_local7", local7)
+    .gte("end_local7", local7)
+    .limit(1);
+
+  if (error) {
+    console.error("dnc_ranges check error:", error);
+    setDncMsg("DNC check failed.", true);
+    return;
+  }
+
+  const onList = (data || []).length > 0;
+  showDncResult({ onList, areaCode, local7: localRaw });
+}
+
+function initDncUi() {
+  const local = $("#dnc-local7");
+  local?.addEventListener("input", () => {
+    const clean = normalizeLocal7Input(local.value);
+    local.value = clean;
+    local.closest(".field")?.classList.toggle("filled", !!clean);
+  });
+
+  $("#dnc-check-btn")?.addEventListener("click", checkNationalDnc);
+
+  local?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      checkNationalDnc();
+    }
+  });
+}
+
 async function exportSelectedLeads(format) {
   const ids = $$(".lead-checkbox:checked").map(cb => cb.dataset.id).filter(Boolean);
   if (!ids.length) return;
@@ -393,6 +524,7 @@ const getNavButtons = () => ({
   submit: $("#nav-submit"),
   request: $("#nav-request"),
   contacts: $("#nav-contacts"),
+  dnc: $("#nav-dnc"),
 });
 
 const getSections = () => ({
@@ -400,6 +532,7 @@ const getSections = () => ({
   submit: $("#submit-lead-section"),
   request: $("#request-leads-section"),
   contacts: $("#contacts-section"),
+  dnc: $("#dnc-list-section"),
 });
 
 function hideAll() {
@@ -1371,6 +1504,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Tabs
+  navs.dnc?.addEventListener("click", async () => {
+    showSection("dnc");
+    initDncUi();
+    await loadDncAreaCodesIntoDropdown();
+    setDncMsg("");
+    $("#dnc-result") && ($("#dnc-result").style.display = "none");
+  });
+  
   const navs = getNavButtons();
   navs.view?.addEventListener("click", () => showSection("view"));
   navs.submit?.addEventListener("click", () => showSection("submit"));
