@@ -105,7 +105,7 @@ async function checkNationalDnc() {
 
   const { data, error } = await supabase
     .from("dnc_ranges")
-    .select("id")
+    .select("area_code") // any existing column works
     .eq("area_code", areaCode)
     .lte("start_local7", local7)
     .gte("end_local7", local7)
