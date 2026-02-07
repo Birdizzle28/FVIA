@@ -694,7 +694,7 @@ async function ensureContactIdFromLeadForm() {
     first_name: $("#lead-first")?.value?.trim() || null,
     last_name: $("#lead-last")?.value?.trim() || null,
     phones: phones.length ? phones : null,
-
+    owning_agent_id: (await supabase.auth.getSession()).data.session.user.id,
     address_line1: $("#lead-address")?.value?.trim() || null,
     address_line2: null,
 
