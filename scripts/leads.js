@@ -774,7 +774,7 @@ async function ensureContactIdFromLeadForm() {
   const { data: inserted, error } = await supabase
     .from("contacts")
     .insert(contactPayload)
-    .select("id")
+    .select("id, needs_dnc_check")
     .single();
 
   if (error) {
@@ -782,6 +782,8 @@ async function ensureContactIdFromLeadForm() {
     throw error;
   }
 
+  console.log("[CONTACT INSERT RESULT]", inserted);
+  
   await initContactPicker();
   return inserted.id;
 }
@@ -1254,7 +1256,7 @@ function renderContacts() {
       <div>${
         selectMode
           ? `<input type="checkbox" class="contact-cb" data-id="${c.id}" ${checked}>`
-          : `${dotHtml(!!c.needs_dnc_check)}`
+          : `${dotHtml((c.needs_dnc_check === true) || (c.needs_dnc_check === 1) || (String(c.needs_dnc_check).toLowerCase() === "true"))}`
       }</div>
       <div><i class="fa-solid fa-id-card-clip" style="margin-right:6px;"></i>${name}</div>
       <div><i class="fa-solid fa-phone" style="margin-right:6px;"></i>${phone || "—"}</div>
