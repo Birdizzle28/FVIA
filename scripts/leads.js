@@ -437,10 +437,9 @@ function dotHtml(needsDncCheck) {
 
 // if lead has its own needs_dnc_check use it; otherwise fall back to the linked contact status
 function leadNeedsDnc(lead, contactMap) {
-  if (typeof lead.needs_dnc_check === "boolean") return lead.needs_dnc_check;
   const c = lead.contact_id ? contactMap.get(lead.contact_id) : null;
   if (c && typeof c.needs_dnc_check === "boolean") return c.needs_dnc_check;
-  // safest default: if unknown, treat as needs check
+  // safest default: if unknown contact state, treat as needs check (red)
   return true;
 }
 // ---------- floating labels ----------
