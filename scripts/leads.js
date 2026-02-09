@@ -695,6 +695,7 @@ function phoneToAreaAndLocal7(phone) {
 
 async function isPhoneOnNationalDnc(phone) {
   const parts = phoneToAreaAndLocal7(phone);
+  console.log("[DNC CHECK] raw:", phone, "parts:", parts);
   if (!parts) return false;
 
   const { areaCode, local7Int } = parts;
@@ -746,6 +747,7 @@ async function ensureContactIdFromLeadForm() {
 
   const phones = getPhoneValues();
   const onNationalDnc = await phonesOnNationalDnc(phones);
+  console.log("[CONTACT CREATE] phones:", phones, "onNationalDnc:", onNationalDnc);
   // ✅ contacts schema uses address_line1 / address_line2 (NOT address)
   const contactPayload = {
     first_name: $("#lead-first")?.value?.trim() || null,
