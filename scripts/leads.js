@@ -1454,7 +1454,7 @@ function submitLeadToSupabase(agentProfile) {
       notes: $("#lead-notes")?.value?.trim() || null,
 
       phone: phones,
-      needs_dnc_check: contactNeedsDnc,
+      
       submitted_by: session.user.id,
       assigned_to: session.user.id,
 
