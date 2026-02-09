@@ -681,6 +681,64 @@ async function initContactPicker() {
 
   initFloatingLabels(document);
 }
+function digits10(v) {
+  return String(v || "").replace(/\D/g, "").slice(-10);
+}
+
+function phoneToAreaAndLocal7(phone) {
+  const d = digits10(phone);
+  if (d.length !== 10) return null;
+  const areaCode = d.slice(0, 3);
+  const local7Str = d.slice(3);        // keep leading zeros here (7 chars)
+  const local7Int = parseInt(local7Str, 10); // integer for db compare
+  return { areaCode, local7Str, local7Int };
+}
+
+async function isPhoneOnNationalDnc(phone) {
+  const parts = phoneToAreaAndLocal7(phone);
+  if (!parts) return false;
+
+  const { areaCode, local7Int } = parts;
+
+  const { data, error } = await supabase
+    .from("dnc_ranges")
+    .select("area_code")     // pick any existing column
+    .eq("area_code", areaCode)
+    .lte("start_local7", local7Int)
+    .gte("end_local7", local7Int)
+    .limit(1);
+
+  if (error) {
+    console.error("dnc_ranges check error:", error);
+    // safest: if DNC check fails, treat as RED (on DNC) so you don't accidentally call
+    return true;
+  }
+
+  return (data || []).length > 0;
+}
+
+async function phonesOnNationalDnc(phones) {
+  const list = Array.isArray(phones) ? phones : [];
+  for (const p of list) {
+    if (await isPhoneOnNationalDnc(p)) return true; // ANY phone on DNC => RED
+  }
+  return false; // none on DNC => BLUE
+}
+
+async function getContactNeedsDnc(contactId) {
+  const { data, error } = await supabase
+    .from("contacts")
+    .select("needs_dnc_check")
+    .eq("id", contactId)
+    .single();
+
+  if (error) {
+    console.error("getContactNeedsDnc error:", error);
+    // safest fallback: RED
+    return true;
+  }
+  return !!data?.needs_dnc_check;
+}
 
 async function ensureContactIdFromLeadForm() {
   const picker = document.getElementById("contact-picker");
@@ -688,7 +746,7 @@ async function ensureContactIdFromLeadForm() {
   if (chosenId) return chosenId;
 
   const phones = getPhoneValues();
-
+  const onNationalDnc = await phonesOnNationalDnc(phones);
   // ✅ contacts schema uses address_line1 / address_line2 (NOT address)
   const contactPayload = {
     first_name: $("#lead-first")?.value?.trim() || null,
@@ -697,11 +755,11 @@ async function ensureContactIdFromLeadForm() {
     owning_agent_id: (await supabase.auth.getSession()).data.session.user.id,
     address_line1: $("#lead-address")?.value?.trim() || null,
     address_line2: null,
-
     city: $("#lead-city")?.value?.trim() || null,
     state: $("#lead-state")?.value || null,
     zip: $("#lead-zip")?.value?.trim() || null,
     notes: $("#lead-notes")?.value?.trim() || null,
+    needs_dnc_check: onNationalDnc,
   };
 
   const { data: inserted, error } = await supabase
@@ -1364,6 +1422,7 @@ function submitLeadToSupabase(agentProfile) {
       }
     }
     let contactId = null;
+    
     try {
       contactId = await ensureContactIdFromLeadForm();
       // ❌ INTERNAL DNC BLOCK
@@ -1376,7 +1435,11 @@ function submitLeadToSupabase(agentProfile) {
       if (msg) msg.textContent = "Failed creating contact.";
       return;
     }
-
+    
+    const contactNeedsDnc = chosenId
+      ? await getContactNeedsDnc(contactId)      // attach => use existing contact color
+      : await getContactNeedsDnc(contactId);     // new contact just created => read it back
+    
     const payload = {
       first_name: $("#lead-first")?.value?.trim() || null,
       last_name: $("#lead-last")?.value?.trim() || null,
@@ -1391,7 +1454,7 @@ function submitLeadToSupabase(agentProfile) {
       notes: $("#lead-notes")?.value?.trim() || null,
 
       phone: phones,
-
+      needs_dnc_check: contactNeedsDnc,
       submitted_by: session.user.id,
       assigned_to: session.user.id,
 
