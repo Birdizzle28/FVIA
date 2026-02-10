@@ -400,23 +400,57 @@ function toE164(v) {
   return `+${d}`;
 }
 
+function vcardEscape(v) {
+  return String(v || "")
+    .replace(/\\/g, "\\\\")
+    .replace(/\n/g, "\\n")
+    .replace(/;/g, "\\;")
+    .replace(/,/g, "\\,");
+}
+
 function contactToVCard(c) {
   const first = c.first_name || "";
-  const last = c.last_name || "";
-  const org = "Family Values Group";
+  const last  = c.last_name || "";
+
+  // ✅ Change org name
+  const org = "FVG Prospect";
+
   const phones = Array.isArray(c.phones) ? c.phones : (c.phones ? [c.phones] : []);
   const emails = Array.isArray(c.emails) ? c.emails : (c.emails ? [c.emails] : []);
+
+  // ✅ Include address (if present)
+  const addr1 = (c.address_line1 || "").trim();
+  const addr2 = (c.address_line2 || "").trim();
+  const street = [addr1, addr2].filter(Boolean).join(" ").trim();
+  const city  = (c.city || "").trim();
+  const state = (c.state || "").trim();
+  const zip   = (c.zip || "").trim();
+
+  const hasAddress = !!(street || city || state || zip);
+
+  // ✅ Include notes (if present)
+  const note = (c.notes || "").trim();
 
   const lines = [
     "BEGIN:VCARD",
     "VERSION:3.0",
-    `N:${last};${first};;;`,
-    `FN:${[first, last].filter(Boolean).join(" ") || "Contact"}`,
-    `ORG:${org}`,
+    `N:${vcardEscape(last)};${vcardEscape(first)};;;`,
+    `FN:${vcardEscape([first, last].filter(Boolean).join(" ") || "Contact")}`,
+    `ORG:${vcardEscape(org)}`,
+
     ...phones.map((p) => `TEL;TYPE=CELL:${toE164(p) || p}`),
-    ...emails.map((e) => `EMAIL;TYPE=INTERNET:${e}`),
+    ...emails.map((e) => `EMAIL;TYPE=INTERNET:${vcardEscape(e)}`),
+
+    // ADR format: PO Box;Extended;Street;City;Region;Postal;Country
+    ...(hasAddress
+      ? [`ADR;TYPE=HOME:;;${vcardEscape(street)};${vcardEscape(city)};${vcardEscape(state)};${vcardEscape(zip)};USA`]
+      : []),
+
+    ...(note ? [`NOTE:${vcardEscape(note)}`] : []),
+
     "END:VCARD",
   ];
+
   return lines.join("\r\n");
 }
 
