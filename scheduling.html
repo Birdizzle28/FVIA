@@ -68,29 +68,68 @@
 
       <!-- Appointment Booking Form w/ Floating Labels -->
       <form id="appointment-form" class="fl-form">
-        <div class="fl-field">
-          <input type="text" id="title" name="title" autocomplete="off" />
-          <label for="title">Appointment Title</label>
-        </div>
 
-        <div class="row">
-          <div class="fl-field grow">
-            <input type="text" id="client-name" name="clientName" autocomplete="off" />
-            <label for="client-name">Client Name</label>
-          </div>
-          <div class="fl-field grow">
-            <input type="text" id="client-contact" name="clientContact" autocomplete="off" />
-            <label for="client-contact">Client Contact (Email or Phone)</label>
-          </div>
-        </div>
-
-        <div class="fl-field">
-          <input type="text" id="datetime" name="datetime" required autocomplete="off" />
-          <label for="datetime">Date & Time</label>
-        </div>
-
-        <button type="submit" id="create-appointment" class="btn-primary">Create Appointment</button>
-      </form>
+			  <div class="fl-field">
+			    <input type="text" id="title" name="title" autocomplete="off" required />
+			    <label for="title">Title</label>
+			  </div>
+			
+			  <div class="fl-field">
+			    <select id="location-type" name="locationType" required>
+			      <option value="" disabled selected hidden></option>
+			      <option value="physical">Physical Address</option>
+			      <option value="virtual">Virtual</option>
+			    </select>
+			    <label for="location-type">Location</label>
+			  </div>
+			
+			  <div class="fl-field" id="location-address-wrap" style="display:none;">
+			    <input type="text" id="location-address" name="locationAddress" autocomplete="off" />
+			    <label for="location-address">Physical Address</label>
+			  </div>
+			
+			  <div class="row">
+			    <div class="fl-field grow">
+			      <input type="text" id="starts" name="starts" required autocomplete="off" />
+			      <label for="starts">Starts</label>
+			    </div>
+			
+			    <div class="fl-field grow">
+			      <input type="text" id="ends" name="ends" required autocomplete="off" />
+			      <label for="ends">Ends</label>
+			    </div>
+			  </div>
+			
+			  <div class="fl-field">
+			    <select id="repeat-rule" name="repeatRule">
+			      <option value="never" selected>Never</option>
+			      <option value="daily">Everyday</option>
+			      <option value="weekly">Every Week</option>
+			      <option value="biweekly">Every Two Weeks</option>
+			      <option value="monthly">Every Month</option>
+			      <option value="yearly">Every Year</option>
+			      <option value="custom">Custom</option>
+			    </select>
+			    <label for="repeat-rule">Repeat</label>
+			  </div>
+			
+			  <div class="fl-field" id="repeat-custom-wrap" style="display:none;">
+			    <textarea id="repeat-custom" name="repeatCustom" rows="3"></textarea>
+			    <label for="repeat-custom">Custom Repeat (notes)</label>
+			  </div>
+			
+			  <div class="fl-field">
+			    <input type="url" id="url" name="url" autocomplete="off" placeholder=" " />
+			    <label for="url">URL</label>
+			  </div>
+			
+			  <div class="fl-field">
+			    <textarea id="notes" name="notes" rows="4"></textarea>
+			    <label for="notes">Notes</label>
+			  </div>
+			
+		  	<button type="submit" id="create-appointment" class="btn-primary">Create Appointment</button>
+			</form>
 
       <!-- Calendar -->
       <div id="calendar" class="calendar-card"></div>
