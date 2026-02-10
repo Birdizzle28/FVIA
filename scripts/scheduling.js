@@ -46,6 +46,46 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   if (!form) return;
 
+  function addMinutes(date, minutes) {
+    return new Date(date.getTime() + minutes * 60000);
+  }
+  
+  function sameOrAfter(a, b) { return a.getTime() >= b.getTime(); }
+  function sameOrBefore(a, b) { return a.getTime() <= b.getTime(); }
+  
+  function getDurationMinutes(start, end) {
+    if (!start || !end) return 30;
+    const ms = end.getTime() - start.getTime();
+    return Math.max(5, Math.round(ms / 60000));
+  }
+  
+  function clampToRange(dt, rangeStart, rangeEnd) {
+    return dt.getTime() >= rangeStart.getTime() && dt.getTime() < rangeEnd.getTime();
+  }
+  
+  function addMonths(d, months) {
+    const x = new Date(d);
+    const day = x.getDate();
+    x.setMonth(x.getMonth() + months);
+  
+    // handle month rollover (e.g., Jan 31 -> Feb)
+    if (x.getDate() !== day) {
+      x.setDate(0); // last day of previous month
+    }
+    return x;
+  }
+  
+  function addYears(d, years) {
+    const x = new Date(d);
+    x.setFullYear(x.getFullYear() + years);
+    return x;
+  }
+  
+  // Builds a per-occurrence id so FullCalendar doesn’t treat all instances as same event
+  function occId(baseId, occStart) {
+    return `${baseId}__${occStart.toISOString()}`;
+  }
+  
   /* ---------------- Choices.js (optional) ---------------- */
   let locationChoices = null;
   let repeatChoices = null;
