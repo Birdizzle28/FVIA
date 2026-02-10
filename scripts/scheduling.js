@@ -213,101 +213,151 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   const calendarEl = document.getElementById('calendar');
-  const initialEvents = await loadAppointments();
-
-  /* ---------------- FullCalendar ---------------- */
-  const calendar = new FullCalendar.Calendar(calendarEl, {
-    initialView: 'dayGridMonth',
-    headerToolbar: {
-      left: 'prev,next today',
-      center: 'title',
-      right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
-    },
-    editable: true,
-    selectable: true,
-    events: initialEvents,
-
-    dateClick: (info) => {
-      // Prefill Starts/Ends when clicking a date
-      const start = info.date;
-      const end = new Date(start.getTime() + 30 * 60000); // default 30 mins
-      fpStart.setDate(start, true);
-      fpEnd.setDate(end, true);
-      titleInput?.focus();
-      form.scrollIntoView({ behavior: 'smooth' });
-    },
-
-    eventClick: async (info) => {
-      const ev = info.event;
-      const p = ev.extendedProps || {};
-
-      const startText = ev.start ? new Date(ev.start).toLocaleString() : "";
-      const endText = ev.end ? new Date(ev.end).toLocaleString() : "";
-
-      const lines = [
-        `Title: ${ev.title}`,
-        p.location_type ? `Location: ${p.location_type === "physical" ? "Physical" : "Virtual"}` : "",
-        p.location_address ? `Address: ${p.location_address}` : "",
-        p.url ? `URL: ${p.url}` : "",
-        startText ? `Starts: ${startText}` : "",
-        endText ? `Ends: ${endText}` : "",
-        p.repeat_rule ? `Repeat: ${p.repeat_rule}` : "",
-        p.repeat_custom ? `Custom: ${p.repeat_custom}` : "",
-        p.notes ? `Notes: ${p.notes}` : "",
-        "",
-        "Delete this appointment?"
-      ].filter(Boolean).join("\n");
-
-      const ok = confirm(lines);
-      if (!ok) return;
-
-      const { error } = await supabase.from('appointments').delete().eq('id', ev.id);
-      if (error) { alert('Failed to delete appointment.'); console.error(error); return; }
-      ev.remove();
-    },
-
-    eventDrop: async (info) => {
-      const ev = info.event;
-      if (!ev.start) { info.revert(); return; }
-
-      // keep duration when dragging
-      let newEndIso = null;
-      if (ev.end) newEndIso = ev.end.toISOString();
-
-      const { error } = await supabase
-        .from('appointments')
-        .update({
-          scheduled_for: ev.start.toISOString(),
-          ends_at: newEndIso
-        })
-        .eq('id', ev.id);
-
-      if (error) {
-        alert('Could not reschedule (reverting).');
-        console.error(error);
-        info.revert();
+  async function fetchSeriesRows() {
+    const { data, error } = await supabase
+      .from('appointments')
+      .select(`
+        id,
+        agent_id,
+        scheduled_for,
+        ends_at,
+        title,
+        location_type,
+        location_address,
+        repeat_rule,
+        repeat_custom,
+        url,
+        notes
+      `)
+      .order('scheduled_for', { ascending: true });
+  
+    if (error) throw error;
+  
+    // show only my appointments (keep your current behavior)
+    return (data || []).filter(r => r.agent_id === user.id);
+  }
+  
+  function expandSeriesIntoRange(row, rangeStart, rangeEnd) {
+    const rule = (row.repeat_rule || "never").toLowerCase();
+  
+    const seriesStart = new Date(row.scheduled_for);
+    const seriesEnd = row.ends_at ? new Date(row.ends_at) : addMinutes(seriesStart, 30);
+    const durMin = getDurationMinutes(seriesStart, seriesEnd);
+  
+    const baseTitle = (row.title || "Appointment").trim() || "Appointment";
+  
+    const baseProps = {
+      series_id: row.id,
+      is_occurrence: rule !== "never",
+      location_type: row.location_type || null,
+      location_address: row.location_address || null,
+      repeat_rule: row.repeat_rule || "never",
+      repeat_custom: row.repeat_custom || null,
+      url: row.url || null,
+      notes: row.notes || null,
+    };
+  
+    const out = [];
+  
+    // NEVER: just include if it intersects the range
+    if (rule === "never" || rule === "") {
+      // include if start is within range OR overlaps range
+      const startsIn = clampToRange(seriesStart, rangeStart, rangeEnd);
+      const endsIn = clampToRange(seriesEnd, rangeStart, rangeEnd);
+      const overlaps = seriesStart < rangeEnd && seriesEnd > rangeStart;
+  
+      if (startsIn || endsIn || overlaps) {
+        out.push({
+          id: row.id,
+          title: baseTitle,
+          start: seriesStart.toISOString(),
+          end: seriesEnd.toISOString(),
+          allDay: false,
+          extendedProps: baseProps,
+        });
       }
-    },
-
-    eventResize: async (info) => {
-      const ev = info.event;
-      if (!ev.start) { info.revert(); return; }
-
-      const { error } = await supabase
-        .from('appointments')
-        .update({
-          scheduled_for: ev.start.toISOString(),
-          ends_at: ev.end ? ev.end.toISOString() : null
-        })
-        .eq('id', ev.id);
-
-      if (error) {
-        alert('Could not update duration (reverting).');
-        console.error(error);
-        info.revert();
+      return out;
+    }
+  
+    // CUSTOM (for now): store it but don’t auto-generate until you define structure
+    if (rule === "custom") {
+      // MVP behavior: show only the base occurrence if it’s in range
+      if (clampToRange(seriesStart, rangeStart, rangeEnd)) {
+        out.push({
+          id: occId(row.id, seriesStart),
+          title: baseTitle,
+          start: seriesStart.toISOString(),
+          end: addMinutes(seriesStart, durMin).toISOString(),
+          allDay: false,
+          extendedProps: baseProps,
+        });
+      }
+      return out;
+    }
+  
+    // For repeating rules: generate occurrences within range
+    // Start from the seriesStart and step forward until we pass rangeEnd
+    let cur = new Date(seriesStart);
+  
+    // Optimization: fast-forward near rangeStart for daily/weekly/biweekly
+    if (rule === "daily" || rule === "weekly" || rule === "biweekly") {
+      const stepDays = rule === "daily" ? 1 : (rule === "weekly" ? 7 : 14);
+      if (cur < rangeStart) {
+        const diffDays = Math.floor((rangeStart - cur) / (24 * 60 * 60 * 1000));
+        const jumps = Math.floor(diffDays / stepDays);
+        cur = new Date(cur.getTime() + jumps * stepDays * 24 * 60 * 60 * 1000);
+        // if still behind, step until >= rangeStart
+        while (cur < rangeStart) cur = new Date(cur.getTime() + stepDays * 24 * 60 * 60 * 1000);
       }
     }
-  });
+  
+    // Generate occurrences
+    while (cur < rangeEnd) {
+      const occStart = new Date(cur);
+      const occEnd = addMinutes(occStart, durMin);
+  
+      // Only include if it intersects the visible range
+      if (occStart < rangeEnd && occEnd > rangeStart) {
+        out.push({
+          id: occId(row.id, occStart),
+          title: baseTitle,
+          start: occStart.toISOString(),
+          end: occEnd.toISOString(),
+          allDay: false,
+          extendedProps: { ...baseProps, occurrence_start: occStart.toISOString() },
+        });
+      }
+  
+      // Step forward
+      if (rule === "daily") cur = new Date(cur.getTime() + 1 * 24 * 60 * 60 * 1000);
+      else if (rule === "weekly") cur = new Date(cur.getTime() + 7 * 24 * 60 * 60 * 1000);
+      else if (rule === "biweekly") cur = new Date(cur.getTime() + 14 * 24 * 60 * 60 * 1000);
+      else if (rule === "monthly") cur = addMonths(cur, 1);
+      else if (rule === "yearly") cur = addYears(cur, 1);
+      else break; // safety
+    }
+  
+    return out;
+  }
+  
+  async function eventSourceByViewRange(info, successCallback, failureCallback) {
+    try {
+      const rows = await fetchSeriesRows();
+  
+      const rangeStart = info.start; // Date
+      const rangeEnd = info.end;     // Date
+  
+      const expanded = [];
+      for (const row of rows) {
+        expanded.push(...expandSeriesIntoRange(row, rangeStart, rangeEnd));
+      }
+  
+      successCallback(expanded);
+    } catch (err) {
+      console.error("Failed to load events:", err);
+      failureCallback(err);
+    }
+  }
 
   calendar.render();
 
