@@ -1,119 +1,134 @@
-// scripts/scheduling.js
+// scripts/scheduling.js — upgraded form fields + schema support
+
 document.addEventListener('DOMContentLoaded', async () => {
-    /* ---------------- Auth gate + header dropdown ---------------- */
+  /* ---------------- Auth gate ---------------- */
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) { window.location.href = 'login.html'; return; }
   const user = session.user;
-  
-  /* ---------------- Flatpickr ---------------- */
-  const dtInput = document.getElementById('datetime');
-  const fp = flatpickr('#datetime', {
-    enableTime: true,
-    dateFormat: 'Y-m-d H:i',
-    minDate: 'today'
-  });
 
-  /* ---------------- Helpers ---------------- */
+  /* ---------------- Floating Labels ---------------- */
   function initFloatingLabels(scope = document){
     const fields = scope.querySelectorAll('.fl-field');
     fields.forEach(fl => {
       const input = fl.querySelector('input, textarea, select');
       if (!input) return;
 
-      const setHV = () => fl.classList.toggle('has-value', !!input.value.trim());
-      setHV(); // initial (handles browser autofill)
+      const setHV = () => {
+        const val = (input.tagName === "SELECT") ? (input.value || "") : (input.value || "").trim();
+        fl.classList.toggle('has-value', !!val);
+      };
 
+      setHV();
       input.addEventListener('focus', () => fl.classList.add('is-focused'));
       input.addEventListener('blur',  () => { fl.classList.remove('is-focused'); setHV(); });
       input.addEventListener('input', setHV);
       input.addEventListener('change', setHV);
     });
   }
-  initFloatingLabels();
-  const toE164 = (v) => {
-    if (!v) return null;
-    const s = String(v).trim();
-    if (s.startsWith('+')) return s.replace(/[^\d+]/g, '');
-    const d = s.replace(/\D/g, '');
-    if (!d) return null;
-    if (d.length === 10) return `+1${d}`;
-    if (d.length === 11 && d.startsWith('1')) return `+${d}`;
-    return `+${d}`;
-  };
-  const isEmail = (s) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s || '');
 
-  function splitName(full) {
-    const t = (full || '').trim();
-    if (!t) return { first: null, last: null };
-    const parts = t.split(/\s+/);
-    if (parts.length === 1) return { first: parts[0], last: null };
-    return { first: parts.slice(0, -1).join(' '), last: parts.slice(-1)[0] };
+  /* ---------------- Elements ---------------- */
+  const form = document.getElementById('appointment-form');
+  const titleInput = document.getElementById('title');
+
+  const locationType = document.getElementById('location-type');
+  const locationAddressWrap = document.getElementById('location-address-wrap');
+  const locationAddress = document.getElementById('location-address');
+
+  const startsInput = document.getElementById('starts');
+  const endsInput = document.getElementById('ends');
+
+  const repeatRule = document.getElementById('repeat-rule');
+  const repeatCustomWrap = document.getElementById('repeat-custom-wrap');
+  const repeatCustom = document.getElementById('repeat-custom');
+
+  const urlInput = document.getElementById('url');
+  const notesInput = document.getElementById('notes');
+
+  if (!form) return;
+
+  /* ---------------- Choices.js (optional) ---------------- */
+  let locationChoices = null;
+  let repeatChoices = null;
+
+  function initChoices() {
+    if (!window.Choices) return;
+
+    if (locationType) {
+      if (locationChoices) locationChoices.destroy();
+      locationChoices = new Choices(locationType, {
+        searchEnabled: false,
+        shouldSort: false,
+        itemSelectText: "",
+        placeholder: true,
+        placeholderValue: "Select…",
+      });
+    }
+
+    if (repeatRule) {
+      if (repeatChoices) repeatChoices.destroy();
+      repeatChoices = new Choices(repeatRule, {
+        searchEnabled: false,
+        shouldSort: false,
+        itemSelectText: "",
+      });
+    }
   }
 
-  async function findOrCreateContact({ fullName, contactValue }) {
-    const { first, last } = splitName(fullName);
-    const email = isEmail(contactValue) ? contactValue.trim() : null;
-    const phoneE164 = !email ? toE164(contactValue) : null;
-    const phone10   = phoneE164 ? phoneE164.replace(/\D/g, '').slice(-10) : null;
+  /* ---------------- Flatpickr ---------------- */
+  const fpStart = flatpickr('#starts', {
+    enableTime: true,
+    dateFormat: 'Y-m-d H:i',
+    minDate: 'today'
+  });
 
-    // 1) Try by exact email in contacts.emails[]
-    if (email) {
-      const r = await supabase
-        .from('contacts')
-        .select('id, emails, phones, first_name, last_name')
-        .contains('emails', [email])
-        .maybeSingle();
-      if (r.data) return r.data.id;
-    }
-    // 2) Try by E.164 in contacts.phones[]
-    if (phoneE164) {
-      const r = await supabase
-        .from('contacts')
-        .select('id, phones')
-        .contains('phones', [phoneE164])
-        .maybeSingle();
-      if (r.data) return r.data.id;
-    }
-    // 3) Try by 10-digit in contacts.phones[]
-    if (phone10) {
-      const r = await supabase
-        .from('contacts')
-        .select('id, phones')
-        .contains('phones', [phone10])
-        .maybeSingle();
-      if (r.data) return r.data.id;
-    }
+  const fpEnd = flatpickr('#ends', {
+    enableTime: true,
+    dateFormat: 'Y-m-d H:i',
+    minDate: 'today'
+  });
 
-    // 4) Create new contact (store both E.164 and 10-digit if available)
-    const phonesArr = [];
-    if (phoneE164) phonesArr.push(phoneE164);
-    if (phone10 && phone10 !== phoneE164?.replace(/\D/g, '').slice(-10)) phonesArr.push(phone10);
-    const emailsArr = email ? [email] : [];
-
-    const { data: inserted, error } = await supabase.from('contacts').insert({
-      first_name: first,
-      last_name:  last,
-      // full_name is a generated column — will populate automatically
-      phones: phonesArr,
-      emails: emailsArr,
-      owning_agent_id: user.id
-    }).select('id').single();
-
-    if (error) throw error;
-    return inserted.id;
+  function toggleLocationFields() {
+    const v = (locationType?.value || "").toLowerCase();
+    const showPhysical = v === "physical";
+    if (locationAddressWrap) locationAddressWrap.style.display = showPhysical ? "block" : "none";
+    if (!showPhysical && locationAddress) locationAddress.value = "";
+    initFloatingLabels(document);
   }
 
-  /* ---------------- Load appointments -> FullCalendar events ---------------- */
+  function toggleRepeatCustom() {
+    const v = (repeatRule?.value || "").toLowerCase();
+    const show = v === "custom";
+    if (repeatCustomWrap) repeatCustomWrap.style.display = show ? "block" : "none";
+    if (!show && repeatCustom) repeatCustom.value = "";
+    initFloatingLabels(document);
+  }
+
+  locationType?.addEventListener("change", toggleLocationFields);
+  repeatRule?.addEventListener("change", toggleRepeatCustom);
+
+  initChoices();
+  initFloatingLabels(document);
+  toggleLocationFields();
+  toggleRepeatCustom();
+
+  /* ---------------- Load appointments ---------------- */
   async function loadAppointments() {
-    // Join contact for name display
     const { data, error } = await supabase
       .from('appointments')
       .select(`
         id,
-        scheduled_for,
-        lead_id,
+        agent_id,
         contact_id,
-        contacts:contact_id ( first_name, last_name, full_name )
+        lead_id,
+        scheduled_for,
+        ends_at,
+        title,
+        location_type,
+        location_address,
+        repeat_rule,
+        repeat_custom,
+        url,
+        notes
       `)
       .order('scheduled_for', { ascending: true });
 
@@ -123,18 +138,35 @@ document.addEventListener('DOMContentLoaded', async () => {
       return [];
     }
 
-    return (data || []).map(row => {
-      const name = row.contacts?.full_name
-                || [row.contacts?.first_name, row.contacts?.last_name].filter(Boolean).join(' ')
-                || 'Appointment';
+    // show only my appointments (change this if you want shared calendar)
+    const mine = (data || []).filter(r => r.agent_id === user.id);
+
+    return mine.map(row => {
+      const startIso = row.scheduled_for;
+      const endIso   = row.ends_at || null;
+
+      // display title fallback
+      const displayTitle = (row.title || "Appointment").trim() || "Appointment";
+
+      // build a “location” string for FullCalendar hover/details
+      let locText = "";
+      if (row.location_type === "physical") locText = row.location_address || "";
+      if (row.location_type === "virtual") locText = row.url || "Virtual";
+
       return {
         id: row.id,
-        title: name,                     // we use contact name as the title
-        start: row.scheduled_for,        // ISO
+        title: displayTitle,
+        start: startIso,
+        end: endIso,
         allDay: false,
         extendedProps: {
-          contact_id: row.contact_id,
-          lead_id: row.lead_id || null
+          location_type: row.location_type || null,
+          location_address: row.location_address || null,
+          repeat_rule: row.repeat_rule || "never",
+          repeat_custom: row.repeat_custom || null,
+          url: row.url || null,
+          notes: row.notes || null,
+          locationText: locText
         }
       };
     });
@@ -151,33 +183,65 @@ document.addEventListener('DOMContentLoaded', async () => {
       center: 'title',
       right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
     },
-    editable: true,        // allow drag to reschedule
-    selectable: true,      // click day to prefill
+    editable: true,
+    selectable: true,
     events: initialEvents,
 
     dateClick: (info) => {
-      // Prefill the picker with clicked date/time
-      const clicked = info.date;
-      fp?.setDate(clicked, true);
-      document.getElementById('title')?.focus();
-      document.getElementById('appointment-form')?.scrollIntoView({ behavior: 'smooth' });
+      // Prefill Starts/Ends when clicking a date
+      const start = info.date;
+      const end = new Date(start.getTime() + 30 * 60000); // default 30 mins
+      fpStart.setDate(start, true);
+      fpEnd.setDate(end, true);
+      titleInput?.focus();
+      form.scrollIntoView({ behavior: 'smooth' });
     },
 
     eventClick: async (info) => {
-      const ok = confirm(`Delete appointment for "${info.event.title}"?`);
+      const ev = info.event;
+      const p = ev.extendedProps || {};
+
+      const startText = ev.start ? new Date(ev.start).toLocaleString() : "";
+      const endText = ev.end ? new Date(ev.end).toLocaleString() : "";
+
+      const lines = [
+        `Title: ${ev.title}`,
+        p.location_type ? `Location: ${p.location_type === "physical" ? "Physical" : "Virtual"}` : "",
+        p.location_address ? `Address: ${p.location_address}` : "",
+        p.url ? `URL: ${p.url}` : "",
+        startText ? `Starts: ${startText}` : "",
+        endText ? `Ends: ${endText}` : "",
+        p.repeat_rule ? `Repeat: ${p.repeat_rule}` : "",
+        p.repeat_custom ? `Custom: ${p.repeat_custom}` : "",
+        p.notes ? `Notes: ${p.notes}` : "",
+        "",
+        "Delete this appointment?"
+      ].filter(Boolean).join("\n");
+
+      const ok = confirm(lines);
       if (!ok) return;
-      const { error } = await supabase.from('appointments').delete().eq('id', info.event.id);
+
+      const { error } = await supabase.from('appointments').delete().eq('id', ev.id);
       if (error) { alert('Failed to delete appointment.'); console.error(error); return; }
-      info.event.remove();
+      ev.remove();
     },
 
     eventDrop: async (info) => {
-      // Only scheduled_for supported — we’ll ignore event.end
-      const when = info.event.start?.toISOString();
-      if (!when) { info.revert(); return; }
-      const { error } = await supabase.from('appointments').update({
-        scheduled_for: when
-      }).eq('id', info.event.id);
+      const ev = info.event;
+      if (!ev.start) { info.revert(); return; }
+
+      // keep duration when dragging
+      let newEndIso = null;
+      if (ev.end) newEndIso = ev.end.toISOString();
+
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          scheduled_for: ev.start.toISOString(),
+          ends_at: newEndIso
+        })
+        .eq('id', ev.id);
+
       if (error) {
         alert('Could not reschedule (reverting).');
         console.error(error);
@@ -185,55 +249,72 @@ document.addEventListener('DOMContentLoaded', async () => {
       }
     },
 
-    eventResize: (info) => {
-      // We don’t store end/duration in schema — prevent resize
-      alert('Duration editing is not enabled for appointments.');
-      info.revert();
+    eventResize: async (info) => {
+      const ev = info.event;
+      if (!ev.start) { info.revert(); return; }
+
+      const { error } = await supabase
+        .from('appointments')
+        .update({
+          scheduled_for: ev.start.toISOString(),
+          ends_at: ev.end ? ev.end.toISOString() : null
+        })
+        .eq('id', ev.id);
+
+      if (error) {
+        alert('Could not update duration (reverting).');
+        console.error(error);
+        info.revert();
+      }
     }
   });
 
   calendar.render();
 
-  /* ---------------- Create appointment (form submit) ---------------- */
-  const form = document.getElementById('appointment-form');
-  const titleInput = document.getElementById('title'); // purely cosmetic right now
-  const nameInput  = document.getElementById('client-name');
-  const contactInput = document.getElementById('client-contact');
-
+  /* ---------------- Create appointment ---------------- */
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    // Validate datetime
-    const dtVal = dtInput.value?.trim();
-    if (!dtVal) { alert('Please select a date and time.'); return; }
-    // Flatpickr’s parse
-    const selected = fp?.selectedDates?.[0] || new Date(dtVal);
-    if (!selected || Number.isNaN(+selected)) { alert('Invalid date/time.'); return; }
-    const whenIso = selected.toISOString();
+    const title = (titleInput?.value || "").trim();
+    if (!title) { alert("Title is required."); return; }
 
-    // Build / find contact
-    const fullName = (nameInput.value || '').trim();
-    const contactValue = (contactInput.value || '').trim();
-    let contactId = null;
-    try {
-      if (fullName || contactValue) {
-        contactId = await findOrCreateContact({ fullName, contactValue });
-      }
-    } catch (err) {
-      console.error('Contact create failed:', err);
-      alert('Could not save/find the contact.');
-      return;
-    }
+    const locType = (locationType?.value || "").trim();
+    if (!locType) { alert("Select a Location type."); return; }
+
+    const start = fpStart.selectedDates?.[0] || null;
+    const end = fpEnd.selectedDates?.[0] || null;
+
+    if (!start || !end) { alert("Starts and Ends are required."); return; }
+    if (+end <= +start) { alert("Ends must be after Starts."); return; }
+
+    const rep = (repeatRule?.value || "never").trim();
+    const repCustom = (rep === "custom") ? ((repeatCustom?.value || "").trim() || null) : null;
+
+    const addr = (locType === "physical")
+      ? ((locationAddress?.value || "").trim() || null)
+      : null;
+
+    const url = (urlInput?.value || "").trim() || null;
+    const notes = (notesInput?.value || "").trim() || null;
 
     // Insert appointment
+    const payload = {
+      agent_id: user.id,
+      scheduled_for: start.toISOString(),
+      ends_at: end.toISOString(),
+
+      title,
+      location_type: locType,
+      location_address: addr,
+      repeat_rule: rep,
+      repeat_custom: repCustom,
+      url,
+      notes
+    };
+
     const { data: inserted, error } = await supabase
       .from('appointments')
-      .insert({
-        contact_id: contactId,          // may be null if no info was provided
-        agent_id: user.id,
-        lead_id: null,                  // tie to a lead later if you want
-        scheduled_for: whenIso
-      })
+      .insert(payload)
       .select('id')
       .single();
 
@@ -243,21 +324,30 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    // Add to calendar UI — we display the contact name (or the free-typed title if no name)
-    const displayTitle =
-      (fullName && fullName.trim()) || titleInput.value.trim() || 'Appointment';
-
     calendar.addEvent({
       id: inserted.id,
-      title: displayTitle,
-      start: whenIso,
+      title,
+      start: payload.scheduled_for,
+      end: payload.ends_at,
       allDay: false,
-      extendedProps: { contact_id: contactId }
+      extendedProps: {
+        location_type: locType,
+        location_address: addr,
+        repeat_rule: rep,
+        repeat_custom: repCustom,
+        url,
+        notes,
+        locationText: (locType === "physical") ? (addr || "") : (url || "Virtual")
+      }
     });
 
-    // Reset form
     form.reset();
-    fp?.clear();
+    fpStart.clear();
+    fpEnd.clear();
+    toggleLocationFields();
+    toggleRepeatCustom();
+    initFloatingLabels(document);
+
     alert('Appointment created!');
   });
 });
