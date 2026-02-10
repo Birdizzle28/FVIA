@@ -1,179 +1,181 @@
 <!DOCTYPE html>
 <html lang="en">
-	<head>
-		<meta charset="UTF-8" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-		<title>Scheduling | Family Values Group</title>
-		<link rel="stylesheet" href="styles/agentstyle.css" />
-		<link rel="stylesheet" href="styles/scheduling.css" />
-		<link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
-		<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
-    	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
-    	<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
-	</head>
-	
-	<body id="dashboardbody">
-		
-		<!-- Header -->
-		<header class="index-grid-header">
-			<div id="logofvcontainer">
-				<div id="logodiv">
-					<a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
-				</div>
-				<div id="fvdiv">
-					<p><strong>Family Values Group</strong></p>
-				</div>
-			</div>
-			<div id="navcontainer">
-				<nav class="header-flex-container">
-					<a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
-					<a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
-					<div id="menu-toggle">
-						<i class="fa-solid fa-bars"></i>
-					</div>
-				</nav>
-			</div>
-		</header>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Scheduling | Family Values Group</title>
 
-		<!-- Mobile Menu -->
-		<div id="mobile-menu">
-			<a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
-			
-			<!-- Toolkit parent (acts like a toggle, not a link) -->
-			<button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
-				<i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
-				<i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
-			</button>
-			
-			<!-- Submenu that expands between Toolkit and Commissions -->
-			<div id="toolkit-submenu" class="submenu" hidden>
-				<a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
-				<a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
-				<a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
-				<a href="calculator.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
-				<a href="marketing.html"><i class="fa-solid fa-handshake"></i><span>Marketing</span></a>
-			</div>
-			<a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
-			<a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
-			<a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
-			<a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
-			<a href="admin.html" class="admin-link admin-hidden" data-admin-link>
-	        <i class="fa-solid fa-user-shield"></i><p>Admin</p>
-	      </a>
-		</div>
+    <link rel="stylesheet" href="styles/agentstyle.css" />
+    <link rel="stylesheet" href="styles/scheduling.css" />
+    <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+  </head>
 
-  <main class="auth-container">
-    <section class="schedule-section card-ish">
-      <h2 class="dash-title">Appointment Scheduler</h2>
+  <body id="dashboardbody">
 
-      <!-- Appointment Booking Form w/ Floating Labels -->
-      <form id="appointment-form" class="fl-form">
+    <!-- Header -->
+    <header class="index-grid-header">
+      <div id="logofvcontainer">
+        <div id="logodiv">
+          <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+        </div>
+        <div id="fvdiv">
+          <p><strong>Family Values Group</strong></p>
+        </div>
+      </div>
+      <div id="navcontainer">
+        <nav class="header-flex-container">
+          <a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
+          <a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
+          <div id="menu-toggle">
+            <i class="fa-solid fa-bars"></i>
+          </div>
+        </nav>
+      </div>
+    </header>
 
-			  <div class="fl-field">
-			    <input type="text" id="title" name="title" autocomplete="off" required />
-			    <label for="title">Title</label>
-			  </div>
-			
-			  <div class="fl-field">
-			    <select id="location-type" name="locationType" required>
-			      <option value="" disabled selected hidden></option>
-			      <option value="physical">Physical Address</option>
-			      <option value="virtual">Virtual</option>
-			    </select>
-			    <label for="location-type">Location</label>
-			  </div>
-			
-			  <div class="fl-field" id="location-address-wrap" style="display:none;">
-			    <input type="text" id="location-address" name="locationAddress" autocomplete="off" />
-			    <label for="location-address">Physical Address</label>
-			  </div>
-			
-			  <div class="row">
-			    <div class="fl-field grow">
-			      <input type="text" id="starts" name="starts" required autocomplete="off" />
-			      <label for="starts">Starts</label>
-			    </div>
-			
-			    <div class="fl-field grow">
-			      <input type="text" id="ends" name="ends" required autocomplete="off" />
-			      <label for="ends">Ends</label>
-			    </div>
-			  </div>
-			
-			  <div class="fl-field">
-			    <select id="repeat-rule" name="repeatRule">
-			      <option value="never" selected>Never</option>
-			      <option value="daily">Everyday</option>
-			      <option value="weekly">Every Week</option>
-			      <option value="biweekly">Every Two Weeks</option>
-			      <option value="monthly">Every Month</option>
-			      <option value="yearly">Every Year</option>
-			      <option value="custom">Custom</option>
-			    </select>
-			    <label for="repeat-rule">Repeat</label>
-			  </div>
-			
-			  <div class="fl-field" id="repeat-custom-wrap" style="display:none;">
-			    <textarea id="repeat-custom" name="repeatCustom" rows="3"></textarea>
-			    <label for="repeat-custom">Custom Repeat (notes)</label>
-			  </div>
-			
-			  <div class="fl-field">
-			    <input type="url" id="url" name="url" autocomplete="off" placeholder=" " />
-			    <label for="url">URL</label>
-			  </div>
-			
-			  <div class="fl-field">
-			    <textarea id="notes" name="notes" rows="4"></textarea>
-			    <label for="notes">Notes</label>
-			  </div>
-			
-		  	<button type="submit" id="create-appointment" class="btn-primary">Create Appointment</button>
-			</form>
+    <!-- Mobile Menu -->
+    <div id="mobile-menu">
+      <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
 
-      <!-- Calendar -->
-      <div id="calendar" class="calendar-card"></div>
-    </section>
-  </main>
+      <button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
+        <i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
+        <i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
+      </button>
 
-  <!-- Footer -->
-		<footer class="index-grid-footer">
-			<img id="footerlogo" src="Pics/img17.png">
-			<hr class="footerhr">
-			<div id="footercontact">
-				<a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
-				<span class="fa fa-envelope"></span>
-				<span class="contactcontcontacts">info@familyvaluesgroup.com</span>
-			</a>
-			<p> | </p>
-			<a class="contactcontainer" href="tel:+16292437980">
-				<span class="fa fa-phone"></span>
-				<span class="contactcontcontacts">+1-629-243-7980</span>
-			</a>
-			</div>
-			<hr class="footerhr">
-			<div id="footersocial">
-				<a class="fab fa-facebook-f" href="https://www.facebook.com/familyvaluesgroup"></a>
-				<a class="fab fa-linkedin-in" href="https://www.linkedin.com/in/demisi-johnson-026227391?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"></a>
-				<a class="fab fa-instagram" href="https://www.instagram.com/family.values.group?igsh=OHl3dGdnd3RwMTV0&utm_source=qr"></a>
-				<a class="fab fa-youtube" href="https://youtube.com/@familyvaluesgroup?si=mauqWp5nxyczgCJd"></a>
-				<a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
-			</div>
-			<!-- Footer links section (below social icons) -->
-			<div id="footerlinks">
-				<a href="faqs.html">FAQs</a>
-				<a href="terms.html">Terms</a>
-				<a href="accessibility.html">Accessibility</a>
-				<a href="privacy.html">Privacy</a>
-			</div>
-			<p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
-		</footer>
-		<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-		<script src="scripts/supabase-client.js"></script>
-		<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
-		<!-- Flatpickr (JS) -->
-		<script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
-		<script src="scripts/general.js"></script>
-		<script src="scripts/scheduling.js"></script>
-	</body>
+      <div id="toolkit-submenu" class="submenu" hidden>
+        <a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
+        <a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
+        <a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
+        <a href="calculator.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
+        <a href="marketing.html"><i class="fa-solid fa-handshake"></i><span>Marketing</span></a>
+      </div>
+
+      <a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
+      <a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
+      <a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
+      <a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
+      <a href="admin.html" class="admin-link admin-hidden" data-admin-link>
+        <i class="fa-solid fa-user-shield"></i><p>Admin</p>
+      </a>
+    </div>
+
+    <main class="auth-container">
+      <section class="schedule-section card-ish">
+        <h2 class="dash-title">Appointment Scheduler</h2>
+
+        <!-- Updated Calendar-Style Form -->
+        <form id="appointment-form" class="fl-form">
+
+          <div class="fl-field">
+            <input type="text" id="title" name="title" autocomplete="off" required />
+            <label for="title">Title</label>
+          </div>
+
+          <div class="fl-field">
+            <select id="location-type" name="locationType" required>
+              <option value="" disabled selected hidden></option>
+              <option value="physical">Physical Address</option>
+              <option value="virtual">Virtual</option>
+            </select>
+            <label for="location-type">Location</label>
+          </div>
+
+          <div class="fl-field" id="location-address-wrap" style="display:none;">
+            <input type="text" id="location-address" name="locationAddress" autocomplete="off" />
+            <label for="location-address">Physical Address</label>
+          </div>
+
+          <div class="row">
+            <div class="fl-field grow">
+              <input type="text" id="starts" name="starts" required autocomplete="off" />
+              <label for="starts">Starts</label>
+            </div>
+
+            <div class="fl-field grow">
+              <input type="text" id="ends" name="ends" required autocomplete="off" />
+              <label for="ends">Ends</label>
+            </div>
+          </div>
+
+          <div class="fl-field">
+            <select id="repeat-rule" name="repeatRule">
+              <option value="never" selected>Never</option>
+              <option value="daily">Everyday</option>
+              <option value="weekly">Every Week</option>
+              <option value="biweekly">Every Two Weeks</option>
+              <option value="monthly">Every Month</option>
+              <option value="yearly">Every Year</option>
+              <option value="custom">Custom</option>
+            </select>
+            <label for="repeat-rule">Repeat</label>
+          </div>
+
+          <div class="fl-field" id="repeat-custom-wrap" style="display:none;">
+            <textarea id="repeat-custom" name="repeatCustom" rows="3"></textarea>
+            <label for="repeat-custom">Custom Repeat</label>
+          </div>
+
+          <div class="fl-field">
+            <input type="url" id="url" name="url" autocomplete="off" placeholder=" " />
+            <label for="url">URL</label>
+          </div>
+
+          <div class="fl-field">
+            <textarea id="notes" name="notes" rows="4"></textarea>
+            <label for="notes">Notes</label>
+          </div>
+
+          <button type="submit" id="create-appointment" class="btn-primary">Create Appointment</button>
+        </form>
+
+        <!-- Calendar -->
+        <div id="calendar" class="calendar-card"></div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="index-grid-footer">
+      <img id="footerlogo" src="Pics/img17.png">
+      <hr class="footerhr">
+      <div id="footercontact">
+        <a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
+          <span class="fa fa-envelope"></span>
+          <span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+        </a>
+        <p> | </p>
+        <a class="contactcontainer" href="tel:+16292437980">
+          <span class="fa fa-phone"></span>
+          <span class="contactcontcontacts">+1-629-243-7980</span>
+        </a>
+      </div>
+      <hr class="footerhr">
+      <div id="footersocial">
+        <a class="fab fa-facebook-f" href="https://www.facebook.com/familyvaluesgroup"></a>
+        <a class="fab fa-linkedin-in" href="https://www.linkedin.com/in/demisi-johnson-026227391?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"></a>
+        <a class="fab fa-instagram" href="https://www.instagram.com/family.values.group?igsh=OHl3dGdnd3RwMTV0&utm_source=qr"></a>
+        <a class="fab fa-youtube" href="https://youtube.com/@familyvaluesgroup?si=mauqWp5nxyczgCJd"></a>
+        <a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
+      </div>
+      <div id="footerlinks">
+        <a href="faqs.html">FAQs</a>
+        <a href="terms.html">Terms</a>
+        <a href="accessibility.html">Accessibility</a>
+        <a href="privacy.html">Privacy</a>
+      </div>
+      <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="scripts/supabase-client.js"></script>
+
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+
+    <script src="scripts/general.js"></script>
+    <script src="scripts/scheduling.js"></script>
+  </body>
 </html>
