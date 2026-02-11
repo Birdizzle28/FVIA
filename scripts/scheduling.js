@@ -356,6 +356,38 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   calendar.render();
+    /* ---------------- Custom header buttons ---------------- */
+  const prevBtn = document.getElementById("cal-prev");
+  const nextBtn = document.getElementById("cal-next");
+  const todayBtn = document.getElementById("cal-today");
+
+  prevBtn?.addEventListener("click", () => {
+    if (activeMode === "year") {
+      renderYearGrid(activeYear - 1);
+    } else {
+      calendar.prev();
+      setHeaderTitle(calendar.view.title);
+    }
+  });
+
+  nextBtn?.addEventListener("click", () => {
+    if (activeMode === "year") {
+      renderYearGrid(activeYear + 1);
+    } else {
+      calendar.next();
+      setHeaderTitle(calendar.view.title);
+    }
+  });
+
+  todayBtn?.addEventListener("click", () => {
+    if (activeMode === "year") {
+      const y = new Date().getFullYear();
+      renderYearGrid(y);
+    } else {
+      calendar.today();
+      setHeaderTitle(calendar.view.title);
+    }
+  });
 
   /* ---------------- Apple-style Year view (no events) ---------------- */
 const tabsWrap = document.getElementById("cal-tabs");
@@ -390,6 +422,7 @@ function firstDow(y, m) {
 // No appointments shown. Clicking a day can jump you to Day view (optional).
 function renderYearGrid(year) {
   activeYear = year;
+  setHeaderTitle(String(year));
   if (yearTitleEl) yearTitleEl.textContent = String(year);
   if (!yearGridEl) return;
 
@@ -456,7 +489,7 @@ function showCalendarMode(fcViewName, goToDate) {
 
   if (goToDate) calendar.gotoDate(goToDate);
   calendar.changeView(fcViewName);
-  setHeaderTitle(calendar.view.title);
+  requestAnimationFrame(() => setHeaderTitle(calendar.view.title));
 }
 
 function setViewMode(mode, goToDate) {
@@ -508,9 +541,6 @@ tabsWrap?.addEventListener("click", (e) => {
 
     if (dx < 0) renderYearGrid(activeYear + 1);
     else renderYearGrid(activeYear - 1);
-
-    // ✅ keep your custom header title synced
-    setHeaderTitle(String(activeYear));
   }, { passive: true });
 })();
 
