@@ -1,25 +1,36 @@
-/* ===== Theme tokens aligned with Admin look ===== */
+/* styles/scheduling.css — Apple-ish neutral theme (matches Year tab) */
+
+/* ===== Neutral tokens (Year tab vibe) ===== */
 :root{
-  --ink:#353468;              /* dark ink */
-  --muted:#6b7280;            /* secondary text */
-  --panel:#ffffff;            /* cards */
-  --panel-line:#d6d9e2;       /* borders */
-  --page:#f6f7fb;             /* page bg */
-  --brand:#ed9ea5;            /* agency pink */
-  --brand-ink:#482039;        /* deep plum for hovers/press */
-  --accent:#444387;           /* indigo-ish from header text */
-  --shadow:0 14px 30px rgba(0,0,0,.06);
+  --ink:#111111;            /* primary text */
+  --muted:#6b7280;          /* secondary text */
+  --panel:#ffffff;          /* cards */
+  --panel-line:#e5e7eb;     /* thin borders */
+  --page:#ffffff;           /* clean page */
+  --shadow:0 10px 24px rgba(0,0,0,.06);
+
+  /* “action” colors (no pink) */
+  --action:#111111;
+  --action-hover:#0b0b0b;
+  --action-soft:#f3f4f6;    /* light chip bg */
+  --today:rgba(0,0,0,.06);  /* subtle today highlight */
+
+  /* Calendar event color */
+  --event:#111111;
+  --event-text:#ffffff;
 }
 
-/* Page area similar to dashboard panels */
+/* Page area */
 main{ background:var(--page); width:100%; }
+
+/* Card container */
 .card-ish{
   max-width: 1100px;
   margin: 24px auto;
   padding: 16px;
   background: var(--panel);
   border: 1px solid var(--panel-line);
-  border-radius: 0;           /* square */
+  border-radius: 0;
   box-shadow: var(--shadow);
 }
 
@@ -31,6 +42,41 @@ main{ background:var(--page); width:100%; }
   font-weight: 800;
 }
 
+/* ===== Tabs (Day/Week/Month/Year) ===== */
+.cal-tabs{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  align-items:center;
+  margin: 10px 0 14px;
+}
+
+.cal-tab{
+  appearance:none;
+  border:1px solid var(--panel-line);
+  padding:8px 14px;
+  background: #fff;
+  color: var(--ink);
+  border-radius:999px;
+  font: inherit;
+  cursor:pointer;
+  transition: background .12s ease, border-color .12s ease, transform .06s ease;
+}
+
+.cal-tab:hover{
+  background: var(--action-soft);
+}
+
+.cal-tab:active{
+  transform: scale(.98);
+}
+
+.cal-tab.active{
+  background: var(--action);
+  color:#fff;
+  border-color: var(--action);
+}
+
 /* ===== Floating label form ===== */
 .fl-form{
   display:flex;
@@ -39,18 +85,20 @@ main{ background:var(--page); width:100%; }
   margin-bottom: 18px;
 }
 
-/* Row helper (matches your style) */
+/* Row helper */
 .row{ display:flex; gap:12px; flex-wrap:wrap; }
 .grow{ flex:1 1 220px; }
 
-/* Floating field container */
+/* Field wrapper */
 .fl-field{
   position: relative;
   display: block;
 }
 
-/* Inputs (square, match admin theme) */
-.fl-field input{
+/* Inputs */
+.fl-field input,
+.fl-field textarea,
+.fl-field select{
   width: 100%;
   background: #fff;
   border: 1px solid var(--panel-line);
@@ -59,10 +107,21 @@ main{ background:var(--page); width:100%; }
   font: inherit;
   color: var(--ink);
   outline: none;
-  transition: border-color .15s ease, box-shadow .15s ease;
+  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 
-/* Label sits over input */
+/* Make selects feel consistent */
+.fl-field select{
+  padding-right: 38px;
+}
+
+/* Placeholder spacing for URL input if you use placeholder=" " */
+.fl-field input::placeholder,
+.fl-field textarea::placeholder{
+  color: transparent;
+}
+
+/* Label */
 .fl-field label{
   position: absolute;
   left: 10px;
@@ -75,120 +134,227 @@ main{ background:var(--page); width:100%; }
   transition: all .12s ease;
 }
 
-/* Focus / has-value states */
+/* Focus / has-value */
 .fl-field.is-focused input,
-.fl-field.has-value input{
-  border-color: var(--brand);
-  box-shadow: 0 0 0 2px rgba(237,158,165,.2);
+.fl-field.has-value input,
+.fl-field.is-focused textarea,
+.fl-field.has-value textarea,
+.fl-field.is-focused select,
+.fl-field.has-value select{
+  border-color: #111;
+  box-shadow: 0 0 0 2px rgba(0,0,0,.10);
 }
+
 .fl-field.is-focused label,
 .fl-field.has-value label{
   top: 0;
   transform: translateY(-60%);
   background: #fff;
-  color: var(--accent);
+  color: var(--ink);
   font-size: 12px;
 }
 
-/* Invalid helper (if you add .is-invalid on the input or wrapper) */
-.fl-field.is-invalid input{ border-color:#d12c2c; box-shadow:0 0 0 2px rgba(209,44,44,.12); }
+/* Invalid helper */
+.fl-field.is-invalid input,
+.fl-field.is-invalid textarea,
+.fl-field.is-invalid select{
+  border-color:#d12c2c;
+  box-shadow:0 0 0 2px rgba(209,44,44,.12);
+}
 .fl-field.is-invalid label{ color:#d12c2c; }
 
-/* Button aligned to theme */
+/* Primary button (now neutral) */
 .btn-primary{
   align-self: flex-start;
-  background: var(--brand);
+  background: var(--action);
   color: #fff;
-  border: 1px solid var(--brand);
+  border: 1px solid var(--action);
   border-radius: 0;
   padding: 10px 16px;
   font-weight: 700;
   cursor: pointer;
+  transition: background .12s ease, border-color .12s ease, transform .06s ease;
 }
-.btn-primary:hover{ background: var(--brand-ink); border-color: var(--brand-ink); }
+.btn-primary:hover{ background: var(--action-hover); border-color: var(--action-hover); }
+.btn-primary:active{ transform: scale(.99); }
 
-/* Calendar container card */
+/* Calendar container */
 .calendar-card{
   width:100%;
   min-height:600px;
   margin-top: 10px;
   border: 1px solid var(--panel-line);
   border-radius: 0;
-}
-
-/* ===== FullCalendar theming (v6+) ===== */
-.fc{ font-family: Bellota Text, sans-serif; }
-:root{
-  --fc-button-bg-color: var(--brand);
-  --fc-button-border-color: var(--brand);
-  --fc-button-text-color: #ffffff;
-  --fc-button-hover-bg-color: var(--brand-ink);
-  --fc-button-active-bg-color: var(--brand-ink);
-  --fc-today-bg-color: rgba(237,158,165,0.18);
-  --fc-highlight-color: rgba(68,67,135,0.12);
-  --fc-event-bg-color: var(--brand);
-  --fc-event-border-color: var(--brand);
-  --fc-event-text-color: #fff;
-}
-.fc .fc-daygrid-day-number{ font-size:.9em; }
-
-/* Small tweak so floating label over date/time doesn’t clip */
-#datetime{ background:#fff; }
-
-.cal-tabs{
-  display:flex;
-  gap:10px;
-  justify-content:center;
-  margin: 10px 0 14px;
-}
-.cal-tab{
-  border:1px solid #ddd;
-  padding:8px 14px;
   background:#fff;
-  border-radius:999px;
-}
-.cal-tab.active{
-  background:#111;
-  color:#fff;
-  border-color:#111;
 }
 
+/* ===== FullCalendar neutral theme (v6) ===== */
+.fc{ font-family: "Bellota Text", sans-serif; color: var(--ink); }
+
+/* FC CSS vars */
+:root{
+  --fc-button-bg-color: #ffffff;
+  --fc-button-border-color: var(--panel-line);
+  --fc-button-text-color: var(--ink);
+  --fc-button-hover-bg-color: var(--action-soft);
+  --fc-button-hover-border-color: var(--panel-line);
+  --fc-button-active-bg-color: var(--action);
+  --fc-button-active-border-color: var(--action);
+  --fc-button-active-text-color: #ffffff;
+
+  --fc-today-bg-color: var(--today);
+  --fc-highlight-color: rgba(0,0,0,0.07);
+
+  --fc-event-bg-color: var(--event);
+  --fc-event-border-color: var(--event);
+  --fc-event-text-color: var(--event-text);
+}
+
+/* Make FC header/title match the Year vibe */
+.fc .fc-toolbar-title{
+  font-weight: 800;
+  letter-spacing: .2px;
+}
+
+/* Buttons: remove “puffy” vibe */
+.fc .fc-button{
+  border-radius: 999px;
+  box-shadow: none;
+  font-weight: 700;
+  padding: 6px 12px;
+}
+
+/* Today button should not be bright */
+.fc .fc-today-button{
+  background:#fff !important;
+  color: var(--ink) !important;
+}
+
+/* Day numbers slightly subtle */
+.fc .fc-daygrid-day-number{ font-size:.9em; color: var(--ink); opacity:.9; }
+
+/* Grid borders thin */
+.fc .fc-scrollgrid,
+.fc .fc-scrollgrid td,
+.fc .fc-scrollgrid th{
+  border-color: var(--panel-line) !important;
+}
+
+/* Month view day cells hover (subtle) */
+.fc .fc-daygrid-day:hover{
+  background: rgba(0,0,0,.02);
+}
+
+/* Event pills: clean */
+.fc .fc-event{
+  border-radius: 10px;
+  padding: 2px 6px;
+}
+
+/* Time grid lines subtle */
+.fc .fc-timegrid-slot,
+.fc .fc-timegrid-axis{
+  border-color: var(--panel-line) !important;
+}
+
+/* List view neutral */
+.fc .fc-list-day-cushion{
+  background: #fff;
+  border-bottom: 1px solid var(--panel-line);
+}
+
+/* ===== Choices.js (dropdowns) — neutralize ===== */
+.choices__inner{
+  border-radius: 0 !important;
+  border: 1px solid var(--panel-line) !important;
+  background:#fff !important;
+  min-height: 48px;
+  padding: 10px 12px !important;
+  color: var(--ink) !important;
+}
+
+.choices__list--dropdown,
+.choices__list[aria-expanded]{
+  border-radius: 0 !important;
+  border: 1px solid var(--panel-line) !important;
+  box-shadow: var(--shadow);
+}
+
+.choices__item--selectable.is-highlighted{
+  background: var(--action-soft) !important;
+}
+
+/* ===== Custom Year view ===== */
 .year-view{
   user-select:none;
 }
+
 .year-title{
   font-size:40px;
-  font-weight:700;
+  font-weight:800;
   margin: 6px 0 12px;
+  color: var(--ink);
 }
+
+/* 4x3 months grid like Apple */
 .year-grid{
   display:grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 14px;
 }
-.mini-month-title{
-  font-weight:700;
-  margin-bottom:6px;
+
+.mini-month{
+  padding: 6px 2px;
 }
+
+.mini-month-title{
+  font-weight:800;
+  margin-bottom:6px;
+  color: var(--ink);
+}
+
 .mini-dow{
   display:grid;
   grid-template-columns: repeat(7, 1fr);
   font-size: 12px;
-  opacity:.75;
+  color: var(--muted);
   margin-bottom:6px;
 }
+
 .mini-grid{
   display:grid;
   grid-template-columns: repeat(7, 1fr);
   gap: 4px;
 }
+
 .mini-day{
   border:0;
   background:transparent;
   padding:2px 0;
   font-size: 13px;
   text-align:center;
+  color: var(--ink);
+  border-radius: 6px;
+  cursor:pointer;
 }
+
+.mini-day:hover{
+  background: var(--action-soft);
+}
+
+.mini-day:active{
+  background: rgba(0,0,0,.10);
+}
+
 .mini-day.blank{
   visibility:hidden;
+}
+
+/* Responsive: collapse year grid nicely */
+@media (max-width: 900px){
+  .year-grid{ grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 640px){
+  .year-grid{ grid-template-columns: repeat(2, 1fr); }
+  .year-title{ font-size:34px; }
 }
