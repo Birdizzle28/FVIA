@@ -358,6 +358,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   calendar.render();
+  // initial title after render
+  setHeaderTitle(calendar.view.title);
     /* ---------------- Custom header buttons ---------------- */
   const prevBtn = document.getElementById("cal-prev");
   const nextBtn = document.getElementById("cal-next");
