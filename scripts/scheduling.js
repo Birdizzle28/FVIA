@@ -16,7 +16,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const repeatRule = document.getElementById("repeat-rule");
   const repeatCustomWrap = document.getElementById("repeat-custom-wrap");
-  const repeatCustom = document.getElementById("repeat-custom");
+  const repeatInterval = document.getElementById("repeat-interval");
+  const repeatUnit = document.getElementById("repeat-unit");
 
   const urlInput = document.getElementById("url");
   const notesInput = document.getElementById("notes");
@@ -78,6 +79,17 @@ document.addEventListener("DOMContentLoaded", async () => {
         itemSelectText: "",
       });
     }
+
+    // (Optional) style the custom unit dropdown too
+    if (repeatUnit) {
+      // you can reuse repeatChoices variable or create a new one; let's make a new one
+      if (window.repeatUnitChoices) window.repeatUnitChoices.destroy();
+      window.repeatUnitChoices = new Choices(repeatUnit, {
+        searchEnabled: false,
+        shouldSort: false,
+        itemSelectText: "",
+      });
+    }
   }
 
   /* ---------------- Flatpickr ---------------- */
@@ -105,8 +117,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   function toggleRepeatCustom() {
     const v = (repeatRule?.value || "").toLowerCase();
     const show = v === "custom";
+  
     if (repeatCustomWrap) repeatCustomWrap.style.display = show ? "block" : "none";
-    if (!show && repeatCustom) repeatCustom.value = "";
+  
+    if (!show) {
+      if (repeatInterval) repeatInterval.value = "1";
+      if (repeatUnit) repeatUnit.value = "days";
+    }
+  
     initFloatingLabels(document);
   }
 
@@ -216,18 +234,54 @@ document.addEventListener("DOMContentLoaded", async () => {
       return out;
     }
 
-    // CUSTOM (MVP): store it, show only base occurrence for now
+    // CUSTOM: interval + unit ("Every 3 weeks")
     if (rule === "custom") {
-      if (clampToRange(seriesStart, rangeStart, rangeEnd)) {
-        out.push({
-          id: occId(row.id, seriesStart),
-          title: baseTitle,
-          start: seriesStart.toISOString(),
-          end: addMinutes(seriesStart, durMin).toISOString(),
-          allDay: false,
-          extendedProps: baseProps,
-        });
+      let interval = 1;
+      let unit = "days";
+    
+      // repeat_custom is stored as JSON string: {"interval":3,"unit":"weeks"}
+      if (row.repeat_custom) {
+        try {
+          const parsed = JSON.parse(row.repeat_custom);
+          interval = Math.max(1, parseInt(parsed.interval || 1, 10));
+          unit = String(parsed.unit || "days").toLowerCase();
+        } catch (e) {
+          // If older data is not JSON, fallback to base-only
+          unit = "days";
+          interval = 1;
+        }
       }
+    
+      let cur = new Date(seriesStart);
+    
+      // fast-forward roughly (good enough for now)
+      if (cur < rangeStart) {
+        cur = new Date(rangeStart);
+        cur.setHours(seriesStart.getHours(), seriesStart.getMinutes(), 0, 0);
+      }
+    
+      while (cur < rangeEnd) {
+        const occStart = new Date(cur);
+        const occEnd = addMinutes(occStart, durMin);
+    
+        if (occStart < rangeEnd && occEnd > rangeStart) {
+          out.push({
+            id: occId(row.id, occStart),
+            title: baseTitle,
+            start: occStart.toISOString(),
+            end: occEnd.toISOString(),
+            allDay: false,
+            extendedProps: { ...baseProps, occurrence_start: occStart.toISOString() },
+          });
+        }
+    
+        if (unit === "days") cur = new Date(cur.getTime() + interval * 24 * 60 * 60 * 1000);
+        else if (unit === "weeks") cur = new Date(cur.getTime() + interval * 7 * 24 * 60 * 60 * 1000);
+        else if (unit === "months") cur = addMonths(cur, interval);
+        else if (unit === "years") cur = addYears(cur, interval);
+        else break;
+      }
+    
       return out;
     }
 
@@ -591,7 +645,14 @@ setHeaderTitle(calendar.view.title);
     if (+end <= +start) { alert("Ends must be after Starts."); return; }
 
     const rep = (repeatRule?.value || "never").trim();
-    const repCustom = (rep === "custom") ? ((repeatCustom?.value || "").trim() || null) : null;
+
+    let repCustom = null;
+    if (rep === "custom") {
+      const interval = Math.max(1, parseInt(repeatInterval?.value || "1", 10));
+      const unit = (repeatUnit?.value || "days").toLowerCase();
+    
+      repCustom = JSON.stringify({ interval, unit }); // stored in text column
+    }
 
     const addr = (locType === "physical")
       ? ((locationAddress?.value || "").trim() || null)
