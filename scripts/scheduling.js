@@ -30,6 +30,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   function setHeaderTitle(text) {
     if (headerTitleEl) headerTitleEl.textContent = text || "";
   }
+  let activeMode = "month";          // day | week | month | year
+  let activeYear = new Date().getFullYear();
   
   /* ---------------- Floating Labels ---------------- */
   function initFloatingLabels(scope = document) {
@@ -394,9 +396,6 @@ const tabsWrap = document.getElementById("cal-tabs");
 const yearViewEl = document.getElementById("year-view");
 const yearTitleEl = document.getElementById("year-title");
 const yearGridEl = document.getElementById("year-grid");
-
-let activeMode = "month";          // day | week | month | year
-let activeYear = new Date().getFullYear();
 
 function setActiveTab(mode) {
   activeMode = mode;
