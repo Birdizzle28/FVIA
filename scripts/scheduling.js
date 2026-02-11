@@ -285,32 +285,38 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   /* ---------------- FullCalendar ---------------- */
   const calendar = new FullCalendar.Calendar(calendarEl, {
-    // ✅ Default to scrollable months (Apple-ish)
-    initialView: "multiMonthYear",
+    initialView: "year",
   
     headerToolbar: {
       left: "prev,next today",
       center: "title",
-      right: "multiMonthYear,dayGridMonth,timeGridWeek,timeGridDay,listWeek",
+      right: "timeGridDay,timeGridWeek,dayGridMonth,year",
     },
   
-    // ✅ MultiMonth scroll view
+    // Make the buttons show the labels you want
+    buttonText: {
+      today: "Today",
+      timeGridDay: "Day",
+      timeGridWeek: "Week",
+      dayGridMonth: "Month",
+      year: "Year",
+    },
+  
+    // Your "Year" view (Apple-style conceptually: 12 months)
     views: {
-      multiMonthYear: {
+      year: {
         type: "multiMonth",
-        duration: { months: 12 },   // big scrollable stack
+        duration: { months: 12 },
         fixedWeekCount: false,
       },
     },
   
-    // ✅ Week/Day: scrollable time grid inside the view
-    // (not infinite time scrolling, but it feels natural on phones)
     expandRows: true,
     height: "auto",
     contentHeight: "auto",
     stickyHeaderDates: true,
     nowIndicator: true,
-    scrollTime: "08:00:00", // start the day view around 8am
+    scrollTime: "08:00:00",
   
     editable: true,
     selectable: true,
@@ -328,14 +334,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   
     eventClick: async (info) => {
       const seriesId = info.event.extendedProps?.series_id || info.event.id;
-      const ok = confirm(
-        `Delete "${info.event.title}"?\n\n(If this is recurring, this deletes the whole series for now.)`
-      );
+      const ok = confirm(`Delete "${info.event.title}"?\n\n(Recurring deletes whole series for now.)`);
       if (!ok) return;
   
       const { error } = await supabase.from("appointments").delete().eq("id", seriesId);
       if (error) { console.error(error); alert("Failed to delete appointment."); return; }
-  
       calendar.refetchEvents();
     },
   
