@@ -285,18 +285,38 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   /* ---------------- FullCalendar ---------------- */
   const calendar = new FullCalendar.Calendar(calendarEl, {
-    initialView: "dayGridMonth",
+    // ✅ Default to scrollable months (Apple-ish)
+    initialView: "multiMonthYear",
+  
     headerToolbar: {
       left: "prev,next today",
       center: "title",
-      right: "dayGridMonth,timeGridWeek,timeGridDay,listWeek",
+      right: "multiMonthYear,dayGridMonth,timeGridWeek,timeGridDay,listWeek",
     },
+  
+    // ✅ MultiMonth scroll view
+    views: {
+      multiMonthYear: {
+        type: "multiMonth",
+        duration: { months: 12 },   // big scrollable stack
+        fixedWeekCount: false,
+      },
+    },
+  
+    // ✅ Week/Day: scrollable time grid inside the view
+    // (not infinite time scrolling, but it feels natural on phones)
+    expandRows: true,
+    height: "auto",
+    contentHeight: "auto",
+    stickyHeaderDates: true,
+    nowIndicator: true,
+    scrollTime: "08:00:00", // start the day view around 8am
+  
     editable: true,
     selectable: true,
-
-    // ✅ recurring expansion per view range
+  
     events: eventSourceByViewRange,
-
+  
     dateClick: (info) => {
       const start = info.date;
       const end = addMinutes(start, 30);
@@ -305,80 +325,78 @@ document.addEventListener("DOMContentLoaded", async () => {
       titleInput?.focus();
       form.scrollIntoView({ behavior: "smooth" });
     },
-
+  
     eventClick: async (info) => {
-      // MVP behavior: delete the whole series
       const seriesId = info.event.extendedProps?.series_id || info.event.id;
-
       const ok = confirm(
         `Delete "${info.event.title}"?\n\n(If this is recurring, this deletes the whole series for now.)`
       );
       if (!ok) return;
-
+  
       const { error } = await supabase.from("appointments").delete().eq("id", seriesId);
-      if (error) {
-        console.error(error);
-        alert("Failed to delete appointment.");
-        return;
-      }
-
+      if (error) { console.error(error); alert("Failed to delete appointment."); return; }
+  
       calendar.refetchEvents();
     },
-
+  
     eventDrop: async (info) => {
-      // MVP: dragging one occurrence updates the series base start/end (keeps duration)
       const seriesId = info.event.extendedProps?.series_id || info.event.id;
       const start = info.event.start;
       const end = info.event.end;
-
       if (!start || !end) { info.revert(); return; }
-
+  
       const { error } = await supabase
         .from("appointments")
-        .update({
-          scheduled_for: start.toISOString(),
-          ends_at: end.toISOString(),
-        })
+        .update({ scheduled_for: start.toISOString(), ends_at: end.toISOString() })
         .eq("id", seriesId);
-
-      if (error) {
-        console.error(error);
-        alert("Could not reschedule (reverting).");
-        info.revert();
-        return;
-      }
-
+  
+      if (error) { console.error(error); alert("Could not reschedule (reverting)."); info.revert(); return; }
       calendar.refetchEvents();
     },
-
+  
     eventResize: async (info) => {
-      // resizing updates the series duration (MVP)
       const seriesId = info.event.extendedProps?.series_id || info.event.id;
       const start = info.event.start;
       const end = info.event.end;
-
       if (!start || !end) { info.revert(); return; }
-
+  
       const { error } = await supabase
         .from("appointments")
-        .update({
-          scheduled_for: start.toISOString(),
-          ends_at: end.toISOString(),
-        })
+        .update({ scheduled_for: start.toISOString(), ends_at: end.toISOString() })
         .eq("id", seriesId);
-
-      if (error) {
-        console.error(error);
-        alert("Could not update duration (reverting).");
-        info.revert();
-        return;
-      }
-
+  
+      if (error) { console.error(error); alert("Could not update duration (reverting)."); info.revert(); return; }
       calendar.refetchEvents();
     },
   });
 
   calendar.render();
+
+  (function enableSwipeNav() {
+    let startX = 0, startY = 0, isDown = false;
+  
+    calendarEl.addEventListener("touchstart", (e) => {
+      const t = e.touches[0];
+      startX = t.clientX;
+      startY = t.clientY;
+      isDown = true;
+    }, { passive: true });
+  
+    calendarEl.addEventListener("touchend", (e) => {
+      if (!isDown) return;
+      isDown = false;
+  
+      const t = e.changedTouches[0];
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+  
+      // only treat as swipe if mostly horizontal
+      if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return;
+  
+      if (dx < 0) calendar.next(); // swipe left => next
+      else calendar.prev();        // swipe right => prev
+    }, { passive: true });
+  })();
 
   /* ---------------- Create appointment ---------------- */
   form.addEventListener("submit", async (e) => {
