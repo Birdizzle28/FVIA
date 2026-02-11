@@ -114,8 +114,29 @@
           </div>
 
           <div class="fl-field" id="repeat-custom-wrap" style="display:none;">
-            <textarea id="repeat-custom" name="repeatCustom" rows="3"></textarea>
-            <label for="repeat-custom">Custom Repeat</label>
+            <div class="custom-repeat-row">
+              <span class="custom-repeat-text">Every</span>
+          
+              <input
+                type="number"
+                id="repeat-interval"
+                name="repeatInterval"
+                min="1"
+                step="1"
+                value="1"
+                inputmode="numeric"
+                required
+              />
+          
+              <select id="repeat-unit" name="repeatUnit" required>
+                <option value="days">days</option>
+                <option value="weeks">weeks</option>
+                <option value="months">months</option>
+                <option value="years">years</option>
+              </select>
+            </div>
+          
+            <label for="repeat-interval">Custom Repeat</label>
           </div>
 
           <div class="fl-field">
