@@ -130,8 +130,21 @@
 
           <button type="submit" id="create-appointment" class="btn-primary">Create Appointment</button>
         </form>
-
-        <!-- Calendar -->
+        <!-- View Tabs (Apple-style) -->
+        <div class="cal-tabs" id="cal-tabs">
+          <button type="button" class="cal-tab" data-view="day">Day</button>
+          <button type="button" class="cal-tab" data-view="week">Week</button>
+          <button type="button" class="cal-tab" data-view="month">Month</button>
+          <button type="button" class="cal-tab" data-view="year">Year</button>
+        </div>
+        
+        <!-- Custom Year View (12 mini-months, no events) -->
+        <div id="year-view" class="year-view" style="display:none;">
+          <div class="year-title" id="year-title">2026</div>
+          <div class="year-grid" id="year-grid"></div>
+        </div>
+        
+        <!-- FullCalendar (Day/Week/Month only) -->
         <div id="calendar" class="calendar-card"></div>
       </section>
     </main>
