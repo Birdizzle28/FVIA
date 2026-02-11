@@ -25,6 +25,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   if (!form || !calendarEl) return;
 
+    // ✅ Header title control (your custom header element)
+  const headerTitleEl = document.getElementById("cal-title");
+  function setHeaderTitle(text) {
+    if (headerTitleEl) headerTitleEl.textContent = text || "";
+  }
+  
   /* ---------------- Floating Labels ---------------- */
   function initFloatingLabels(scope = document) {
     scope.querySelectorAll(".fl-field").forEach((fl) => {
@@ -286,34 +292,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   /* ---------------- FullCalendar ---------------- */
   const calendar = new FullCalendar.Calendar(calendarEl, {
     initialView: "dayGridMonth",
-  
-    headerToolbar: {
-      left: "prev,next today",
-      center: "title",
-      right: "",
-    },
-  
-    // Your "Year" view (Apple-style conceptually: 12 months)
-    views: {
-      year: {
-        type: "multiMonth",
-        duration: { months: 12 },
-        fixedWeekCount: false,
-      },
-    },
-  
+    headerToolbar: false,
     expandRows: true,
     height: "auto",
     contentHeight: "auto",
     stickyHeaderDates: true,
     nowIndicator: true,
     scrollTime: "08:00:00",
-  
     editable: true,
     selectable: true,
-  
     events: eventSourceByViewRange,
-  
+    datesSet: () => {
+      if (activeMode !== "year") setHeaderTitle(calendar.view.title);
+    },
     dateClick: (info) => {
       const start = info.date;
       const end = addMinutes(start, 30);
@@ -456,6 +447,7 @@ function showYearMode() {
   // Show “just the year” at the top (Apple behavior)
   // Also ensures January is included (we always render Jan–Dec)
   renderYearGrid(activeYear);
+  setHeaderTitle(String(activeYear));
 }
 
 function showCalendarMode(fcViewName, goToDate) {
@@ -464,6 +456,7 @@ function showCalendarMode(fcViewName, goToDate) {
 
   if (goToDate) calendar.gotoDate(goToDate);
   calendar.changeView(fcViewName);
+  setHeaderTitle(calendar.view.title);
 }
 
 function setViewMode(mode, goToDate) {
@@ -513,13 +506,17 @@ tabsWrap?.addEventListener("click", (e) => {
 
     if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return;
 
-    if (dx < 0) renderYearGrid(activeYear + 1); // swipe left -> next year
-    else renderYearGrid(activeYear - 1);        // swipe right -> prev year
+    if (dx < 0) renderYearGrid(activeYear + 1);
+    else renderYearGrid(activeYear - 1);
+
+    // ✅ keep your custom header title synced
+    setHeaderTitle(String(activeYear));
   }, { passive: true });
 })();
 
 // Default mode
 setViewMode("month");
+setHeaderTitle(calendar.view.title);
   (function enableSwipeNav() {
     let startX = 0, startY = 0, isDown = false;
   
