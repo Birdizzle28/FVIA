@@ -475,3 +475,39 @@ main{ background:var(--page); width:100%; }
   .cal-title{ text-align:center; }
   .cal-arrows{ justify-content:center; flex-wrap:wrap; }
 }
+
+/* ===== Custom Repeat: "Every ___ [unit]" ===== */
+.custom-repeat-row{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding: 10px 12px;
+  border: 1px solid var(--panel-line);
+  background:#fff;
+}
+
+.custom-repeat-text{
+  color: var(--ink);
+  font-weight: 700;
+}
+
+#repeat-interval{
+  width: 110px;
+  padding: 12px 10px;
+  border: 1px solid var(--panel-line);
+  background:#fff;
+  font: inherit;
+  color: var(--ink);
+  outline:none;
+}
+
+#repeat-unit{
+  flex: 0 0 auto;
+  min-width: 140px;
+  padding: 12px 10px;
+  border: 1px solid var(--panel-line);
+  background:#fff;
+  font: inherit;
+  color: var(--ink);
+  outline:none;
+}
