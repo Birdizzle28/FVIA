@@ -510,7 +510,7 @@ function setViewMode(mode, goToDate) {
 
 // Tabs click
 tabsWrap?.addEventListener("click", (e) => {
-  const btn = e.target.closest(".cal-tab");
+  const btn = e.target?.closest?.(".cal-tab");
   if (!btn) return;
   setViewMode(btn.dataset.view);
 });
