@@ -414,3 +414,64 @@ main{ background:var(--page); width:100%; }
   .cal-title{ min-width: 120px; font-size: 14px; }
   .cal-today-btn{ padding: 0 10px; }
 }
+/* ===== Calendar Controls (arrows left, title right) ===== */
+.cal-controls{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:12px;
+  margin: 6px 0 10px;
+}
+
+.cal-arrows{
+  display:flex;
+  align-items:center;
+  gap:10px;
+}
+
+.cal-nav-btn{
+  appearance:none;
+  border:1px solid var(--panel-line);
+  background:#fff;
+  color:var(--ink);
+  border-radius:999px;
+  width:38px;
+  height:38px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+}
+
+.cal-nav-btn:hover{ background: var(--action-soft); }
+.cal-nav-btn:active{ transform: scale(.98); }
+
+.cal-today-btn{
+  appearance:none;
+  border:1px solid var(--panel-line);
+  background:#fff;
+  color:var(--ink);
+  border-radius:999px;
+  padding:8px 14px;
+  font:inherit;
+  font-weight:700;
+  cursor:pointer;
+}
+
+.cal-today-btn:hover{ background: var(--action-soft); }
+.cal-today-btn:active{ transform: scale(.98); }
+
+.cal-title{
+  font-weight:800;
+  color:var(--ink);
+  letter-spacing:.2px;
+  text-align:right;
+  min-height: 20px;
+}
+
+/* keep it nice on mobile */
+@media (max-width: 520px){
+  .cal-controls{ flex-direction:column; align-items:stretch; }
+  .cal-title{ text-align:center; }
+  .cal-arrows{ justify-content:center; flex-wrap:wrap; }
+}
