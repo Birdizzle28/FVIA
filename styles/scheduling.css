@@ -358,3 +358,59 @@ main{ background:var(--page); width:100%; }
   .year-grid{ grid-template-columns: repeat(2, 1fr); }
   .year-title{ font-size:34px; }
 }
+/* ===== Custom Calendar Header (replaces FullCalendar header) ===== */
+.cal-header{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:10px;
+  margin: 8px 0 10px;
+}
+
+.cal-title{
+  min-width: 160px;
+  text-align:center;
+  font-weight: 800;
+  letter-spacing: .2px;
+  color: var(--ink);
+}
+
+.cal-nav-btn{
+  appearance:none;
+  border:1px solid var(--panel-line);
+  background:#fff;
+  color: var(--ink);
+  border-radius:999px;
+  width:40px;
+  height:40px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition: background .12s ease, transform .06s ease;
+}
+
+.cal-nav-btn:hover{ background: var(--action-soft); }
+.cal-nav-btn:active{ transform: scale(.98); }
+
+.cal-today-btn{
+  appearance:none;
+  border:1px solid var(--panel-line);
+  background:#fff;
+  color: var(--ink);
+  border-radius:999px;
+  height:40px;
+  padding:0 14px;
+  font-weight:800;
+  cursor:pointer;
+  transition: background .12s ease, transform .06s ease;
+}
+
+.cal-today-btn:hover{ background: var(--action-soft); }
+.cal-today-btn:active{ transform: scale(.98); }
+
+/* Optional: tighter header on small screens */
+@media (max-width: 520px){
+  .cal-title{ min-width: 120px; font-size: 14px; }
+  .cal-today-btn{ padding: 0 10px; }
+}
