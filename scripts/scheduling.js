@@ -285,20 +285,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   /* ---------------- FullCalendar ---------------- */
   const calendar = new FullCalendar.Calendar(calendarEl, {
-    initialView: "year",
+    initialView: "dayGridMonth",
   
     headerToolbar: {
       left: "prev,next today",
       center: "title",
-      right: "timeGridDay,timeGridWeek,dayGridMonth",
-    },
-  
-    // Make the buttons show the labels you want
-    buttonText: {
-      today: "Today",
-      timeGridDay: "Day",
-      timeGridWeek: "Week",
-      dayGridMonth: "Month",
+      right: "",
     },
   
     // Your "Year" view (Apple-style conceptually: 12 months)
