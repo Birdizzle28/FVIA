@@ -290,7 +290,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     headerToolbar: {
       left: "prev,next today",
       center: "title",
-      right: "timeGridDay,timeGridWeek,dayGridMonth,year",
+      right: "timeGridDay,timeGridWeek,dayGridMonth",
     },
   
     // Make the buttons show the labels you want
@@ -299,7 +299,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       timeGridDay: "Day",
       timeGridWeek: "Week",
       dayGridMonth: "Month",
-      year: "Year",
     },
   
     // Your "Year" view (Apple-style conceptually: 12 months)
@@ -375,6 +374,160 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   calendar.render();
 
+  /* ---------------- Apple-style Year view (no events) ---------------- */
+const tabsWrap = document.getElementById("cal-tabs");
+const yearViewEl = document.getElementById("year-view");
+const yearTitleEl = document.getElementById("year-title");
+const yearGridEl = document.getElementById("year-grid");
+
+let activeMode = "month";          // day | week | month | year
+let activeYear = new Date().getFullYear();
+
+function setActiveTab(mode) {
+  activeMode = mode;
+  document.querySelectorAll(".cal-tab").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.view === mode);
+  });
+}
+
+function monthName(m) {
+  return ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"][m];
+}
+
+function daysInMonth(y, m) {
+  return new Date(y, m + 1, 0).getDate();
+}
+
+function firstDow(y, m) {
+  // 0 = Sun
+  return new Date(y, m, 1).getDay();
+}
+
+// Builds 12 mini calendars (Jan–Dec) with all day numbers.
+// No appointments shown. Clicking a day can jump you to Day view (optional).
+function renderYearGrid(year) {
+  activeYear = year;
+  if (yearTitleEl) yearTitleEl.textContent = String(year);
+  if (!yearGridEl) return;
+
+  yearGridEl.innerHTML = "";
+
+  for (let m = 0; m < 12; m++) {
+    const wrap = document.createElement("div");
+    wrap.className = "mini-month";
+
+    const head = document.createElement("div");
+    head.className = "mini-month-title";
+    head.textContent = monthName(m);
+    wrap.appendChild(head);
+
+    const dow = document.createElement("div");
+    dow.className = "mini-dow";
+    dow.innerHTML = `<span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>`;
+    wrap.appendChild(dow);
+
+    const grid = document.createElement("div");
+    grid.className = "mini-grid";
+
+    const pad = firstDow(year, m);
+    for (let i = 0; i < pad; i++) {
+      const blank = document.createElement("span");
+      blank.className = "mini-day blank";
+      grid.appendChild(blank);
+    }
+
+    const dim = daysInMonth(year, m);
+    for (let d = 1; d <= dim; d++) {
+      const cell = document.createElement("button");
+      cell.type = "button";
+      cell.className = "mini-day";
+      cell.textContent = String(d);
+
+      // Optional: tap a date -> switch to Day view at that date
+      cell.addEventListener("click", () => {
+        setViewMode("day", new Date(year, m, d));
+      });
+
+      grid.appendChild(cell);
+    }
+
+    wrap.appendChild(grid);
+    yearGridEl.appendChild(wrap);
+  }
+}
+
+function showYearMode() {
+  // Hide FullCalendar, show custom year grid
+  if (calendarEl) calendarEl.style.display = "none";
+  if (yearViewEl) yearViewEl.style.display = "block";
+
+  // Show “just the year” at the top (Apple behavior)
+  // Also ensures January is included (we always render Jan–Dec)
+  renderYearGrid(activeYear);
+}
+
+function showCalendarMode(fcViewName, goToDate) {
+  if (yearViewEl) yearViewEl.style.display = "none";
+  if (calendarEl) calendarEl.style.display = "block";
+
+  if (goToDate) calendar.gotoDate(goToDate);
+  calendar.changeView(fcViewName);
+}
+
+function setViewMode(mode, goToDate) {
+  setActiveTab(mode);
+
+  if (mode === "year") {
+    // anchor year based on the current calendar date if coming from month/week/day
+    if (goToDate) activeYear = goToDate.getFullYear();
+    else activeYear = calendar.getDate().getFullYear();
+    showYearMode();
+    return;
+  }
+
+  // Day/Week/Month map
+  if (mode === "day")   showCalendarMode("timeGridDay", goToDate);
+  if (mode === "week")  showCalendarMode("timeGridWeek", goToDate);
+  if (mode === "month") showCalendarMode("dayGridMonth", goToDate);
+}
+
+// Tabs click
+tabsWrap?.addEventListener("click", (e) => {
+  const btn = e.target.closest(".cal-tab");
+  if (!btn) return;
+  setViewMode(btn.dataset.view);
+});
+
+// Swipe left/right on YEAR view -> previous/next year
+(function enableYearSwipe() {
+  if (!yearViewEl) return;
+
+  let startX = 0, startY = 0, down = false;
+
+  yearViewEl.addEventListener("touchstart", (e) => {
+    const t = e.touches[0];
+    startX = t.clientX;
+    startY = t.clientY;
+    down = true;
+  }, { passive: true });
+
+  yearViewEl.addEventListener("touchend", (e) => {
+    if (!down) return;
+    down = false;
+
+    const t = e.changedTouches[0];
+    const dx = t.clientX - startX;
+    const dy = t.clientY - startY;
+
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return;
+
+    if (dx < 0) renderYearGrid(activeYear + 1); // swipe left -> next year
+    else renderYearGrid(activeYear - 1);        // swipe right -> prev year
+  }, { passive: true });
+})();
+
+// Default mode
+setViewMode("month");
   (function enableSwipeNav() {
     let startX = 0, startY = 0, isDown = false;
   
