@@ -130,6 +130,24 @@
 
           <button type="submit" id="create-appointment" class="btn-primary">Create Appointment</button>
         </form>
+
+        <!-- Calendar Controls Row (arrows left, title right) -->
+        <div class="cal-controls" id="cal-controls">
+          <div class="cal-arrows">
+            <button type="button" class="cal-nav-btn" id="cal-prev" aria-label="Previous">
+              <i class="fa-solid fa-chevron-left"></i>
+            </button>
+        
+            <button type="button" class="cal-nav-btn" id="cal-next" aria-label="Next">
+              <i class="fa-solid fa-chevron-right"></i>
+            </button>
+        
+            <button type="button" class="cal-today-btn" id="cal-today">Today</button>
+          </div>
+        
+          <div class="cal-title" id="cal-title"></div>
+        </div>
+        
         <!-- View Tabs (Apple-style) -->
         <div class="cal-tabs" id="cal-tabs">
           <button type="button" class="cal-tab" data-view="day">Day</button>
