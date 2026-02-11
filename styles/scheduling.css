@@ -134,3 +134,61 @@ main{ background:var(--page); width:100%; }
 
 /* Small tweak so floating label over date/time doesn’t clip */
 #datetime{ background:#fff; }
+
+.cal-tabs{
+  display:flex;
+  gap:10px;
+  justify-content:center;
+  margin: 10px 0 14px;
+}
+.cal-tab{
+  border:1px solid #ddd;
+  padding:8px 14px;
+  background:#fff;
+  border-radius:999px;
+}
+.cal-tab.active{
+  background:#111;
+  color:#fff;
+  border-color:#111;
+}
+
+.year-view{
+  user-select:none;
+}
+.year-title{
+  font-size:40px;
+  font-weight:700;
+  margin: 6px 0 12px;
+}
+.year-grid{
+  display:grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 14px;
+}
+.mini-month-title{
+  font-weight:700;
+  margin-bottom:6px;
+}
+.mini-dow{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  font-size: 12px;
+  opacity:.75;
+  margin-bottom:6px;
+}
+.mini-grid{
+  display:grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.mini-day{
+  border:0;
+  background:transparent;
+  padding:2px 0;
+  font-size: 13px;
+  text-align:center;
+}
+.mini-day.blank{
+  visibility:hidden;
+}
