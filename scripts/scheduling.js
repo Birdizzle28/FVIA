@@ -33,125 +33,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
   let activeMode = "month";          // day | week | month | year
   let activeYear = new Date().getFullYear();
-
-    /* ---------------- Calendar Sync Helpers (Google + Apple/ICS) ---------------- */
-  function pad2(n) { return String(n).padStart(2, "0"); }
-
-  function toICSDateUTC(date) {
-    // YYYYMMDDTHHMMSSZ
-    return (
-      date.getUTCFullYear() +
-      pad2(date.getUTCMonth() + 1) +
-      pad2(date.getUTCDate()) +
-      "T" +
-      pad2(date.getUTCHours()) +
-      pad2(date.getUTCMinutes()) +
-      pad2(date.getUTCSeconds()) +
-      "Z"
-    );
-  }
-
-  function icsEscape(str) {
-    return String(str || "")
-      .replace(/\\/g, "\\\\")
-      .replace(/\n/g, "\\n")
-      .replace(/,/g, "\\,")
-      .replace(/;/g, "\\;");
-  }
-
-  function buildRRule(repeatRule, repeatCustom) {
-    const rule = (repeatRule || "never").toLowerCase();
-
-    if (!rule || rule === "never") return null;
-
-    if (rule === "daily") return "FREQ=DAILY";
-    if (rule === "weekly") return "FREQ=WEEKLY";
-    if (rule === "biweekly") return "FREQ=WEEKLY;INTERVAL=2";
-    if (rule === "monthly") return "FREQ=MONTHLY";
-    if (rule === "yearly") return "FREQ=YEARLY";
-
-    // If you store custom like: {"interval":3,"unit":"weeks"} in repeat_custom
-    // We'll try to parse it.
-    if (rule === "custom") {
-      try {
-        const obj = typeof repeatCustom === "string" ? JSON.parse(repeatCustom) : repeatCustom;
-        const interval = Number(obj?.interval || 1);
-        const unit = String(obj?.unit || "days").toLowerCase();
-
-        const freq =
-          unit.startsWith("day") ? "DAILY" :
-          unit.startsWith("week") ? "WEEKLY" :
-          unit.startsWith("month") ? "MONTHLY" :
-          unit.startsWith("year") ? "YEARLY" :
-          "DAILY";
-
-        return `FREQ=${freq};INTERVAL=${Math.max(1, interval)}`;
-      } catch {
-        return null; // fallback: no RRULE if it's not parseable yet
-      }
-    }
-
-    return null;
-  }
-
-  function makeICS({ uid, title, start, end, location, description, url, rrule }) {
-    const dtStamp = toICSDateUTC(new Date());
-    const dtStart = toICSDateUTC(start);
-    const dtEnd = toICSDateUTC(end);
-
-    const lines = [
-      "BEGIN:VCALENDAR",
-      "VERSION:2.0",
-      "PRODID:-//Family Values Group//Scheduling//EN",
-      "CALSCALE:GREGORIAN",
-      "METHOD:PUBLISH",
-      "BEGIN:VEVENT",
-      `UID:${icsEscape(uid)}`,
-      `DTSTAMP:${dtStamp}`,
-      `DTSTART:${dtStart}`,
-      `DTEND:${dtEnd}`,
-      `SUMMARY:${icsEscape(title)}`,
-    ];
-
-    if (location) lines.push(`LOCATION:${icsEscape(location)}`);
-    if (description) lines.push(`DESCRIPTION:${icsEscape(description)}`);
-    if (url) lines.push(`URL:${icsEscape(url)}`);
-    if (rrule) lines.push(`RRULE:${rrule}`);
-
-    lines.push("END:VEVENT", "END:VCALENDAR");
-    return lines.join("\r\n");
-  }
-
-  function downloadICS(filename, content) {
-    const blob = new Blob([content], { type: "text/calendar;charset=utf-8" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = filename;
-    document.body.appendChild(link);
-    link.click();
-    setTimeout(() => {
-      URL.revokeObjectURL(link.href);
-      link.remove();
-    }, 500);
-  }
-
-  function buildGoogleTemplateUrl({ title, start, end, details, location, rrule }) {
-    // Google wants: dates=YYYYMMDDTHHMMSSZ/YYYYMMDDTHHMMSSZ
-    const dates = `${toICSDateUTC(start)}/${toICSDateUTC(end)}`;
-
-    const params = new URLSearchParams();
-    params.set("action", "TEMPLATE");
-    params.set("text", title || "Appointment");
-    params.set("dates", dates);
-    if (details) params.set("details", details);
-    if (location) params.set("location", location);
-
-    // recurring:
-    // Google supports "recur=RRULE:FREQ=...;INTERVAL=..."
-    if (rrule) params.set("recur", `RRULE:${rrule}`);
-
-    return `https://calendar.google.com/calendar/render?${params.toString()}`;
-  }
   
   /* ---------------- Floating Labels ---------------- */
   function initFloatingLabels(scope = document) {
@@ -750,9 +631,7 @@ setHeaderTitle(calendar.view.title);
   /* ---------------- Create appointment ---------------- */
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    let googleWin = null;
-    try { googleWin = window.open("about:blank", "_blank"); } catch {}
-    
+
     const title = (titleInput?.value || "").trim();
     if (!title) { alert("Title is required."); return; }
 
@@ -795,11 +674,7 @@ setHeaderTitle(calendar.view.title);
       notes,
     };
 
-    const { data: inserted, error } = await supabase
-      .from("appointments")
-      .insert(payload)
-      .select("id, scheduled_for, ends_at, title, location_type, location_address, repeat_rule, repeat_custom, url, notes")
-      .single();
+    const { error } = await supabase.from("appointments").insert(payload);
 
     if (error) {
       console.error("Insert failed:", error);
@@ -815,53 +690,6 @@ setHeaderTitle(calendar.view.title);
     initFloatingLabels(document);
 
     calendar.refetchEvents();
-
-    // ---- Build fields for Google + ICS ----
-    const startDate = new Date(inserted.scheduled_for);
-    const endDate = new Date(inserted.ends_at);
-
-    const loc =
-      (inserted.location_type === "physical" && inserted.location_address)
-        ? inserted.location_address
-        : (inserted.location_type === "virtual" ? "Virtual" : "");
-
-    const detailsParts = [];
-    if (inserted.notes) detailsParts.push(inserted.notes);
-    if (inserted.url) detailsParts.push(`Link: ${inserted.url}`);
-    const details = detailsParts.join("\n\n");
-
-    const rrule = buildRRule(inserted.repeat_rule, inserted.repeat_custom);
-
-    // 1) Apple/Outlook/etc: download .ics
-    const ics = makeICS({
-      uid: inserted.id,
-      title: inserted.title,
-      start: startDate,
-      end: endDate,
-      location: loc,
-      description: details,
-      url: inserted.url || "",
-      rrule,
-    });
-    downloadICS(`appointment-${inserted.id}.ics`, ics);
-
-    // 2) Google: open prefilled add-event page
-    const gUrl = buildGoogleTemplateUrl({
-      title: inserted.title,
-      start: startDate,
-      end: endDate,
-      details,
-      location: loc,
-      rrule,
-    });
-
-    if (googleWin && !googleWin.closed) {
-      googleWin.location.href = gUrl;
-    } else {
-      // fallback if popup blocked
-      window.location.href = gUrl;
-    }
-
-    alert("Appointment created! (ICS downloaded + Google tab opened)");
+    alert("Appointment created!");
   });
 });
