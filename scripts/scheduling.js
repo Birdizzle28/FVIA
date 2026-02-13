@@ -122,23 +122,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     items.forEach((it, i) => it.classList.toggle("active", i === idx));
   }
   
-  function getCenteredIndex(listEl) {
+  function getClosestItemIndex(listEl) {
     const items = Array.from(listEl.querySelectorAll(".wheel-item"));
     if (!items.length) return 0;
   
-    // With spacers, "0" is centered at scrollTop = 0
-    const raw = listEl.scrollTop / WHEEL_ITEM_HEIGHT;
-    const idx = Math.round(raw);
+    const listRect = listEl.getBoundingClientRect();
+    const centerY = listRect.top + listRect.height / 2;
   
-    return Math.max(0, Math.min(idx, items.length - 1));
+    let bestIdx = 0;
+    let bestDist = Infinity;
+  
+    items.forEach((it, idx) => {
+      const r = it.getBoundingClientRect();
+      const itCenter = r.top + r.height / 2;
+      const dist = Math.abs(itCenter - centerY);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestIdx = idx;
+      }
+    });
+  
+    return bestIdx;
   }
   
   function snapWheel(listEl) {
     const items = Array.from(listEl.querySelectorAll(".wheel-item"));
     if (!items.length) return;
   
-    const idx = getCenteredIndex(listEl);
-    const targetTop = idx * WHEEL_ITEM_HEIGHT;
+    const idx = getClosestItemIndex(listEl);
+    const item = items[idx];
+  
+    // Scroll so this item's center aligns with the wheel's center
+    const targetTop = item.offsetTop - (listEl.clientHeight / 2 - item.clientHeight / 2);
   
     listEl.scrollTo({ top: targetTop, behavior: "smooth" });
     setActiveByIndex(listEl, idx);
@@ -146,16 +161,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   
   function scrollToValue(listEl, val) {
     const items = Array.from(listEl.querySelectorAll(".wheel-item"));
-    const idx = items.findIndex((it) => it.dataset.val === String(val));
-    if (idx === -1) return;
+    const item = items.find((it) => it.dataset.val === String(val));
+    if (!item) return;
   
-    listEl.scrollTo({ top: idx * WHEEL_ITEM_HEIGHT, behavior: "auto" });
+    const targetTop = item.offsetTop - (listEl.clientHeight / 2 - item.clientHeight / 2);
+  
+    listEl.scrollTo({ top: targetTop, behavior: "auto" });
+  
+    const idx = items.indexOf(item);
     setActiveByIndex(listEl, idx);
   }
   
   function getCenteredValue(listEl) {
-    const idx = getCenteredIndex(listEl);
     const items = Array.from(listEl.querySelectorAll(".wheel-item"));
+    const idx = getClosestItemIndex(listEl);
+  
     setActiveByIndex(listEl, idx);
     return parseInt(items[idx]?.dataset.val || "0", 10);
   }
@@ -188,9 +208,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   
       scrollToValue(wheelHours, remindHours);
       scrollToValue(wheelMins, remindMins);
-
-      wheelHours.scrollTop = Math.max(wheelHours.scrollTop, getOffset(wheelHours));
-      wheelMins.scrollTop  = Math.max(wheelMins.scrollTop,  getOffset(wheelMins));
     });
   }
   
