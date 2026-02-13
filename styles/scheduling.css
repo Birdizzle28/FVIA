@@ -636,9 +636,7 @@ main{ background:var(--page); width:100%; }
   padding: 14px 0 18px;
 }
 
-.wheel-col{
-  width: 140px;
-}
+.wheel-col{ width: 140px; }
 
 .wheel-label{
   text-align:center;
@@ -654,12 +652,17 @@ main{ background:var(--page); width:100%; }
   border-radius: 14px;
   border: 1px solid rgba(0,0,0,.10);
   background:#fff;
-  padding: 80px 0; /* creates space above/below so center aligns */
+  padding: 0;              /* ✅ IMPORTANT */
+}
+
+.wheel-spacer{
+  width: 100%;
 }
 
 .wheel-item{
   scroll-snap-align: center;
-  height: 44px;
+  height: 44px;            /* ✅ must match JS WHEEL_ITEM_HEIGHT */
+  line-height: 44px;       /* ✅ helps exact centering */
   display:flex;
   align-items:center;
   justify-content:center;
@@ -667,9 +670,7 @@ main{ background:var(--page); width:100%; }
   opacity: .55;
 }
 
-.wheel-item.active{
-  opacity: 1;
-}
+.wheel-item.active{ opacity: 1; }
 
 .wheel-highlight{
   position:absolute;
