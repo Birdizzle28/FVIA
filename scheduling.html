@@ -190,12 +190,12 @@
     </main>
     
     <!-- Push Permission Modal -->
-    <div id="push-modal" class="fvg-modal-backdrop" aria-hidden="true">
-      <div class="fvg-modal" role="dialog" aria-modal="true" aria-labelledby="push-modal-title">
+    <div id="push-modal" class="fvg-modal" hidden aria-hidden="true">
+      <div class="fvg-modal-backdrop" data-push-close></div>
+    
+      <div class="fvg-modal-card" role="dialog" aria-modal="true" aria-labelledby="push-modal-title">
         <h3 id="push-modal-title">Enable reminders?</h3>
-        <p id="push-modal-desc">
-          Want push notification reminders for this appointment?
-        </p>
+        <p id="push-modal-desc">Want push notification reminders for this appointment?</p>
     
         <div id="push-modal-status" class="fvg-modal-status" style="display:none;"></div>
     
