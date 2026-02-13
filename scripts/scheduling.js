@@ -188,6 +188,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   
       scrollToValue(wheelHours, remindHours);
       scrollToValue(wheelMins, remindMins);
+
+      wheelHours.scrollTop = Math.max(wheelHours.scrollTop, getOffset(wheelHours));
+      wheelMins.scrollTop  = Math.max(wheelMins.scrollTop,  getOffset(wheelMins));
     });
   }
   
