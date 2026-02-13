@@ -24,114 +24,239 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const calendarEl = document.getElementById("calendar");
 
-  /* ---------------- Push modal elements ---------------- */
-  const pushModal = document.getElementById("push-modal");
-  const pushCancelBtn = document.getElementById("push-modal-cancel");
-  const pushEnableBtn = document.getElementById("push-modal-enable");
-  const pushStatusEl = document.getElementById("push-modal-status");
-  const pushDescEl = document.getElementById("push-modal-desc");
+  /* ---------------- Reminder modal elements ---------------- */
+  const reminderModal = document.getElementById("reminder-modal");
+  const reminderStatusEl = document.getElementById("reminder-modal-status");
+  const reminderCancelBtn = document.getElementById("reminder-cancel");
+  const reminderSaveBtn = document.getElementById("reminder-save");
+  const cardYes = document.getElementById("reminder-card-yes");
+  const cardNo = document.getElementById("reminder-card-no");
+  const timeBtn = document.getElementById("reminder-time-btn");
+  const timeLabel = document.getElementById("reminder-time-label");
+  
+  // timewheel modal
+  const timewheelModal = document.getElementById("timewheel-modal");
+  const wheelHours = document.getElementById("wheel-hours");
+  const wheelMins = document.getElementById("wheel-mins");
+  const timewheelDone = document.getElementById("timewheel-done");
+  const timewheelCancel = document.getElementById("timewheel-cancel");
+  
+  let pendingAppointmentPayload = null; // hold form data until modal Save
+  let reminderChoice = "no";            // "yes" | "no"
+  let remindHours = 0;
+  let remindMins = 5;
 
-  let lastCreatedAppointment = null;
-
-  function openPushModal(appointment) {
-    lastCreatedAppointment = appointment || null;
-  
-    if (pushDescEl) {
-      pushDescEl.textContent = "Want push notification reminders for this appointment?";
+  function setReminderStatus(msg, show=true){
+    if (!reminderStatusEl) return;
+    if (!show || !msg){
+      reminderStatusEl.style.display = "none";
+      reminderStatusEl.textContent = "";
+      return;
     }
-  
-    setPushStatus("", false);
-  
-    if (pushModal) {
-      pushModal.hidden = false;
-      pushModal.setAttribute("aria-hidden", "false");
-    }
+    reminderStatusEl.style.display = "block";
+    reminderStatusEl.textContent = msg;
   }
   
-  function closePushModal() {
-    if (pushModal) {
-      pushModal.hidden = true;
-      pushModal.setAttribute("aria-hidden", "true");
-    }
-    lastCreatedAppointment = null;
-    setPushStatus("", false);
+  function openReminderModal(payload){
+    pendingAppointmentPayload = payload;
+    setReminderStatus("", false);
+  
+    selectReminderCard("no"); // default
+    updateTimeLabel();
+  
+    reminderModal.hidden = false;
+    reminderModal.setAttribute("aria-hidden", "false");
+  }
+  
+  function closeReminderModal(){
+    reminderModal.hidden = true;
+    reminderModal.setAttribute("aria-hidden", "true");
+    pendingAppointmentPayload = null;
+    setReminderStatus("", false);
+  }
+  
+  function selectReminderCard(choice){
+    reminderChoice = choice;
+    cardYes?.classList.toggle("selected", choice === "yes");
+    cardNo?.classList.toggle("selected", choice === "no");
+  }
+  
+  function updateTimeLabel(){
+    const hh = String(remindHours).padStart(2,"0");
+    const mm = String(remindMins).padStart(2,"0");
+    if (timeLabel) timeLabel.textContent = `${hh} hours ${mm} min`;
   }
 
-  function setPushStatus(msg, show = true) {
-    if (!pushStatusEl) return;
-    if (!show || !msg) {
-      pushStatusEl.style.display = "none";
-      pushStatusEl.textContent = "";
-      return;
+  function buildWheel(el, max){
+    el.innerHTML = "";
+    for (let i=0;i<=max;i++){
+      const item = document.createElement("div");
+      item.className = "wheel-item";
+      item.dataset.val = String(i);
+      item.textContent = String(i);
+      el.appendChild(item);
     }
-    pushStatusEl.style.display = "block";
-    pushStatusEl.textContent = msg;
+  }
+  function openTimewheel(){
+    buildWheel(wheelHours, 23);
+    buildWheel(wheelMins, 59);
+  
+    timewheelModal.hidden = false;
+    timewheelModal.setAttribute("aria-hidden", "false");
+  
+    requestAnimationFrame(() => {
+      scrollToValue(wheelHours, remindHours);
+      scrollToValue(wheelMins, remindMins);
+    });
+  }
+  
+  function closeTimewheel(){
+    timewheelModal.hidden = true;
+    timewheelModal.setAttribute("aria-hidden", "true");
   }
 
-  // Close modal
-  pushCancelBtn?.addEventListener("click", closePushModal);
-
-  // Optional: click outside to close
-  document.querySelectorAll("[data-push-close]").forEach((el) => {
-    el.addEventListener("click", closePushModal);
-  });
-
-  async function handleEnableRemindersClick() {
-    // Safety: browser support
-    if (!("Notification" in window)) {
-      setPushStatus("Your browser doesn’t support push notifications.", true);
-      return;
-    }
-
-    const perm = Notification.permission; // "default" | "granted" | "denied"
-
-    // Already granted -> do NOT ask again
-    if (perm === "granted") {
-      setPushStatus("Notifications already enabled ✅", true);
-
-      // Hook for later: store subscription, schedule reminders, etc.
-      // await enableRemindersForAppointment(lastCreatedAppointment);
-
-      setTimeout(closePushModal, 700);
-      return;
-    }
-
-    // Denied -> do NOT ask again (browser won’t show prompt)
-    if (perm === "denied") {
-      setPushStatus(
-        "Notifications are blocked. Enable them in your browser/site settings, then try again.",
-        true
-      );
-      return;
-    }
-
-    // Default -> ask once
+  // close by clicking backdrop
+  document.querySelectorAll("[data-reminder-close]").forEach(el => el.addEventListener("click", closeReminderModal));
+  document.querySelectorAll("[data-timewheel-close]").forEach(el => el.addEventListener("click", closeTimewheel));
+  
+  reminderCancelBtn?.addEventListener("click", closeReminderModal);
+  reminderSaveBtn?.addEventListener("click", async () => {
     try {
-      setPushStatus("Requesting permission…", true);
-      const result = await Notification.requestPermission();
-
-      if (result === "granted") {
-        setPushStatus("Enabled ✅", true);
-
-        // Hook for later: store subscription, schedule reminders, etc.
-        // await enableRemindersForAppointment(lastCreatedAppointment);
-
-        setTimeout(closePushModal, 700);
-      } else if (result === "denied") {
-        setPushStatus(
-          "Notifications were blocked. You can enable them later in your browser/site settings.",
-          true
-        );
-      } else {
-        setPushStatus("No changes made.", true);
+      if (!pendingAppointmentPayload) return;
+  
+      setReminderStatus("Saving…", true);
+  
+      const remindBeforeMinutes = (remindHours * 60) + remindMins;
+  
+      // If they chose reminders, ensure browser push is enabled + stored
+      if (reminderChoice === "yes") {
+        await ensurePushSubscription();
       }
+  
+      // ✅ Attach reminder settings to the appointment payload
+      const payloadToInsert = {
+        ...pendingAppointmentPayload,
+        remind_enabled: reminderChoice === "yes",
+        remind_before_minutes: reminderChoice === "yes" ? remindBeforeMinutes : null,
+      };
+  
+      const { error } = await supabase.from("appointments").insert(payloadToInsert);
+      if (error) throw error;
+  
+      closeReminderModal();
+  
+      // Reset UI like before
+      form.reset();
+      window.fpStart?.clear?.();
+      window.fpEnd?.clear?.();
+      toggleLocationFields();
+      toggleRepeatCustom();
+      initFloatingLabels(document);
+  
+      calendar.refetchEvents();
+  
     } catch (err) {
       console.error(err);
-      setPushStatus("Something went wrong while requesting permission.", true);
+      setReminderStatus(err?.message || "Failed to save appointment.", true);
     }
+  });
+  
+  cardYes?.addEventListener("click", () => selectReminderCard("yes"));
+  cardNo?.addEventListener("click", () => selectReminderCard("no"));
+  
+  timeBtn?.addEventListener("click", () => {
+    selectReminderCard("yes");
+    openTimewheel();
+  });
+  
+  timewheelCancel?.addEventListener("click", closeTimewheel);
+  
+  timewheelDone?.addEventListener("click", () => {
+    remindHours = getCenteredValue(wheelHours);
+    remindMins = getCenteredValue(wheelMins);
+    updateTimeLabel();
+    closeTimewheel();
+  });
+  function getCenteredValue(listEl){
+    const items = Array.from(listEl.querySelectorAll(".wheel-item"));
+    const rect = listEl.getBoundingClientRect();
+    const centerY = rect.top + rect.height/2;
+  
+    let best = null;
+    let bestDist = Infinity;
+    for (const it of items){
+      const r = it.getBoundingClientRect();
+      const mid = r.top + r.height/2;
+      const d = Math.abs(mid - centerY);
+      if (d < bestDist){ bestDist = d; best = it; }
+    }
+  
+    items.forEach(i => i.classList.toggle("active", i === best));
+    return best ? parseInt(best.dataset.val,10) : 0;
+  }
+  
+  function scrollToValue(listEl, val){
+    const item = listEl.querySelector(`.wheel-item[data-val="${val}"]`);
+    if (!item) return;
+    item.scrollIntoView({ block: "center" });
   }
 
-  pushEnableBtn?.addEventListener("click", handleEnableRemindersClick);
+  const VAPID_PUBLIC_KEY = "BBsKhwYM-5dtgJ01oHJ_4H0wgzkXdxZRAg12B2kFHgb8K07c0VbvpYhHRILFf-erU37H11e_gFXErBbVnGuE8GA"; // safe to be public
+
+  function urlBase64ToUint8Array(base64String) {
+    const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+    const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+    const rawData = atob(base64);
+    const outputArray = new Uint8Array(rawData.length);
+    for (let i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+    return outputArray;
+  }
+  
+  async function ensurePushSubscription(){
+    // NOTE: iOS Safari only supports web push for PWA installed to Home Screen.
+    if (!("Notification" in window) || !("serviceWorker" in navigator)) {
+      throw new Error("Your browser doesn’t support push notifications here.");
+    }
+  
+    if (Notification.permission === "denied") {
+      throw new Error("Notifications are blocked in browser/site settings.");
+    }
+  
+    if (Notification.permission !== "granted") {
+      const r = await Notification.requestPermission();
+      if (r !== "granted") throw new Error("Notification permission was not granted.");
+    }
+  
+    const reg = await navigator.serviceWorker.ready;
+  
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub) {
+      sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+      });
+    }
+  
+    // send subscription to Netlify function for storage
+    const { data: { session } } = await supabase.auth.getSession();
+    const token = session?.access_token;
+  
+    const resp = await fetch("/.netlify/functions/push-subscribe", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify({ subscription: sub }),
+    });
+  
+    if (!resp.ok) {
+      const t = await resp.text();
+      throw new Error(`Failed to save push subscription: ${t}`);
+    }
+  
+    return sub;
+  }
 
   if (!form || !calendarEl) return;
 
@@ -202,13 +327,13 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   /* ---------------- Flatpickr ---------------- */
-  const fpStart = flatpickr("#starts", {
+  window.fpStart = flatpickr("#starts", {
     enableTime: true,
     dateFormat: "Y-m-d H:i",
     minDate: "today",
   });
-
-  const fpEnd = flatpickr("#ends", {
+  
+  window.fpEnd = flatpickr("#ends", {
     enableTime: true,
     dateFormat: "Y-m-d H:i",
     minDate: "today",
@@ -473,8 +598,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     dateClick: (info) => {
       const start = info.date;
       const end = addMinutes(start, 30);
-      fpStart.setDate(start, true);
-      fpEnd.setDate(end, true);
+      window.fpStart?.setDate(start, true);
+      window.fpEnd?.setDate(end, true);
       titleInput?.focus();
       form.scrollIntoView({ behavior: "smooth" });
     },
@@ -747,8 +872,8 @@ setHeaderTitle(calendar.view.title);
     const locType = (locationType?.value || "").trim();
     if (!locType) { alert("Select a Location type."); return; }
 
-    const start = fpStart.selectedDates?.[0] || null;
-    const end = fpEnd.selectedDates?.[0] || null;
+    const start = window.fpStart?.selectedDates?.[0] || null;
+    const end = window.fpEnd?.selectedDates?.[0] || null;
 
     if (!start || !end) { alert("Starts and Ends are required."); return; }
     if (+end <= +start) { alert("Ends must be after Starts."); return; }
@@ -781,32 +906,15 @@ setHeaderTitle(calendar.view.title);
       repeat_custom: repCustom,
       url,
       notes,
+      remind_enabled: false,
+      remind_before_minutes: null,
     };
 
-    const { error } = await supabase.from("appointments").insert(payload);
-
-    if (error) {
-      console.error("Insert failed:", error);
-      alert("Failed to create appointment.");
-      return;
-    }
-
-    form.reset();
-    fpStart.clear();
-    fpEnd.clear();
-    toggleLocationFields();
-    toggleRepeatCustom();
-    initFloatingLabels(document);
-
-    calendar.refetchEvents();
-
-    // show reminder modal instead of alert
-    openPushModal({
-      title,
-      start: start.toISOString(),
-      end: end.toISOString(),
-      repeat_rule: rep,
-      repeat_custom: repCustom,
-    });
+    // ✅ Hold payload until user chooses reminder settings
+    pendingAppointmentPayload = payload;
+    
+    // ✅ Open the reminder choice modal (Option 2)
+    openReminderModal(payload);
   });
 });
+
