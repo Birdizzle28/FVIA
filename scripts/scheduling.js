@@ -152,11 +152,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     const idx = getClosestItemIndex(listEl);
     const item = items[idx];
   
-    // Scroll so this item's center aligns with the wheel's center
     const targetTop = item.offsetTop - (listEl.clientHeight / 2 - item.clientHeight / 2);
   
-    listEl.scrollTo({ top: targetTop, behavior: "smooth" });
+    // prevent scroll-loop from programmatic snapping
+    listEl.dataset.programSnap = "1";
+    listEl.scrollTo({ top: targetTop, behavior: "auto" });
     setActiveByIndex(listEl, idx);
+  
+    // release lock next frame
+    requestAnimationFrame(() => {
+      delete listEl.dataset.programSnap;
+    });
   }
   
   function scrollToValue(listEl, val) {
@@ -166,10 +172,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   
     const targetTop = item.offsetTop - (listEl.clientHeight / 2 - item.clientHeight / 2);
   
+    listEl.dataset.programSnap = "1";
     listEl.scrollTo({ top: targetTop, behavior: "auto" });
   
     const idx = items.indexOf(item);
     setActiveByIndex(listEl, idx);
+  
+    requestAnimationFrame(() => {
+      delete listEl.dataset.programSnap;
+    });
   }
   
   function getCenteredValue(listEl) {
@@ -187,7 +198,10 @@ document.addEventListener("DOMContentLoaded", async () => {
     let t = null;
   
     listEl.addEventListener("scroll", () => {
-      // If iOS rubber-bands negative, clamp to 0 (0 is valid!)
+      // Ignore scroll events caused by our own snap scrollTo()
+      if (listEl.dataset.programSnap === "1") return;
+  
+      // If iOS rubber-bands negative, clamp
       if (listEl.scrollTop < 0) listEl.scrollTop = 0;
   
       if (t) clearTimeout(t);
