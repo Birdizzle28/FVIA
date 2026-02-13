@@ -24,6 +24,114 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const calendarEl = document.getElementById("calendar");
 
+    /* ---------------- Push modal elements ---------------- */
+  const pushModal = document.getElementById("push-modal");
+  const pushCancelBtn = document.getElementById("push-modal-cancel");
+  const pushEnableBtn = document.getElementById("push-modal-enable");
+  const pushStatusEl = document.getElementById("push-modal-status");
+  const pushDescEl = document.getElementById("push-modal-desc");
+
+  let lastCreatedAppointment = null;
+
+  function openPushModal(appointment) {
+    lastCreatedAppointment = appointment || null;
+
+    if (pushDescEl) {
+      pushDescEl.textContent = "Want push notification reminders for this appointment?";
+    }
+
+    setPushStatus("", false);
+    if (pushModal) {
+      pushModal.classList.add("is-open");
+      pushModal.setAttribute("aria-hidden", "false");
+    }
+  }
+
+  function closePushModal() {
+    if (pushModal) {
+      pushModal.classList.remove("is-open");
+      pushModal.setAttribute("aria-hidden", "true");
+    }
+    lastCreatedAppointment = null;
+    setPushStatus("", false);
+  }
+
+  function setPushStatus(msg, show = true) {
+    if (!pushStatusEl) return;
+    if (!show || !msg) {
+      pushStatusEl.style.display = "none";
+      pushStatusEl.textContent = "";
+      return;
+    }
+    pushStatusEl.style.display = "block";
+    pushStatusEl.textContent = msg;
+  }
+
+  // Close modal
+  pushCancelBtn?.addEventListener("click", closePushModal);
+
+  // Optional: click outside to close
+  pushModal?.addEventListener("click", (e) => {
+    if (e.target === pushModal) closePushModal();
+  });
+
+    async function handleEnableRemindersClick() {
+    // Safety: browser support
+    if (!("Notification" in window)) {
+      setPushStatus("Your browser doesn’t support push notifications.", true);
+      return;
+    }
+
+    const perm = Notification.permission; // "default" | "granted" | "denied"
+
+    // Already granted -> do NOT ask again
+    if (perm === "granted") {
+      setPushStatus("Notifications already enabled ✅", true);
+
+      // Hook for later: store subscription, schedule reminders, etc.
+      // await enableRemindersForAppointment(lastCreatedAppointment);
+
+      setTimeout(closePushModal, 700);
+      return;
+    }
+
+    // Denied -> do NOT ask again (browser won’t show prompt)
+    if (perm === "denied") {
+      setPushStatus(
+        "Notifications are blocked. Enable them in your browser/site settings, then try again.",
+        true
+      );
+      return;
+    }
+
+    // Default -> ask once
+    try {
+      setPushStatus("Requesting permission…", true);
+      const result = await Notification.requestPermission();
+
+      if (result === "granted") {
+        setPushStatus("Enabled ✅", true);
+
+        // Hook for later: store subscription, schedule reminders, etc.
+        // await enableRemindersForAppointment(lastCreatedAppointment);
+
+        setTimeout(closePushModal, 700);
+      } else if (result === "denied") {
+        setPushStatus(
+          "Notifications were blocked. You can enable them later in your browser/site settings.",
+          true
+        );
+      } else {
+        setPushStatus("No changes made.", true);
+      }
+    } catch (err) {
+      console.error(err);
+      setPushStatus("Something went wrong while requesting permission.", true);
+    }
+  }
+
+  pushEnableBtn?.addEventListener("click", handleEnableRemindersClick);
+
   if (!form || !calendarEl) return;
 
     // ✅ Header title control (your custom header element)
@@ -690,6 +798,14 @@ setHeaderTitle(calendar.view.title);
     initFloatingLabels(document);
 
     calendar.refetchEvents();
-    alert("Appointment created!");
+
+    // show reminder modal instead of alert
+    openPushModal({
+      title,
+      start: start.toISOString(),
+      end: end.toISOString(),
+      repeat_rule: rep,
+      repeat_custom: repCustom,
+    });
   });
 });
