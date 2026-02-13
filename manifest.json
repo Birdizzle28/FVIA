@@ -1,0 +1,20 @@
+{
+  "name": "Family Values Group",
+  "short_name": "FVG",
+  "start_url": "/dashboard.html",
+  "display": "standalone",
+  "background_color": "#545454",
+  "theme_color": "#545454",
+  "icons": [
+    {
+      "src": "/Pics/img17.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/Pics/img17.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
