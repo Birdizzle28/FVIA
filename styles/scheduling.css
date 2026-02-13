@@ -676,7 +676,7 @@ main{ background:var(--page); width:100%; }
   position:absolute;
   left: 50%;
   transform: translateX(-50%);
-  top: 92px;
+  top: calc(50% - 22px);
   width: calc(140px * 2 + 14px);
   height: 44px;
   border-radius: 12px;
