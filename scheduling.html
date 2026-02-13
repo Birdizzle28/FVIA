@@ -189,19 +189,65 @@
       </section>
     </main>
     
-    <!-- Push Permission Modal -->
-    <div id="push-modal" class="fvg-modal" hidden aria-hidden="true">
-      <div class="fvg-modal-backdrop" data-push-close></div>
+    <!-- Reminder Modal -->
+    <div id="reminder-modal" class="fvg-modal" hidden aria-hidden="true">
+      <div class="fvg-modal-backdrop" data-reminder-close></div>
     
-      <div class="fvg-modal-card" role="dialog" aria-modal="true" aria-labelledby="push-modal-title">
-        <h3 id="push-modal-title">Enable reminders?</h3>
-        <p id="push-modal-desc">Want push notification reminders for this appointment?</p>
+      <div class="fvg-modal-card" role="dialog" aria-modal="true" aria-labelledby="reminder-modal-title">
+        <h3 id="reminder-modal-title">Reminder for this appointment?</h3>
     
-        <div id="push-modal-status" class="fvg-modal-status" style="display:none;"></div>
+        <div class="reminder-options">
+          <!-- Card 1 -->
+          <div class="reminder-card" id="reminder-card-yes" data-reminder-choice="yes" role="button" tabindex="0">
+            <div class="reminder-card-title">Remind me</div>
+    
+            <button type="button" class="reminder-time-btn" id="reminder-time-btn">
+              <span id="reminder-time-label">00 hours 05 min</span>
+            </button>
+    
+            <div class="reminder-card-sub">before the appointment</div>
+          </div>
+    
+          <!-- Card 2 -->
+          <div class="reminder-card" id="reminder-card-no" data-reminder-choice="no" role="button" tabindex="0">
+            <div class="reminder-card-title">No reminder</div>
+            <div class="reminder-card-sub">Don’t send a push notification for this appointment</div>
+          </div>
+        </div>
+    
+        <div id="reminder-modal-status" class="fvg-modal-status" style="display:none;"></div>
     
         <div class="fvg-modal-actions">
-          <button type="button" id="push-modal-cancel" class="btn-secondary">Not now</button>
-          <button type="button" id="push-modal-enable" class="btn-primary">Enable reminders</button>
+          <button type="button" id="reminder-cancel" class="btn-secondary">Cancel</button>
+          <button type="button" id="reminder-save" class="btn-primary">Save</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Time Wheel Modal (hours/minutes) -->
+    <div id="timewheel-modal" class="fvg-modal" hidden aria-hidden="true">
+      <div class="fvg-modal-backdrop" data-timewheel-close></div>
+    
+      <div class="fvg-modal-card" role="dialog" aria-modal="true" aria-labelledby="timewheel-title">
+        <h3 id="timewheel-title">Remind me before</h3>
+    
+        <div class="timewheel">
+          <div class="wheel-col">
+            <div class="wheel-label">hours</div>
+            <div class="wheel-list" id="wheel-hours"></div>
+          </div>
+    
+          <div class="wheel-col">
+            <div class="wheel-label">min</div>
+            <div class="wheel-list" id="wheel-mins"></div>
+          </div>
+    
+          <div class="wheel-highlight"></div>
+        </div>
+    
+        <div class="fvg-modal-actions">
+          <button type="button" id="timewheel-cancel" class="btn-secondary">Cancel</button>
+          <button type="button" id="timewheel-done" class="btn-primary">Done</button>
         </div>
       </div>
     </div>
