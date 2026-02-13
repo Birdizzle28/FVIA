@@ -122,71 +122,63 @@ document.addEventListener("DOMContentLoaded", async () => {
     items.forEach((it, i) => it.classList.toggle("active", i === idx));
   }
   
-  function getClosestItemIndex(listEl) {
+  function getOffset(listEl) {
+    const topSpacer = listEl.querySelector(".wheel-spacer");
+    return topSpacer ? topSpacer.offsetHeight : 0;
+  }
+  
+  // ✅ Spacer-aware, pixel-safe centered index (NO getBoundingClientRect)
+  function getCenteredIndex(listEl) {
     const items = Array.from(listEl.querySelectorAll(".wheel-item"));
     if (!items.length) return 0;
   
-    const listRect = listEl.getBoundingClientRect();
-    const centerY = listRect.top + listRect.height / 2;
+    const offset = getOffset(listEl);
+    const centerAdjust = listEl.clientHeight / 2 - WHEEL_ITEM_HEIGHT / 2;
   
-    let bestIdx = 0;
-    let bestDist = Infinity;
+    const raw = (listEl.scrollTop + centerAdjust - offset) / WHEEL_ITEM_HEIGHT;
+    const idx = Math.round(raw);
   
-    items.forEach((it, idx) => {
-      const r = it.getBoundingClientRect();
-      const itCenter = r.top + r.height / 2;
-      const dist = Math.abs(itCenter - centerY);
-      if (dist < bestDist) {
-        bestDist = dist;
-        bestIdx = idx;
-      }
-    });
-  
-    return bestIdx;
+    return Math.max(0, Math.min(idx, items.length - 1));
   }
   
   function snapWheel(listEl) {
     const items = Array.from(listEl.querySelectorAll(".wheel-item"));
     if (!items.length) return;
   
-    const idx = getClosestItemIndex(listEl);
-    const item = items[idx];
+    const idx = getCenteredIndex(listEl);
   
-    const targetTop = item.offsetTop - (listEl.clientHeight / 2 - item.clientHeight / 2);
+    const offset = getOffset(listEl);
+    const centerAdjust = listEl.clientHeight / 2 - WHEEL_ITEM_HEIGHT / 2;
   
-    // prevent scroll-loop from programmatic snapping
+    const targetTop = offset + idx * WHEEL_ITEM_HEIGHT - centerAdjust;
+  
     listEl.dataset.programSnap = "1";
     listEl.scrollTo({ top: targetTop, behavior: "auto" });
     setActiveByIndex(listEl, idx);
   
-    // release lock next frame
-    requestAnimationFrame(() => {
-      delete listEl.dataset.programSnap;
-    });
+    requestAnimationFrame(() => delete listEl.dataset.programSnap);
   }
   
   function scrollToValue(listEl, val) {
     const items = Array.from(listEl.querySelectorAll(".wheel-item"));
-    const item = items.find((it) => it.dataset.val === String(val));
-    if (!item) return;
+    const idx = items.findIndex((it) => it.dataset.val === String(val));
+    if (idx === -1) return;
   
-    const targetTop = item.offsetTop - (listEl.clientHeight / 2 - item.clientHeight / 2);
+    const offset = getOffset(listEl);
+    const centerAdjust = listEl.clientHeight / 2 - WHEEL_ITEM_HEIGHT / 2;
+  
+    const targetTop = offset + idx * WHEEL_ITEM_HEIGHT - centerAdjust;
   
     listEl.dataset.programSnap = "1";
     listEl.scrollTo({ top: targetTop, behavior: "auto" });
-  
-    const idx = items.indexOf(item);
     setActiveByIndex(listEl, idx);
   
-    requestAnimationFrame(() => {
-      delete listEl.dataset.programSnap;
-    });
+    requestAnimationFrame(() => delete listEl.dataset.programSnap);
   }
   
   function getCenteredValue(listEl) {
     const items = Array.from(listEl.querySelectorAll(".wheel-item"));
-    const idx = getClosestItemIndex(listEl);
-  
+    const idx = getCenteredIndex(listEl);
     setActiveByIndex(listEl, idx);
     return parseInt(items[idx]?.dataset.val || "0", 10);
   }
@@ -198,10 +190,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     let t = null;
   
     listEl.addEventListener("scroll", () => {
-      // Ignore scroll events caused by our own snap scrollTo()
       if (listEl.dataset.programSnap === "1") return;
   
-      // If iOS rubber-bands negative, clamp
+      // allow 0 (0 is valid)
       if (listEl.scrollTop < 0) listEl.scrollTop = 0;
   
       if (t) clearTimeout(t);
