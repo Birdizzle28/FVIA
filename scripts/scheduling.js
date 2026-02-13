@@ -87,28 +87,112 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (timeLabel) timeLabel.textContent = `${hh} hours ${mm} min`;
   }
 
-  function buildWheel(el, max){
-    el.innerHTML = "";
-    for (let i=0;i<=max;i++){
-      const item = document.createElement("div");
-      item.className = "wheel-item";
-      item.dataset.val = String(i);
-      item.textContent = String(i);
-      el.appendChild(item);
-    }
+  // --- TIMEWHEEL SETTINGS ---
+// IMPORTANT: This MUST match your CSS .wheel-item height (px)
+const WHEEL_ITEM_HEIGHT = 44;
+
+function spacerHeightPx(listEl) {
+  return Math.max(0, Math.floor(listEl.clientHeight / 2 - WHEEL_ITEM_HEIGHT / 2));
+}
+
+function buildWheel(listEl, max) {
+  listEl.innerHTML = "";
+
+  const top = document.createElement("div");
+  top.className = "wheel-spacer";
+  top.style.height = `${spacerHeightPx(listEl)}px`;
+  listEl.appendChild(top);
+
+  for (let i = 0; i <= max; i++) {
+    const item = document.createElement("div");
+    item.className = "wheel-item";
+    item.dataset.val = String(i);
+    item.textContent = String(i);
+    listEl.appendChild(item);
   }
-  function openTimewheel(){
+
+  const bottom = document.createElement("div");
+  bottom.className = "wheel-spacer";
+  bottom.style.height = `${spacerHeightPx(listEl)}px`;
+  listEl.appendChild(bottom);
+}
+
+function getOffset(listEl) {
+  const topSpacer = listEl.querySelector(".wheel-spacer");
+  return topSpacer ? topSpacer.offsetHeight : 0;
+}
+
+function setActiveByIndex(listEl, idx) {
+  const items = Array.from(listEl.querySelectorAll(".wheel-item"));
+  items.forEach((it, i) => it.classList.toggle("active", i === idx));
+}
+
+function getCenteredIndex(listEl) {
+  const offset = getOffset(listEl);
+  const items = Array.from(listEl.querySelectorAll(".wheel-item"));
+  if (!items.length) return 0;
+
+  const raw = (listEl.scrollTop - offset) / WHEEL_ITEM_HEIGHT;
+  const idx = Math.round(raw);
+  return Math.max(0, Math.min(idx, items.length - 1));
+}
+
+function snapWheel(listEl) {
+  const offset = getOffset(listEl);
+  const idx = getCenteredIndex(listEl);
+  const targetTop = offset + idx * WHEEL_ITEM_HEIGHT;
+
+  listEl.scrollTo({ top: targetTop, behavior: "smooth" });
+  setActiveByIndex(listEl, idx);
+}
+
+function wireWheelSnap(listEl) {
+  if (listEl.dataset.snapWired === "1") return;
+  listEl.dataset.snapWired = "1";
+
+  let t = null;
+  listEl.addEventListener(
+    "scroll",
+    () => {
+      if (t) clearTimeout(t);
+      t = setTimeout(() => snapWheel(listEl), 90);
+    },
+    { passive: true }
+  );
+}
+
+function scrollToValue(listEl, val) {
+  const items = Array.from(listEl.querySelectorAll(".wheel-item"));
+  const idx = items.findIndex((it) => it.dataset.val === String(val));
+  if (idx === -1) return;
+
+  const offset = getOffset(listEl);
+  listEl.scrollTo({ top: offset + idx * WHEEL_ITEM_HEIGHT, behavior: "auto" });
+  setActiveByIndex(listEl, idx);
+}
+
+function getCenteredValue(listEl) {
+  const idx = getCenteredIndex(listEl);
+  const items = Array.from(listEl.querySelectorAll(".wheel-item"));
+  setActiveByIndex(listEl, idx);
+  return parseInt(items[idx]?.dataset.val || "0", 10);
+}
+
+function openTimewheel() {
+  timewheelModal.hidden = false;
+  timewheelModal.setAttribute("aria-hidden", "false");
+
+  requestAnimationFrame(() => {
     buildWheel(wheelHours, 23);
     buildWheel(wheelMins, 59);
-  
-    timewheelModal.hidden = false;
-    timewheelModal.setAttribute("aria-hidden", "false");
-  
-    requestAnimationFrame(() => {
-      scrollToValue(wheelHours, remindHours);
-      scrollToValue(wheelMins, remindMins);
-    });
-  }
+
+    wireWheelSnap(wheelHours);
+    wireWheelSnap(wheelMins);
+
+    scrollToValue(wheelHours, remindHours);
+    scrollToValue(wheelMins, remindMins);
+  });
+}
   
   function closeTimewheel(){
     timewheelModal.hidden = true;
@@ -177,29 +261,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     updateTimeLabel();
     closeTimewheel();
   });
-  function getCenteredValue(listEl){
-    const items = Array.from(listEl.querySelectorAll(".wheel-item"));
-    const rect = listEl.getBoundingClientRect();
-    const centerY = rect.top + rect.height/2;
-  
-    let best = null;
-    let bestDist = Infinity;
-    for (const it of items){
-      const r = it.getBoundingClientRect();
-      const mid = r.top + r.height/2;
-      const d = Math.abs(mid - centerY);
-      if (d < bestDist){ bestDist = d; best = it; }
-    }
-  
-    items.forEach(i => i.classList.toggle("active", i === best));
-    return best ? parseInt(best.dataset.val,10) : 0;
-  }
-  
-  function scrollToValue(listEl, val){
-    const item = listEl.querySelector(`.wheel-item[data-val="${val}"]`);
-    if (!item) return;
-    item.scrollIntoView({ block: "center" });
-  }
 
   const VAPID_PUBLIC_KEY = "BBsKhwYM-5dtgJ01oHJ_4H0wgzkXdxZRAg12B2kFHgb8K07c0VbvpYhHRILFf-erU37H11e_gFXErBbVnGuE8GA"; // safe to be public
 
