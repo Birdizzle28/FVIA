@@ -24,7 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const calendarEl = document.getElementById("calendar");
 
-    /* ---------------- Push modal elements ---------------- */
+  /* ---------------- Push modal elements ---------------- */
   const pushModal = document.getElementById("push-modal");
   const pushCancelBtn = document.getElementById("push-modal-cancel");
   const pushEnableBtn = document.getElementById("push-modal-enable");
@@ -35,21 +35,22 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function openPushModal(appointment) {
     lastCreatedAppointment = appointment || null;
-
+  
     if (pushDescEl) {
       pushDescEl.textContent = "Want push notification reminders for this appointment?";
     }
-
+  
     setPushStatus("", false);
+  
     if (pushModal) {
-      pushModal.classList.add("is-open");
+      pushModal.hidden = false;
       pushModal.setAttribute("aria-hidden", "false");
     }
   }
-
+  
   function closePushModal() {
     if (pushModal) {
-      pushModal.classList.remove("is-open");
+      pushModal.hidden = true;
       pushModal.setAttribute("aria-hidden", "true");
     }
     lastCreatedAppointment = null;
@@ -71,11 +72,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   pushCancelBtn?.addEventListener("click", closePushModal);
 
   // Optional: click outside to close
-  pushModal?.addEventListener("click", (e) => {
-    if (e.target === pushModal) closePushModal();
+  document.querySelectorAll("[data-push-close]").forEach((el) => {
+    el.addEventListener("click", closePushModal);
   });
 
-    async function handleEnableRemindersClick() {
+  async function handleEnableRemindersClick() {
     // Safety: browser support
     if (!("Notification" in window)) {
       setPushStatus("Your browser doesn’t support push notifications.", true);
