@@ -10,6 +10,7 @@
     "nodemailer": "^6.9.14",
     "xml2js": "^0.6.2",
     "stripe": "^16.0.0",
-    "pdfkit": "^0.15.0"
+    "pdfkit": "^0.15.0",
+    "web-push": "^3.x.x"
   }
 }
