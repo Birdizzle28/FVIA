@@ -511,23 +511,39 @@ main{ background:var(--page); width:100%; }
   color: var(--ink);
   outline:none;
 }
-/* --- Push modal --- */
-.fvg-modal-backdrop{
+/* --- Push modal (matches your HTML structure) --- */
+
+/* Wrapper */
+.fvg-modal{
   position: fixed;
   inset: 0;
-  display: none;
+  z-index: 9999;
+
+  /* Use flex to center the card */
+  display: flex;
   align-items: center;
   justify-content: center;
+
   padding: 18px;
+}
+
+/* When the element has the HTML attribute hidden, hide it */
+.fvg-modal[hidden]{
+  display: none;
+}
+
+/* Backdrop overlay (your child div) */
+.fvg-modal .fvg-modal-backdrop{
+  position: absolute;
+  inset: 0;
   background: rgba(0,0,0,.55);
-  z-index: 9999;
 }
 
-.fvg-modal-backdrop.is-open{
-  display: flex;
-}
+/* Card (your dialog) */
+.fvg-modal .fvg-modal-card{
+  position: relative;          /* so it sits above backdrop */
+  z-index: 1;
 
-.fvg-modal{
   width: 100%;
   max-width: 420px;
   background: #fff;
@@ -536,15 +552,17 @@ main{ background:var(--page); width:100%; }
   box-shadow: 0 18px 60px rgba(0,0,0,.35);
 }
 
-.fvg-modal h3{
+/* Typography */
+.fvg-modal .fvg-modal-card h3{
   margin: 0 0 8px;
 }
 
-.fvg-modal p{
+.fvg-modal .fvg-modal-card p{
   margin: 0 0 14px;
   line-height: 1.35;
 }
 
+/* Status message */
 .fvg-modal-status{
   margin: 10px 0 0;
   padding: 10px 12px;
@@ -553,6 +571,7 @@ main{ background:var(--page); width:100%; }
   font-size: 14px;
 }
 
+/* Actions row */
 .fvg-modal-actions{
   display: flex;
   gap: 10px;
