@@ -1,5 +1,7 @@
 /* service-worker.js */
 
+self.addEventListener("install", () => self.skipWaiting());
+self.addEventListener("activate", (event) => event.waitUntil(clients.claim()));
 self.addEventListener("push", (event) => {
   let data = {};
   try {
@@ -15,7 +17,7 @@ self.addEventListener("push", (event) => {
     icon: data.icon || "/Pics/img17.png",      // update if needed
     badge: data.badge || "/Pics/img17.png",    // update if needed
     data: {
-      url: data.url || "/agent/scheduling.html", // update path if needed
+      url: data.url || "/scheduling.html", // update path if needed
       ...data.data,
     },
     tag: data.tag || "fvg-push",
@@ -31,22 +33,28 @@ self.addEventListener("notificationclick", (event) => {
 
   const url = (event.notification?.data && event.notification.data.url) || "/";
 
-  event.waitUntil(
-    (async () => {
-      const allClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
+  event.waitUntil((async () => {
+    const allClients = await clients.matchAll({ type: "window", includeUncontrolled: true });
 
-      // If a tab is already open, focus it
-      for (const client of allClients) {
-        if (client.url.includes(self.location.origin)) {
-          await client.focus();
-          // Optionally navigate that tab
-          try { await client.navigate(url); } catch (_) {}
-          return;
-        }
+    // 1) Prefer a tab already on the target URL
+    for (const client of allClients) {
+      if (client.url === new URL(url, self.location.origin).href) {
+        await client.focus();
+        return;
       }
+    }
 
-      // Otherwise open a new tab
-      await clients.openWindow(url);
-    })()
-  );
+    // 2) Otherwise prefer any tab on our origin
+    for (const client of allClients) {
+      const sameOrigin = client.url.startsWith(self.location.origin);
+      if (sameOrigin) {
+        await client.focus();
+        try { await client.navigate(url); } catch (_) {}
+        return;
+      }
+    }
+
+    // 3) Otherwise open a new tab
+    await clients.openWindow(url);
+  })());
 });
