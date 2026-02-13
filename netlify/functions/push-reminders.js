@@ -32,25 +32,28 @@ export default async () => {
     const now = new Date();
     const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
+    // NOTE: Your UI writes:
+    //  - remind_enabled: boolean
+    //  - remind_before_minutes: int
+    // This runner respects those.
     const { data: appts, error: apptErr } = await supabase
       .from("appointments")
-      .select("id, agent_id, title, scheduled_for, url, remind_before_minutes, remind_sent")
+      .select("id, agent_id, title, scheduled_for, url, remind_enabled, remind_before_minutes, remind_sent")
+      .eq("remind_enabled", true)
       .eq("remind_sent", false)
       .gte("scheduled_for", now.toISOString())
       .lte("scheduled_for", in24h.toISOString());
 
     if (apptErr) throw apptErr;
 
-    const enabled = (appts || []).filter(a => a.remind_before_minutes !== null);
-
-    const due = enabled.filter((a) => {
+    const due = (appts || []).filter((a) => {
       const start = new Date(a.scheduled_for);
-      const beforeMin = Number(a.remind_before_minutes || 0);
+      const beforeMin = Number(a.remind_before_minutes ?? 0);
       const fireAt = new Date(start.getTime() - beforeMin * 60 * 1000);
 
-      // IMPORTANT: 0 mins means "at start time", not "immediately"
+      // 0 mins = at start time (with a small grace window)
       const graceMs = 3 * 60 * 1000;
-      return now >= fireAt && now <= new Date(start.getTime() + graceMs);
+      return now.getTime() >= fireAt.getTime() && now.getTime() <= start.getTime() + graceMs;
     });
 
     if (due.length === 0) {
@@ -63,15 +66,17 @@ export default async () => {
     let sentCount = 0;
 
     for (const appt of due) {
+      // ✅ Your push_subscriptions schema is:
+      // endpoint, p256dh, auth (NO "subscription" column)
       const { data: subs, error: subErr } = await supabase
         .from("push_subscriptions")
-        .select("id, subscription")
+        .select("id, endpoint, p256dh, auth")
         .eq("user_id", appt.agent_id);
 
       if (subErr) throw subErr;
 
       if (!subs || subs.length === 0) {
-        // mark as sent so it doesn't loop
+        // No device subscribed — mark as sent so it doesn't loop forever
         await supabase
           .from("appointments")
           .update({ remind_sent: true, remind_sent_at: new Date().toISOString() })
@@ -91,14 +96,21 @@ export default async () => {
       let anySuccess = false;
 
       for (const s of subs) {
-        try {
-          // If you stored subscription as TEXT, it will be a string -> parse it.
-          const subObj = typeof s.subscription === "string" ? JSON.parse(s.subscription) : s.subscription;
+        const subObj = {
+          endpoint: s.endpoint,
+          keys: {
+            p256dh: s.p256dh,
+            auth: s.auth,
+          },
+        };
 
+        try {
           await webpush.sendNotification(subObj, payload);
           anySuccess = true;
         } catch (err) {
           const code = err?.statusCode;
+
+          // Remove dead subs
           if (code === 410 || code === 404) {
             await supabase.from("push_subscriptions").delete().eq("id", s.id);
           } else {
