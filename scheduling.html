@@ -187,6 +187,23 @@
         <div id="calendar" class="calendar-card"></div>
       </section>
     </main>
+    
+    <!-- Push Permission Modal -->
+    <div id="push-modal" class="fvg-modal-backdrop" aria-hidden="true">
+      <div class="fvg-modal" role="dialog" aria-modal="true" aria-labelledby="push-modal-title">
+        <h3 id="push-modal-title">Enable reminders?</h3>
+        <p id="push-modal-desc">
+          Want push notification reminders for this appointment?
+        </p>
+    
+        <div id="push-modal-status" class="fvg-modal-status" style="display:none;"></div>
+    
+        <div class="fvg-modal-actions">
+          <button type="button" id="push-modal-cancel" class="btn-secondary">Not now</button>
+          <button type="button" id="push-modal-enable" class="btn-primary">Enable reminders</button>
+        </div>
+      </div>
+    </div>
 
     <!-- Footer -->
     <footer class="index-grid-footer">
