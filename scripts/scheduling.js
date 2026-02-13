@@ -117,69 +117,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     listEl.appendChild(bottom);
   }
   
-  function getOffset(listEl) {
-    const topSpacer = listEl.querySelector(".wheel-spacer");
-    return topSpacer ? topSpacer.offsetHeight : 0;
-  }
-  
   function setActiveByIndex(listEl, idx) {
     const items = Array.from(listEl.querySelectorAll(".wheel-item"));
     items.forEach((it, i) => it.classList.toggle("active", i === idx));
   }
   
   function getCenteredIndex(listEl) {
-    const offset = getOffset(listEl);
     const items = Array.from(listEl.querySelectorAll(".wheel-item"));
     if (!items.length) return 0;
   
-    const raw = (listEl.scrollTop - offset) / WHEEL_ITEM_HEIGHT;
+    // With spacers, "0" is centered at scrollTop = 0
+    const raw = listEl.scrollTop / WHEEL_ITEM_HEIGHT;
     const idx = Math.round(raw);
+  
     return Math.max(0, Math.min(idx, items.length - 1));
   }
   
   function snapWheel(listEl) {
-    const offset = getOffset(listEl);
     const items = Array.from(listEl.querySelectorAll(".wheel-item"));
     if (!items.length) return;
   
-    // Calculate centered idx
-    let idx = getCenteredIndex(listEl);
-  
-    // Clamp idx hard (so 0 is always reachable)
-    idx = Math.max(0, Math.min(idx, items.length - 1));
-  
-    // Compute targetTop and clamp so it never goes above the first item center
-    const minTop = offset; // this is the "0" position
-    const maxTop = offset + (items.length - 1) * WHEEL_ITEM_HEIGHT;
-    let targetTop = offset + idx * WHEEL_ITEM_HEIGHT;
-  
-    if (targetTop < minTop) targetTop = minTop;
-    if (targetTop > maxTop) targetTop = maxTop;
+    const idx = getCenteredIndex(listEl);
+    const targetTop = idx * WHEEL_ITEM_HEIGHT;
   
     listEl.scrollTo({ top: targetTop, behavior: "smooth" });
     setActiveByIndex(listEl, idx);
-  }
-  
-  function wireWheelSnap(listEl) {
-    if (listEl.dataset.snapWired === "1") return;
-    listEl.dataset.snapWired = "1";
-  
-    let t = null;
-  
-    listEl.addEventListener(
-      "scroll",
-      () => {
-        // If user rubber-bands above 0, lock them to 0 immediately
-        const offset = getOffset(listEl);
-        if (listEl.scrollTop < offset) {
-          listEl.scrollTop = offset;
-        }
-  
-        if (t) clearTimeout(t);
-        t = setTimeout(() => snapWheel(listEl), 90);
-      },
-      { passive: true }
-    );
   }
   
   function scrollToValue(listEl, val) {
@@ -187,8 +149,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const idx = items.findIndex((it) => it.dataset.val === String(val));
     if (idx === -1) return;
   
-    const offset = getOffset(listEl);
-    listEl.scrollTo({ top: offset + idx * WHEEL_ITEM_HEIGHT, behavior: "auto" });
+    listEl.scrollTo({ top: idx * WHEEL_ITEM_HEIGHT, behavior: "auto" });
     setActiveByIndex(listEl, idx);
   }
   
@@ -197,6 +158,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     const items = Array.from(listEl.querySelectorAll(".wheel-item"));
     setActiveByIndex(listEl, idx);
     return parseInt(items[idx]?.dataset.val || "0", 10);
+  }
+  
+  function wireWheelSnap(listEl) {
+    if (listEl.dataset.snapWired === "1") return;
+    listEl.dataset.snapWired = "1";
+  
+    let t = null;
+  
+    listEl.addEventListener("scroll", () => {
+      // If iOS rubber-bands negative, clamp to 0 (0 is valid!)
+      if (listEl.scrollTop < 0) listEl.scrollTop = 0;
+  
+      if (t) clearTimeout(t);
+      t = setTimeout(() => snapWheel(listEl), 90);
+    }, { passive: true });
   }
   
   function openTimewheel() {
@@ -212,10 +188,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   
       scrollToValue(wheelHours, remindHours);
       scrollToValue(wheelMins, remindMins);
-
-      // Make sure 0 is always reachable (prevents iOS bounce weirdness)
-      wheelHours.scrollTop = Math.max(wheelHours.scrollTop, getOffset(wheelHours));
-      wheelMins.scrollTop  = Math.max(wheelMins.scrollTop,  getOffset(wheelMins));
     });
   }
   
