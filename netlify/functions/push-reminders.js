@@ -18,8 +18,8 @@ export default async () => {
     const SUPABASE_URL = process.env.SUPABASE_URL;
     const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-    const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY;
-    const VAPID_PRIVATE_KEY = process.env.VAPID_PRIVATE_KEY;
+    const VAPID_PUBLIC_KEY = (process.env.VAPID_PUBLIC_KEY || "").trim();
+    const VAPID_PRIVATE_KEY = (process.env.VAPID_PRIVATE_KEY || "").trim();
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       return json(500, { ok: false, error: "Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY." });
@@ -29,7 +29,8 @@ export default async () => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-
+    console.log("VAPID_PUBLIC_KEY len:", VAPID_PUBLIC_KEY.length, "value:", JSON.stringify(VAPID_PUBLIC_KEY));
+    console.log("VAPID_PRIVATE_KEY len:", VAPID_PRIVATE_KEY.length, "value:", JSON.stringify(VAPID_PRIVATE_KEY));
     webpush.setVapidDetails(
       "mailto:info@familyvaluesgroup.com",
       VAPID_PUBLIC_KEY,
