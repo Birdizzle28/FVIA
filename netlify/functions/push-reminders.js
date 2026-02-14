@@ -29,8 +29,7 @@ export default async () => {
     }
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
-    console.log("VAPID_PUBLIC_KEY len:", VAPID_PUBLIC_KEY.length, "value:", JSON.stringify(VAPID_PUBLIC_KEY));
-    console.log("VAPID_PRIVATE_KEY len:", VAPID_PRIVATE_KEY.length, "value:", JSON.stringify(VAPID_PRIVATE_KEY));
+  
     webpush.setVapidDetails(
       "mailto:info@familyvaluesgroup.com",
       VAPID_PUBLIC_KEY,
