@@ -41,6 +41,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   const apptDeleteBtn = document.getElementById("appt-delete");
   
   let activeClickedEvent = null;
+
+  function sameLocalTimeOnDate(baseLocalDateTime, y, m, d) {
+    return new Date(
+      y, m, d,
+      baseLocalDateTime.getHours(),
+      baseLocalDateTime.getMinutes(),
+      0, 0
+    );
+  }
+  
+  function addDaysLocal(d, days) {
+    const x = new Date(d);
+    x.setDate(x.getDate() + days); // local-calendar day step (DST-safe)
+    return x;
+  }
   
   function setApptStatus(msg, show = true) {
     if (!apptStatusEl) return;
