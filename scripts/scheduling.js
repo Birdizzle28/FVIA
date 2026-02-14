@@ -769,18 +769,25 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       }
     
-      let cur = new Date(seriesStart);
-    
-      // fast-forward roughly (good enough for now)
-      if (cur < rangeStart) {
-        cur = new Date(rangeStart);
-        cur.setHours(seriesStart.getHours(), seriesStart.getMinutes(), 0, 0);
+      // repeating rules: generate only for this view range
+      const baseLocal = new Date(row.scheduled_for); // local view of the first occurrence
+      let cur = new Date(baseLocal);
+      
+      // fast-forward to view start (by local days, DST-safe)
+      while (cur < rangeStart) {
+        if (rule === "daily") cur = addDaysLocal(cur, 1);
+        else if (rule === "weekly") cur = addDaysLocal(cur, 7);
+        else if (rule === "biweekly") cur = addDaysLocal(cur, 14);
+        else if (rule === "monthly") cur = addMonths(cur, 1);
+        else if (rule === "yearly") cur = addYears(cur, 1);
+        else break;
       }
-    
+      
       while (cur < rangeEnd) {
-        const occStart = new Date(cur);
+        // ✅ rebuild occurrence using SAME local time on the CURRENT date
+        const occStart = sameLocalTimeOnDate(baseLocal, cur.getFullYear(), cur.getMonth(), cur.getDate());
         const occEnd = addMinutes(occStart, durMin);
-    
+      
         if (occStart < rangeEnd && occEnd > rangeStart) {
           out.push({
             id: occId(row.id, occStart),
@@ -791,14 +798,15 @@ document.addEventListener("DOMContentLoaded", async () => {
             extendedProps: { ...baseProps, occurrence_start: occStart.toISOString() },
           });
         }
-    
-        if (unit === "days") cur = new Date(cur.getTime() + interval * 24 * 60 * 60 * 1000);
-        else if (unit === "weeks") cur = new Date(cur.getTime() + interval * 7 * 24 * 60 * 60 * 1000);
-        else if (unit === "months") cur = addMonths(cur, interval);
-        else if (unit === "years") cur = addYears(cur, interval);
+      
+        if (rule === "daily") cur = addDaysLocal(cur, 1);
+        else if (rule === "weekly") cur = addDaysLocal(cur, 7);
+        else if (rule === "biweekly") cur = addDaysLocal(cur, 14);
+        else if (rule === "monthly") cur = addMonths(cur, 1);
+        else if (rule === "yearly") cur = addYears(cur, 1);
         else break;
       }
-    
+      
       return out;
     }
 
