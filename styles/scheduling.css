@@ -683,3 +683,27 @@ main{ background:var(--page); width:100%; }
   background: rgba(0,0,0,.06);
   pointer-events:none;
 }
+/* Appointment details modal */
+.appt-details{
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.appt-row{
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 10px;
+  align-items: start;
+}
+
+.appt-label{
+  font-weight: 700;
+  opacity: 0.9;
+}
+
+.appt-value{
+  word-break: break-word;
+  white-space: pre-wrap;
+}
