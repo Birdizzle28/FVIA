@@ -83,7 +83,25 @@ export default async () => {
         continue;
       }
 
-      const startLocal = new Date(appt.scheduled_for).toLocaleString();
+      // Pull agent timezone for correct display (DST-safe)
+      let agentTz = "UTC";
+
+      const { data: agentRow } = await supabase
+        .from("agents") // change to "profiles" if needed
+        .select("timezone")
+        .eq("id", appt.agent_id) // change id column if needed
+        .maybeSingle();
+
+      if (agentRow?.timezone) agentTz = agentRow.timezone;
+
+      const startLocal = new Intl.DateTimeFormat("en-US", {
+        timeZone: agentTz,
+        year: "numeric",
+        month: "short",
+        day: "2-digit",
+        hour: "numeric",
+        minute: "2-digit",
+      }).format(new Date(appt.scheduled_for));
 
       const payload = JSON.stringify({
         title: "Appointment Reminder",
