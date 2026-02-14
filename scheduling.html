@@ -251,7 +251,57 @@
         </div>
       </div>
     </div>
-
+    
+    <!-- Appointment Details Modal -->
+    <div id="appt-modal" class="fvg-modal" hidden aria-hidden="true">
+      <div class="fvg-modal-backdrop" data-appt-close></div>
+    
+      <div class="fvg-modal-card" role="dialog" aria-modal="true" aria-labelledby="appt-modal-title">
+        <h3 id="appt-modal-title">Appointment</h3>
+    
+        <div class="appt-details">
+          <div class="appt-row">
+            <div class="appt-label">Title</div>
+            <div class="appt-value" id="appt-title"></div>
+          </div>
+    
+          <div class="appt-row">
+            <div class="appt-label">When</div>
+            <div class="appt-value" id="appt-when"></div>
+          </div>
+    
+          <div class="appt-row">
+            <div class="appt-label">Location</div>
+            <div class="appt-value" id="appt-location"></div>
+          </div>
+    
+          <div class="appt-row" id="appt-repeat-row" style="display:none;">
+            <div class="appt-label">Repeat</div>
+            <div class="appt-value" id="appt-repeat"></div>
+          </div>
+    
+          <div class="appt-row" id="appt-url-row" style="display:none;">
+            <div class="appt-label">URL</div>
+            <div class="appt-value">
+              <a href="#" id="appt-url" target="_blank" rel="noopener">Open link</a>
+            </div>
+          </div>
+    
+          <div class="appt-row" id="appt-notes-row" style="display:none;">
+            <div class="appt-label">Notes</div>
+            <div class="appt-value" id="appt-notes"></div>
+          </div>
+        </div>
+    
+        <div id="appt-modal-status" class="fvg-modal-status" style="display:none;"></div>
+    
+        <div class="fvg-modal-actions">
+          <button type="button" id="appt-cancel" class="btn-secondary" data-appt-close>Cancel</button>
+          <button type="button" id="appt-delete" class="btn-secondary">Delete</button>
+          <button type="button" id="appt-edit" class="btn-primary">Edit</button>
+        </div>
+      </div>
+    </div>
     <!-- Footer -->
     <footer class="index-grid-footer">
       <img id="footerlogo" src="Pics/img17.png">
