@@ -23,6 +23,191 @@ document.addEventListener("DOMContentLoaded", async () => {
   const notesInput = document.getElementById("notes");
 
   const calendarEl = document.getElementById("calendar");
+  
+  /* ---------------- Appointment Details Modal ---------------- */
+  const apptModal = document.getElementById("appt-modal");
+  const apptStatusEl = document.getElementById("appt-modal-status");
+  const apptTitleEl = document.getElementById("appt-title");
+  const apptWhenEl = document.getElementById("appt-when");
+  const apptLocationEl = document.getElementById("appt-location");
+  const apptRepeatRow = document.getElementById("appt-repeat-row");
+  const apptRepeatEl = document.getElementById("appt-repeat");
+  const apptUrlRow = document.getElementById("appt-url-row");
+  const apptUrlEl = document.getElementById("appt-url");
+  const apptNotesRow = document.getElementById("appt-notes-row");
+  const apptNotesEl = document.getElementById("appt-notes");
+  
+  const apptEditBtn = document.getElementById("appt-edit");
+  const apptDeleteBtn = document.getElementById("appt-delete");
+  
+  let activeClickedEvent = null;
+  
+  function setApptStatus(msg, show = true) {
+    if (!apptStatusEl) return;
+    if (!show || !msg) {
+      apptStatusEl.style.display = "none";
+      apptStatusEl.textContent = "";
+      return;
+    }
+    apptStatusEl.style.display = "block";
+    apptStatusEl.textContent = msg;
+  }
+  
+  function closeApptModal() {
+    if (!apptModal) return;
+    apptModal.hidden = true;
+    apptModal.setAttribute("aria-hidden", "true");
+    activeClickedEvent = null;
+    setApptStatus("", false);
+  }
+  
+  function openApptModal(fcEvent) {
+    activeClickedEvent = fcEvent;
+    setApptStatus("", false);
+  
+    const props = fcEvent.extendedProps || {};
+    const title = (fcEvent.title || "Appointment").trim();
+  
+    const start = fcEvent.start ? new Date(fcEvent.start) : null;
+    const end = fcEvent.end ? new Date(fcEvent.end) : null;
+  
+    const when = start
+      ? `${start.toLocaleString()}${end ? ` → ${end.toLocaleString()}` : ""}`
+      : "";
+  
+    const locType = (props.location_type || "").toLowerCase();
+    let locationText = "—";
+    if (locType === "virtual") locationText = "Virtual";
+    if (locType === "physical") locationText = props.location_address ? props.location_address : "Physical (no address)";
+    if (!locType) locationText = props.location_address || "—";
+  
+    const repeatRule = (props.repeat_rule || "never").toLowerCase();
+    let repeatText = "";
+    if (repeatRule && repeatRule !== "never") {
+      if (repeatRule === "daily") repeatText = "Every day";
+      else if (repeatRule === "weekly") repeatText = "Every week";
+      else if (repeatRule === "biweekly") repeatText = "Every 2 weeks";
+      else if (repeatRule === "monthly") repeatText = "Every month";
+      else if (repeatRule === "yearly") repeatText = "Every year";
+      else if (repeatRule === "custom") {
+        try {
+          const parsed = props.repeat_custom ? JSON.parse(props.repeat_custom) : null;
+          if (parsed?.interval && parsed?.unit) {
+            repeatText = `Every ${parsed.interval} ${parsed.unit}`;
+          } else {
+            repeatText = "Custom repeat";
+          }
+        } catch {
+          repeatText = "Custom repeat";
+        }
+      } else {
+        repeatText = props.repeat_rule || "Repeat";
+      }
+    }
+  
+    if (apptTitleEl) apptTitleEl.textContent = title;
+    if (apptWhenEl) apptWhenEl.textContent = when;
+    if (apptLocationEl) apptLocationEl.textContent = locationText;
+  
+    if (apptRepeatRow) apptRepeatRow.style.display = repeatText ? "grid" : "none";
+    if (apptRepeatEl) apptRepeatEl.textContent = repeatText || "";
+  
+    const url = props.url || "";
+    if (apptUrlRow) apptUrlRow.style.display = url ? "grid" : "none";
+    if (apptUrlEl) {
+      apptUrlEl.href = url || "#";
+      apptUrlEl.textContent = url ? "Open link" : "";
+    }
+  
+    const notes = props.notes || "";
+    if (apptNotesRow) apptNotesRow.style.display = notes ? "grid" : "none";
+    if (apptNotesEl) apptNotesEl.textContent = notes || "";
+  
+    apptModal.hidden = false;
+    apptModal.setAttribute("aria-hidden", "false");
+  }
+  
+  // close by clicking backdrop or cancel
+  document.querySelectorAll("[data-appt-close]").forEach(el => el.addEventListener("click", closeApptModal));
+  
+  apptDeleteBtn?.addEventListener("click", async () => {
+    try {
+      if (!activeClickedEvent) return;
+  
+      const props = activeClickedEvent.extendedProps || {};
+      const seriesId = props.series_id || activeClickedEvent.id;
+  
+      // If it’s an occurrence id like "uuid__2026-...", delete series
+      const confirmed = confirm(`Delete "${activeClickedEvent.title}"?\n\nRecurring deletes the whole series for now.`);
+      if (!confirmed) return;
+  
+      setApptStatus("Deleting…", true);
+  
+      const { error } = await supabase.from("appointments").delete().eq("id", seriesId);
+      if (error) throw error;
+  
+      closeApptModal();
+      calendar.refetchEvents();
+    } catch (err) {
+      console.error(err);
+      setApptStatus(err?.message || "Failed to delete appointment.", true);
+    }
+  });
+  
+  apptEditBtn?.addEventListener("click", () => {
+    if (!activeClickedEvent) return;
+  
+    const props = activeClickedEvent.extendedProps || {};
+    const seriesId = props.series_id || activeClickedEvent.id;
+  
+    // Fill the form with the clicked event’s data
+    titleInput.value = activeClickedEvent.title || "";
+    initFloatingLabels(document);
+  
+    const locType = (props.location_type || "").toLowerCase();
+    if (locationType) {
+      locationType.value = locType || "";
+      locationChoices?.setChoiceByValue?.(locationType.value);
+    }
+    if (locationAddress) locationAddress.value = props.location_address || "";
+    toggleLocationFields();
+  
+    const start = activeClickedEvent.start ? new Date(activeClickedEvent.start) : null;
+    const end = activeClickedEvent.end ? new Date(activeClickedEvent.end) : null;
+  
+    if (start) window.fpStart?.setDate(start, true);
+    if (end) window.fpEnd?.setDate(end, true);
+  
+    if (repeatRule) {
+      repeatRule.value = (props.repeat_rule || "never");
+      repeatChoices?.setChoiceByValue?.(repeatRule.value);
+    }
+  
+    if ((props.repeat_rule || "").toLowerCase() === "custom") {
+      try {
+        const parsed = props.repeat_custom ? JSON.parse(props.repeat_custom) : null;
+        if (repeatInterval) repeatInterval.value = String(parsed?.interval || 1);
+        if (repeatUnit) repeatUnit.value = String(parsed?.unit || "days");
+        window.repeatUnitChoices?.setChoiceByValue?.(repeatUnit.value);
+      } catch {}
+    }
+  
+    if (urlInput) urlInput.value = props.url || "";
+    if (notesInput) notesInput.value = props.notes || "";
+  
+    toggleRepeatCustom();
+    initFloatingLabels(document);
+  
+    // Put the id somewhere so we know we’re editing (not creating)
+    form.dataset.editingId = seriesId;
+  
+    closeApptModal();
+    form.scrollIntoView({ behavior: "smooth" });
+  
+    // Change button label (optional)
+    const btn = document.getElementById("create-appointment");
+    if (btn) btn.textContent = "Save Changes";
+  });
 
   /* ---------------- Reminder modal elements ---------------- */
   const reminderModal = document.getElementById("reminder-modal");
@@ -688,13 +873,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     },
   
     eventClick: async (info) => {
-      const seriesId = info.event.extendedProps?.series_id || info.event.id;
-      const ok = confirm(`Delete "${info.event.title}"?\n\n(Recurring deletes whole series for now.)`);
-      if (!ok) return;
-  
-      const { error } = await supabase.from("appointments").delete().eq("id", seriesId);
-      if (error) { console.error(error); alert("Failed to delete appointment."); return; }
-      calendar.refetchEvents();
+      openApptModal(info.event);
     },
   
     eventDrop: async (info) => {
@@ -979,25 +1158,60 @@ setHeaderTitle(calendar.view.title);
     const notes = (notesInput?.value || "").trim() || null;
 
     const payload = {
-      agent_id: user.id,
-      scheduled_for: start.toISOString(),
-      ends_at: end.toISOString(),
-      title,
-      location_type: locType,
-      location_address: addr,
-      repeat_rule: rep,
-      repeat_custom: repCustom,
-      url,
-      notes,
-      remind_enabled: false,
-      remind_before_minutes: null,
-    };
+  agent_id: user.id,
+  scheduled_for: start.toISOString(),
+  ends_at: end.toISOString(),
+  title,
+  location_type: locType,
+  location_address: addr,
+  repeat_rule: rep,
+  repeat_custom: repCustom,
+  url,
+  notes,
+  remind_enabled: false,
+  remind_before_minutes: null,
+};
 
-    // ✅ Hold payload until user chooses reminder settings
-    pendingAppointmentPayload = payload;
-    
-    // ✅ Open the reminder choice modal (Option 2)
-    openReminderModal(payload);
+const editingId = form.dataset.editingId || "";
+
+if (editingId) {
+  // ✅ EDIT MODE: update existing series immediately (don’t use reminder modal here yet)
+  const { error } = await supabase
+    .from("appointments")
+    .update({
+      scheduled_for: payload.scheduled_for,
+      ends_at: payload.ends_at,
+      title: payload.title,
+      location_type: payload.location_type,
+      location_address: payload.location_address,
+      repeat_rule: payload.repeat_rule,
+      repeat_custom: payload.repeat_custom,
+      url: payload.url,
+      notes: payload.notes,
+    })
+    .eq("id", editingId);
+
+    if (error) { console.error(error); alert("Failed to update appointment."); return; }
+  
+    // reset edit mode
+    delete form.dataset.editingId;
+    const btn = document.getElementById("create-appointment");
+    if (btn) btn.textContent = "Create Appointment";
+  
+    form.reset();
+    window.fpStart?.clear?.();
+    window.fpEnd?.clear?.();
+    toggleLocationFields();
+    toggleRepeatCustom();
+    initFloatingLabels(document);
+  
+    calendar.refetchEvents();
+    return;
+  }
+  
+  // ✅ CREATE MODE: use reminder modal flow
+  pendingAppointmentPayload = payload;
+  openReminderModal(payload);
   });
 });
 
