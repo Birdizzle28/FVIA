@@ -5,7 +5,33 @@ document.addEventListener("DOMContentLoaded", async () => {
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) { window.location.href = "login.html"; return; }
   const user = session.user;
+    // ---------------- Timezone capture (save once per user) ----------------
+  async function ensureUserTimezoneSaved() {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+    if (!tz) return;
 
+    // ✅ change this to "profiles" if that's your user table
+    const TABLE = "agents";
+    const ID_COL = "id";        // change to "user_id" if your table uses that
+    const TZ_COL = "timezone";
+
+    // try to read existing
+    const { data: row } = await supabase
+      .from(TABLE)
+      .select(`${TZ_COL}`)
+      .eq(ID_COL, user.id)
+      .maybeSingle();
+
+    if (row?.[TZ_COL]) return; // already saved
+
+    // upsert timezone
+    await supabase
+      .from(TABLE)
+      .upsert({ [ID_COL]: user.id, [TZ_COL]: tz }, { onConflict: ID_COL });
+  }
+
+  await ensureUserTimezoneSaved();
+  
   /* ---------------- Elements ---------------- */
   const form = document.getElementById("appointment-form");
   const titleInput = document.getElementById("title");
