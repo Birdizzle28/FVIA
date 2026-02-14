@@ -284,7 +284,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     closeTimewheel();
   });
 
-  const VAPID_PUBLIC_KEY = "BC3M0fd7zzF2bB6JoQowvn_YCyR-UB_tWTS_zP10zsB--9RTj01kAoPcs3bvXwQ3PLGn5ULhY7QcwsaXvzz5JKk"; // safe to be public
+  const VAPID_PUBLIC_KEY = "BD2IGcWhq7PWFauNfIAkQdh44nwKycEs2RMlHjk-ypuWsW4jdmoPy7_sDyHuYkMqKCMg1D0wZpc8QjRWKXfOCW0"; // safe to be public
 
   function urlBase64ToUint8Array(base64String) {
     const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
