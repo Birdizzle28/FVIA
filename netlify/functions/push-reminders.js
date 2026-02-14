@@ -31,7 +31,7 @@ export default async () => {
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     webpush.setVapidDetails(
-      "mailto:fvinsuranceagency@gmail.com",
+      "mailto:info@familyvaluesgroup.com",
       VAPID_PUBLIC_KEY,
       VAPID_PRIVATE_KEY
     );
