@@ -1664,7 +1664,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     alert("Quote: coming soon");
   });
   $("#contacts-bulk-schedule")?.addEventListener("click", () => {
-    alert("Schedule: coming soon");
+    const picked = contacts.filter(c => selectedIds.has(c.id));
+  
+    if (!picked.length) {
+      alert("Select at least 1 contact first.");
+      return;
+    }
+  
+    const fullName = (c) => `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Unknown";
+    const firstPhone = (c) => (Array.isArray(c.phones) && c.phones.length ? c.phones[0] : "—");
+    const title = picked.map(fullName).join(", ");
+    const notes = picked.map(c => `${fullName(c)}: ${firstPhone(c)}`).join(", ");
+    const base = "https://familyvaluesgroup.com/scheduling";
+    const url =
+      `${base}?appointment_type=contact` +
+      `&prefill_title=${encodeURIComponent(title)}` +
+      `&prefill_notes=${encodeURIComponent(notes)}`;
+  
+    window.location.href = url;
   });
   $("#contacts-bulk-dnc")?.addEventListener("click", addSelectedContactsToDnc);
   $("#contacts-select-toggle")?.addEventListener("click", () => {
