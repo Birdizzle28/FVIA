@@ -14,8 +14,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const TABLE = "agents";
     const ID_COL = "id";        // change to "user_id" if your table uses that
     const TZ_COL = "timezone";
-    const EVENT_PURPLE = "#363465";
-    const EVENT_PINK = "#E2A1A7";
 
     // try to read existing
     const { data: row } = await supabase
@@ -64,6 +62,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   const apptUrlEl = document.getElementById("appt-url");
   const apptNotesRow = document.getElementById("appt-notes-row");
   const apptNotesEl = document.getElementById("appt-notes");
+  const EVENT_PURPLE = "#363465";
+  const EVENT_PINK = "#E2A1A7";
   
   const apptEditBtn = document.getElementById("appt-edit");
   const apptDeleteBtn = document.getElementById("appt-delete");
