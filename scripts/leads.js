@@ -1556,7 +1556,7 @@ function submitLeadRequestToSupabase(agentProfile) {
       if (msg) msg.textContent = "Requested quantity must be 1 or more.";
       return;
     }
-    const notes       = (document.getElementById("request-notes")?.value || "").trim() || null;
+    const notes = (document.getElementById("request-notes")?.value || "").trim() || null;
 
     const state = document.getElementById("request-state")?.value || null;
     const city  = (document.getElementById("request-city")?.value || "").trim() || null;
