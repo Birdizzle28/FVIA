@@ -14,6 +14,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const TABLE = "agents";
     const ID_COL = "id";        // change to "user_id" if your table uses that
     const TZ_COL = "timezone";
+    const EVENT_PURPLE = "#363465";
+    const EVENT_PINK = "#E2A1A7";
 
     // try to read existing
     const { data: row } = await supabase
@@ -71,6 +73,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   (function prefillFromQuery() {
     const params = new URLSearchParams(window.location.search);
     const apptType = (params.get("appointment_type") || "").toLowerCase();
+    window.__newAppointmentType = apptType || ""; // "contact" or ""
     if (apptType !== "contact") return;
   
     const t = params.get("prefill_title");
@@ -741,6 +744,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         title,
         location_type,
         location_address,
+        appointment_type,
         repeat_rule,
         repeat_custom,
         url,
@@ -760,7 +764,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const seriesStart = new Date(row.scheduled_for);
     const seriesEnd = row.ends_at ? new Date(row.ends_at) : addMinutes(seriesStart, 30);
     const durMin = getDurationMinutes(seriesStart, seriesEnd);
-
+    const isContact = (row.appointment_type || "").toLowerCase() === "contact";
+    const bg = isContact ? EVENT_PINK : EVENT_PURPLE;
     const baseTitle = (row.title || "Appointment").trim() || "Appointment";
 
     const baseProps = {
@@ -1224,60 +1229,61 @@ setHeaderTitle(calendar.view.title);
     const notes = (notesInput?.value || "").trim() || null;
 
     const payload = {
-  agent_id: user.id,
-  scheduled_for: start.toISOString(),
-  ends_at: end.toISOString(),
-  title,
-  location_type: locType,
-  location_address: addr,
-  repeat_rule: rep,
-  repeat_custom: repCustom,
-  url,
-  notes,
-  remind_enabled: false,
-  remind_before_minutes: null,
-};
+      agent_id: user.id,
+      scheduled_for: start.toISOString(),
+      ends_at: end.toISOString(),
+      title,
+      location_type: locType,
+      location_address: addr,
+      repeat_rule: rep,
+      repeat_custom: repCustom,
+      url,
+      notes,
+      appointment_type: (window.__newAppointmentType || "").toLowerCase() || null,
+      remind_enabled: false,
+      remind_before_minutes: null,
+    };
 
-const editingId = form.dataset.editingId || "";
-
-if (editingId) {
-  // ✅ EDIT MODE: update existing series immediately (don’t use reminder modal here yet)
-  const { error } = await supabase
-    .from("appointments")
-    .update({
-      scheduled_for: payload.scheduled_for,
-      ends_at: payload.ends_at,
-      title: payload.title,
-      location_type: payload.location_type,
-      location_address: payload.location_address,
-      repeat_rule: payload.repeat_rule,
-      repeat_custom: payload.repeat_custom,
-      url: payload.url,
-      notes: payload.notes,
-    })
-    .eq("id", editingId);
-
-    if (error) { console.error(error); alert("Failed to update appointment."); return; }
+    const editingId = form.dataset.editingId || "";
+    
+    if (editingId) {
+    // ✅ EDIT MODE: update existing series immediately (don’t use reminder modal here yet)
+    const { error } = await supabase
+      .from("appointments")
+      .update({
+        scheduled_for: payload.scheduled_for,
+        ends_at: payload.ends_at,
+        title: payload.title,
+        location_type: payload.location_type,
+        location_address: payload.location_address,
+        repeat_rule: payload.repeat_rule,
+        repeat_custom: payload.repeat_custom,
+        url: payload.url,
+        notes: payload.notes,
+      })
+      .eq("id", editingId);
   
-    // reset edit mode
-    delete form.dataset.editingId;
-    const btn = document.getElementById("create-appointment");
-    if (btn) btn.textContent = "Create Appointment";
-  
-    form.reset();
-    window.fpStart?.clear?.();
-    window.fpEnd?.clear?.();
-    toggleLocationFields();
-    toggleRepeatCustom();
-    initFloatingLabels(document);
-  
-    calendar.refetchEvents();
-    return;
-  }
-  
-  // ✅ CREATE MODE: use reminder modal flow
-  pendingAppointmentPayload = payload;
-  openReminderModal(payload);
+      if (error) { console.error(error); alert("Failed to update appointment."); return; }
+    
+      // reset edit mode
+      delete form.dataset.editingId;
+      const btn = document.getElementById("create-appointment");
+      if (btn) btn.textContent = "Create Appointment";
+    
+      form.reset();
+      window.fpStart?.clear?.();
+      window.fpEnd?.clear?.();
+      toggleLocationFields();
+      toggleRepeatCustom();
+      initFloatingLabels(document);
+    
+      calendar.refetchEvents();
+      return;
+    }
+    
+    // ✅ CREATE MODE: use reminder modal flow
+    pendingAppointmentPayload = payload;
+    openReminderModal(payload);
   });
 });
 
