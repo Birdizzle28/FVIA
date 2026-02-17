@@ -4,40 +4,42 @@
    TOKENS
 =========================== */
 :root{
-  --ink:#111;
-  --muted:#6b7280;
+   --ink:#111;
+   --muted:#6b7280;
 
-  --panel:#fff;
-  --panel-line:#e5e7eb;
-  --page:#fff;
+   --panel:#fff;
+   --panel-line:#e5e7eb;
+   --page:#fff;
 
-  --shadow:0 10px 24px rgba(0,0,0,.06);
+   --shadow:0 10px 24px rgba(0,0,0,.06);
 
-  --action:#3F3A6B;
+   --action:#3F3A6B;
    --action-hover:#322F56;
-  --action-soft:#f3f4f6;
+   --action-soft:#f3f4f6;
 
-  --today:rgba(0,0,0,.06);
-
-  --event:#111;
-  --event-text:#fff;
-
+   --today:rgba(0,0,0,.06);
+   --event:#111;
+   --event-text:#fff;
+   --fc-event-bg-color: var(--event);
+   --fc-event-border-color: var(--event);
+   --fc-event-text-color: var(--event-text);
+   
   /* FullCalendar vars */
-  --fc-button-bg-color:#fff;
-  --fc-button-border-color:var(--panel-line);
-  --fc-button-text-color:var(--ink);
-  --fc-button-hover-bg-color:var(--action-soft);
-  --fc-button-hover-border-color:var(--panel-line);
-  --fc-button-active-bg-color:var(--action);
-  --fc-button-active-border-color:var(--action);
-  --fc-button-active-text-color:#fff;
+   --fc-button-bg-color:#fff;
+   --fc-button-border-color:var(--panel-line);
+   --fc-button-text-color:var(--ink);
+   --fc-button-hover-bg-color:var(--action-soft);
+   --fc-button-hover-border-color:var(--panel-line);
+   --fc-button-active-bg-color:var(--action);
+   --fc-button-active-border-color:var(--action);
+   --fc-button-active-text-color:#fff;
 
-  --fc-today-bg-color:var(--today);
-  --fc-highlight-color:rgba(0,0,0,.07);
+   --fc-today-bg-color:var(--today);
+   --fc-highlight-color:rgba(0,0,0,.07);
 
-  --fc-event-bg-color:var(--event);
-  --fc-event-border-color:var(--event);
-  --fc-event-text-color:var(--event-text);
+   --fc-event-bg-color:var(--event);
+   --fc-event-border-color:var(--event);
+   --fc-event-text-color:var(--event-text);
 }
 
 /* ===========================
