@@ -793,6 +793,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           start: seriesStart.toISOString(),
           end: seriesEnd.toISOString(),
           allDay: false,
+          backgroundColor: bg,
+          borderColor: bg,
+          textColor: "#ffffff",
           extendedProps: baseProps,
         });
       }
@@ -843,6 +846,9 @@ document.addEventListener("DOMContentLoaded", async () => {
             start: occStart.toISOString(),
             end: occEnd.toISOString(),
             allDay: false,
+            backgroundColor: bg,
+            borderColor: bg,
+            textColor: "#ffffff",
             extendedProps: { ...baseProps, occurrence_start: occStart.toISOString() },
           });
         }
@@ -885,6 +891,9 @@ document.addEventListener("DOMContentLoaded", async () => {
           start: occStart.toISOString(),
           end: occEnd.toISOString(),
           allDay: false,
+          backgroundColor: bg,
+          borderColor: bg,
+          textColor: "#ffffff",
           extendedProps: { ...baseProps, occurrence_start: occStart.toISOString() },
         });
       }
