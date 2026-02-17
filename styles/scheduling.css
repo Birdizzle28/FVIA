@@ -904,3 +904,35 @@ main{ background:var(--page); width:100%; }
 #appointment-form .row .fl-field.grow > label{
   left: 12px !important;  /* was 10px; +2 for the padding */
 }
+/* ===========================
+   HARD LOCK: Starts/Ends (no spill, no missing edge)
+   Works even if JS/Flatpickr re-adds focus/has-value states
+=========================== */
+
+#appointment-form .row {
+  width: 100%;
+}
+
+#appointment-form .row .fl-field.grow {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+
+  /* the magic combo */
+  overflow: hidden !important;   /* clip anything that tries to spill */
+  padding: 3px !important;       /* BUT give room so ring/shadow isn't clipped */
+  box-sizing: border-box !important;
+}
+
+/* keep the input perfectly inside the padded wrapper */
+#appointment-form .row .fl-field.grow > input {
+  width: 100% !important;
+  max-width: 100% !important;
+  display: block !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+}
+
+/* move the floating label over by the padding amount */
+#appointment-form .row .fl-field.grow > label {
+  left: 13px !important; /* original 10px + 3px padding */
+}
