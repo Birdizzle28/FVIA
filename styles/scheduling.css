@@ -786,3 +786,45 @@ main{ background:var(--page); width:100%; }
   display: block !important;
   box-sizing: border-box !important;
 }
+
+/* ===========================
+   HARD FIX: Starts/Ends flex overflow on iOS (Flatpickr fields)
+=========================== */
+
+/* make the row behave */
+#appointment-form .row{
+  align-items: stretch;
+}
+
+/* make each of the two columns truly shrinkable */
+#appointment-form .row .fl-field.grow{
+  flex: 1 1 0 !important;   /* key: allows equal columns + shrink */
+  min-width: 0 !important;  /* key: iOS flex overflow fix */
+  overflow: hidden;         /* prevents any “spill” to the right */
+}
+
+/* lock the inputs specifically */
+#starts,
+#ends{
+  display: block !important;
+  width: 100% !important;
+  max-width: 100% !important;
+  margin: 0 !important;
+  left: 0 !important;
+  right: auto !important;
+  box-sizing: border-box !important;
+}
+
+/* if flatpickr is adding any wrapper, lock it too */
+#appointment-form .row .fl-field.grow .flatpickr-wrapper{
+  width: 100% !important;
+  max-width: 100% !important;
+  display: block !important;
+}
+
+/* sometimes a global rule hits readonly flatpickr inputs */
+#starts[readonly],
+#ends[readonly]{
+  padding-left: 12px !important;
+  padding-right: 12px !important;
+}
