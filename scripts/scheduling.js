@@ -655,12 +655,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     enableTime: true,
     dateFormat: "Y-m-d H:i",
     minDate: "today",
+    disableMobile: true, // ✅ force real flatpickr input on iOS
   });
   
   window.fpEnd = flatpickr("#ends", {
     enableTime: true,
     dateFormat: "Y-m-d H:i",
     minDate: "today",
+    disableMobile: true, // ✅
   });
 
   /* ---------------- UI toggles ---------------- */
