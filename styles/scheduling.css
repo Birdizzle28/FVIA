@@ -1,160 +1,190 @@
-/* styles/scheduling.css — Apple-ish neutral theme (matches Year tab) */
+/* styles/scheduling.css — Apple-ish neutral theme (clean + deduped) */
 
-/* ===== Neutral tokens (Year tab vibe) ===== */
+/* ===========================
+   TOKENS
+=========================== */
 :root{
-  --ink:#111111;            /* primary text */
-  --muted:#6b7280;          /* secondary text */
-  --panel:#ffffff;          /* cards */
-  --panel-line:#e5e7eb;     /* thin borders */
-  --page:#ffffff;           /* clean page */
+  --ink:#111;
+  --muted:#6b7280;
+
+  --panel:#fff;
+  --panel-line:#e5e7eb;
+  --page:#fff;
+
   --shadow:0 10px 24px rgba(0,0,0,.06);
 
-  /* “action” colors (no pink) */
-  --action:#111111;
+  --action:#111;
   --action-hover:#0b0b0b;
-  --action-soft:#f3f4f6;    /* light chip bg */
-  --today:rgba(0,0,0,.06);  /* subtle today highlight */
+  --action-soft:#f3f4f6;
 
-  /* Calendar event color */
-  --event:#111111;
-  --event-text:#ffffff;
+  --today:rgba(0,0,0,.06);
+
+  --event:#111;
+  --event-text:#fff;
+
+  /* FullCalendar vars */
+  --fc-button-bg-color:#fff;
+  --fc-button-border-color:var(--panel-line);
+  --fc-button-text-color:var(--ink);
+  --fc-button-hover-bg-color:var(--action-soft);
+  --fc-button-hover-border-color:var(--panel-line);
+  --fc-button-active-bg-color:var(--action);
+  --fc-button-active-border-color:var(--action);
+  --fc-button-active-text-color:#fff;
+
+  --fc-today-bg-color:var(--today);
+  --fc-highlight-color:rgba(0,0,0,.07);
+
+  --fc-event-bg-color:var(--event);
+  --fc-event-border-color:var(--event);
+  --fc-event-text-color:var(--event-text);
 }
 
-/* Page area */
+/* ===========================
+   BASE / LAYOUT
+=========================== */
 main{ background:var(--page); width:100%; }
 
-/* Card container */
+/* keep width math sane inside the scheduling card */
+.schedule-section,
+.schedule-section *,
+.schedule-section *::before,
+.schedule-section *::after{
+  box-sizing:border-box;
+}
+
 .card-ish{
-  max-width: 1100px;
-  margin: 24px auto;
-  padding: 16px;
-  background: var(--panel);
-  border: 1px solid var(--panel-line);
-  border-radius: 0;
-  box-shadow: var(--shadow);
+  max-width:1100px;
+  margin:24px auto;
+  padding:16px;
+  background:var(--panel);
+  border:1px solid var(--panel-line);
+  border-radius:0;
+  box-shadow:var(--shadow);
 }
 
-/* Headings */
 .dash-title{
-  margin: 6px 0 16px;
-  font-size: clamp(22px,2.4vw,32px);
-  color: var(--ink);
-  font-weight: 800;
+  margin:6px 0 16px;
+  font-size:clamp(22px,2.4vw,32px);
+  color:var(--ink);
+  font-weight:800;
 }
 
-/* ===== Tabs (Day/Week/Month/Year) ===== */
+/* ===========================
+   TABS
+=========================== */
 .cal-tabs{
   display:flex;
   gap:10px;
   justify-content:center;
   align-items:center;
-  margin: 10px 0 14px;
+  margin:10px 0 14px;
 }
 
 .cal-tab{
   appearance:none;
   border:1px solid var(--panel-line);
   padding:8px 14px;
-  background: #fff;
-  color: var(--ink);
+  background:#fff;
+  color:var(--ink);
   border-radius:999px;
-  font: inherit;
+  font:inherit;
   cursor:pointer;
-  transition: background .12s ease, border-color .12s ease, transform .06s ease;
+  transition:background .12s ease, border-color .12s ease, transform .06s ease;
 }
-
-.cal-tab:hover{
-  background: var(--action-soft);
-}
-
-.cal-tab:active{
-  transform: scale(.98);
-}
-
+.cal-tab:hover{ background:var(--action-soft); }
+.cal-tab:active{ transform:scale(.98); }
 .cal-tab.active{
-  background: var(--action);
+  background:var(--action);
   color:#fff;
-  border-color: var(--action);
+  border-color:var(--action);
 }
 
-/* ===== Floating label form ===== */
+/* ===========================
+   FORM (floating labels)
+=========================== */
 .fl-form{
   display:flex;
   flex-direction:column;
   gap:14px;
-  margin-bottom: 18px;
+  margin-bottom:18px;
 }
 
-/* Row helper */
-.row{ display:flex; gap:12px; flex-wrap:wrap; }
-.grow{ flex:1 1 220px; }
+.row{
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+  width:100%;
+  align-items:stretch;
+}
+.grow{
+  flex:1 1 220px;
+  min-width:0; /* important in flex rows */
+}
 
-/* Field wrapper */
 .fl-field{
-  position: relative;
-  display: block;
+  position:relative;
+  display:block;
 }
 
-/* Inputs */
+/* controls */
 .fl-field input,
 .fl-field textarea,
 .fl-field select{
-  width: 100%;
-  background: #fff;
-  border: 1px solid var(--panel-line);
-  border-radius: 0;
-  padding: 14px 12px;
-  font: inherit;
-  color: var(--ink);
-  outline: none;
-  transition: border-color .15s ease, box-shadow .15s ease, background .15s ease;
+  display:block;
+  width:100%;
+  max-width:100%;
+  background:#fff;
+  border:1px solid var(--panel-line);
+  border-radius:0;
+  padding:14px 12px;
+  font:inherit;
+  color:var(--ink);
+  outline:none;
+  transition:border-color .15s ease, box-shadow .15s ease, background .15s ease;
 }
 
-/* Make selects feel consistent */
-.fl-field select{
-  padding-right: 38px;
-}
+/* select spacing */
+.fl-field select{ padding-right:38px; }
 
-/* Placeholder spacing for URL input if you use placeholder=" " */
+/* hide placeholders so labels do the work */
 .fl-field input::placeholder,
-.fl-field textarea::placeholder{
-  color: transparent;
-}
+.fl-field textarea::placeholder{ color:transparent; }
 
-/* Label */
+/* label */
 .fl-field label{
-  position: absolute;
-  left: 10px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: transparent;
-  padding: 0 6px;
-  color: var(--muted);
-  pointer-events: none;
-  transition: all .12s ease;
+  position:absolute;
+  left:10px;
+  top:50%;
+  transform:translateY(-50%);
+  background:transparent;
+  padding:0 6px;
+  color:var(--muted);
+  pointer-events:none;
+  transition:all .12s ease;
 }
 
-/* Focus / has-value */
+/* active/filled state */
 .fl-field.is-focused input,
 .fl-field.has-value input,
 .fl-field.is-focused textarea,
 .fl-field.has-value textarea,
 .fl-field.is-focused select,
 .fl-field.has-value select{
-  border-color: #111;
-  box-shadow: 0 0 0 2px rgba(0,0,0,.10);
+  border-color:#111;
+  box-shadow:0 0 0 2px rgba(0,0,0,.10);
 }
 
 .fl-field.is-focused label,
 .fl-field.has-value label{
-  top: 0;
-  transform: translateY(-60%);
-  background: #fff;
-  color: var(--ink);
-  font-size: 12px;
+  top:0;
+  transform:translateY(-60%);
+  background:#fff;
+  color:var(--ink);
+  font-size:12px;
 }
 
-/* Invalid helper */
+/* invalid state */
 .fl-field.is-invalid input,
 .fl-field.is-invalid textarea,
 .fl-field.is-invalid select{
@@ -163,264 +193,30 @@ main{ background:var(--page); width:100%; }
 }
 .fl-field.is-invalid label{ color:#d12c2c; }
 
-/* Primary button (now neutral) */
+/* primary button */
 .btn-primary{
-  align-self: flex-start;
-  background: var(--action);
-  color: #fff;
-  border: 1px solid var(--action);
-  border-radius: 0;
-  padding: 10px 16px;
-  font-weight: 700;
-  cursor: pointer;
-  transition: background .12s ease, border-color .12s ease, transform .06s ease;
-}
-.btn-primary:hover{ background: var(--action-hover); border-color: var(--action-hover); }
-.btn-primary:active{ transform: scale(.99); }
-
-/* Calendar container */
-.calendar-card{
-  width:100%;
-  min-height:600px;
-  margin-top: 10px;
-  border: 1px solid var(--panel-line);
-  border-radius: 0;
-  background:#fff;
-}
-
-/* ===== FullCalendar neutral theme (v6) ===== */
-.fc{ font-family: "Bellota Text", sans-serif; color: var(--ink); }
-
-/* FC CSS vars */
-:root{
-  --fc-button-bg-color: #ffffff;
-  --fc-button-border-color: var(--panel-line);
-  --fc-button-text-color: var(--ink);
-  --fc-button-hover-bg-color: var(--action-soft);
-  --fc-button-hover-border-color: var(--panel-line);
-  --fc-button-active-bg-color: var(--action);
-  --fc-button-active-border-color: var(--action);
-  --fc-button-active-text-color: #ffffff;
-
-  --fc-today-bg-color: var(--today);
-  --fc-highlight-color: rgba(0,0,0,0.07);
-
-  --fc-event-bg-color: var(--event);
-  --fc-event-border-color: var(--event);
-  --fc-event-text-color: var(--event-text);
-}
-
-/* Make FC header/title match the Year vibe */
-.fc .fc-toolbar-title{
-  font-weight: 800;
-  letter-spacing: .2px;
-}
-
-/* Buttons: remove “puffy” vibe */
-.fc .fc-button{
-  border-radius: 999px;
-  box-shadow: none;
-  font-weight: 700;
-  padding: 6px 12px;
-}
-
-/* Today button should not be bright */
-.fc .fc-today-button{
-  background:#fff !important;
-  color: var(--ink) !important;
-}
-
-/* Day numbers slightly subtle */
-.fc .fc-daygrid-day-number{ font-size:.9em; color: var(--ink); opacity:.9; }
-
-/* Grid borders thin */
-.fc .fc-scrollgrid,
-.fc .fc-scrollgrid td,
-.fc .fc-scrollgrid th{
-  border-color: var(--panel-line) !important;
-}
-
-/* Month view day cells hover (subtle) */
-.fc .fc-daygrid-day:hover{
-  background: rgba(0,0,0,.02);
-}
-
-/* Event pills: clean */
-.fc .fc-event{
-  border-radius: 10px;
-  padding: 2px 6px;
-}
-
-/* Time grid lines subtle */
-.fc .fc-timegrid-slot,
-.fc .fc-timegrid-axis{
-  border-color: var(--panel-line) !important;
-}
-
-/* List view neutral */
-.fc .fc-list-day-cushion{
-  background: #fff;
-  border-bottom: 1px solid var(--panel-line);
-}
-
-/* ===== Choices.js (dropdowns) — neutralize ===== */
-.choices__inner{
-  border-radius: 0 !important;
-  border: 1px solid var(--panel-line) !important;
-  background:#fff !important;
-  min-height: 48px;
-  padding: 10px 12px !important;
-  color: var(--ink) !important;
-}
-
-.choices__list--dropdown,
-.choices__list[aria-expanded]{
-  border-radius: 0 !important;
-  border: 1px solid var(--panel-line) !important;
-  box-shadow: var(--shadow);
-}
-
-.choices__item--selectable.is-highlighted{
-  background: var(--action-soft) !important;
-}
-
-/* ===== Custom Year view ===== */
-.year-view{
-  user-select:none;
-}
-
-.year-title{
-  font-size:40px;
-  font-weight:800;
-  margin: 6px 0 12px;
-  color: var(--ink);
-}
-
-/* 4x3 months grid like Apple */
-.year-grid{
-  display:grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-}
-
-.mini-month{
-  padding: 6px 2px;
-}
-
-.mini-month-title{
-  font-weight:800;
-  margin-bottom:6px;
-  color: var(--ink);
-}
-
-.mini-dow{
-  display:grid;
-  grid-template-columns: repeat(7, 1fr);
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom:6px;
-}
-
-.mini-grid{
-  display:grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 4px;
-}
-
-.mini-day{
-  border:0;
-  background:transparent;
-  padding:2px 0;
-  font-size: 13px;
-  text-align:center;
-  color: var(--ink);
-  border-radius: 6px;
+  align-self:flex-start;
+  background:var(--action);
+  color:#fff;
+  border:1px solid var(--action);
+  border-radius:0;
+  padding:10px 16px;
+  font-weight:700;
   cursor:pointer;
+  transition:background .12s ease, border-color .12s ease, transform .06s ease;
 }
+.btn-primary:hover{ background:var(--action-hover); border-color:var(--action-hover); }
+.btn-primary:active{ transform:scale(.99); }
 
-.mini-day:hover{
-  background: var(--action-soft);
-}
-
-.mini-day:active{
-  background: rgba(0,0,0,.10);
-}
-
-.mini-day.blank{
-  visibility:hidden;
-}
-
-/* Responsive: collapse year grid nicely */
-@media (max-width: 900px){
-  .year-grid{ grid-template-columns: repeat(3, 1fr); }
-}
-@media (max-width: 640px){
-  .year-grid{ grid-template-columns: repeat(2, 1fr); }
-  .year-title{ font-size:34px; }
-}
-/* ===== Custom Calendar Header (replaces FullCalendar header) ===== */
-.cal-header{
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  gap:10px;
-  margin: 8px 0 10px;
-}
-
-.cal-title{
-  min-width: 160px;
-  text-align:center;
-  font-weight: 800;
-  letter-spacing: .2px;
-  color: var(--ink);
-}
-
-.cal-nav-btn{
-  appearance:none;
-  border:1px solid var(--panel-line);
-  background:#fff;
-  color: var(--ink);
-  border-radius:999px;
-  width:40px;
-  height:40px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  cursor:pointer;
-  transition: background .12s ease, transform .06s ease;
-}
-
-.cal-nav-btn:hover{ background: var(--action-soft); }
-.cal-nav-btn:active{ transform: scale(.98); }
-
-.cal-today-btn{
-  appearance:none;
-  border:1px solid var(--panel-line);
-  background:#fff;
-  color: var(--ink);
-  border-radius:999px;
-  height:40px;
-  padding:0 14px;
-  font-weight:800;
-  cursor:pointer;
-  transition: background .12s ease, transform .06s ease;
-}
-
-.cal-today-btn:hover{ background: var(--action-soft); }
-.cal-today-btn:active{ transform: scale(.98); }
-
-/* Optional: tighter header on small screens */
-@media (max-width: 520px){
-  .cal-title{ min-width: 120px; font-size: 14px; }
-  .cal-today-btn{ padding: 0 10px; }
-}
-/* ===== Calendar Controls (arrows left, title right) ===== */
+/* ===========================
+   CALENDAR HEADER CONTROLS
+=========================== */
 .cal-controls{
   display:flex;
   align-items:center;
   justify-content:space-between;
   gap:12px;
-  margin: 6px 0 10px;
+  margin:6px 0 10px;
 }
 
 .cal-arrows{
@@ -441,10 +237,10 @@ main{ background:var(--page); width:100%; }
   align-items:center;
   justify-content:center;
   cursor:pointer;
+  transition:background .12s ease, transform .06s ease;
 }
-
-.cal-nav-btn:hover{ background: var(--action-soft); }
-.cal-nav-btn:active{ transform: scale(.98); }
+.cal-nav-btn:hover{ background:var(--action-soft); }
+.cal-nav-btn:active{ transform:scale(.98); }
 
 .cal-today-btn{
   appearance:none;
@@ -456,187 +252,332 @@ main{ background:var(--page); width:100%; }
   font:inherit;
   font-weight:700;
   cursor:pointer;
+  transition:background .12s ease, transform .06s ease;
 }
-
-.cal-today-btn:hover{ background: var(--action-soft); }
-.cal-today-btn:active{ transform: scale(.98); }
+.cal-today-btn:hover{ background:var(--action-soft); }
+.cal-today-btn:active{ transform:scale(.98); }
 
 .cal-title{
   font-weight:800;
   color:var(--ink);
   letter-spacing:.2px;
   text-align:right;
-  min-height: 20px;
+  min-height:20px;
 }
 
-/* keep it nice on mobile */
-@media (max-width: 520px){
+@media (max-width:520px){
   .cal-controls{ flex-direction:column; align-items:stretch; }
   .cal-title{ text-align:center; }
   .cal-arrows{ justify-content:center; flex-wrap:wrap; }
 }
 
-/* ===== Custom Repeat: "Every ___ [unit]" ===== */
+/* ===========================
+   FULLCALENDAR
+=========================== */
+.calendar-card{
+  width:100%;
+  min-height:600px;
+  margin-top:10px;
+  border:1px solid var(--panel-line);
+  border-radius:0;
+  background:#fff;
+}
+
+.fc{
+  font-family:"Bellota Text", sans-serif;
+  color:var(--ink);
+}
+
+.fc .fc-toolbar-title{
+  font-weight:800;
+  letter-spacing:.2px;
+}
+
+.fc .fc-button{
+  border-radius:999px;
+  box-shadow:none;
+  font-weight:700;
+  padding:6px 12px;
+}
+
+.fc .fc-today-button{
+  background:#fff !important;
+  color:var(--ink) !important;
+}
+
+.fc .fc-daygrid-day-number{
+  font-size:.9em;
+  color:var(--ink);
+  opacity:.9;
+}
+
+.fc .fc-scrollgrid,
+.fc .fc-scrollgrid td,
+.fc .fc-scrollgrid th{
+  border-color:var(--panel-line) !important;
+}
+
+.fc .fc-daygrid-day:hover{ background:rgba(0,0,0,.02); }
+
+.fc .fc-event{
+  border-radius:10px;
+  padding:2px 6px;
+}
+
+.fc .fc-timegrid-slot,
+.fc .fc-timegrid-axis{
+  border-color:var(--panel-line) !important;
+}
+
+.fc .fc-list-day-cushion{
+  background:#fff;
+  border-bottom:1px solid var(--panel-line);
+}
+
+/* ===========================
+   CHOICES.JS (select UI)
+=========================== */
+.choices{
+  width:100% !important;
+  max-width:100% !important;
+}
+
+.choices__inner{
+  border-radius:0 !important;
+  border:1px solid var(--panel-line) !important;
+  background:#fff !important;
+  min-height:48px;
+  padding:10px 12px !important;
+  color:var(--ink) !important;
+  box-sizing:border-box !important;
+}
+
+.choices__list--dropdown,
+.choices__list[aria-expanded]{
+  border-radius:0 !important;
+  border:1px solid var(--panel-line) !important;
+  box-shadow:var(--shadow);
+}
+
+.choices__item--selectable.is-highlighted{
+  background:var(--action-soft) !important;
+}
+
+/* Keep Choices caret inside */
+.choices[data-type*="select-one"]::after{
+  right:14px !important;
+}
+
+/* ===========================
+   FLATPICKR WRAP (width sanity)
+=========================== */
+.flatpickr-wrapper{
+  width:100% !important;
+  max-width:100% !important;
+  display:block !important;
+}
+input.flatpickr-input{
+  width:100% !important;
+  max-width:100% !important;
+  display:block !important;
+}
+
+/* ===========================
+   CUSTOM REPEAT ROW
+=========================== */
 .custom-repeat-row{
   display:flex;
   align-items:center;
   gap:10px;
-  padding: 10px 12px;
-  border: 1px solid var(--panel-line);
+  padding:10px 12px;
+  border:1px solid var(--panel-line);
   background:#fff;
 }
 
 .custom-repeat-text{
-  color: var(--ink);
-  font-weight: 700;
+  color:var(--ink);
+  font-weight:700;
 }
 
-#repeat-interval{
-  width: 110px;
-  padding: 12px 10px;
-  border: 1px solid var(--panel-line);
-  background:#fff;
-  font: inherit;
-  color: var(--ink);
-  outline:none;
-}
-
+#repeat-interval,
 #repeat-unit{
-  flex: 0 0 auto;
-  min-width: 140px;
-  padding: 12px 10px;
-  border: 1px solid var(--panel-line);
+  box-sizing:border-box;
+  max-width:100%;
+  border:1px solid var(--panel-line);
   background:#fff;
-  font: inherit;
-  color: var(--ink);
+  font:inherit;
+  color:var(--ink);
   outline:none;
+  padding:12px 10px;
 }
-/* --- Push modal (matches your HTML structure) --- */
 
-/* Wrapper */
+#repeat-interval{ width:110px; }
+#repeat-unit{ min-width:140px; flex:0 0 auto; }
+
+/* ===========================
+   YEAR VIEW
+=========================== */
+.year-view{ user-select:none; }
+
+.year-title{
+  font-size:40px;
+  font-weight:800;
+  margin:6px 0 12px;
+  color:var(--ink);
+}
+
+.year-grid{
+  display:grid;
+  grid-template-columns:repeat(4, 1fr);
+  gap:14px;
+}
+
+.mini-month{ padding:6px 2px; }
+
+.mini-month-title{
+  font-weight:800;
+  margin-bottom:6px;
+  color:var(--ink);
+}
+
+.mini-dow{
+  display:grid;
+  grid-template-columns:repeat(7, 1fr);
+  font-size:12px;
+  color:var(--muted);
+  margin-bottom:6px;
+}
+
+.mini-grid{
+  display:grid;
+  grid-template-columns:repeat(7, 1fr);
+  gap:4px;
+}
+
+.mini-day{
+  border:0;
+  background:transparent;
+  padding:2px 0;
+  font-size:13px;
+  text-align:center;
+  color:var(--ink);
+  border-radius:6px;
+  cursor:pointer;
+}
+.mini-day:hover{ background:var(--action-soft); }
+.mini-day:active{ background:rgba(0,0,0,.10); }
+.mini-day.blank{ visibility:hidden; }
+
+@media (max-width:900px){
+  .year-grid{ grid-template-columns:repeat(3, 1fr); }
+}
+@media (max-width:640px){
+  .year-grid{ grid-template-columns:repeat(2, 1fr); }
+  .year-title{ font-size:34px; }
+}
+
+/* ===========================
+   MODALS (push + appt details)
+=========================== */
 .fvg-modal{
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-
-  /* Use flex to center the card */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  padding: 18px;
+  position:fixed;
+  inset:0;
+  z-index:9999;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:18px;
 }
+.fvg-modal[hidden]{ display:none; }
 
-/* When the element has the HTML attribute hidden, hide it */
-.fvg-modal[hidden]{
-  display: none;
-}
-
-/* Backdrop overlay (your child div) */
 .fvg-modal .fvg-modal-backdrop{
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,.55);
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.55);
 }
 
-/* Card (your dialog) */
 .fvg-modal .fvg-modal-card{
-  position: relative;          /* so it sits above backdrop */
-  z-index: 1;
-
-  width: 100%;
-  max-width: 420px;
-  background: #fff;
-  border-radius: 14px;
-  padding: 18px 16px;
-  box-shadow: 0 18px 60px rgba(0,0,0,.35);
+  position:relative;
+  z-index:1;
+  width:100%;
+  max-width:420px;
+  background:#fff;
+  border-radius:14px;
+  padding:18px 16px;
+  box-shadow:0 18px 60px rgba(0,0,0,.35);
 }
 
-/* Typography */
-.fvg-modal .fvg-modal-card h3{
-  margin: 0 0 8px;
-}
-
+.fvg-modal .fvg-modal-card h3{ margin:0 0 8px; }
 .fvg-modal .fvg-modal-card p{
-  margin: 0 0 14px;
-  line-height: 1.35;
+  margin:0 0 14px;
+  line-height:1.35;
 }
 
-/* Status message */
 .fvg-modal-status{
-  margin: 10px 0 0;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: rgba(0,0,0,.06);
-  font-size: 14px;
+  margin:10px 0 0;
+  padding:10px 12px;
+  border-radius:10px;
+  background:rgba(0,0,0,.06);
+  font-size:14px;
 }
 
-/* Actions row */
 .fvg-modal-actions{
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  margin-top: 16px;
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  margin-top:16px;
 }
 
-/* selectable option cards */
+/* reminder selectable cards */
 .reminder-options{
   display:flex;
   flex-direction:column;
   gap:12px;
-  margin: 12px 0 4px;
+  margin:12px 0 4px;
 }
 
 .reminder-card{
-  border: 1px solid rgba(0,0,0,.10);
-  border-radius: 14px;
-  padding: 14px 14px;
-  cursor: pointer;
-  user-select: none;
-  transition: transform .08s ease, border-color .12s ease, background .12s ease;
-  background:#fff;
-}
-
-.reminder-card:hover{ background: rgba(0,0,0,.03); }
-.reminder-card:active{ transform: scale(.99); }
-
-.reminder-card.selected{
-  border-color: #111;
-  box-shadow: 0 0 0 2px rgba(0,0,0,.10);
-}
-
-.reminder-card-title{
-  font-weight: 800;
-  margin-bottom: 6px;
-}
-
-.reminder-card-sub{
-  opacity:.75;
-  line-height:1.25;
-}
-
-/* time button inside card */
-.reminder-time-btn{
-  border: 1px solid rgba(0,0,0,.12);
-  background:#fff;
-  border-radius: 12px;
-  padding: 10px 12px;
-  font: inherit;
-  font-weight: 800;
+  border:1px solid rgba(0,0,0,.10);
+  border-radius:14px;
+  padding:14px;
   cursor:pointer;
-  margin: 6px 0 6px;
+  user-select:none;
+  transition:transform .08s ease, border-color .12s ease, background .12s ease;
+  background:#fff;
+}
+.reminder-card:hover{ background:rgba(0,0,0,.03); }
+.reminder-card:active{ transform:scale(.99); }
+.reminder-card.selected{
+  border-color:#111;
+  box-shadow:0 0 0 2px rgba(0,0,0,.10);
 }
 
-/* wheel UI */
+.reminder-card-title{ font-weight:800; margin-bottom:6px; }
+.reminder-card-sub{ opacity:.75; line-height:1.25; }
+
+.reminder-time-btn{
+  border:1px solid rgba(0,0,0,.12);
+  background:#fff;
+  border-radius:12px;
+  padding:10px 12px;
+  font:inherit;
+  font-weight:800;
+  cursor:pointer;
+  margin:6px 0;
+}
+
+/* ===========================
+   TIMEWHEEL
+=========================== */
 .timewheel{
-  position: relative;
+  position:relative;
   display:flex;
   gap:14px;
   justify-content:center;
-  padding: 14px 0 18px;
+  padding:14px 0 18px;
 }
 
-.wheel-col{ width: 140px; }
+.wheel-col{ width:140px; }
 
 .wheel-label{
   text-align:center;
@@ -646,293 +587,64 @@ main{ background:var(--page); width:100%; }
 }
 
 .wheel-list{
-  height: 220px;
-  overflow-y: auto;
-  scroll-snap-type: y mandatory;
-  border-radius: 14px;
-  border: 1px solid rgba(0,0,0,.10);
+  height:220px;
+  overflow-y:auto;
+  scroll-snap-type:y mandatory;
+  border-radius:14px;
+  border:1px solid rgba(0,0,0,.10);
   background:#fff;
-  padding: 0;              /* ✅ IMPORTANT */
+  padding:0;
 }
 
-.wheel-spacer{
-  width: 100%;
-}
+.wheel-spacer{ width:100%; }
 
 .wheel-item{
-  scroll-snap-align: center;
-  height: 44px;            /* ✅ must match JS WHEEL_ITEM_HEIGHT */
-  line-height: 44px;       /* ✅ helps exact centering */
+  scroll-snap-align:center;
+  height:44px;        /* must match JS WHEEL_ITEM_HEIGHT */
+  line-height:44px;
   display:flex;
   align-items:center;
   justify-content:center;
-  font-weight: 800;
-  opacity: .55;
+  font-weight:800;
+  opacity:.55;
 }
-
-.wheel-item.active{ opacity: 1; }
+.wheel-item.active{ opacity:1; }
 
 .wheel-highlight{
   position:absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  top: calc(50% - 22px);
-  width: calc(140px * 2 + 14px);
-  height: 44px;
-  border-radius: 12px;
-  background: rgba(0,0,0,.06);
+  left:50%;
+  transform:translateX(-50%);
+  top:calc(50% - 22px);
+  width:calc(140px * 2 + 14px);
+  height:44px;
+  border-radius:12px;
+  background:rgba(0,0,0,.06);
   pointer-events:none;
 }
-/* Appointment details modal */
+
+/* ===========================
+   APPOINTMENT DETAILS MODAL
+=========================== */
 .appt-details{
-  margin-top: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
+  margin-top:10px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
 }
 
 .appt-row{
-  display: grid;
-  grid-template-columns: 110px 1fr;
-  gap: 10px;
-  align-items: start;
+  display:grid;
+  grid-template-columns:110px 1fr;
+  gap:10px;
+  align-items:start;
 }
 
 .appt-label{
-  font-weight: 700;
-  opacity: 0.9;
+  font-weight:700;
+  opacity:.9;
 }
 
 .appt-value{
-  word-break: break-word;
-  white-space: pre-wrap;
-}
-
-/* ===========================
-   FIX: inputs/selects shifting right (box sizing + Choices width)
-   Paste at the BOTTOM of scheduling.css
-=========================== */
-
-/* 1) Make width math sane everywhere */
-.schedule-section,
-.card-ish,
-.fl-form,
-.fl-field,
-.row,
-.custom-repeat-row {
-  box-sizing: border-box;
-}
-
-.schedule-section *,
-.schedule-section *::before,
-.schedule-section *::after {
-  box-sizing: border-box;
-}
-
-/* 2) Prevent flex children from overflowing their row */
-.row { width: 100%; }
-.grow { min-width: 0; } /* important when inputs are inside flex */
-
-/* 3) Force the actual form controls to respect the box */
-.fl-field input,
-.fl-field textarea,
-.fl-field select {
-  display: block;
-  width: 100%;
-  max-width: 100%;
-}
-
-/* 4) Choices.js: make the injected container behave like a normal full-width field */
-.fl-field .choices {
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-/* Make the visible “select” area not overflow */
-.fl-field .choices__inner {
-  width: 100% !important;
-  max-width: 100% !important;
-  box-sizing: border-box !important;
-}
-
-/* Ensure the dropdown caret is positioned inside the border (Choices adds its own caret) */
-.fl-field .choices[data-type*="select-one"]::after {
-  right: 14px !important;
-}
-
-/* 5) Your custom repeat row inputs too */
-#repeat-interval,
-#repeat-unit {
-  box-sizing: border-box;
-  max-width: 100%;
-}
-
-/* ===========================
-   FIX: Starts/Ends (Flatpickr) shifting right
-   Paste at the BOTTOM of scheduling.css
-=========================== */
-
-/* Flatpickr sometimes wraps the input and breaks width */
-.fl-field .flatpickr-wrapper{
-  width: 100% !important;
-  max-width: 100% !important;
-  display: block !important;
-}
-
-/* Force the actual input to fill the field */
-.fl-field input.flatpickr-input{
-  width: 100% !important;
-  max-width: 100% !important;
-  display: block !important;
-  box-sizing: border-box !important;
-}
-
-/* ===========================
-   HARD FIX: Starts/Ends flex overflow on iOS (Flatpickr fields)
-=========================== */
-
-/* make the row behave */
-#appointment-form .row{
-  align-items: stretch;
-}
-
-/* make each of the two columns truly shrinkable */
-#appointment-form .row .fl-field.grow{
-  flex: 1 1 0 !important;   /* key: allows equal columns + shrink */
-  min-width: 0 !important;  /* key: iOS flex overflow fix */
-  overflow: hidden;         /* prevents any “spill” to the right */
-}
-
-/* lock the inputs specifically */
-#starts,
-#ends{
-  display: block !important;
-  width: 100% !important;
-  max-width: 100% !important;
-  margin: 0 !important;
-  left: 0 !important;
-  right: auto !important;
-  box-sizing: border-box !important;
-}
-
-/* if flatpickr is adding any wrapper, lock it too */
-#appointment-form .row .fl-field.grow{
-  flex: 1 1 0 !important;
-  min-width: 0 !important;
-  overflow: visible !important;   /* ✅ don’t clip borders */
-}
-
-/* iOS Safari: prevent border/edge clipping and weird painting */
-#appointment-form .row .fl-field.grow input{
-  background-clip: padding-box;   /* ✅ keeps border crisp */
-}
-
-/* If iOS is still “eating” the right edge, add a tiny breathing room */
-#appointment-form .row{
-  padding-right: 1px;
-}
-
-/* sometimes a global rule hits readonly flatpickr inputs */
-#starts[readonly],
-#ends[readonly]{
-  padding-left: 12px !important;
-  padding-right: 12px !important;
-}
-
-/* ===========================
-   FIX: Starts/Ends ring spills outside box (use inset ring)
-=========================== */
-
-/* Stop the outer ring for these two inputs only */
-#appointment-form .fl-field.is-focused #starts,
-#appointment-form .fl-field.has-value #starts,
-#appointment-form .fl-field.is-focused #ends,
-#appointment-form .fl-field.has-value #ends{
-  /* replace outer glow with an inset ring */
-  box-shadow: inset 0 0 0 2px rgba(0,0,0,.10) !important;
-  border-color: #111 !important;
-}
-
-/* ===========================
-   FINAL FIX: Starts/Ends spill caused by .has-value/.is-focused shadow
-   (JS sets has-value after flatpickr initializes)
-=========================== */
-
-/* Kill the outer glow for these two fields in ANY state */
-#appointment-form .fl-field #starts,
-#appointment-form .fl-field #ends{
-  box-shadow: none !important;
-  outline: none;
-}
-
-/* When focused OR has-value, use an inward outline instead of outside shadow */
-#appointment-form .fl-field.is-focused #starts,
-#appointment-form .fl-field.has-value  #starts,
-#appointment-form .fl-field.is-focused #ends,
-#appointment-form .fl-field.has-value  #ends{
-  border-color: #111 !important;
-
-  /* inward “ring” that never spills outside the column */
-  outline: 2px solid rgba(0,0,0,.10) !important;
-  outline-offset: -2px !important;
-
-  /* ensure no outside shadow sneaks back in */
-  box-shadow: none !important;
-}
-
-/* ===========================
-   FIX: Starts/Ends spill — give the two columns a 2px buffer
-   (prevents any shadow/outline from painting outside the column)
-=========================== */
-
-#appointment-form .row .fl-field.grow{
-  padding: 2px;           /* <-- the buffer */
-  min-width: 0 !important;
-  flex: 1 1 0 !important;
-  box-sizing: border-box;
-}
-
-/* keep inputs full width inside the padded wrapper */
-#appointment-form .row .fl-field.grow input{
-  width: 100% !important;
-  max-width: 100% !important;
-  display: block !important;
-  box-sizing: border-box !important;
-}
-
-/* nudge labels so they line up after padding */
-#appointment-form .row .fl-field.grow > label{
-  left: 12px !important;  /* was 10px; +2 for the padding */
-}
-/* ===========================
-   HARD LOCK: Starts/Ends (no spill, no missing edge)
-   Works even if JS/Flatpickr re-adds focus/has-value states
-=========================== */
-
-#appointment-form .row {
-  width: 100%;
-}
-
-#appointment-form .row .fl-field.grow {
-  flex: 1 1 0 !important;
-  min-width: 0 !important;
-
-  /* the magic combo */
-  overflow: hidden !important;   /* clip anything that tries to spill */
-  padding: 3px !important;       /* BUT give room so ring/shadow isn't clipped */
-  box-sizing: border-box !important;
-}
-
-/* keep the input perfectly inside the padded wrapper */
-#appointment-form .row .fl-field.grow > input {
-  width: 100% !important;
-  max-width: 100% !important;
-  display: block !important;
-  margin: 0 !important;
-  box-sizing: border-box !important;
-}
-
-/* move the floating label over by the padding amount */
-#appointment-form .row .fl-field.grow > label {
-  left: 13px !important; /* original 10px + 3px padding */
+  word-break:break-word;
+  white-space:pre-wrap;
 }
