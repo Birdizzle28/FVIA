@@ -816,10 +816,20 @@ main{ background:var(--page); width:100%; }
 }
 
 /* if flatpickr is adding any wrapper, lock it too */
-#appointment-form .row .fl-field.grow .flatpickr-wrapper{
-  width: 100% !important;
-  max-width: 100% !important;
-  display: block !important;
+#appointment-form .row .fl-field.grow{
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+  overflow: visible !important;   /* ✅ don’t clip borders */
+}
+
+/* iOS Safari: prevent border/edge clipping and weird painting */
+#appointment-form .row .fl-field.grow input{
+  background-clip: padding-box;   /* ✅ keeps border crisp */
+}
+
+/* If iOS is still “eating” the right edge, add a tiny breathing room */
+#appointment-form .row{
+  padding-right: 1px;
 }
 
 /* sometimes a global rule hits readonly flatpickr inputs */
