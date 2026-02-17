@@ -766,3 +766,23 @@ main{ background:var(--page); width:100%; }
   box-sizing: border-box;
   max-width: 100%;
 }
+
+/* ===========================
+   FIX: Starts/Ends (Flatpickr) shifting right
+   Paste at the BOTTOM of scheduling.css
+=========================== */
+
+/* Flatpickr sometimes wraps the input and breaks width */
+.fl-field .flatpickr-wrapper{
+  width: 100% !important;
+  max-width: 100% !important;
+  display: block !important;
+}
+
+/* Force the actual input to fill the field */
+.fl-field input.flatpickr-input{
+  width: 100% !important;
+  max-width: 100% !important;
+  display: block !important;
+  box-sizing: border-box !important;
+}
