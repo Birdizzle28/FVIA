@@ -707,3 +707,62 @@ main{ background:var(--page); width:100%; }
   word-break: break-word;
   white-space: pre-wrap;
 }
+
+/* ===========================
+   FIX: inputs/selects shifting right (box sizing + Choices width)
+   Paste at the BOTTOM of scheduling.css
+=========================== */
+
+/* 1) Make width math sane everywhere */
+.schedule-section,
+.card-ish,
+.fl-form,
+.fl-field,
+.row,
+.custom-repeat-row {
+  box-sizing: border-box;
+}
+
+.schedule-section *,
+.schedule-section *::before,
+.schedule-section *::after {
+  box-sizing: border-box;
+}
+
+/* 2) Prevent flex children from overflowing their row */
+.row { width: 100%; }
+.grow { min-width: 0; } /* important when inputs are inside flex */
+
+/* 3) Force the actual form controls to respect the box */
+.fl-field input,
+.fl-field textarea,
+.fl-field select {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+}
+
+/* 4) Choices.js: make the injected container behave like a normal full-width field */
+.fl-field .choices {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+/* Make the visible “select” area not overflow */
+.fl-field .choices__inner {
+  width: 100% !important;
+  max-width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Ensure the dropdown caret is positioned inside the border (Choices adds its own caret) */
+.fl-field .choices[data-type*="select-one"]::after {
+  right: 14px !important;
+}
+
+/* 5) Your custom repeat row inputs too */
+#repeat-interval,
+#repeat-unit {
+  box-sizing: border-box;
+  max-width: 100%;
+}
