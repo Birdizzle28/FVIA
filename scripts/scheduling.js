@@ -67,6 +67,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   const apptDeleteBtn = document.getElementById("appt-delete");
   
   let activeClickedEvent = null;
+  
+  (function prefillFromQuery() {
+    const params = new URLSearchParams(window.location.search);
+    const apptType = (params.get("appointment_type") || "").toLowerCase();
+    if (apptType !== "contact") return;
+  
+    const t = params.get("prefill_title");
+    const n = params.get("prefill_notes");
+  
+    if (t && titleInput) titleInput.value = t;
+    if (n && notesInput) notesInput.value = n;
+  
+    // keep your floating labels correct (your file already has this function)
+    if (typeof initFloatingLabels === "function") initFloatingLabels(document);
+  })();
 
   function sameLocalTimeOnDate(baseLocalDateTime, y, m, d) {
     return new Date(
