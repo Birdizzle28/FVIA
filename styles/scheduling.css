@@ -879,3 +879,28 @@ main{ background:var(--page); width:100%; }
   /* ensure no outside shadow sneaks back in */
   box-shadow: none !important;
 }
+
+/* ===========================
+   FIX: Starts/Ends spill — give the two columns a 2px buffer
+   (prevents any shadow/outline from painting outside the column)
+=========================== */
+
+#appointment-form .row .fl-field.grow{
+  padding: 2px;           /* <-- the buffer */
+  min-width: 0 !important;
+  flex: 1 1 0 !important;
+  box-sizing: border-box;
+}
+
+/* keep inputs full width inside the padded wrapper */
+#appointment-form .row .fl-field.grow input{
+  width: 100% !important;
+  max-width: 100% !important;
+  display: block !important;
+  box-sizing: border-box !important;
+}
+
+/* nudge labels so they line up after padding */
+#appointment-form .row .fl-field.grow > label{
+  left: 12px !important;  /* was 10px; +2 for the padding */
+}
