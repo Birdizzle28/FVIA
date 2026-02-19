@@ -10,6 +10,10 @@ if (!supabaseUrl || !serviceKey) {
 
 const supabase = createClient(supabaseUrl, serviceKey);
 
+function monthIndexUTC(d) {
+  return d.getUTCFullYear() * 12 + d.getUTCMonth(); // 0-based month
+}
+
 function getPayDate(event) {
   const qs = event.queryStringParameters || {};
   if (qs.pay_date) {
@@ -430,14 +434,28 @@ export async function handler(event) {
         if (alreadyPaidThisMonth.has(policyAgentYearKey)) continue;
 
         const priorCount = payThruCountMap.get(policyAgentYearKey) || 0;
-        if (priorCount >= 12) continue;
+        const remainingMonths = Math.max(0, 12 - monthsAdvanced);
+        if (priorCount >= remainingMonths) continue;
 
         let annualAmount = 0;
 
-        // Year 1 trails are reduced by (1 - advance_rate) normally.
-        // If as-earned, globalAdvanceRate is forced to 0 -> no reduction.
+        // ✅ TRUE ADVANCE-MONTHS BEHAVIOR (only change):
+        // If advance_rate = 0.75 => 9 months advanced, so Year-1 paythru starts after 9 months from issued_at.
+        // (We do NOT reduce the monthly trail anymore; we simply delay it.)
         if (policyYear === 1) {
-          annualAmount = ap * effectiveRate * (1 - globalAdvanceRate);
+          const issuedAt = new Date(policy.issued_at);
+          const monthsAdvanced = Math.floor((globalAdvanceRate || 0) * 12);
+        
+          // Use the pay-month’s monthStart (already computed) so we compare by pay month, not by day.
+          const issuedMonth = monthIndexUTC(issuedAt);
+          const payMonth = monthIndexUTC(monthStart);
+        
+          const monthsElapsed = payMonth - issuedMonth;
+        
+          // Not yet “earned back” the advanced months → no Year-1 paythru this month
+          if (monthsElapsed < monthsAdvanced) continue;
+        
+          annualAmount = ap * effectiveRate; // full monthly trail once paythru begins
         } else {
           annualAmount = ap * effectiveRate;
         }
