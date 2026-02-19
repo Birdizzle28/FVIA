@@ -231,15 +231,15 @@ export async function handler(event) {
   try {
     const payDateStr = getPayDateStr(event); // YYYY-MM-DD (Friday)
 
-    // ✅ Issued window rule (the one you asked for):
-    // - Issued Sat/Sun/Mon => paid the coming Friday
-    // - Issued Tue/Wed/Thu/Fri => paid the next Friday
+    // ✅ Issued window rule (NEW):
+    // - Issued Sun/Mon/Tue => paid NEXT Friday
+    // - Issued Wed/Thu/Fri/Sat => paid the FRIDAY AFTER NEXT
     //
     // For a given pay Friday, eligible issued_at dates are:
-    // Tuesday (10 days before) through Monday (4 days before), inclusive.
-    // Implemented as: [TuesdayStart, nextTuesdayStart) i.e. Tue..Mon inclusive.
-    const startYMD = addDaysYMD(payDateStr, -10); // Tuesday
-    const endYMD   = addDaysYMD(payDateStr, -3);  // Tuesday (exclusive)
+    // Wednesday (9 days before) through Tuesday (3 days before), inclusive.
+    // Implemented as: [WedStart, nextWedStart) i.e. Wed..Tue inclusive.
+    const startYMD = addDaysYMD(payDateStr, -9); // Wednesday
+    const endYMD   = addDaysYMD(payDateStr, -2); // Wednesday (exclusive)
 
     const startIso = localMidnightToUtcIso(startYMD, PAY_TZ); // inclusive
     const endIso   = localMidnightToUtcIso(endYMD, PAY_TZ);   // exclusive
