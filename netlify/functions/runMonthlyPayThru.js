@@ -434,9 +434,17 @@ export async function handler(event) {
         if (alreadyPaidThisMonth.has(policyAgentYearKey)) continue;
 
         const priorCount = payThruCountMap.get(policyAgentYearKey) || 0;
-        const remainingMonths = Math.max(0, 12 - monthsAdvanced);
-        if (priorCount >= remainingMonths) continue;
 
+        // Year 1 only: cap total rows to the “unadvanced” months (12 - monthsAdvanced)
+        let monthsAdvanced = 0;
+        if (policyYear === 1) {
+          monthsAdvanced = policyAsEarned ? 0 : Math.floor((globalAdvanceRate || 0) * 12);
+          const remainingMonths = Math.max(0, 12 - monthsAdvanced);
+          if (priorCount >= remainingMonths) continue;
+        } else {
+          // Renewal years: normal 12 months cap
+          if (priorCount >= 12) continue;
+        }
         let annualAmount = 0;
 
         // ✅ TRUE ADVANCE-MONTHS BEHAVIOR (only change):
@@ -444,7 +452,6 @@ export async function handler(event) {
         // (We do NOT reduce the monthly trail anymore; we simply delay it.)
         if (policyYear === 1) {
           const issuedAt = new Date(policy.issued_at);
-          const monthsAdvanced = Math.floor((globalAdvanceRate || 0) * 12);
         
           // Use the pay-month’s monthStart (already computed) so we compare by pay month, not by day.
           const issuedMonth = monthIndexUTC(issuedAt);
