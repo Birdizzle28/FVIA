@@ -215,6 +215,45 @@ export async function handler(event) {
     const monthStartIso = monthStart.toISOString();
     const monthEndIso   = monthEnd.toISOString();
 
+    // Build a map: policy_id -> annualized_premium for THIS pay month
+    async function loadMonthlyTermPremiumMap(policyIds) {
+      if (!policyIds.length) return new Map();
+    
+      // Use DATE strings so Postgres compares cleanly to date columns
+      const monthStartYMD = monthStartIso.slice(0, 10);
+      const monthEndYMD   = monthEndIso.slice(0, 10);
+    
+      const { data, error } = await supabase
+        .from('policy_terms')
+        .select('policy_id, annualized_premium, term_start, term_end')
+        .in('policy_id', policyIds)
+        .lt('term_start', monthEndYMD)
+        .or(`term_end.is.null,term_end.gte.${monthStartYMD}`)
+        .order('term_start', { ascending: false });
+    
+      if (error) {
+        console.warn('[runMonthlyPayThru] Could not load policy_terms; falling back to policies.premium_annual', error);
+        return new Map();
+      }
+    
+      const map = new Map();
+      for (const row of data || []) {
+        const start = row.term_start; // YYYY-MM-DD
+        const end   = row.term_end;   // YYYY-MM-DD or null
+
+        const overlaps =
+          start < monthEndYMD &&
+          (end == null || end >= monthStartYMD);
+
+        if (!overlaps) continue;
+
+        if (!map.has(row.policy_id)) {
+          map.set(row.policy_id, Number(row.annualized_premium || 0));
+        }
+      }
+      return map;
+    }
+
     // ✅ 28-day wait is based on ISSUED_AT (not created_at)
     const cutoff = new Date(payDate);
     cutoff.setDate(cutoff.getDate() - 28);
@@ -304,6 +343,7 @@ export async function handler(event) {
       };
     }
 
+    const termPremiumMap = await loadMonthlyTermPremiumMap(policies.map(p => p.id));
     const agentCache = new Map();
     const schedCache = new Map();
 
@@ -362,7 +402,8 @@ export async function handler(event) {
     let totalNewGross = 0;
 
     for (const policy of policies) {
-      const ap = Number(policy.premium_annual || 0);
+      const apFromTerm = termPremiumMap.get(policy.id);
+      const ap = Number((apFromTerm != null && apFromTerm > 0) ? apFromTerm : (policy.premium_annual || 0));
       if (!policy.agent_id || ap <= 0) continue;
       if (!policy.issued_at) continue;
 
