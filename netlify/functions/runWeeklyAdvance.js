@@ -30,14 +30,17 @@ function getNextFridayYMD(fromYMD) {
 
 function computePayFridayForIssuedYMD(issuedYMD) {
   const dow = getLocalDOW(new Date(`${issuedYMD}T12:00:00Z`), PAY_TZ); // 0..6
-  const nextFri = getNextFridayYMD(issuedYMD);
 
-  // Sun(0)-Tue(2) => NEXT Friday
-  if (dow <= 2) return nextFri;
+  // "THIS Friday" = the upcoming Friday after issued date (never same-day)
+  const thisFriday = getNextFridayYMD(issuedYMD);
 
-  // Wed(3)-Sat(6) => Friday AFTER next
-  return addDaysYMD(nextFri, 7);
+  // Sun(0)-Tue(2) => NEXT Friday (one week after THIS Friday)
+  if (dow <= 2) return addDaysYMD(thisFriday, 7);
+
+  // Wed(3)-Sat(6) => Friday AFTER next (two weeks after THIS Friday)
+  return addDaysYMD(thisFriday, 14);
 }
+
 function getLocalYMD(date = new Date(), tz = PAY_TZ) {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: tz,
@@ -400,7 +403,7 @@ export async function handler(event) {
           pay_date: payDateStr,
           window_start: startIso,
           window_end_exclusive: endIso,
-          excluded_as_earned_policies: skippedCount,
+          excluded_as_earned_policies: asEarnedCount,
         }),
       };
     }
@@ -573,7 +576,7 @@ export async function handler(event) {
           agent_payouts: payoutSummary,
           ledger_row_count: ledgerRows.length,
           eligible_policy_count: eligiblePolicyIds.length,
-          excluded_as_earned_policies: skippedCount,
+          excluded_as_earned_policies: asEarnedCount,
         },
         null,
         2
