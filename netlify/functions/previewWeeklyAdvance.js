@@ -16,6 +16,29 @@ const supabase = createClient(supabaseUrl, serviceKey);
    ================================ */
 const PAY_TZ = 'America/Chicago';
 
+function getNextFridayYMD(fromYMD) {
+  let cur = fromYMD;
+  for (let i = 1; i <= 14; i++) {
+    cur = addDaysYMD(cur, 1);
+    const dow = getLocalDOW(new Date(`${cur}T12:00:00Z`), PAY_TZ);
+    if (dow === 5) return cur; // Friday
+  }
+  return addDaysYMD(fromYMD, 7);
+}
+
+function computePayFridayForIssuedYMD(issuedYMD) {
+  const dow = getLocalDOW(new Date(`${issuedYMD}T12:00:00Z`), PAY_TZ); // 0..6
+
+  // "THIS Friday" = the upcoming Friday after issued date (never same-day)
+  const thisFriday = getNextFridayYMD(issuedYMD);
+
+  // Sun(0)-Tue(2) => NEXT Friday
+  if (dow <= 2) return addDaysYMD(thisFriday, 7);
+
+  // Wed(3)-Sat(6) => Friday AFTER next
+  return addDaysYMD(thisFriday, 14);
+}
+
 function getLocalYMD(date = new Date(), tz = PAY_TZ) {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: tz,
@@ -117,15 +140,9 @@ export async function handler(event) {
   try {
     const payDateStr = getPayDateStr(event); // Friday YYYY-MM-DD
 
-    // ✅ Issued window rule (same as runWeeklyAdvance):
-    // - Issued Sat/Sun/Mon => paid the coming Friday
-    // - Issued Tue/Wed/Thu/Fri => paid the next Friday
-    //
-    // For a given pay Friday, eligible issued_at dates are:
-    // Tuesday (10 days before) through Monday (4 days before), inclusive.
-    // Implemented as: [TuesdayStart, nextTuesdayStart) i.e. Tue..Mon inclusive.
-    const startYMD = addDaysYMD(payDateStr, -10); // Tuesday
-    const endYMD   = addDaysYMD(payDateStr, -3);  // Tuesday (exclusive)
+    // ✅ Match runWeeklyAdvance: broad window then compute per-policy due pay Friday
+    const startYMD = addDaysYMD(payDateStr, -21);
+    const endYMD   = addDaysYMD(payDateStr, 1); // end exclusive (next day)
 
     const startIso = localMidnightToUtcIso(startYMD, PAY_TZ); // inclusive
     const endIso   = localMidnightToUtcIso(endYMD, PAY_TZ);   // exclusive
@@ -143,7 +160,7 @@ export async function handler(event) {
     // 2) Find eligible POLICIES by issued_at window (NOT ledger created_at)
     const { data: policyRows, error: polErr } = await supabase
       .from('policies')
-      .select('id, as_earned')
+      .select('id, as_earned, issued_at')
       .in('status', ['issued', 'in_force'])
       .gte('issued_at', startIso)
       .lt('issued_at', endIso);
@@ -178,29 +195,40 @@ export async function handler(event) {
     }
 
     // 2.2) Exclude as-earned policies from weekly advance
-    const eligiblePolicyIds = (policyRows || [])
+    const asEarnedCount = (policyRows || []).filter(p => p.as_earned === true).length;
+
+    const duePolicyRows = (policyRows || [])
       .filter(p => p.as_earned !== true)
-      .map(p => p.id);
-
-    const skippedCount = allPolicyIds.length - eligiblePolicyIds.length;
-
+      .filter(p => {
+        if (!p.issued_at) return false;
+    
+        const issuedYMD = getLocalYMD(new Date(p.issued_at), PAY_TZ);
+        const computedPay = computePayFridayForIssuedYMD(issuedYMD);
+        return computedPay === payDateStr;
+      });
+    
+    const eligiblePolicyIds = duePolicyRows.map(p => p.id);
+    
     console.log(
-      '[previewWeeklyAdvance] eligible policies total =',
-      allPolicyIds.length,
-      'excluded as-earned policies =',
-      skippedCount
+      '[previewWeeklyAdvance] scanned policies in window =',
+      (policyRows || []).length,
+      'as-earned excluded =',
+      asEarnedCount,
+      'due this pay_date =',
+      eligiblePolicyIds.length
     );
-
+    
     if (eligiblePolicyIds.length === 0) {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: 'All policies in this issued_at window are as-earned; nothing to preview.',
+          message: 'No non-as-earned policies are due to be paid on this pay_date based on the Sun–Tue / Wed–Sat rule.',
           pay_date: payDateStr,
           window_start: startIso,
           window_end_exclusive: endIso,
-          eligible_policy_count: 0,
-          excluded_as_earned_policies: skippedCount,
+          excluded_as_earned_policies: asEarnedCount,
+          due_policies_for_pay_date: 0,
+          scanned_policies_in_window: (policyRows || []).length,
           agent_payouts: [],
           total_gross: 0,
           total_debits: 0,
@@ -238,7 +266,7 @@ export async function handler(event) {
           window_start: startIso,
           window_end_exclusive: endIso,
           eligible_policy_count: eligiblePolicyIds.length,
-          excluded_as_earned_policies: skippedCount,
+          excluded_as_earned_policies: asEarnedCount,
           agent_payouts: [],
           total_gross: 0,
           total_debits: 0,
@@ -272,7 +300,7 @@ export async function handler(event) {
           window_start: startIso,
           window_end_exclusive: endIso,
           eligible_policy_count: eligiblePolicyIds.length,
-          excluded_as_earned_policies: skippedCount,
+          excluded_as_earned_policies: asEarnedCount,
           agent_payouts: [],
           total_gross: 0,
           total_debits: 0,
@@ -393,7 +421,7 @@ export async function handler(event) {
           agent_payouts: payoutSummary,
           ledger_row_count: ledgerRows.length,
           eligible_policy_count: eligiblePolicyIds.length,
-          excluded_as_earned_policies: skippedCount,
+          excluded_as_earned_policies: asEarnedCount,
         },
         null,
         2
