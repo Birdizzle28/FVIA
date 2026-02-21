@@ -1143,7 +1143,14 @@ async function wireRunPayoutsButton() {
   }
 
   function getMonthlyScheduledDate(today) {
-    return new Date(today.getFullYear(), today.getMonth(), 5);
+    const d = new Date(today);
+    const fifthThisMonth = new Date(d.getFullYear(), d.getMonth(), 5);
+  
+    // if we already passed the 5th, use next month’s 5th
+    if (d > fifthThisMonth) {
+      return new Date(d.getFullYear(), d.getMonth() + 1, 5);
+    }
+    return fifthThisMonth;
   }
 
   btn.addEventListener('click', async () => {
