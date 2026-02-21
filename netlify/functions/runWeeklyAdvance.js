@@ -31,13 +31,13 @@ function getNextFridayYMD(fromYMD) {
 function computePayFridayForIssuedYMD(issuedYMD) {
   const dow = getLocalDOW(new Date(`${issuedYMD}T12:00:00Z`), PAY_TZ); // 0..6
 
-  // "THIS Friday" = the upcoming Friday after issued date (never same-day)
-  const thisFriday = getNextFridayYMD(issuedYMD);
+  // NEW: if issued on Friday, count that as "this Friday"
+  const thisFriday = (dow === 5) ? issuedYMD : getNextFridayYMD(issuedYMD);
 
-  // Sun(0)-Tue(2) => NEXT Friday (one week after THIS Friday)
+  // Sun(0)-Tue(2) => NEXT Friday (one week after this Friday)
   if (dow <= 2) return addDaysYMD(thisFriday, 7);
 
-  // Wed(3)-Sat(6) => Friday AFTER next (two weeks after THIS Friday)
+  // Wed(3)-Sat(6) => Friday AFTER next (two weeks after this Friday)
   return addDaysYMD(thisFriday, 14);
 }
 
