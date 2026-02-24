@@ -253,7 +253,6 @@ export async function handler(event) {
       }
       return map;
     }
-  }
 
     // ✅ 28-day wait is based on ISSUED_AT (not created_at)
     const cutoff = new Date(payDate);
