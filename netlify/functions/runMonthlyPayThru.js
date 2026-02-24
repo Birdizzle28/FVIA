@@ -508,7 +508,14 @@ export async function handler(event) {
           annualAmount = ap * effectiveRate;
         }
 
-        const monthlyRaw = annualAmount / 12;
+        // ✅ COMPRESSED YEAR-1 PAYTHRU:
+        // If months were advanced, spread the FULL unadvanced annualAmount across ONLY the remaining months.
+        const divisorMonths =
+          (policyYear === 1)
+            ? Math.max(1, 12 - monthsAdvanced)   // remainingMonths
+            : 12;
+        
+        const monthlyRaw = annualAmount / divisorMonths;
         const monthly = Math.round(monthlyRaw * 100) / 100;
         if (monthly <= 0) continue;
 
@@ -541,6 +548,8 @@ export async function handler(event) {
             // helpful audit flags:
             as_earned: policyAsEarned,
             advance_rate_applied: globalAdvanceRate,
+            months_advanced: monthsAdvanced,
+            divisor_months: divisorMonths,
             issued_at: policy.issued_at
           }
         });
