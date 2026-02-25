@@ -324,7 +324,7 @@ async function createLeadFromRow(row, session, me, contactId, targetAgentId) {
   const payload = {
     first_name: (row.first_name || "").trim() || "Unknown",
     last_name: (row.last_name || "").trim() || "Unknown",
-    contact_id,
+    contact_id: contactId,
 
     age: null,
     address: (row.address || "").trim() || null,
