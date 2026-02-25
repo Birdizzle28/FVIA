@@ -16,26 +16,38 @@ const supabase = createClient(supabaseUrl, serviceKey);
    ================================ */
 const PAY_TZ = 'America/Chicago';
 
+/**
+ * Helper: return YYYY-MM-DD in America/Chicago
+ */
 function getNextFridayYMD(fromYMD) {
+  // fromYMD is YYYY-MM-DD in PAY_TZ context
   let cur = fromYMD;
   for (let i = 1; i <= 14; i++) {
     cur = addDaysYMD(cur, 1);
     const dow = getLocalDOW(new Date(`${cur}T12:00:00Z`), PAY_TZ);
     if (dow === 5) return cur; // Friday
   }
-  return addDaysYMD(fromYMD, 7);
+  return addDaysYMD(fromYMD, 7); // fallback
 }
 
+/**
+ * ✅ MUST MATCH runWeeklyAdvance EXACTLY
+ * Sun(0)-Tue(2) => NEXT Friday (one week after "this Friday")
+ * Wed(3)-Sat(6) => Friday AFTER next (two weeks after "this Friday")
+ *
+ * NEW behavior: if issued on Friday, treat THAT as "this Friday"
+ */
 function computePayFridayForIssuedYMD(issuedYMD) {
   const dow = getLocalDOW(new Date(`${issuedYMD}T12:00:00Z`), PAY_TZ); // 0..6
 
-  // "THIS Friday" = the upcoming Friday after issued date (never same-day)
-  const thisFriday = getNextFridayYMD(issuedYMD);
+  // ✅ Match runWeeklyAdvance:
+  // if issued on Friday, count that as "this Friday"
+  const thisFriday = (dow === 5) ? issuedYMD : getNextFridayYMD(issuedYMD);
 
-  // Sun(0)-Tue(2) => NEXT Friday
+  // Sun(0)-Tue(2) => NEXT Friday (one week after this Friday)
   if (dow <= 2) return addDaysYMD(thisFriday, 7);
 
-  // Wed(3)-Sat(6) => Friday AFTER next
+  // Wed(3)-Sat(6) => Friday AFTER next (two weeks after this Friday)
   return addDaysYMD(thisFriday, 14);
 }
 
@@ -53,6 +65,9 @@ function getLocalYMD(date = new Date(), tz = PAY_TZ) {
   return `${y}-${m}-${d}`;
 }
 
+/**
+ * Helper: day-of-week number in America/Chicago (0=Sun .. 6=Sat)
+ */
 function getLocalDOW(date = new Date(), tz = PAY_TZ) {
   const dowStr = new Intl.DateTimeFormat('en-US', {
     timeZone: tz,
@@ -63,12 +78,19 @@ function getLocalDOW(date = new Date(), tz = PAY_TZ) {
   return map[dowStr] ?? date.getDay();
 }
 
+/**
+ * Add days to a YYYY-MM-DD string and return YYYY-MM-DD
+ * (safe for “date math” because it operates at UTC midnight)
+ */
 function addDaysYMD(ymd, days) {
   const d = new Date(`${ymd}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + days);
   return d.toISOString().slice(0, 10);
 }
 
+/**
+ * Get numeric offset like "-06:00" or "-05:00" for a given date (DST-safe enough)
+ */
 function getOffsetForYMD(ymd, tz = PAY_TZ) {
   const probe = new Date(`${ymd}T12:00:00Z`);
   const s = new Intl.DateTimeFormat('en-US', {
@@ -88,6 +110,10 @@ function getOffsetForYMD(ymd, tz = PAY_TZ) {
   return `${sign}${absH}:${absM}`;
 }
 
+/**
+ * Convert a local America/Chicago midnight (YYYY-MM-DDT00:00:00 offset)
+ * into a UTC ISO string for Supabase comparisons.
+ */
 function localMidnightToUtcIso(ymd, tz = PAY_TZ) {
   const offset = getOffsetForYMD(ymd, tz);
   const local = new Date(`${ymd}T00:00:00${offset}`);
@@ -108,8 +134,9 @@ function getPayDateStr(event) {
 
   const now = new Date();
   const todayYMD = getLocalYMD(now, PAY_TZ);
-  const dow = getLocalDOW(now, PAY_TZ);
+  const dow = getLocalDOW(now, PAY_TZ); // 0=Sun..6=Sat
 
+  // Friday is 5. Always upcoming, not today.
   let diff = (5 - dow + 7) % 7;
   if (diff === 0) diff = 7;
 
@@ -201,14 +228,14 @@ export async function handler(event) {
       .filter(p => p.as_earned !== true)
       .filter(p => {
         if (!p.issued_at) return false;
-    
+
         const issuedYMD = getLocalYMD(new Date(p.issued_at), PAY_TZ);
         const computedPay = computePayFridayForIssuedYMD(issuedYMD);
         return computedPay === payDateStr;
       });
-    
+
     const eligiblePolicyIds = duePolicyRows.map(p => p.id);
-    
+
     console.log(
       '[previewWeeklyAdvance] scanned policies in window =',
       (policyRows || []).length,
@@ -217,7 +244,7 @@ export async function handler(event) {
       'due this pay_date =',
       eligiblePolicyIds.length
     );
-    
+
     if (eligiblePolicyIds.length === 0) {
       return {
         statusCode: 200,
@@ -409,6 +436,7 @@ export async function handler(event) {
     // READ-ONLY preview (no inserts/updates)
     return {
       statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(
         {
           message: 'Weekly advance PREVIEW (issued_at-window; no DB changes performed).',
@@ -426,7 +454,6 @@ export async function handler(event) {
         null,
         2
       ),
-      headers: { 'Content-Type': 'application/json' },
     };
   } catch (err) {
     console.error('[previewWeeklyAdvance] Unexpected error:', err);
