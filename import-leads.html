@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Import Leads | Family Values Group</title>
+
+    <link rel="stylesheet" href="styles/agentstyle.css" />
+    <link rel="stylesheet" href="styles/import-leads.css" />
+    <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <!-- PapaParse (CSV parser) -->
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+  </head>
+
+  <body id="dashboardbody">
+
+    <!-- Header (matches your other pages) -->
+    <header class="index-grid-header">
+      <div id="logofvcontainer">
+        <div id="logodiv">
+          <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+        </div>
+        <div id="fvdiv">
+          <p><strong>Family Values Group</strong></p>
+        </div>
+      </div>
+
+      <div id="navcontainer">
+        <nav class="header-flex-container">
+          <a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
+          <a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
+
+          <div class="dropdown">
+            <button id="agent-hub-toggle" class="hub-toggle" type="button">
+              <i class="fa-solid fa-toolbox"></i> Agent Hub <i class="fa-solid fa-chevron-down"></i>
+            </button>
+            <div id="agent-hub-menu" class="hub-menu">
+              <a href="leads.html"><i class="fa-solid fa-address-book"></i> My Leads</a>
+              <a href="maps.html"><i class="fa-solid fa-route"></i> Map & Routing</a>
+              <a href="calculator.html"><i class="fa-solid fa-calculator"></i> Insurance Calculator</a>
+              <a class="admin-only" href="admin.html"><i class="fa-solid fa-user-shield"></i> Admin</a>
+            </div>
+          </div>
+
+          <div id="menu-toggle"><i class="fa-solid fa-bars"></i></div>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Mobile Menu (kept consistent) -->
+    <div id="mobile-menu">
+      <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
+      <button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
+        <i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
+        <i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
+      </button>
+      <div id="toolkit-submenu" class="submenu" hidden>
+        <a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
+        <a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
+        <a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
+        <a href="calculator.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
+        <a href="marketing.html"><i class="fa-solid fa-handshake"></i><span>Marketing</span></a>
+      </div>
+      <a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
+      <a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
+      <a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
+      <a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
+      <a class="admin-only" href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
+    </div>
+
+    <main class="import-wrap">
+      <h1 class="import-title">Bulk Lead Import</h1>
+      <p class="import-sub">
+        Upload a NextWave CSV and I’ll create a <strong>Contact</strong> + <strong>Lead</strong> per row.
+        Any extra columns get dumped into <strong>notes</strong>.
+      </p>
+
+      <section class="card">
+        <div class="row">
+          <label class="file-btn">
+            <input id="csvFile" type="file" accept=".csv,text/csv" />
+            <i class="fa-solid fa-file-csv"></i> Choose CSV
+          </label>
+
+          <button id="parseBtn" class="btn" type="button" disabled>
+            <i class="fa-solid fa-magnifying-glass"></i> Parse
+          </button>
+
+          <button id="importBtn" class="btn primary" type="button" disabled>
+            <i class="fa-solid fa-cloud-arrow-up"></i> Import to Supabase
+          </button>
+        </div>
+
+        <div class="row split">
+          <div class="mini">
+            <div class="k">Rows</div>
+            <div class="v" id="rowCount">—</div>
+          </div>
+          <div class="mini">
+            <div class="k">Parsed</div>
+            <div class="v" id="parsedCount">—</div>
+          </div>
+          <div class="mini">
+            <div class="k">Imported</div>
+            <div class="v" id="importedCount">0</div>
+          </div>
+          <div class="mini">
+            <div class="k">Errors</div>
+            <div class="v bad" id="errorCount">0</div>
+          </div>
+        </div>
+
+        <div class="progress">
+          <div class="bar" id="progressBar" style="width:0%"></div>
+        </div>
+
+        <div id="status" class="status">Upload a CSV to begin.</div>
+      </section>
+
+      <section class="card">
+        <h2 class="h2">What gets mapped</h2>
+        <ul class="maplist">
+          <li><strong>Contacts</strong>: first_name, last_name, phones[], emails[], address_line1, city, state, zip, consent_source, consent_at, tcpaconsent, notes</li>
+          <li><strong>Leads</strong>: first_name, last_name, phone[], address, city, state, zip, product_type, lead_type, notes, submitted_by, assigned_to, contact_id</li>
+          <li><strong>Everything else</strong> → shoved into notes as JSON</li>
+        </ul>
+      </section>
+
+      <section class="card">
+        <h2 class="h2">Preview (first 10 rows)</h2>
+        <div class="table-wrap">
+          <table class="preview">
+            <thead id="previewHead"></thead>
+            <tbody id="previewBody"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- Supabase client (ESM) + page logic -->
+    <script type="module" src="scripts/import-leads.js"></script>
+  </body>
+</html>
