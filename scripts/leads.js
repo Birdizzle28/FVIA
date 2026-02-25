@@ -633,7 +633,9 @@ async function fetchAgentProfile() {
   return data;
 }
 
-// ---------- contact picker ----------async function initContactPicker() {
+// ---------- contact picker ----------
+
+async function initContactPicker() {
   const el = document.getElementById("contact-picker");
   if (!el) return;
 
