@@ -215,13 +215,13 @@ export async function handler(event) {
     const monthStartIso = monthStart.toISOString();
     const monthEndIso   = monthEnd.toISOString();
 
-    // Build a map: policy_id -> annualized_premium for THIS pay month
-    async function loadMonthlyTermPremiumMap(policyIds) {
+    // Build a map: policy_id -> most recent overlapping policy_terms row for THIS pay month
+    async function loadMonthlyTermRowMap(policyIds) {
       if (!policyIds.length) return new Map();
-    
+
       const monthStartYMD = monthStartIso.slice(0, 10);
       const monthEndYMD   = monthEndIso.slice(0, 10);
-    
+
       const { data, error } = await supabase
         .from('policy_terms')
         .select('policy_id, term_premium, annualized_premium, term_months, term_start, term_end')
@@ -229,21 +229,20 @@ export async function handler(event) {
         .lt('term_start', monthEndYMD)
         .or(`term_end.is.null,term_end.gte.${monthStartYMD}`)
         .order('term_start', { ascending: false });
-    
+
       if (error) {
         console.warn('[runMonthlyPayThru] Could not load policy_terms; falling back to policy premiums', error);
         return new Map();
       }
-    
-      // Map policy_id -> most recent overlapping term row (for that pay month)
+
       const map = new Map();
       for (const row of data || []) {
-        const start = row.term_start;
-        const end   = row.term_end;
-    
+        const start = row.term_start; // YYYY-MM-DD
+        const end   = row.term_end;   // YYYY-MM-DD or null
+
         const overlaps = start < monthEndYMD && (end == null || end >= monthStartYMD);
         if (!overlaps) continue;
-    
+
         if (!map.has(row.policy_id)) {
           map.set(row.policy_id, row);
         }
@@ -313,7 +312,6 @@ export async function handler(event) {
     });
 
     // ✅ Load policies eligible by issued_at cutoff (and that have issued_at)
-    // (We keep created_at out of eligibility entirely now.)
     const { data: policies, error: polErr } = await supabase
       .from('policies')
       .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, premium_modal, issued_at, as_earned, status')
@@ -340,7 +338,7 @@ export async function handler(event) {
       };
     }
 
-    const termPremiumMap = await loadMonthlyTermPremiumMap(policies.map(p => p.id));
+    const termRowMap = await loadMonthlyTermRowMap(policies.map(p => p.id));
     const agentCache = new Map();
     const schedCache = new Map();
 
@@ -396,13 +394,49 @@ export async function handler(event) {
       return data;
     }
 
+    function annualizeFromTerm(termPremium, termMonths) {
+      const tp = Number(termPremium || 0);
+      const m  = Number(termMonths || 0);
+      if (tp <= 0 || m <= 0) return 0;
+      return tp * (12 / m);
+    }
+
+    // IMPORTANT:
+    // This assumes policies.premium_modal is a MONTHLY premium.
+    // If your premium_modal is instead "term premium", change this to: mp * (12 / termMonths)
+    function annualizeFromModal(modalMonthlyPremium) {
+      const mp = Number(modalMonthlyPremium || 0);
+      if (mp <= 0) return 0;
+      return mp * 12;
+    }
+
+    function resolveAnnualizedAP({ policy, termRow, scheduleTermMonths }) {
+      // 1) Term row overrides
+      if (termRow) {
+        const ap = Number(termRow.annualized_premium || 0);
+        if (ap > 0) return ap;
+
+        const termMonths = Number(termRow.term_months || scheduleTermMonths || 0);
+        const derived = annualizeFromTerm(termRow.term_premium, termMonths);
+        if (derived > 0) return derived;
+      }
+
+      // 2) Fall back to policies.premium_annual
+      const apPol = Number(policy.premium_annual || 0);
+      if (apPol > 0) return apPol;
+
+      // 3) premium_modal fallback (monthly premium)
+      const apModal = annualizeFromModal(policy.premium_modal);
+      if (apModal > 0) return apModal;
+
+      return 0;
+    }
+
     const newLedgerRows = [];
     let totalNewGross = 0;
 
     for (const policy of policies) {
-      const apFromTerm = termPremiumMap.get(policy.id);
-      const ap = Number((apFromTerm != null && apFromTerm > 0) ? apFromTerm : (policy.premium_annual || 0));
-      if (!policy.agent_id || ap <= 0) continue;
+      if (!policy.agent_id) continue;
       if (!policy.issued_at) continue;
 
       // ✅ policyYear based on ISSUED_AT
@@ -411,12 +445,27 @@ export async function handler(event) {
 
       const policyAsEarned = policy.as_earned === true;
 
+      // ---- get writing agent + schedule FIRST so we can read term_length_months ----
+      const writingAgent = await getAgent(policy.agent_id);
+      if (!writingAgent) continue;
+
+      const writingLevel = writingAgent.level || 'agent';
+      const writingSchedule = await getSchedule(policy, writingLevel);
+      if (!writingSchedule) continue;
+
+      const scheduleTermMonths = Number(writingSchedule.term_length_months || 12);
+
+      // pick the best term row (if any) for this pay month
+      const termRow = termRowMap.get(policy.id) || null;
+
+      const ap = resolveAnnualizedAP({ policy, termRow, scheduleTermMonths });
+      if (ap <= 0) continue;
+
+      // ---- build upline chain starting from writing agent (and reusing schedule cache) ----
       const chain = [];
-      let current = await getAgent(policy.agent_id);
+      let current = writingAgent;
       const visitedAgents = new Set();
 
-      // globalAdvanceRate is taken from the writing-agent schedule normally,
-      // but if policy is as-earned, force it to 0.
       let globalAdvanceRate = null;
 
       for (let depth = 0; depth < 10 && current; depth++) {
@@ -469,50 +518,42 @@ export async function handler(event) {
         if (effectiveRate <= 0) continue;
 
         const policyAgentYearKey = `${policy.id}:${node.agent.id}:${policyYear}`;
-
         if (alreadyPaidThisMonth.has(policyAgentYearKey)) continue;
 
         const priorCount = payThruCountMap.get(policyAgentYearKey) || 0;
 
-        // Year 1 only: cap total rows to the “unadvanced” months (12 - monthsAdvanced)
+        // monthsAdvanced based on ADVANCE RATE (still expressed as a % of annual)
         let monthsAdvanced = 0;
         if (policyYear === 1) {
           monthsAdvanced = policyAsEarned ? 0 : Math.floor((globalAdvanceRate || 0) * 12);
           const remainingMonths = Math.max(0, 12 - monthsAdvanced);
           if (priorCount >= remainingMonths) continue;
         } else {
-          // Renewal years: normal 12 months cap
           if (priorCount >= 12) continue;
         }
+
         let annualAmount = 0;
 
-        // ✅ TRUE ADVANCE-MONTHS BEHAVIOR (only change):
-        // If advance_rate = 0.75 => 9 months advanced, so Year-1 paythru starts after 9 months from issued_at.
-        // (We do NOT reduce the monthly trail anymore; we simply delay it.)
+        // delay paythru until advanced months have elapsed
         if (policyYear === 1) {
           const issuedAt = new Date(policy.issued_at);
-        
-          // Use the pay-month’s monthStart (already computed) so we compare by pay month, not by day.
           const issuedMonth = monthIndexUTC(issuedAt);
           const payMonth = monthIndexUTC(monthStart);
-        
           const monthsElapsed = payMonth - issuedMonth;
-        
-          // Not yet “earned back” the advanced months → no Year-1 paythru this month
+
           if (monthsElapsed < monthsAdvanced) continue;
-        
-          annualAmount = ap * effectiveRate; // full monthly trail once paythru begins
+
+          annualAmount = ap * effectiveRate;
         } else {
           annualAmount = ap * effectiveRate;
         }
 
-        // ✅ COMPRESSED YEAR-1 PAYTHRU:
-        // If months were advanced, spread the FULL unadvanced annualAmount across ONLY the remaining months.
+        // COMPRESSED YEAR-1 PAYTHRU: spread across remaining months only
         const divisorMonths =
           (policyYear === 1)
-            ? Math.max(1, 12 - monthsAdvanced)   // remainingMonths
+            ? Math.max(1, 12 - monthsAdvanced)
             : 12;
-        
+
         const monthlyRaw = annualAmount / divisorMonths;
         const monthly = Math.round(monthlyRaw * 100) / 100;
         if (monthly <= 0) continue;
@@ -543,12 +584,14 @@ export async function handler(event) {
             policy_type: policy.policy_type,
             ap,
             rate_portion: effectiveRate,
-            // helpful audit flags:
             as_earned: policyAsEarned,
             advance_rate_applied: globalAdvanceRate,
             months_advanced: monthsAdvanced,
             divisor_months: divisorMonths,
-            issued_at: policy.issued_at
+            issued_at: policy.issued_at,
+            // audit:
+            schedule_term_months: scheduleTermMonths,
+            term_row_used: termRow ? true : false
           }
         });
       }
