@@ -319,7 +319,7 @@ export async function handler(event) {
     // (We keep created_at out of eligibility entirely now.)
     const { data: policies, error: polErr } = await supabase
       .from('policies')
-      .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, issued_at, as_earned, status')
+      .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, premium_modal, issued_at, as_earned, status')
       .in('status', ['issued', 'in_force'])
       .not('issued_at', 'is', null)
       .lte('issued_at', cutoffIso);
@@ -380,7 +380,8 @@ export async function handler(event) {
         .from('commission_schedules')
         .select(
           'base_commission_rate, advance_rate, renewal_commission_rate, ' +
-          'renewal_start_year, renewal_end_year, renewal_trail_rule'
+          'renewal_start_year, renewal_end_year, renewal_trail_rule, ' +
+          'term_length_months'
         )
         .eq('carrier_name', policy.carrier_name)
         .eq('product_line', policy.product_line)
