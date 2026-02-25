@@ -219,36 +219,33 @@ export async function handler(event) {
     async function loadMonthlyTermPremiumMap(policyIds) {
       if (!policyIds.length) return new Map();
     
-      // Use DATE strings so Postgres compares cleanly to date columns
       const monthStartYMD = monthStartIso.slice(0, 10);
       const monthEndYMD   = monthEndIso.slice(0, 10);
     
       const { data, error } = await supabase
         .from('policy_terms')
-        .select('policy_id, annualized_premium, term_start, term_end')
+        .select('policy_id, term_premium, annualized_premium, term_months, term_start, term_end')
         .in('policy_id', policyIds)
         .lt('term_start', monthEndYMD)
         .or(`term_end.is.null,term_end.gte.${monthStartYMD}`)
         .order('term_start', { ascending: false });
     
       if (error) {
-        console.warn('[runMonthlyPayThru] Could not load policy_terms; falling back to policies.premium_annual', error);
+        console.warn('[runMonthlyPayThru] Could not load policy_terms; falling back to policy premiums', error);
         return new Map();
       }
     
+      // Map policy_id -> most recent overlapping term row (for that pay month)
       const map = new Map();
       for (const row of data || []) {
-        const start = row.term_start; // YYYY-MM-DD
-        const end   = row.term_end;   // YYYY-MM-DD or null
-
-        const overlaps =
-          start < monthEndYMD &&
-          (end == null || end >= monthStartYMD);
-
+        const start = row.term_start;
+        const end   = row.term_end;
+    
+        const overlaps = start < monthEndYMD && (end == null || end >= monthStartYMD);
         if (!overlaps) continue;
-
+    
         if (!map.has(row.policy_id)) {
-          map.set(row.policy_id, Number(row.annualized_premium || 0));
+          map.set(row.policy_id, row);
         }
       }
       return map;
