@@ -643,36 +643,24 @@ async function initContactPicker() {
   const user = session?.user;
   if (!user) return;
 
-  // Always load only contacts tied to MY leads
-  const { data: myLeads, error: leadErr } = await supabase
-    .from("leads")
-    .select("contact_id")
-    .eq("assigned_to", user.id)
-    .not("contact_id", "is", null)
-    .limit(5000);
+  const isAdmin = !!agentProfile?.is_admin;
 
-  if (leadErr) {
-    console.error("contact picker lead lookup error:", leadErr);
+  let q = supabase
+    .from("contacts")
+    .select("id, first_name, last_name, phones, emails")
+    .order("created_at", { ascending: false })
+    .limit(500);
+
+  // Agents pick only from their own contacts
+  if (!isAdmin) q = q.eq("owning_agent_id", user.id);
+
+  const { data, error } = await q;
+  if (error) {
+    console.error("contact picker load error:", error);
     return;
   }
 
-  const ids = Array.from(new Set((myLeads || []).map(r => r.contact_id).filter(Boolean)));
-
-  let contactRows = [];
-  if (ids.length) {
-    const { data, error } = await supabase
-      .from("contacts")
-      .select("id, first_name, last_name, phones, emails")
-      .in("id", ids)
-      .order("created_at", { ascending: false })
-      .limit(500);
-
-    if (error) {
-      console.error("contact picker load error:", error);
-      return;
-    }
-    contactRows = data || [];
-  }
+  const contactRows = data || [];
 
   el.innerHTML = `<option value="">New contact (auto-create)</option>`;
   contactRows.forEach((c) => {
@@ -1298,38 +1286,20 @@ async function loadContacts() {
   const user = session?.user;
   if (!user) return;
 
-  // Only my lead-linked contacts
-  const { data: myLeads, error: leadErr } = await supabase
-    .from("leads")
-    .select("contact_id")
-    .eq("assigned_to", user.id)
-    .eq("archived", false)
-    .not("contact_id", "is", null)
-    .limit(5000);
+  const isAdmin = !!agentProfile?.is_admin;
 
-  if (leadErr) {
-    console.error("contacts lead lookup error", leadErr);
-    contacts = [];
-    renderContacts();
-    return;
-  }
-
-  const ids = Array.from(new Set((myLeads || []).map(r => r.contact_id).filter(Boolean)));
-  if (!ids.length) {
-    contacts = [];
-    renderContacts();
-    return;
-  }
-
-  const { data, error } = await supabase
+  let q = supabase
     .from("contacts")
     .select(`
       *,
-      internal_dnc:internal_dnc!internal_dnc_contact_id_fkey ( id )
+      internal_dnc:internal_dnc!internal_dnc_contact_id_fkey ( id, is_active )
     `)
-    .in("id", ids)
     .order("created_at", { ascending: false });
 
+  // Agents: only contacts they own
+  if (!isAdmin) q = q.eq("owning_agent_id", user.id);
+
+  const { data, error } = await q;
   if (error) {
     console.error("contacts load error", error);
     contacts = [];
@@ -1337,7 +1307,9 @@ async function loadContacts() {
     return;
   }
 
+  // If you STILL want to hide internal DNC from the list
   contacts = (data || []).filter(c => (c.internal_dnc || []).length === 0);
+
   renderContacts();
 }
 
