@@ -48,7 +48,7 @@ function getRepaymentRate(totalDebt, isActive) {
 }
 
 /* ---------------------------
-   PAY-THRU / RENEWAL HELPERS
+   TIME / TERM HELPERS
    --------------------------- */
 
 function getPolicyYear(policyIssuedAt, asOfDate) {
@@ -70,8 +70,32 @@ function getPolicyYear(policyIssuedAt, asOfDate) {
   return policyYear < 1 ? 1 : policyYear;
 }
 
-function getBaseRenewalRate(schedule, renewalYear) {
-  if (!renewalYear || renewalYear < 1) return 0;
+function getTermNumberByMonths(policyIssuedAt, payMonthStartUTC, termLengthMonths) {
+  const issuedAt = new Date(policyIssuedAt);
+  if (isNaN(issuedAt.getTime())) return null;
+
+  const issuedMonth = monthIndexUTC(issuedAt);
+  const payMonth    = monthIndexUTC(payMonthStartUTC);
+
+  const monthsElapsed = payMonth - issuedMonth;
+  if (monthsElapsed < 0) return 1;
+
+  const termLen = Number(termLengthMonths || 0);
+  if (termLen <= 0) return 1;
+
+  // term 1 = months 0..termLen-1, term 2 = termLen..2*termLen-1, etc.
+  return Math.floor(monthsElapsed / termLen) + 1;
+}
+
+/* ---------------------------
+   RENEWAL/TRAIL RATE HELPERS
+   --------------------------- */
+
+function getBaseRenewalRate(schedule, renewalIndex) {
+  // NOTE: "renewalIndex" means:
+  // - If term_length_months is NULL (12-month world): policyYear (2+)
+  // - If term_length_months is set (term world): termNumber (2+)
+  if (!renewalIndex || renewalIndex < 1) return 0;
 
   let rule = schedule.renewal_trail_rule;
   if (rule && typeof rule === 'string') {
@@ -86,8 +110,8 @@ function getBaseRenewalRate(schedule, renewalYear) {
     for (const band of rule.bands) {
       const start = band.start_year ?? (schedule.renewal_start_year ?? 2);
       const end   = band.end_year;
-      const withinLower = renewalYear >= start;
-      const withinUpper = end == null ? true : renewalYear <= end;
+      const withinLower = renewalIndex >= start;
+      const withinUpper = end == null ? true : renewalIndex <= end;
       if (withinLower && withinUpper) {
         return Number(band.rate || 0);
       }
@@ -98,14 +122,48 @@ function getBaseRenewalRate(schedule, renewalYear) {
   const flatRate = Number(schedule.renewal_commission_rate || 0);
   if (!flatRate) return 0;
 
-  const startYear = schedule.renewal_start_year ?? 2;
-  const endYear   = schedule.renewal_end_year;
-  const withinLower = renewalYear >= startYear;
-  const withinUpper = endYear == null ? true : renewalYear <= endYear;
+  const startIdx = schedule.renewal_start_year ?? 2;
+  const endIdx   = schedule.renewal_end_year;
+  const withinLower = renewalIndex >= startIdx;
+  const withinUpper = endIdx == null ? true : renewalIndex <= endIdx;
   if (withinLower && withinUpper) return flatRate;
 
   return 0;
 }
+
+/* ---------------------------
+   PREMIUM BASIS HELPERS
+   --------------------------- */
+
+// Returns premium for ONE term (not annual), then monthly payout spreads over term months.
+// For 12-month world, term premium == annual premium.
+function resolveTermPremium({ policy, termRow, termLengthMonths }) {
+  const termLen = Number(termLengthMonths || 12);
+
+  // 1) If policy_terms has term_premium, prefer it (this is the cleanest for term carriers)
+  if (termRow) {
+    const tp = Number(termRow.term_premium || 0);
+    if (tp > 0) return tp;
+
+    // If only annualized_premium exists, convert to term premium
+    const ap = Number(termRow.annualized_premium || 0);
+    if (ap > 0) return ap * (termLen / 12);
+  }
+
+  // 2) policies.premium_annual (annual) -> convert to term premium if termLen != 12
+  const pa = Number(policy.premium_annual || 0);
+  if (pa > 0) return pa * (termLen / 12);
+
+  // 3) policies.premium_modal (monthly) -> term premium = modal * termLen
+  const pm = Number(policy.premium_modal || 0);
+  if (pm > 0) return pm * termLen;
+
+  return 0;
+}
+
+/* ---------------------------
+   DEBT REPAYMENTS
+   --------------------------- */
 
 async function applyRepayments(agent_id, chargebackRepay, leadRepay, payout_batch_id) {
   if (chargebackRepay > 0) {
@@ -198,6 +256,10 @@ async function applyRepayments(agent_id, chargebackRepay, leadRepay, payout_batc
   }
 }
 
+/* ---------------------------
+   MAIN HANDLER
+   --------------------------- */
+
 export async function handler(event) {
   if (event.httpMethod !== 'POST') {
     return {
@@ -237,20 +299,18 @@ export async function handler(event) {
 
       const map = new Map();
       for (const row of data || []) {
-        const start = row.term_start; // YYYY-MM-DD
-        const end   = row.term_end;   // YYYY-MM-DD or null
+        const start = row.term_start;
+        const end   = row.term_end;
 
         const overlaps = start < monthEndYMD && (end == null || end >= monthStartYMD);
         if (!overlaps) continue;
 
-        if (!map.has(row.policy_id)) {
-          map.set(row.policy_id, row);
-        }
+        if (!map.has(row.policy_id)) map.set(row.policy_id, row);
       }
       return map;
     }
 
-    // ✅ 28-day wait is based on ISSUED_AT (not created_at)
+    // ✅ 28-day wait based on ISSUED_AT
     const cutoff = new Date(payDate);
     cutoff.setDate(cutoff.getDate() - 28);
     const cutoffIso = cutoff.toISOString();
@@ -264,7 +324,7 @@ export async function handler(event) {
       cutoffIso
     );
 
-    // prevent duplicates for the same pay_month + policy_year
+    // Prevent duplicates for this pay_month
     const { data: existingPayThru, error: existingErr } = await supabase
       .from('commission_ledger')
       .select('policy_id, agent_id, meta')
@@ -273,22 +333,19 @@ export async function handler(event) {
 
     if (existingErr) {
       console.error('[runMonthlyPayThru] Error loading existing paythru rows:', existingErr);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to load existing paythru rows', details: existingErr }),
-      };
+      return { statusCode: 500, body: JSON.stringify({ error: 'Failed to load existing paythru rows', details: existingErr }) };
     }
 
     const alreadyPaidThisMonth = new Set();
     (existingPayThru || []).forEach(row => {
       const m = row.meta || {};
-      const py = m.policy_year != null ? Number(m.policy_year) : 1;
+      const idx = m.cycle_index != null ? Number(m.cycle_index) : (m.policy_year != null ? Number(m.policy_year) : 1);
       if (row.policy_id && row.agent_id) {
-        alreadyPaidThisMonth.add(`${row.policy_id}:${row.agent_id}:${py}`);
+        alreadyPaidThisMonth.add(`${row.policy_id}:${row.agent_id}:${idx}`);
       }
     });
 
-    // cap 12 per policy-year per agent across history
+    // Cap count per cycle per agent (cycle = policyYear or termNumber)
     const { data: payThruPrior, error: priorErr } = await supabase
       .from('commission_ledger')
       .select('policy_id, agent_id, meta')
@@ -296,22 +353,18 @@ export async function handler(event) {
 
     if (priorErr) {
       console.error('[runMonthlyPayThru] Error loading prior paythru rows:', priorErr);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to load paythru counts', details: priorErr }),
-      };
+      return { statusCode: 500, body: JSON.stringify({ error: 'Failed to load paythru counts', details: priorErr }) };
     }
 
     const payThruCountMap = new Map();
     (payThruPrior || []).forEach(row => {
       const m = row.meta || {};
-      const py = m.policy_year != null ? Number(m.policy_year) : 1;
-      const key = `${row.policy_id}:${row.agent_id}:${py}`;
-      const prev = payThruCountMap.get(key) || 0;
-      payThruCountMap.set(key, prev + 1);
+      const idx = m.cycle_index != null ? Number(m.cycle_index) : (m.policy_year != null ? Number(m.policy_year) : 1);
+      const key = `${row.policy_id}:${row.agent_id}:${idx}`;
+      payThruCountMap.set(key, (payThruCountMap.get(key) || 0) + 1);
     });
 
-    // ✅ Load policies eligible by issued_at cutoff (and that have issued_at)
+    // Load eligible policies by issued_at cutoff
     const { data: policies, error: polErr } = await supabase
       .from('policies')
       .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, premium_modal, issued_at, as_earned, status')
@@ -321,17 +374,14 @@ export async function handler(event) {
 
     if (polErr) {
       console.error('[runMonthlyPayThru] Error loading policies:', polErr);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to load policies', details: polErr }),
-      };
+      return { statusCode: 500, body: JSON.stringify({ error: 'Failed to load policies', details: polErr }) };
     }
 
     if (!policies || policies.length === 0) {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: 'No policies eligible for monthly trails/renewals (28-day wait after issued_at) this run.',
+          message: 'No policies eligible for monthly pay-thru (28-day wait after issued_at) this run.',
           pay_date: payDateStr,
           pay_month: payMonthKey,
         }),
@@ -339,6 +389,7 @@ export async function handler(event) {
     }
 
     const termRowMap = await loadMonthlyTermRowMap(policies.map(p => p.id));
+
     const agentCache = new Map();
     const schedCache = new Map();
 
@@ -375,8 +426,7 @@ export async function handler(event) {
         .from('commission_schedules')
         .select(
           'base_commission_rate, advance_rate, renewal_commission_rate, ' +
-          'renewal_start_year, renewal_end_year, renewal_trail_rule, ' +
-          'term_length_months'
+          'renewal_start_year, renewal_end_year, renewal_trail_rule, term_length_months'
         )
         .eq('carrier_name', policy.carrier_name)
         .eq('product_line', policy.product_line)
@@ -394,79 +444,21 @@ export async function handler(event) {
       return data;
     }
 
-    function annualizeFromTerm(termPremium, termMonths) {
-      const tp = Number(termPremium || 0);
-      const m  = Number(termMonths || 0);
-      if (tp <= 0 || m <= 0) return 0;
-      return tp * (12 / m);
-    }
-
-    // IMPORTANT:
-    // This assumes policies.premium_modal is a MONTHLY premium.
-    // If your premium_modal is instead "term premium", change this to: mp * (12 / termMonths)
-    function annualizeFromModal(modalMonthlyPremium) {
-      const mp = Number(modalMonthlyPremium || 0);
-      if (mp <= 0) return 0;
-      return mp * 12;
-    }
-
-    function resolveAnnualizedAP({ policy, termRow, scheduleTermMonths }) {
-      // 1) Term row overrides
-      if (termRow) {
-        const ap = Number(termRow.annualized_premium || 0);
-        if (ap > 0) return ap;
-
-        const termMonths = Number(termRow.term_months || scheduleTermMonths || 0);
-        const derived = annualizeFromTerm(termRow.term_premium, termMonths);
-        if (derived > 0) return derived;
-      }
-
-      // 2) Fall back to policies.premium_annual
-      const apPol = Number(policy.premium_annual || 0);
-      if (apPol > 0) return apPol;
-
-      // 3) premium_modal fallback (monthly premium)
-      const apModal = annualizeFromModal(policy.premium_modal);
-      if (apModal > 0) return apModal;
-
-      return 0;
-    }
-
     const newLedgerRows = [];
-    let totalNewGross = 0;
 
     for (const policy of policies) {
       if (!policy.agent_id) continue;
       if (!policy.issued_at) continue;
 
-      // ✅ policyYear based on ISSUED_AT
-      const policyYear = getPolicyYear(policy.issued_at, payDate);
-      if (!policyYear) continue;
-
       const policyAsEarned = policy.as_earned === true;
 
-      // ---- get writing agent + schedule FIRST so we can read term_length_months ----
-      const writingAgent = await getAgent(policy.agent_id);
-      if (!writingAgent) continue;
-
-      const writingLevel = writingAgent.level || 'agent';
-      const writingSchedule = await getSchedule(policy, writingLevel);
-      if (!writingSchedule) continue;
-
-      const scheduleTermMonths = Number(writingSchedule.term_length_months || 12);
-
-      // pick the best term row (if any) for this pay month
-      const termRow = termRowMap.get(policy.id) || null;
-
-      const ap = resolveAnnualizedAP({ policy, termRow, scheduleTermMonths });
-      if (ap <= 0) continue;
-
-      // ---- build upline chain starting from writing agent (and reusing schedule cache) ----
+      // Build chain (and capture writing-agent schedule first)
       const chain = [];
-      let current = writingAgent;
+      let current = await getAgent(policy.agent_id);
       const visitedAgents = new Set();
 
       let globalAdvanceRate = null;
+      let writingTermLenMonths = 12;
 
       for (let depth = 0; depth < 10 && current; depth++) {
         if (visitedAgents.has(current.id)) break;
@@ -478,6 +470,12 @@ export async function handler(event) {
 
         const baseRate = Number(schedule.base_commission_rate || 0);
         const advRate  = Number(schedule.advance_rate || 0);
+
+        if (depth === 0) {
+          const t = schedule.term_length_months;
+          writingTermLenMonths = (t == null ? 12 : Number(t || 12));
+          if (!writingTermLenMonths || writingTermLenMonths <= 0) writingTermLenMonths = 12;
+        }
 
         if (globalAdvanceRate == null) {
           globalAdvanceRate = policyAsEarned ? 0 : advRate;
@@ -495,6 +493,30 @@ export async function handler(event) {
 
       if (!chain.length || globalAdvanceRate == null) continue;
 
+      // Determine time index:
+      // - 12-month world => policyYear
+      // - term world => termNumber
+      const isTermWorld = writingTermLenMonths !== 12;
+
+      const cycleIndex = isTermWorld
+        ? getTermNumberByMonths(policy.issued_at, monthStart, writingTermLenMonths)
+        : getPolicyYear(policy.issued_at, payDate);
+
+      if (!cycleIndex) continue;
+
+      // Term premium basis (one term)
+      const termRow = termRowMap.get(policy.id) || null;
+      const termPremium = resolveTermPremium({
+        policy,
+        termRow,
+        termLengthMonths: writingTermLenMonths
+      });
+
+      if (termPremium <= 0) continue;
+
+      // months in this cycle for monthly spreading
+      const cycleMonths = isTermWorld ? writingTermLenMonths : 12;
+
       let prevBaseRate = 0;
       let prevBaseRenewalRate = 0;
 
@@ -502,13 +524,13 @@ export async function handler(event) {
         let effectiveRate = 0;
         let phase = 'trail';
 
-        if (policyYear === 1) {
+        if (cycleIndex === 1) {
           const levelBaseRate = node.baseRate;
           effectiveRate = levelBaseRate - prevBaseRate;
           prevBaseRate = levelBaseRate;
           phase = 'trail';
         } else {
-          const baseRenewalRate = getBaseRenewalRate(node.schedule, policyYear);
+          const baseRenewalRate = getBaseRenewalRate(node.schedule, cycleIndex);
           if (!baseRenewalRate || baseRenewalRate <= 0) continue;
           effectiveRate = baseRenewalRate - prevBaseRenewalRate;
           prevBaseRenewalRate = baseRenewalRate;
@@ -517,49 +539,47 @@ export async function handler(event) {
 
         if (effectiveRate <= 0) continue;
 
-        const policyAgentYearKey = `${policy.id}:${node.agent.id}:${policyYear}`;
-        if (alreadyPaidThisMonth.has(policyAgentYearKey)) continue;
+        const key = `${policy.id}:${node.agent.id}:${cycleIndex}`;
 
-        const priorCount = payThruCountMap.get(policyAgentYearKey) || 0;
+        // Already paid this month for this policy/agent/cycle
+        if (alreadyPaidThisMonth.has(key)) continue;
 
-        // monthsAdvanced based on ADVANCE RATE (still expressed as a % of annual)
+        const priorCount = payThruCountMap.get(key) || 0;
+
+        // Cap: you can only create up to cycleMonths ledger rows per cycle
+        if (priorCount >= cycleMonths) continue;
+
+        // Advance logic ONLY applies in 12-month world (life-style advance months)
         let monthsAdvanced = 0;
-        if (policyYear === 1) {
+        if (!isTermWorld && cycleIndex === 1) {
           monthsAdvanced = policyAsEarned ? 0 : Math.floor((globalAdvanceRate || 0) * 12);
-          const remainingMonths = Math.max(0, 12 - monthsAdvanced);
-          if (priorCount >= remainingMonths) continue;
-        } else {
-          if (priorCount >= 12) continue;
-        }
 
-        let annualAmount = 0;
-
-        // delay paythru until advanced months have elapsed
-        if (policyYear === 1) {
+          // Delay start until advanced months are "earned back"
           const issuedAt = new Date(policy.issued_at);
           const issuedMonth = monthIndexUTC(issuedAt);
           const payMonth = monthIndexUTC(monthStart);
           const monthsElapsed = payMonth - issuedMonth;
 
           if (monthsElapsed < monthsAdvanced) continue;
-
-          annualAmount = ap * effectiveRate;
-        } else {
-          annualAmount = ap * effectiveRate;
         }
 
-        // COMPRESSED YEAR-1 PAYTHRU: spread across remaining months only
-        const divisorMonths =
-          (policyYear === 1)
-            ? Math.max(1, 12 - monthsAdvanced)
-            : 12;
+        // Commission for ONE term (or one year in 12-month world)
+        const cycleCommission = termPremium * effectiveRate;
 
-        const monthlyRaw = annualAmount / divisorMonths;
+        // Monthly spread:
+        // - term world: spread over 6 months (or whatever term_length_months is)
+        // - 12-month world:
+        //   - normal: spread over 12
+        //   - if monthsAdvanced: compress remaining payout into remaining months (your “compressed paythru”)
+        const divisorMonths = (!isTermWorld && cycleIndex === 1)
+          ? Math.max(1, 12 - monthsAdvanced)
+          : cycleMonths;
+
+        const monthlyRaw = cycleCommission / divisorMonths;
         const monthly = Math.round(monthlyRaw * 100) / 100;
         if (monthly <= 0) continue;
 
-        payThruCountMap.set(policyAgentYearKey, priorCount + 1);
-        totalNewGross += monthly;
+        payThruCountMap.set(key, priorCount + 1);
 
         newLedgerRows.push({
           agent_id: node.agent.id,
@@ -569,29 +589,27 @@ export async function handler(event) {
           entry_type: 'paythru',
           description:
             phase === 'trail'
-              ? `Monthly trail on ${policy.carrier_name} ${policy.product_line} (${policy.policy_type}) for ${payMonthKey}`
-              : `Monthly renewal (year ${policyYear}) on ${policy.carrier_name} ${policy.product_line} (${policy.policy_type}) for ${payMonthKey}`,
+              ? `Monthly pay-thru (cycle 1) on ${policy.carrier_name} ${policy.product_line} (${policy.policy_type}) for ${payMonthKey}`
+              : `Monthly renewal pay-thru (cycle ${cycleIndex}) on ${policy.carrier_name} ${policy.product_line} (${policy.policy_type}) for ${payMonthKey}`,
           period_start: monthStartIso,
           period_end: monthEndIso,
           is_settled: false,
           payout_batch_id: null,
           meta: {
             pay_month: payMonthKey,
-            policy_year: policyYear,
+            cycle_index: cycleIndex,        // ✅ unified index (policyYear OR termNumber)
             phase,
             carrier_name: policy.carrier_name,
             product_line: policy.product_line,
             policy_type: policy.policy_type,
-            ap,
+            term_length_months: writingTermLenMonths,
+            term_premium_used: termPremium,
             rate_portion: effectiveRate,
             as_earned: policyAsEarned,
             advance_rate_applied: globalAdvanceRate,
             months_advanced: monthsAdvanced,
             divisor_months: divisorMonths,
-            issued_at: policy.issued_at,
-            // audit:
-            schedule_term_months: scheduleTermMonths,
-            term_row_used: termRow ? true : false
+            issued_at: policy.issued_at
           }
         });
       }
@@ -604,13 +622,11 @@ export async function handler(event) {
 
       if (insErr) {
         console.error('[runMonthlyPayThru] Error inserting new paythru rows:', insErr);
-        return {
-          statusCode: 500,
-          body: JSON.stringify({ error: 'Failed to insert new paythru rows', details: insErr }),
-        };
+        return { statusCode: 500, body: JSON.stringify({ error: 'Failed to insert new paythru rows', details: insErr }) };
       }
     }
 
+    // Now select unpaid paythru rows through this pay month and apply $100 threshold
     const { data: unpaidTrails, error: unpaidErr } = await supabase
       .from('commission_ledger')
       .select('id, agent_id, amount')
@@ -619,21 +635,18 @@ export async function handler(event) {
       .lte('meta->>pay_month', payMonthKey);
 
     if (unpaidErr) {
-      console.error('[runMonthlyPayThru] Error loading unpaid trails:', unpaidErr);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to load unpaid trails', details: unpaidErr }),
-      };
+      console.error('[runMonthlyPayThru] Error loading unpaid paythru:', unpaidErr);
+      return { statusCode: 500, body: JSON.stringify({ error: 'Failed to load unpaid paythru', details: unpaidErr }) };
     }
 
     if (!unpaidTrails || unpaidTrails.length === 0) {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: 'No unpaid trails/renewals to consider for $100 threshold (all caught up).',
+          message: 'No unpaid paythru rows to consider for $100 threshold (all caught up).',
           pay_date: payDateStr,
           pay_month: payMonthKey,
-          new_trails_created: newLedgerRows.length,
+          new_rows_created: newLedgerRows.length,
           agents_paid: 0,
         }),
       };
@@ -658,11 +671,7 @@ export async function handler(event) {
 
     for (const [aid, sum] of Object.entries(agentTotals)) {
       if (sum >= threshold) {
-        const rounded = Number(sum.toFixed(2));
-        basePayableAgents.push({
-          agent_id: aid,
-          gross_monthly_trail: rounded,
-        });
+        basePayableAgents.push({ agent_id: aid, gross_monthly_trail: Number(sum.toFixed(2)) });
       }
     }
 
@@ -670,10 +679,10 @@ export async function handler(event) {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: 'Monthly trails/renewals accrued, but no agent reached the $100 minimum yet.',
+          message: 'Paythru accrued, but no agent reached the $100 minimum yet.',
           pay_date: payDateStr,
           pay_month: payMonthKey,
-          new_trails_created: newLedgerRows.length,
+          new_rows_created: newLedgerRows.length,
           agents_paid: 0,
         }),
       };
@@ -688,10 +697,7 @@ export async function handler(event) {
 
     if (debtErr) {
       console.error('[runMonthlyPayThru] Error loading agent_total_debt:', debtErr);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to load agent_total_debt', details: debtErr }),
-      };
+      return { statusCode: 500, body: JSON.stringify({ error: 'Failed to load agent_total_debt', details: debtErr }) };
     }
 
     const debtMap = new Map();
@@ -710,16 +716,11 @@ export async function handler(event) {
 
     if (agentErr) {
       console.error('[runMonthlyPayThru] Error loading agents.is_active:', agentErr);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to load agent active flags', details: agentErr }),
-      };
+      return { statusCode: 500, body: JSON.stringify({ error: 'Failed to load agent active flags', details: agentErr }) };
     }
 
     const activeMap = new Map();
-    (agentRows || []).forEach(a => {
-      activeMap.set(a.id, a.is_active !== false);
-    });
+    (agentRows || []).forEach(a => activeMap.set(a.id, a.is_active !== false));
 
     const finalPayouts = [];
     let batchTotalGross = 0;
@@ -745,15 +746,13 @@ export async function handler(event) {
 
         let remaining = toRepay;
 
-        const cbOutstanding = debtInfo.chargeback;
-        if (cbOutstanding > 0 && remaining > 0) {
-          chargebackRepay = Math.min(remaining, cbOutstanding);
+        if (debtInfo.chargeback > 0 && remaining > 0) {
+          chargebackRepay = Math.min(remaining, debtInfo.chargeback);
           remaining -= chargebackRepay;
         }
 
-        const leadOutstanding = debtInfo.lead;
-        if (leadOutstanding > 0 && remaining > 0) {
-          leadRepay = Math.min(remaining, leadOutstanding);
+        if (debtInfo.lead > 0 && remaining > 0) {
+          leadRepay = Math.min(remaining, debtInfo.lead);
           remaining -= leadRepay;
         }
 
@@ -784,16 +783,13 @@ export async function handler(event) {
         total_gross: batchTotalGross,
         total_debits: batchTotalDebits,
         total_net: batchTotalNet,
-        note: `Monthly pay-thru payout run for ${payMonthKey} (threshold $${threshold}, 30/40/50 tiers, trails + renewals)`,
+        note: `Monthly pay-thru run for ${payMonthKey} (threshold $${threshold}, debt tiers 30/40/50)`,
       })
       .select('*');
 
     if (batchErr) {
       console.error('[runMonthlyPayThru] Error creating payout batch:', batchErr);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to create payout batch', details: batchErr }),
-      };
+      return { statusCode: 500, body: JSON.stringify({ error: 'Failed to create payout batch', details: batchErr }) };
     }
 
     const batch = batchRows && batchRows[0];
@@ -816,10 +812,7 @@ export async function handler(event) {
 
     if (updErr) {
       console.error('[runMonthlyPayThru] Error settling paythru rows:', updErr);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to mark paythru rows settled', details: updErr }),
-      };
+      return { statusCode: 500, body: JSON.stringify({ error: 'Failed to mark paythru rows settled', details: updErr }) };
     }
 
     for (const fp of finalPayouts) {
@@ -832,12 +825,13 @@ export async function handler(event) {
 
     return {
       statusCode: 200,
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(
         {
-          message: 'Monthly pay-thru run completed with $100 minimum + tiered debt withholding (trails + renewals).',
+          message: 'Monthly pay-thru run completed.',
           pay_date: payDateStr,
           pay_month: payMonthKey,
-          new_trails_created: newLedgerRows.length,
+          new_rows_created: newLedgerRows.length,
           batch_id: batch.id,
           agents_paid: finalPayouts.length,
           total_gross: batchTotalGross,
@@ -848,13 +842,9 @@ export async function handler(event) {
         null,
         2
       ),
-      headers: { 'Content-Type': 'application/json' },
     };
   } catch (err) {
     console.error('[runMonthlyPayThru] Unexpected error:', err);
-    return {
-      statusCode: 500,
-      body: JSON.stringify({ error: 'Unexpected error', details: String(err) }),
-    };
+    return { statusCode: 500, body: JSON.stringify({ error: 'Unexpected error', details: String(err) }) };
   }
 }
