@@ -643,16 +643,12 @@ async function initContactPicker() {
   const user = session?.user;
   if (!user) return;
 
-  const isAdmin = !!agentProfile?.is_admin;
-
   let q = supabase
     .from("contacts")
     .select("id, first_name, last_name, phones, emails")
+    .eq("owning_agent_id", user.id) // ✅ ALWAYS restrict (admins too)
     .order("created_at", { ascending: false })
     .limit(500);
-
-  // Agents pick only from their own contacts
-  if (!isAdmin) q = q.eq("owning_agent_id", user.id);
 
   const { data, error } = await q;
   if (error) {
@@ -1286,18 +1282,14 @@ async function loadContacts() {
   const user = session?.user;
   if (!user) return;
 
-  const isAdmin = !!agentProfile?.is_admin;
-
   let q = supabase
     .from("contacts")
     .select(`
       *,
       internal_dnc:internal_dnc!internal_dnc_contact_id_fkey ( id, is_active )
     `)
+    .eq("owning_agent_id", user.id) // ✅ ALWAYS restrict (admins too)
     .order("created_at", { ascending: false });
-
-  // Agents: only contacts they own
-  if (!isAdmin) q = q.eq("owning_agent_id", user.id);
 
   const { data, error } = await q;
   if (error) {
