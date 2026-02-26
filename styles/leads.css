@@ -619,4 +619,18 @@ a, button{ outline-color: var(--brand); }
   width: max-content;   /* lets columns be as wide as they want */
   min-width: 100%;      /* still fills the container */
 }
+/* Force table headers left-aligned */
+#agent-leads-table th {
+  text-align: left !important;
+}
 
+/* Optional: also align body cells left if any are centered */
+#agent-leads-table td {
+  text-align: left;
+}
+
+/* If your .cell wrapper is centering content */
+#agent-leads-table th .cell,
+#agent-leads-table td .cell {
+  text-align: left;
+}
