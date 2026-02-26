@@ -804,6 +804,11 @@ async function loadAgentLeads() {
     .from("leads")
     .select(`
       *,
+      assigned_agent:assigned_to (
+        id,
+        first_name,
+        last_name
+      ),
       contacts:contact_id (
         id,
         needs_dnc_check,
@@ -845,7 +850,11 @@ async function loadAgentLeads() {
       <td><input type="checkbox" class="lead-checkbox" data-id="${l.id}"></td>
       <td class="dnc-cell"><div class="cell">${dotHtml(needsDnc)}</div></td>
       <td><div class="cell">${l.created_at ? new Date(l.created_at).toLocaleDateString() : ""}</div></td>
-      <td><div class="cell">${l.submitted_by_name || ""}</div></td>
+      <td><div class="cell">${
+        l.assigned_agent
+          ? `${l.assigned_agent.first_name || ""} ${l.assigned_agent.last_name || ""}`.trim()
+          : ""
+      }</div></td>
       <td><div class="cell">${l.first_name || ""}</div></td>
       <td><div class="cell">${l.last_name || ""}</div></td>
       <td><div class="cell">${l.age ?? ""}</div></td>
