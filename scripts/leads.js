@@ -843,20 +843,20 @@ async function loadAgentLeads() {
     const needsDnc = leadNeedsDnc(l, contactMap);
     tr.innerHTML = `
       <td><input type="checkbox" class="lead-checkbox" data-id="${l.id}"></td>
-      <td class="dnc-cell">${dotHtml(needsDnc)}</td>
-      <td>${l.created_at ? new Date(l.created_at).toLocaleDateString() : ""}</td>
-      <td>${l.submitted_by_name || ""}</td>
-      <td>${l.first_name || ""}</td>
-      <td>${l.last_name || ""}</td>
-      <td>${l.age ?? ""}</td>
-      <td>${(l.phone || []).join(", ")}</td>
-      <td>${l.address || ""}</td>
-      <td>${l.city || ""}</td>
-      <td>${l.state || ""}</td>
-      <td>${l.zip || ""}</td>
-      <td>${l.lead_type || ""}</td>
-      <td>${l.product_type || ""}</td>
-      <td>${l.notes || ""}</td>
+      <td class="dnc-cell"><div class="cell">${dotHtml(needsDnc)}</div></td>
+      <td><div class="cell">${l.created_at ? new Date(l.created_at).toLocaleDateString() : ""}</div></td>
+      <td><div class="cell">${l.submitted_by_name || ""}</div></td>
+      <td><div class="cell">${l.first_name || ""}</div></td>
+      <td><div class="cell">${l.last_name || ""}</div></td>
+      <td><div class="cell">${l.age ?? ""}</div></td>
+      <td><div class="cell">${(l.phone || []).join(", ")}</div></td>
+      <td><div class="cell">${l.address || ""}</div></td>
+      <td><div class="cell">${l.city || ""}</div></td>
+      <td><div class="cell">${l.state || ""}</div></td>
+      <td><div class="cell">${l.zip || ""}</div></td>
+      <td><div class="cell">${l.lead_type || ""}</div></td>
+      <td><div class="cell">${l.product_type || ""}</div></td>
+      <td><div class="cell">${l.notes || ""}</div></td>
     `;
     tbody.appendChild(tr);
   });
