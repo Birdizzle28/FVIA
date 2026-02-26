@@ -961,6 +961,128 @@ Do you want to continue?
 let contacts = [];
 let selectMode = false;
 const selectedIds = new Set();
+// ---------- structured contact notes ----------
+const NOTE_STATUS = [
+  "No Answer",
+  "Answered",
+  "No Answer (Door Knock)",
+  "Answered (Door Knock)",
+  "Called Back",
+  "Straight to Voicemail",
+  "Dead Air",
+  "Wrong Number",
+  "Other",
+];
+
+function statusAbbr(s) {
+  const map = {
+    "No Answer": "NA",
+    "Answered": "A",
+    "No Answer (Door Knock)": "NA(DK)",
+    "Answered (Door Knock)": "A(DK)",
+    "Straight to Voicemail": "STV",
+    "Called Back": "CB",
+    "Dead Air": "DA",
+    "Wrong Number": "WN",
+    "Other": "O",
+  };
+  return map[s] || "O";
+}
+
+function statusColorClass(s) {
+  const blue = new Set(["Answered", "Answered (Door Knock)", "Called Back"]);
+  const red  = new Set(["No Answer", "Straight to Voicemail", "No Answer (Door Knock)", "Dead Air", "Wrong Number"]);
+  if (blue.has(s)) return "note-pill--blue";
+  if (red.has(s))  return "note-pill--red";
+  return "note-pill--yellow"; // Other
+}
+
+function formatLocalDateTime(iso, tz) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const opt = { year:"numeric", month:"numeric", day:"numeric", hour:"numeric", minute:"2-digit" };
+  return new Intl.DateTimeFormat(undefined, { ...opt, timeZone: tz || undefined }).format(d);
+}
+
+function formatLocalLong(iso, tz) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const opt = { year:"numeric", month:"long", day:"numeric", hour:"numeric", minute:"2-digit" };
+  return new Intl.DateTimeFormat(undefined, { ...opt, timeZone: tz || undefined }).format(d);
+}
+
+async function fetchContactNoteDetails(contactId) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("contact_notes_details")
+    .select("*")
+    .eq("contact_id", contactId)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (error) {
+    console.error("fetchContactNoteDetails error:", error);
+    return [];
+  }
+  return data || [];
+}
+
+async function insertContactNote({ contactId, status, details, phone }) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
+  if (!user) throw new Error("Not logged in.");
+
+  const payload = {
+    contact_id: contactId,
+    agent_id: user.id,
+    status,
+    details: (details || "").trim() || null,
+    phone: (phone || "").trim() || null,
+  };
+
+  const { data, error } = await supabase
+    .from("contact_notes_details")
+    .insert(payload)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+async function updateContactNote(noteId, patch) {
+  const { data, error } = await supabase
+    .from("contact_notes_details")
+    .update(patch)
+    .eq("id", noteId)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+async function deleteContactNote(noteId) {
+  const { error } = await supabase
+    .from("contact_notes_details")
+    .delete()
+    .eq("id", noteId);
+
+  if (error) throw error;
+}
+
+// Builds phone dropdown options from contact phones
+function phoneOptionsFromContact(c) {
+  const phones = Array.isArray(c.phones) ? c.phones : [];
+  const opts = phones.map(p => {
+    const label = formatUSPhone(p);
+    return `<option value="${escapeHtml(p)}">${escapeHtml(label)}</option>`;
+  }).join("");
+  return `<option value="">(optional)</option>${opts}`;
+}
 
 function updateBulkBar() {
   const bar = $("#contacts-bulk-actions");
@@ -1115,23 +1237,81 @@ async function openContactDetail(c) {
       </div>
 
       <!-- Notes -->
+            <!-- Notes (structured) -->
       <div class="contact-sec" data-sec="notes">
-        <div class="contact-sec-head">
+        <div class="contact-sec-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
           <strong><i class="fa-solid fa-note-sticky"></i> Notes</strong>
-          <button class="contact-edit-btn" data-edit="notes" title="Edit notes">
-            <i class="fa-solid fa-pen-to-square"></i>
+          <button id="add-note-btn" class="see-all" title="Add note" style="display:inline-flex;gap:8px;align-items:center;">
+            <i class="fa-solid fa-plus"></i> Add
           </button>
         </div>
 
-        <div class="contact-sec-view" data-view="notes">
-          ${c.notes ? escapeHtml(c.notes) : "—"}
+        <div id="contact-notes-chips" class="note-chip-row" style="margin-top:10px;opacity:.95;">
+          Loading…
         </div>
+      </div>
 
-        <div class="contact-sec-edit" data-form="notes" style="display:none;">
-          <textarea id="edit-notes" rows="5" style="width:100%;padding:10px;border:1px solid #d6d9e2;border-radius:0;">${escapeHtml(c.notes || "")}</textarea>
-          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
-            <button class="see-all" data-cancel="notes">Cancel</button>
-            <button class="see-all" data-save="notes"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+      <!-- Sticky actions (bottom) -->
+      <div class="contact-sticky-actions">
+        <button id="contact-schedule-one" class="see-all">
+          <i class="fa-solid fa-calendar-check"></i> Schedule
+        </button>
+        <button id="contact-save-one" class="see-all">
+          <i class="fa-solid fa-download"></i> Save to phone (.vcf)
+        </button>
+      </div>
+
+      <!-- Add Note mini modal -->
+      <div id="add-note-modal" class="mini-modal" aria-hidden="true">
+        <div class="mm-backdrop" data-mm-close></div>
+        <div class="mm-panel">
+          <div class="mm-head">
+            <strong>Add Note</strong>
+            <button class="mm-close" data-mm-close>&times;</button>
+          </div>
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div>
+              <label style="font-size:12px;opacity:.75;">Status</label>
+              <select id="note-status" style="width:100%;padding:10px;border:1px solid #d6d9e2;border-radius:0;">
+                ${NOTE_STATUS.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("")}
+              </select>
+            </div>
+
+            <div id="note-phone-wrap" style="display:none;">
+              <label style="font-size:12px;opacity:.75;">Phone (optional)</label>
+              <select id="note-phone" style="width:100%;padding:10px;border:1px solid #d6d9e2;border-radius:0;">
+                ${phoneOptionsFromContact(c)}
+              </select>
+            </div>
+          </div>
+
+          <div id="note-details-wrap" style="display:none;margin-top:10px;">
+            <label style="font-size:12px;opacity:.75;">Additional Details</label>
+            <input id="note-details" type="text" placeholder="Type extra details…" style="width:100%;padding:10px;border:1px solid #d6d9e2;border-radius:0;">
+          </div>
+
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+            <button class="see-all" data-mm-close>Cancel</button>
+            <button id="note-save-btn" class="see-all"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Note Detail mini modal -->
+      <div id="note-detail-modal" class="mini-modal" aria-hidden="true">
+        <div class="mm-backdrop" data-nd-close></div>
+        <div class="mm-panel">
+          <div class="mm-head">
+            <strong>Note</strong>
+            <button class="mm-close" data-nd-close>&times;</button>
+          </div>
+
+          <div id="note-detail-body" style="line-height:1.45;"></div>
+
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;flex-wrap:wrap;">
+            <button id="note-delete-btn" class="see-all"><i class="fa-solid fa-trash"></i> Delete</button>
+            <button id="note-edit-btn" class="see-all"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
           </div>
         </div>
       </div>
@@ -1160,6 +1340,203 @@ async function openContactDetail(c) {
 
   modal.classList.add("open");
   modal.setAttribute("aria-hidden", "false");
+    // Local timezone (from browser). If you later save agent timezone, use that instead.
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
+
+  // mini modal open/close helpers
+  function openMini(id) {
+    const mm = $(id);
+    if (!mm) return;
+    mm.classList.add("open");
+    mm.setAttribute("aria-hidden", "false");
+  }
+  function closeMini(id) {
+    const mm = $(id);
+    if (!mm) return;
+    mm.classList.remove("open");
+    mm.setAttribute("aria-hidden", "true");
+  }
+
+  // close on backdrop/close buttons
+  body.querySelectorAll("[data-mm-close]").forEach(x => {
+    x.addEventListener("click", () => closeMini("#add-note-modal"));
+  });
+  body.querySelectorAll("[data-nd-close]").forEach(x => {
+    x.addEventListener("click", () => closeMini("#note-detail-modal"));
+  });
+
+  // conditional fields for add-note modal
+  const statusEl = $("#note-status");
+  const detailsWrap = $("#note-details-wrap");
+  const phoneWrap = $("#note-phone-wrap");
+
+  function updateAddNoteFields() {
+    const s = statusEl?.value || "";
+    const showDetails = ["Answered", "Called Back", "Answered (Door Knock)", "Other"].includes(s);
+    const showPhone = ["Wrong Number", "Other"].includes(s);
+    if (detailsWrap) detailsWrap.style.display = showDetails ? "block" : "none";
+    if (phoneWrap) phoneWrap.style.display = showPhone ? "block" : "none";
+    if (!showDetails) $("#note-details") && ($("#note-details").value = "");
+    if (!showPhone) $("#note-phone") && ($("#note-phone").value = "");
+  }
+  statusEl?.addEventListener("change", updateAddNoteFields);
+  updateAddNoteFields();
+
+  // render chips
+  let noteCache = [];
+
+  async function renderNoteChips() {
+    const box = $("#contact-notes-chips");
+    if (!box) return;
+
+    noteCache = await fetchContactNoteDetails(c.id);
+
+    if (!noteCache.length) {
+      box.innerHTML = `<div style="opacity:.7;">—</div>`;
+      return;
+    }
+
+    box.innerHTML = noteCache.map(n => {
+      const abbr = statusAbbr(n.status);
+      const cls = statusColorClass(n.status);
+      const dt = formatLocalDateTime(n.created_at, tz);
+
+      const det = (n.details || "").trim();
+      const phone = (n.phone || "").trim();
+
+      return `
+        <div class="note-chip" data-note-id="${n.id}">
+          <span class="note-pill ${cls}">${escapeHtml(abbr)}</span>
+          <div class="note-chip-meta">
+            <span class="muted">${escapeHtml(dt)}</span>
+            ${det ? `<span class="note-ellipsis">${escapeHtml(det)}</span>` : ""}
+            ${phone ? `<span class="muted">${escapeHtml(formatUSPhone(phone))}</span>` : ""}
+          </div>
+        </div>
+      `;
+    }).join("");
+
+    // click -> open detail modal
+    box.querySelectorAll(".note-chip").forEach(chip => {
+      chip.addEventListener("click", () => {
+        const id = chip.dataset.noteId;
+        const note = noteCache.find(x => x.id === id);
+        if (!note) return;
+        openNoteDetail(note);
+      });
+    });
+  }
+
+  function openNoteDetail(note) {
+    const bodyEl = $("#note-detail-body");
+    if (!bodyEl) return;
+
+    const lastEdit = (note.edited_on && note.edited_on.length)
+      ? note.edited_on[note.edited_on.length - 1]
+      : null;
+
+    bodyEl.innerHTML = `
+      <div><strong>Status:</strong> ${escapeHtml(note.status)}</div>
+      <div style="margin-top:6px;"><strong>Date and Time:</strong> ${escapeHtml(formatLocalLong(note.created_at, tz))}</div>
+      ${note.details ? `<div style="margin-top:6px;"><strong>Additional Details:</strong> ${escapeHtml(note.details)}</div>` : ""}
+      ${note.phone ? `<div style="margin-top:6px;"><strong>Phone:</strong> ${escapeHtml(formatUSPhone(note.phone))}</div>` : ""}
+      ${lastEdit ? `<div style="margin-top:6px;"><strong>Last edited on:</strong> ${escapeHtml(formatLocalLong(lastEdit, tz))}</div>` : ""}
+    `;
+
+    // wire edit/delete buttons
+    $("#note-delete-btn").onclick = async () => {
+      const ok = confirm("Delete this note? This cannot be undone.");
+      if (!ok) return;
+      try {
+        await deleteContactNote(note.id);
+        closeMini("#note-detail-modal");
+        await renderNoteChips();
+      } catch (e) {
+        console.error(e);
+        alert("Failed to delete note.");
+      }
+    };
+
+    $("#note-edit-btn").onclick = async () => {
+      // open add-note modal but prefill and save will UPDATE instead
+      openMini("#add-note-modal");
+
+      $("#note-status").value = note.status;
+      updateAddNoteFields();
+
+      $("#note-details") && ($("#note-details").value = note.details || "");
+      $("#note-phone") && ($("#note-phone").value = note.phone || "");
+
+      const saveBtn = $("#note-save-btn");
+      if (!saveBtn) return;
+
+      // temporary edit-mode save
+      saveBtn.dataset.mode = "edit";
+      saveBtn.dataset.noteId = note.id;
+    };
+
+    openMini("#note-detail-modal");
+  }
+
+  // + Add opens modal
+  $("#add-note-btn")?.addEventListener("click", () => {
+    // reset into "create" mode
+    const saveBtn = $("#note-save-btn");
+    if (saveBtn) {
+      saveBtn.dataset.mode = "create";
+      saveBtn.dataset.noteId = "";
+    }
+
+    $("#note-status") && ($("#note-status").value = "No Answer");
+    $("#note-details") && ($("#note-details").value = "");
+    $("#note-phone") && ($("#note-phone").value = "");
+    updateAddNoteFields();
+
+    openMini("#add-note-modal");
+  });
+
+  // Save (create or edit)
+  $("#note-save-btn")?.addEventListener("click", async () => {
+    const s = ($("#note-status")?.value || "").trim();
+    const details = ($("#note-details")?.value || "").trim();
+    const phone = ($("#note-phone")?.value || "").trim();
+
+    if (!s) {
+      alert("Pick a status.");
+      return;
+    }
+
+    try {
+      const btn = $("#note-save-btn");
+      const mode = btn?.dataset.mode || "create";
+      const noteId = btn?.dataset.noteId || "";
+
+      if (mode === "edit" && noteId) {
+        const patch = {
+          status: s,
+          details: details || null,
+          phone: phone || null,
+        };
+        await updateContactNote(noteId, patch);
+      } else {
+        await insertContactNote({
+          contactId: c.id,
+          status: s,
+          details,
+          phone,
+        });
+      }
+
+      closeMini("#add-note-modal");
+      await renderNoteChips();
+    } catch (e) {
+      console.error(e);
+      alert("Failed to save note.");
+    }
+  });
+
+  // initial render
+  await renderNoteChips();
 
   // ✅ Schedule (single)
   $("#contact-schedule-one")?.addEventListener("click", () => {
