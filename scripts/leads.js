@@ -304,6 +304,24 @@ async function fetchContactLeads(contactId) {
   }
   return data || [];
 }
+async function fetchContactPolicies(contactId) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
+  if (!user) return [];
+
+  const { data, error } = await supabase
+    .from("policies")
+    .select("id, policy_number, product_line, policy_type, carrier_name, created_at")
+    .eq("contact_id", contactId)
+    .order("created_at", { ascending: false })
+    .limit(200);
+
+  if (error) {
+    console.error("fetchContactPolicies error:", error);
+    return [];
+  }
+  return data || [];
+}
 
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
@@ -1259,25 +1277,25 @@ async function openContactDetail(c) {
             <button class="mm-close" data-mm-close>&times;</button>
           </div>
 
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+          <div class="mm-grid">
             <div>
-              <label style="font-size:12px;opacity:.75;">Status</label>
-              <select id="note-status" style="width:100%;padding:10px;border:1px solid #d6d9e2;border-radius:0;">
+              <label class="mm-label">Status</label>
+              <select id="note-status">
                 ${NOTE_STATUS.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("")}
               </select>
             </div>
-
+          
             <div id="note-phone-wrap" style="display:none;">
-              <label style="font-size:12px;opacity:.75;">Phone (optional)</label>
-              <select id="note-phone" style="width:100%;padding:10px;border:1px solid #d6d9e2;border-radius:0;">
+              <label class="mm-label">Phone (optional)</label>
+              <select id="note-phone">
                 ${phoneOptionsFromContact(c)}
               </select>
             </div>
           </div>
-
+          
           <div id="note-details-wrap" style="display:none;margin-top:10px;">
-            <label style="font-size:12px;opacity:.75;">Additional Details</label>
-            <input id="note-details" type="text" placeholder="Type extra details…" style="width:100%;padding:10px;border:1px solid #d6d9e2;border-radius:0;">
+            <label class="mm-label">Additional Details</label>
+            <input id="note-details" type="text" placeholder="Type extra details…">
           </div>
 
           <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
@@ -1305,6 +1323,15 @@ async function openContactDetail(c) {
         </div>
       </div>
 
+      <!-- Policies -->
+      <div class="contact-sec" data-sec="policies">
+        <div class="contact-sec-head">
+          <strong><i class="fa-solid fa-file-shield"></i> Policies</strong>
+        </div>
+      
+        <div id="contact-policies-list" style="margin-top:10px;opacity:.9;">Loading…</div>
+      </div>
+      
       <!-- Connected Leads -->
       <div class="contact-sec" data-sec="leads">
         <div class="contact-sec-head">
@@ -1538,6 +1565,28 @@ async function openContactDetail(c) {
     downloadText(`${(name || "contact")}.vcf`, contactToVCard(c))
   );
 
+  // Load connected policies
+  const polBox = $("#contact-policies-list");
+  const policies = await fetchContactPolicies(c.id);
+  
+  if (polBox) {
+    if (!policies.length) {
+      polBox.textContent = "—";
+    } else {
+      polBox.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${policies.map(p => `
+            <div style="border:1px solid #eef0f6;border-radius:12px;padding:10px;">
+              <div style="font-weight:800;">${escapeHtml(p.policy_number || "—")}</div>
+              <div style="opacity:.85;margin-top:4px;">
+                ${escapeHtml(p.product_line || "—")} • ${escapeHtml(p.policy_type || "—")} • ${escapeHtml(p.carrier_name || "—")}
+              </div>
+            </div>
+          `).join("")}
+        </div>
+      `;
+    }
+  }
   // Load connected leads
   const leadsBox = $("#contact-leads-list");
   const leads = await fetchContactLeads(c.id);
