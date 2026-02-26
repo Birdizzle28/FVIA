@@ -969,6 +969,24 @@ function updateBulkBar() {
   if (bar) bar.style.display = count > 0 ? "flex" : "none";
 }
 
+function buildScheduleUrlFromContacts(picked) {
+  const fullName = (c) => `${c.first_name || ""} ${c.last_name || ""}`.trim() || "Unknown";
+  const firstPhone = (c) => (Array.isArray(c.phones) && c.phones.length ? c.phones[0] : "—");
+
+  const title = picked.map(fullName).join(", ");
+  const notes = picked.map(c => `${fullName(c)}: ${firstPhone(c)}`).join(", ");
+
+  // Use scheduling.html (same as your mobile menu)
+  const base = "scheduling.html";
+
+  return (
+    `${base}?appointment_type=contact` +
+    `&prefill_title=${encodeURIComponent(title)}` +
+    `&prefill_notes=${encodeURIComponent(notes)}` +
+    `&contact_ids=${encodeURIComponent(JSON.stringify(picked.map(c => c.id)))}`
+  );
+}
+
 async function openContactDetail(c) {
   const modal = $("#contact-detail-modal");
   const title = $("#contact-modal-name");
@@ -988,6 +1006,31 @@ async function openContactDetail(c) {
 
   body.innerHTML = `
     <div class="contact-ov">
+
+      <!-- Name -->
+      <div class="contact-sec" data-sec="name">
+        <div class="contact-sec-head">
+          <strong><i class="fa-solid fa-user"></i> Name</strong>
+          <button class="contact-edit-btn" data-edit="name" title="Edit name">
+            <i class="fa-solid fa-pen-to-square"></i>
+          </button>
+        </div>
+
+        <div class="contact-sec-view" data-view="name">
+          <span id="contact-name-view">${escapeHtml(name || "—")}</span>
+        </div>
+
+        <div class="contact-sec-edit" data-form="name" style="display:none;">
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+            <input id="edit-first" type="text" placeholder="First name" value="${escapeHtml(c.first_name || "")}" style="padding:10px;border:1px solid #d6d9e2;border-radius:0;">
+            <input id="edit-last"  type="text" placeholder="Last name"  value="${escapeHtml(c.last_name || "")}" style="padding:10px;border:1px solid #d6d9e2;border-radius:0;">
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:10px;">
+            <button class="see-all" data-cancel="name">Cancel</button>
+            <button class="see-all" data-save="name"><i class="fa-solid fa-floppy-disk"></i> Save</button>
+          </div>
+        </div>
+      </div>
 
       <!-- Phones -->
       <div class="contact-sec" data-sec="phones">
@@ -1101,8 +1144,15 @@ async function openContactDetail(c) {
         <div id="contact-leads-list" style="opacity:.85;">Loading…</div>
       </div>
 
-      <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
-        <button id="contact-save-one" class="see-all"><i class="fa-solid fa-download"></i> Save to phone (.vcf)</button>
+      <!-- Sticky bottom actions -->
+      <div class="contact-actions-sticky">
+        <button id="contact-schedule-one" class="see-all">
+          <i class="fa-solid fa-calendar-check"></i> Schedule
+        </button>
+
+        <button id="contact-save-one" class="see-all">
+          <i class="fa-solid fa-download"></i> Save to phone (.vcf)
+        </button>
       </div>
 
     </div>
@@ -1111,9 +1161,14 @@ async function openContactDetail(c) {
   modal.classList.add("open");
   modal.setAttribute("aria-hidden", "false");
 
-  // Save single
+  // ✅ Schedule (single)
+  $("#contact-schedule-one")?.addEventListener("click", () => {
+    window.location.href = buildScheduleUrlFromContacts([c]);
+  });
+
+  // ✅ Save single (.vcf)
   $("#contact-save-one")?.addEventListener("click", () =>
-    downloadText(`${name || "contact"}.vcf`, contactToVCard(c))
+    downloadText(`${(name || "contact")}.vcf`, contactToVCard(c))
   );
 
   // Load connected leads
@@ -1156,12 +1211,16 @@ async function openContactDetail(c) {
     btn.addEventListener("click", () => hideEdit(btn.getAttribute("data-cancel")));
   });
 
-  // Saves
+  // Saves (NOW includes name)
   body.querySelectorAll("[data-save]").forEach(btn => {
     btn.addEventListener("click", async () => {
       const sec = btn.getAttribute("data-save");
       let update = {};
 
+      if (sec === "name") {
+        update.first_name = ($("#edit-first")?.value || "").trim() || null;
+        update.last_name  = ($("#edit-last")?.value || "").trim() || null;
+      }
       if (sec === "phones") {
         update.phones = linesToArray($("#edit-phones")?.value);
       }
@@ -1187,7 +1246,7 @@ async function openContactDetail(c) {
         .from("contacts")
         .update(update)
         .eq("id", c.id)
-        .eq("owning_agent_id", user.id) // ✅ must own it
+        .eq("owning_agent_id", user.id)
         .select("*")
         .single();
 
@@ -1201,7 +1260,6 @@ async function openContactDetail(c) {
       const idx = contacts.findIndex(x => x.id === c.id);
       if (idx >= 0) contacts[idx] = updated;
 
-      // reopen overlay with fresh data (keeps everything in sync)
       renderContacts();
       openContactDetail(updated);
     });
