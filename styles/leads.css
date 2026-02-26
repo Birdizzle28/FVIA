@@ -884,3 +884,91 @@ a, button{ outline-color: var(--brand); }
   cursor:pointer;
   line-height:1;
 }
+/* Notes area background (no white gaps) */
+.contact-sec[data-sec="notes"]{
+  background: rgba(10,16,26,.35);
+  border: 1px solid rgba(39,183,255,.12);
+  padding: 12px;
+}
+
+/* The list container */
+.note-chip-row{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+/* Each note line */
+.note-chip{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px;
+  cursor:pointer;
+  user-select:none;
+
+  /* same gray as you liked */
+  background: rgba(10,16,26,.35);
+  border: 1px solid rgba(255,255,255,.06);
+}
+
+.note-chip:hover{
+  transform: translateY(-1px);
+}
+
+/* Each “bubble” */
+.note-bubble{
+  display:inline-flex;
+  align-items:center;
+  padding:4px 10px;
+  border-radius:999px;
+  font-weight:800;
+  font-size:12px;
+  letter-spacing:.35px;
+  border:1px solid rgba(255,255,255,.18);
+  white-space:nowrap;
+}
+
+/* Date bubble is subtle gray */
+.note-bubble--date{
+  font-weight:700;
+  opacity:.9;
+  border-color: rgba(255,255,255,.12);
+  box-shadow: 0 0 10px rgba(255,255,255,.06);
+}
+
+/* Details bubble gets ellipsis */
+.note-bubble--details{
+  max-width: 320px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  font-weight:700;
+  opacity:.95;
+  border-color: rgba(255,255,255,.12);
+  box-shadow: 0 0 10px rgba(255,255,255,.06);
+}
+
+/* Phone bubble subtle */
+.note-bubble--phone{
+  font-weight:700;
+  opacity:.85;
+  border-color: rgba(255,255,255,.12);
+  box-shadow: 0 0 10px rgba(255,255,255,.06);
+}
+
+/* Neon color themes (apply to ANY bubble) */
+.note-glow--blue{
+  color:#bfefff;
+  border-color:rgba(39,183,255,.55);
+  box-shadow:0 0 10px rgba(39,183,255,.35), 0 0 18px rgba(39,183,255,.18);
+}
+.note-glow--red{
+  color:#ffd0d0;
+  border-color:rgba(255,42,42,.55);
+  box-shadow:0 0 10px rgba(255,42,42,.35), 0 0 18px rgba(255,42,42,.18);
+}
+.note-glow--yellow{
+  color:#fff4b8;
+  border-color:rgba(255,215,0,.55);
+  box-shadow:0 0 10px rgba(255,215,0,.25), 0 0 18px rgba(255,215,0,.12);
+}
