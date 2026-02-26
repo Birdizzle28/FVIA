@@ -634,3 +634,108 @@ a, button{ outline-color: var(--brand); }
 #agent-leads-table td .cell {
   text-align: left;
 }
+
+/* ============================
+   Contacts Modal (Detail View)
+   ============================ */
+
+/* Make modal body breathe */
+#contact-detail-modal .overlay-body{
+  padding: 18px 18px 22px;
+}
+
+/* Modal content wrapper */
+#contact-detail-modal .contact-ov{
+  display: flex;
+  flex-direction: column;
+  gap: 14px;              /* ✅ vertical space between sections */
+}
+
+/* Each section becomes a card-like block */
+#contact-detail-modal .contact-sec{
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+
+/* Section header row */
+#contact-detail-modal .contact-sec-head{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap: 10px;
+
+  padding: 12px 14px;
+  background: var(--soft);
+  border-bottom: 1px solid var(--line);
+}
+
+/* View mode content */
+#contact-detail-modal .contact-sec-view{
+  padding: 12px 14px;
+  color: var(--ink);
+  line-height: 1.35;
+}
+
+/* ✅ Preserve newlines + tabs in Notes (and any other view block if you want) */
+#contact-detail-modal .contact-sec[data-sec="notes"] .contact-sec-view{
+  white-space: pre-wrap;   /* preserves newlines; wraps long lines */
+  tab-size: 4;             /* preserves the “feel” of tabs */
+}
+
+/* Optional: make phone/email links look nicer */
+#contact-detail-modal .contact-sec-view a{
+  color: var(--brand);
+  text-decoration: none;
+  font-weight: 700;
+}
+#contact-detail-modal .contact-sec-view a:hover{
+  text-decoration: underline;
+}
+
+/* Edit button (pencil) */
+#contact-detail-modal .contact-edit-btn{
+  appearance:none;
+  border:1px solid var(--line);
+  background:#fff;
+  color: var(--muted);
+  border-radius:10px;
+  padding:8px 10px;
+  cursor:pointer;
+}
+#contact-detail-modal .contact-edit-btn:hover{
+  background: var(--soft);
+  color: var(--ink);
+}
+
+/* Edit mode content wrapper */
+#contact-detail-modal .contact-sec-edit{
+  padding: 12px 14px 14px;
+}
+
+/* Make edit inputs match your system */
+#contact-detail-modal .contact-sec-edit input,
+#contact-detail-modal .contact-sec-edit textarea{
+  width:100%;
+  box-sizing:border-box;
+  border:1px solid var(--line);
+  border-radius: var(--field-radius);
+  padding: 12px;
+  min-height: 44px;
+  font-family: inherit;
+  color: var(--ink);
+  background:#fff;
+}
+
+/* Textareas should preserve formatting while editing too */
+#contact-detail-modal .contact-sec-edit textarea{
+  white-space: pre-wrap;
+  tab-size: 4;
+}
+
+/* Footer button row */
+#contact-detail-modal .contact-ov > div:last-child{
+  margin-top: 2px;
+}
