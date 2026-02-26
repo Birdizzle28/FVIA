@@ -1029,3 +1029,65 @@ a, button{ outline-color: var(--brand); }
 
 /* Phone bubble slightly softer */
 .note-bubble--phone{ opacity:.92; font-weight:800; }
+/* IMPORTANT for ellipsis in flex row */
+.note-chip{ flex-wrap:nowrap; }
+.note-chip > *{ min-width:0; } /* ✅ critical */
+
+.note-bubble--details{
+  flex: 1 1 auto;       /* ✅ allow shrink */
+  min-width: 0;         /* ✅ allow ellipsis */
+  max-width: 360px;     /* adjust if you want */
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  font-weight:800;
+}
+/* Holds ~5 note rows; scroll for rest */
+#contact-notes-chips{
+  max-height: 270px;    /* ≈ 5 rows depending on padding */
+  overflow-y:auto;
+  padding-right:6px;    /* room for scrollbar */
+}
+
+/* optional: nicer scrollbar */
+#contact-notes-chips::-webkit-scrollbar{ width:8px; }
+#contact-notes-chips::-webkit-scrollbar-thumb{
+  background:#dfe6f2;
+  border-radius:999px;
+}
+/* modal layout fixes */
+.mini-modal *{ box-sizing:border-box; }
+
+.mini-modal .mm-panel{
+  width: min(560px, 94vw);
+  border-radius:16px;
+  overflow:hidden;
+}
+
+.mm-grid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px;
+}
+@media (max-width: 520px){
+  .mm-grid{ grid-template-columns:1fr; }
+}
+
+/* Match your rounded inputs */
+.mini-modal .mm-panel select,
+.mini-modal .mm-panel input{
+  width:100%;
+  padding:12px 12px;
+  border:1px solid #d6d9e2;
+  border-radius:12px;
+  outline:none;
+  background:#fff;
+}
+
+/* label style inside modal */
+.mm-label{
+  display:block;
+  font-size:12px;
+  opacity:.75;
+  margin-bottom:6px;
+}
