@@ -768,3 +768,119 @@ a, button{ outline-color: var(--brand); }
     justify-content: center;
   }
 }
+/* Notes chips */
+.note-chip-row{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.note-chip{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 10px;
+  border:1px solid rgba(39,183,255,.35);
+  background:rgba(10,16,26,.35);
+  cursor:pointer;
+  user-select:none;
+}
+
+.note-chip:hover{
+  transform:translateY(-1px);
+}
+
+.note-pill{
+  font-weight:900;
+  font-size:12px;
+  padding:4px 8px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.25);
+  letter-spacing:.4px;
+}
+
+.note-pill--blue{
+  color:#bfefff;
+  border-color:rgba(39,183,255,.55);
+  box-shadow:0 0 10px rgba(39,183,255,.35), 0 0 18px rgba(39,183,255,.18);
+}
+.note-pill--red{
+  color:#ffd0d0;
+  border-color:rgba(255,42,42,.55);
+  box-shadow:0 0 10px rgba(255,42,42,.35), 0 0 18px rgba(255,42,42,.18);
+}
+.note-pill--yellow{
+  color:#fff4b8;
+  border-color:rgba(255,215,0,.55);
+  box-shadow:0 0 10px rgba(255,215,0,.25), 0 0 18px rgba(255,215,0,.12);
+}
+
+.note-chip-meta{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  align-items:center;
+  font-size:12.5px;
+  opacity:.92;
+}
+
+.note-chip-meta .muted{
+  opacity:.7;
+}
+
+.note-ellipsis{
+  max-width:260px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Sticky bottom actions inside contact modal */
+.contact-sticky-actions{
+  position:sticky;
+  bottom:0;
+  background:#fff;
+  border-top:1px solid #e9eaf0;
+  padding:12px;
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  z-index:10;
+}
+
+/* Small modal overlays used inside contact modal */
+.mini-modal{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:2000;
+}
+.mini-modal.open{ display:flex; }
+.mini-modal .mm-backdrop{
+  position:absolute; inset:0;
+  background:rgba(0,0,0,.55);
+}
+.mini-modal .mm-panel{
+  position:relative;
+  width:min(520px, calc(100% - 28px));
+  background:#fff;
+  border:1px solid #e9eaf0;
+  box-shadow:0 24px 60px rgba(0,0,0,.25);
+  padding:14px;
+}
+.mini-modal .mm-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:10px;
+}
+.mini-modal .mm-close{
+  border:none;
+  background:transparent;
+  font-size:28px;
+  cursor:pointer;
+  line-height:1;
+}
