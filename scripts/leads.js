@@ -1236,8 +1236,7 @@ async function openContactDetail(c) {
         </div>
       </div>
 
-      <!-- Notes -->
-            <!-- Notes (structured) -->
+      <!-- Notes (structured) -->
       <div class="contact-sec" data-sec="notes">
         <div class="contact-sec-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
           <strong><i class="fa-solid fa-note-sticky"></i> Notes</strong>
@@ -1249,16 +1248,6 @@ async function openContactDetail(c) {
         <div id="contact-notes-chips" class="note-chip-row" style="margin-top:10px;opacity:.95;">
           Loading…
         </div>
-      </div>
-
-      <!-- Sticky actions (bottom) -->
-      <div class="contact-sticky-actions">
-        <button id="contact-schedule-one" class="see-all">
-          <i class="fa-solid fa-calendar-check"></i> Schedule
-        </button>
-        <button id="contact-save-one" class="see-all">
-          <i class="fa-solid fa-download"></i> Save to phone (.vcf)
-        </button>
       </div>
 
       <!-- Add Note mini modal -->
@@ -1398,20 +1387,22 @@ async function openContactDetail(c) {
 
     box.innerHTML = noteCache.map(n => {
       const abbr = statusAbbr(n.status);
-      const cls = statusColorClass(n.status);
+      const glow = statusColorClass(n.status); // currently returns note-pill--blue/red/yellow
+      const glow2 = glow
+        .replace("note-pill--blue","note-glow--blue")
+        .replace("note-pill--red","note-glow--red")
+        .replace("note-pill--yellow","note-glow--yellow");
+    
       const dt = formatLocalDateTime(n.created_at, tz);
-
       const det = (n.details || "").trim();
       const phone = (n.phone || "").trim();
-
+    
       return `
         <div class="note-chip" data-note-id="${n.id}">
-          <span class="note-pill ${cls}">${escapeHtml(abbr)}</span>
-          <div class="note-chip-meta">
-            <span class="muted">${escapeHtml(dt)}</span>
-            ${det ? `<span class="note-ellipsis">${escapeHtml(det)}</span>` : ""}
-            ${phone ? `<span class="muted">${escapeHtml(formatUSPhone(phone))}</span>` : ""}
-          </div>
+          <span class="note-bubble ${glow2}">${escapeHtml(abbr)}</span>
+          <span class="note-bubble note-bubble--date ${glow2}">${escapeHtml(dt)}</span>
+          ${det ? `<span class="note-bubble note-bubble--details ${glow2}" title="${escapeHtml(det)}">${escapeHtml(det)}</span>` : ""}
+          ${phone ? `<span class="note-bubble note-bubble--phone ${glow2}">${escapeHtml(formatUSPhone(phone))}</span>` : ""}
         </div>
       `;
     }).join("");
@@ -1458,19 +1449,18 @@ async function openContactDetail(c) {
     };
 
     $("#note-edit-btn").onclick = async () => {
-      // open add-note modal but prefill and save will UPDATE instead
+      closeMini("#note-detail-modal");   // ✅ close first so you can see edit modal
       openMini("#add-note-modal");
-
+    
       $("#note-status").value = note.status;
       updateAddNoteFields();
-
+    
       $("#note-details") && ($("#note-details").value = note.details || "");
       $("#note-phone") && ($("#note-phone").value = note.phone || "");
-
+    
       const saveBtn = $("#note-save-btn");
       if (!saveBtn) return;
-
-      // temporary edit-mode save
+    
       saveBtn.dataset.mode = "edit";
       saveBtn.dataset.noteId = note.id;
     };
