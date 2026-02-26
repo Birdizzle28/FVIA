@@ -972,3 +972,60 @@ a, button{ outline-color: var(--brand); }
   border-color:rgba(255,215,0,.55);
   box-shadow:0 0 10px rgba(255,215,0,.25), 0 0 18px rgba(255,215,0,.12);
 }
+/* Keep notes area WHITE */
+.contact-sec[data-sec="notes"]{
+  background:#fff;
+  border:1px solid #eef0f6;
+  padding:12px;
+  border-radius:12px;
+}
+
+/* each note row */
+.note-chip{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px;
+  border:1px solid #eef0f6;
+  border-radius:12px;
+  cursor:pointer;
+  user-select:none;
+  background:#fff;
+}
+
+/* each bubble */
+.note-bubble{
+  display:inline-flex;
+  align-items:center;
+  padding:6px 10px;
+  border-radius:999px;
+  font-weight:800;
+  font-size:12px;
+  letter-spacing:.35px;
+  white-space:nowrap;
+  color:#fff;                  /* ✅ letters white */
+  border:1px solid transparent; /* set by glow class */
+}
+
+/* NEON FILLED (background + glow) */
+.note-glow--blue{
+  background: rgba(39,183,255,.95);
+  border-color: rgba(39,183,255,.95);
+  box-shadow: 0 0 10px rgba(39,183,255,.65), 0 0 18px rgba(39,183,255,.35);
+}
+.note-glow--red{
+  background: rgba(255,42,42,.92);
+  border-color: rgba(255,42,42,.92);
+  box-shadow: 0 0 10px rgba(255,42,42,.6), 0 0 18px rgba(255,42,42,.32);
+}
+.note-glow--yellow{
+  background: rgba(255,215,0,.92);
+  border-color: rgba(255,215,0,.92);
+  box-shadow: 0 0 10px rgba(255,215,0,.5), 0 0 18px rgba(255,215,0,.28);
+}
+
+/* Date bubble a bit less “loud” but still neon filled */
+.note-bubble--date{ opacity:.95; font-weight:800; }
+
+/* Phone bubble slightly softer */
+.note-bubble--phone{ opacity:.92; font-weight:800; }
