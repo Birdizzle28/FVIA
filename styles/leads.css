@@ -580,11 +580,14 @@ a, button{ outline-color: var(--brand); }
 
 /* Wrap cell content so we can clamp/scroll safely */
 #agent-leads-table tbody td > .cell {
-  display: block;
-  max-height: calc(var(--lead-row-max) - 20px); /* accounts for padding */
-  overflow: auto;                /* scroll if too much */
-  white-space: normal;           /* allow wrapping */
-  word-break: break-word;        /* long words won't blow up layout */
+   display: block;
+   width: 100%;
+   min-width: 100%;
+   box-sizing: border-box;
+   max-height: calc(var(--lead-row-max) - 20px); /* accounts for padding */
+   overflow: auto;                /* scroll if too much */
+   white-space: normal;           /* allow wrapping */
+   word-break: break-word;        /* long words won't blow up layout */
 }
 
 /* Optional: Notes column gets the scroll behavior strongest */
@@ -600,3 +603,20 @@ a, button{ outline-color: var(--brand); }
   background: rgba(0,0,0,.18);
   border-radius: 10px;
 }
+#agent-leads-table th,
+#agent-leads-table td {
+  min-width: 120px; /* tweak */
+}
+
+#agent-leads-table th:first-child,
+#agent-leads-table td:first-child { min-width: 36px; }
+
+#agent-leads-table th:nth-child(2),
+#agent-leads-table td:nth-child(2) { min-width: 44px; }
+*/
+#agent-leads-table {
+  table-layout: auto;   /* default, but we force it */
+  width: max-content;   /* lets columns be as wide as they want */
+  min-width: 100%;      /* still fills the container */
+}
+
