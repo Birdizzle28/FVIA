@@ -739,3 +739,32 @@ a, button{ outline-color: var(--brand); }
 #contact-detail-modal .contact-ov > div:last-child{
   margin-top: 2px;
 }
+
+/* Contact detail modal: sticky bottom actions */
+.contact-ov{
+  padding-bottom: 84px; /* space so content doesn't hide under sticky bar */
+}
+
+.contact-actions-sticky{
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  background: #fff;
+  border-top: 1px solid #e9eaf0;
+  padding: 10px;
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+/* optional: make buttons fill on small screens */
+@media (max-width: 520px){
+  .contact-actions-sticky{
+    justify-content: space-between;
+  }
+  .contact-actions-sticky .see-all{
+    flex: 1;
+    justify-content: center;
+  }
+}
