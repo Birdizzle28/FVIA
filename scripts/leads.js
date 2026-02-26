@@ -1170,10 +1170,15 @@ async function openContactDetail(c) {
         update.zip = ($("#edit-zip")?.value || "").trim() || null;
       }
 
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
+      if (!user) return;
+
       const { data: updated, error } = await supabase
         .from("contacts")
         .update(update)
         .eq("id", c.id)
+        .eq("owning_agent_id", user.id) // ✅ must own it
         .select("*")
         .single();
 
