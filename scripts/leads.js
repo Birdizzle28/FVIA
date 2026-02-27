@@ -696,8 +696,29 @@ async function initContactPicker() {
       placeholderValue: "Search contacts…",
       itemSelectText: "",
     });
+    // ✅ Force floating label to stay floated for Choices select
+    function syncContactPickerFilled() {
+      const field = el.closest(".field");
+      if (!field) return;
+    
+      // treat ANY non-empty value as filled
+      const hasValue = String(el.value || "").trim().length > 0;
+    
+      // IMPORTANT: if you're using "New contact (auto-create)" as value "",
+      // this keeps label DOWN for that option (correct)
+      field.classList.toggle("filled", hasValue);
+    }
+    
+    // run once after render
+    syncContactPickerFilled();
+    
+    // keep it synced on every possible event Choices might trigger
+    ["change", "input", "blur"].forEach(evt => el.addEventListener(evt, syncContactPickerFilled));
+    
+    // Choices sometimes updates async; this catches the “floats then drops” issue
+    setTimeout(syncContactPickerFilled, 0);
+    setTimeout(syncContactPickerFilled, 50);
   }
-
   initFloatingLabels(document);
 }
 
