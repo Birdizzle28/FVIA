@@ -437,15 +437,14 @@ a, button{ outline-color: var(--brand); }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 980px){
-  #contacts-list .contacts-head,
-  #contacts-list .contact-row{
-    grid-template-columns: 40px 1.2fr 1fr; /* mark | name | email */
+  #contacts-list{
+    overflow-x:auto;
   }
 
-  /* hide PHONE (3rd column), keep EMAIL (4th) */
-  #contacts-list .contacts-head > :nth-child(3),
-  #contacts-list .contact-row > :nth-child(3){
-    display:none;
+  #contacts-list .contacts-head,
+  #contacts-list .contact-row{
+    min-width: 760px; /* adjust */
+    grid-template-columns: 48px 1.2fr 1fr 1fr; /* keep all 4 */
   }
 }
 @media (max-width: 640px){
