@@ -24,6 +24,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   
   /* ---------------- Elements ---------------- */
   const form = document.getElementById("appointment-form");
+  if (form) form.noValidate = true;
   const titleInput = document.getElementById("title");
 
   const locationType = document.getElementById("location-type");
