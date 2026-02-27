@@ -59,11 +59,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   const apptDeleteBtn = document.getElementById("appt-delete");
   
   let activeClickedEvent = null;
-  
+
+  function getContactIdsFromUrl() {
+    const params = new URLSearchParams(window.location.search);
+    const raw = params.get("contact_ids");
+    if (!raw) return [];
+    try {
+      const arr = JSON.parse(raw);
+      return Array.isArray(arr) ? arr.filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  }
   (function prefillFromQuery() {
     const params = new URLSearchParams(window.location.search);
     const apptType = (params.get("appointment_type") || "").toLowerCase();
     window.__newAppointmentType = apptType || ""; // "contact" or ""
+  
+    // ✅ capture passed contact ids
+    window.__contactIdsFromQuery = getContactIdsFromUrl();
+  
     if (apptType !== "contact") return;
   
     const t = params.get("prefill_title");
@@ -72,7 +87,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (t && titleInput) titleInput.value = t;
     if (n && notesInput) notesInput.value = n;
   
-    // keep your floating labels correct (your file already has this function)
     if (typeof initFloatingLabels === "function") initFloatingLabels(document);
   })();
 
@@ -1227,6 +1241,11 @@ setHeaderTitle(calendar.view.title);
     const url = (urlInput?.value || "").trim() || null;
     const notes = (notesInput?.value || "").trim() || null;
 
+    const contactIds = Array.isArray(window.__contactIdsFromQuery)
+      ? window.__contactIdsFromQuery
+      : [];
+    
+    const isContactAppt = ((window.__newAppointmentType || "").toLowerCase() === "contact");
     const payload = {
       agent_id: user.id,
       scheduled_for: start.toISOString(),
@@ -1238,6 +1257,7 @@ setHeaderTitle(calendar.view.title);
       repeat_custom: repCustom,
       url,
       notes,
+      contact_id: (isContactAppt && contactIds.length ? contactIds[0] : null),
       appointment_type: (window.__newAppointmentType || "").toLowerCase() || null,
       remind_enabled: false,
       remind_before_minutes: null,
