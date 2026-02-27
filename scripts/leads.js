@@ -1206,7 +1206,16 @@ async function openContactDetail(c) {
         <div class="contact-sec-view" data-view="phones">
           ${
             (c.phones || []).length
-              ? (c.phones || []).map(p => `<a href="tel:${toE164(p) || p}">${escapeHtml(p)}</a>`).join("<br>")
+              ? (c.phones || []).map(p => {
+                  const d10 = digits10(p);
+                  return `
+                    <a
+                      class="contact-phone"
+                      data-phone-d10="${escapeHtml(d10)}"
+                      href="tel:${escapeHtml(toE164(p) || p)}"
+                    >${escapeHtml(formatUSPhone(p))}</a>
+                  `;
+                }).join("<br>")
               : "—"
           }
         </div>
@@ -1544,17 +1553,17 @@ async function openContactDetail(c) {
   let noteCache = [];
 
   function applyWrongPhoneHighlights(notes) {
+    const normStatus = (s) => String(s || "").trim().toLowerCase();
     const wrongSet = new Set(
       (notes || [])
-        .filter(n => (n.status || "") === "Wrong Number" && n.phone)
+        .filter(n => normStatus(n.status) === "wrong number" && n.phone)
         .map(n => digits10(n.phone))
         .filter(Boolean)
     );
   
     body.querySelectorAll(".contact-phone[data-phone-d10]").forEach(a => {
-      const d10 = a.getAttribute("data-phone-d10") || "";
-      const isWrong = wrongSet.has(d10);
-      a.classList.toggle("contact-phone--wrong", isWrong);
+      const d10 = digits10(a.getAttribute("data-phone-d10"));
+      a.classList.toggle("contact-phone--wrong", wrongSet.has(d10));
     });
   }
 
