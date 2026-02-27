@@ -1141,3 +1141,52 @@ a, button{ outline-color: var(--brand); }
   font-size:20px;
   line-height:1;
 }
+/* ---------- Mobile: Notes header spacing + wrapping ---------- */
+@media (max-width: 560px) {
+  .notes-head{
+    gap: 8px;
+  }
+
+  /* Row 1: left + add button */
+  .notes-left{
+    flex: 1;
+    min-width: 0;
+  }
+
+  .notes-right{
+    margin-left: auto;
+  }
+
+  /* Row 2: filters take full width and wrap nicely */
+  .notes-mid{
+    flex: 0 0 100%;
+    justify-content: flex-start;
+    gap: 8px;
+  }
+
+  .notes-mid input,
+  .notes-mid select{
+    max-width: none;
+    width: 100%;
+    min-width: 0;
+  }
+
+  /* Make filters 2-column so they don’t stack weird */
+  .notes-mid{
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: center;
+  }
+
+  /* Put Clear full-width on its own row */
+  #note-filter-clear{
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
+  /* Keep + button compact */
+  .note-add-btn{
+    width: 34px;
+    height: 34px;
+  }
+}
