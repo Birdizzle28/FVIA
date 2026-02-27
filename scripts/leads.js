@@ -1028,6 +1028,20 @@ function formatLocalLong(iso, tz) {
   const opt = { year:"numeric", month:"long", day:"numeric", hour:"numeric", minute:"2-digit" };
   return new Intl.DateTimeFormat(undefined, { ...opt, timeZone: tz || undefined }).format(d);
 }
+async function fetchContactAppointments(contactId) {
+  const { data, error } = await supabase
+    .from("appointments")
+    .select("id, scheduled_for, ends_at, location_type, url")
+    .eq("contact_id", contactId)
+    .order("scheduled_for", { ascending: true })
+    .limit(300);
+
+  if (error) {
+    console.error("fetchContactAppointments error:", error);
+    return [];
+  }
+  return data || [];
+}
 
 async function fetchContactNoteDetails(contactId) {
   const { data: { session } } = await supabase.auth.getSession();
@@ -1321,6 +1335,15 @@ async function openContactDetail(c) {
             <button id="note-edit-btn" class="see-all"><i class="fa-solid fa-pen-to-square"></i> Edit</button>
           </div>
         </div>
+      </div>
+      
+      <!-- Appointments -->
+      <div class="contact-sec" data-sec="appointments">
+        <div class="contact-sec-head">
+          <strong><i class="fa-solid fa-calendar-days"></i> Appointments</strong>
+        </div>
+
+        <div id="contact-appointments-list" style="margin-top:10px;opacity:.9;">Loading…</div>
       </div>
 
       <!-- Policies -->
