@@ -986,6 +986,7 @@ const NOTE_STATUS = [
   "No Answer (Door Knock)",
   "Answered (Door Knock)",
   "Called Back",
+  "Appointment",
   "Straight to Voicemail",
   "Dead Air",
   "Wrong Number",
