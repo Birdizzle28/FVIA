@@ -1543,6 +1543,21 @@ async function openContactDetail(c) {
   // render chips
   let noteCache = [];
 
+  function applyWrongPhoneHighlights(notes) {
+    const wrongSet = new Set(
+      (notes || [])
+        .filter(n => (n.status || "") === "Wrong Number" && n.phone)
+        .map(n => digits10(n.phone))
+        .filter(Boolean)
+    );
+  
+    body.querySelectorAll(".contact-phone[data-phone-d10]").forEach(a => {
+      const d10 = a.getAttribute("data-phone-d10") || "";
+      const isWrong = wrongSet.has(d10);
+      a.classList.toggle("contact-phone--wrong", isWrong);
+    });
+  }
+
   function isoToLocalYMD(iso, tz) {
     if (!iso) return "";
     const d = new Date(iso);
@@ -1570,6 +1585,7 @@ async function openContactDetail(c) {
   
     // load once each render (keeps it fresh after edits)
     noteCache = await fetchContactNoteDetails(c.id);
+    applyWrongPhoneHighlights(noteCache);
   
     const { statusVal } = getActiveNoteFilters();
   
