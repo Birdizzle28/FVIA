@@ -1190,16 +1190,44 @@ a, button{ outline-color: var(--brand); }
     height: 34px;
   }
 }
+/* ---------- Mobile: Stack notes controls cleanly ---------- */
 @media (max-width: 560px) {
+
+  .notes-head{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  /* Hide title text (icon only) */
   .sec-title-text{
     display: none;
   }
 
-  .sec-title{
-    gap: 0;
+  /* Make filters stack */
+  .notes-mid{
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    width: 100%;
   }
 
-  .sec-title i{
+  .notes-mid input,
+  .notes-mid select,
+  #note-filter-clear,
+  .note-add-btn{
+    width: 100%;
+    max-width: none;
+  }
+
+  /* Make + button same style height as others */
+  .note-add-btn{
+    height: 38px;
     font-size: 18px;
+  }
+
+  /* Keep + in its own row */
+  .notes-right{
+    width: 100%;
   }
 }
