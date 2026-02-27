@@ -502,22 +502,51 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       // ✅ If multiple contact ids were passed, insert one appointment per contact
       if (isContactAppt && contactIds.length > 1) {
-        const rows = contactIds.map((cid) => ({
+        const apptRows = contactIds.map((cid) => ({
           ...payloadToInsert,
           contact_id: cid,
         }));
       
-        const { error } = await supabase.from("appointments").insert(rows);
-        if (error) throw error;
+        const { error: apptErr } = await supabase.from("appointments").insert(apptRows);
+        if (apptErr) throw apptErr;
+      
+        // ✅ ALSO write "Appointment" notes for each contact
+        const noteRows = contactIds.map((cid) => ({
+          contact_id: cid,
+          agent_id: user.id,
+          status: "Appointment",
+          details: (payloadToInsert.notes || payloadToInsert.title || "").trim() || null,
+          phone: null,
+        }));
+      
+        const { error: noteErr } = await supabase.from("contact_notes_details").insert(noteRows);
+        if (noteErr) throw noteErr;
       
       } else {
-        const row = {
+        const cid =
+          (isContactAppt && contactIds.length ? contactIds[0] : payloadToInsert.contact_id || null);
+      
+        const apptRow = {
           ...payloadToInsert,
-          contact_id: (isContactAppt && contactIds.length ? contactIds[0] : payloadToInsert.contact_id || null),
+          contact_id: cid,
         };
       
-        const { error } = await supabase.from("appointments").insert(row);
-        if (error) throw error;
+        const { error: apptErr } = await supabase.from("appointments").insert(apptRow);
+        if (apptErr) throw apptErr;
+      
+        // ✅ Only create the note if we actually have a contact_id
+        if (cid) {
+          const noteRow = {
+            contact_id: cid,
+            agent_id: user.id,
+            status: "Appointment",
+            details: (payloadToInsert.notes || payloadToInsert.title || "").trim() || null,
+            phone: null,
+          };
+      
+          const { error: noteErr } = await supabase.from("contact_notes_details").insert(noteRow);
+          if (noteErr) throw noteErr;
+        }
       }
   
       closeReminderModal();
