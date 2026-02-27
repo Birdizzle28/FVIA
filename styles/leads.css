@@ -1231,3 +1231,27 @@ a, button{ outline-color: var(--brand); }
     width: 100%;
   }
 }
+
+.contact-phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+.contact-phone--wrong {
+  color: #ff2a2a !important;
+  font-weight: 800;
+  text-shadow: 0 0 10px rgba(255,42,42,.75);
+}
+
+.contact-phone--wrong::before {
+  content: "WN";
+  font-size: 11px;
+  font-weight: 900;
+  padding: 2px 6px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,42,42,.65);
+  box-shadow: 0 0 10px rgba(255,42,42,.55);
+  line-height: 1;
+}
