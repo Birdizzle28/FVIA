@@ -1167,7 +1167,7 @@ async function openContactDetail(c) {
       <div class="contact-sec" data-sec="name">
         <div class="contact-sec-head">
           <strong class="sec-title">
-            <i class="fa-solid fa-note-sticky"></i>
+            <i class="fa-solid fa-user"></i>
             <span class="sec-title-text">Name</span>
           </strong>
           <button class="contact-edit-btn" data-edit="name" title="Edit name">
@@ -1195,7 +1195,7 @@ async function openContactDetail(c) {
       <div class="contact-sec" data-sec="phones">
         <div class="contact-sec-head">
           <strong class="sec-title">
-            <i class="fa-solid fa-note-sticky"></i>
+            <i class="fa-solid fa-phone"></i>
             <span class="sec-title-text">Phone(s)</span>
           </strong>
           <button class="contact-edit-btn" data-edit="phones" title="Edit phones">
@@ -1225,7 +1225,7 @@ async function openContactDetail(c) {
       <div class="contact-sec" data-sec="emails">
         <div class="contact-sec-head">
           <strong class="sec-title">
-            <i class="fa-solid fa-note-sticky"></i>
+            <i class="fa-solid fa-envelope"></i>
             <span class="sec-title-text">Email(s)</span>
           </strong>
           <button class="contact-edit-btn" data-edit="emails" title="Edit emails">
@@ -1255,7 +1255,7 @@ async function openContactDetail(c) {
       <div class="contact-sec" data-sec="address">
         <div class="contact-sec-head">
           <strong class="sec-title">
-            <i class="fa-solid fa-note-sticky"></i>
+            <i class="fa-solid fa-location-dot"></i>
             <span class="sec-title-text">Address</span>
           </strong>
           <button class="contact-edit-btn" data-edit="address" title="Edit address">
@@ -1369,7 +1369,7 @@ async function openContactDetail(c) {
       <!-- Appointments -->
       <div class="contact-sec" data-sec="appointments">
         <div class="contact-sec-head">
-          <strong><i class="fa-solid fa-calendar-days"></i> Appointments</strong>
+          <strong><i class="fa-solid fa-calendar-days"></i><span class="sec-title-text">Appointments</span></strong>
         </div>
 
         <div id="contact-appointments-list" style="margin-top:10px;opacity:.9;">Loading…</div>
@@ -1378,7 +1378,10 @@ async function openContactDetail(c) {
       <!-- Policies -->
       <div class="contact-sec" data-sec="policies">
         <div class="contact-sec-head">
-          <strong><i class="fa-solid fa-file-shield"></i> Policies</strong>
+          <strong class="sec-title">
+            <i class="fa-solid fa-note-sticky"></i>
+            <span class="sec-title-text">Policies</span>
+          </strong>
         </div>
       
         <div id="contact-policies-list" style="margin-top:10px;opacity:.9;">Loading…</div>
@@ -1387,7 +1390,10 @@ async function openContactDetail(c) {
       <!-- Connected Leads -->
       <div class="contact-sec" data-sec="leads">
         <div class="contact-sec-head">
-          <strong><i class="fa-solid fa-link"></i> Connected Leads</strong>
+          <strong class="sec-title">
+            <i class="fa-solid fa-link"></i>
+            <span class="sec-title-text">Leads</span>
+          </strong>
         </div>
         <div id="contact-leads-list" style="opacity:.85;">Loading…</div>
       </div>
