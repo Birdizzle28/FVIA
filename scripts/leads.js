@@ -1926,7 +1926,11 @@ function renderContacts() {
     list = list.filter((c) => {
       const name = `${c.first_name || ""} ${c.last_name || ""}`.toLowerCase();
       const phones = (c.phones || []).join(" ").toLowerCase();
-      const emails = (c.emails || []).join(" ").toLowerCase();
+      const emails = (Array.isArray(c.emails) ? c.emails : [])
+        .map(e => String(e || "").trim())
+        .filter(Boolean)
+        .join(" ")
+        .toLowerCase();
       return name.includes(q) || phones.includes(q) || emails.includes(q);
     });
   }
@@ -1961,7 +1965,9 @@ function renderContacts() {
 
     const name = `${c.first_name || ""} ${c.last_name || ""}`.trim() || "(No name)";
     const phone = c.phones && c.phones[0] ? c.phones[0] : "";
-    const email = c.emails && c.emails[0] ? c.emails[0] : "";
+    const email = (Array.isArray(c.emails) ? c.emails : [])
+      .map(e => String(e || "").trim())
+      .find(e => e.length > 0) || "";
     const checked = selectedIds.has(c.id) ? "checked" : "";
 
     row.innerHTML = `
@@ -2002,7 +2008,14 @@ async function loadContacts() {
   let q = supabase
     .from("contacts")
     .select(`
-      *,
+      id,
+      created_at,
+      first_name,
+      last_name,
+      phones,
+      emails,
+      needs_dnc_check,
+      owning_agent_id,
       internal_dnc:internal_dnc!internal_dnc_contact_id_fkey ( id, is_active )
     `)
     .eq("owning_agent_id", user.id) // ✅ ALWAYS restrict (admins too)
