@@ -1543,7 +1543,15 @@ async function openContactDetail(c) {
           phone,
         });
       }
-
+      // ✅ If note indicates a real interaction, mark all un-contacted leads as contacted
+      const SHOULD_TOUCH = new Set(["Answered", "Answered (Door Knock)", "Called Back", "Other"]);
+      if (SHOULD_TOUCH.has(s)) {
+        const { data: touched, error: touchErr } = await supabase.rpc("mark_leads_contacted", {
+          p_contact_id: c.id
+        });
+        if (touchErr) console.error("mark_leads_contacted failed:", touchErr);
+        // touched = number of leads updated (optional)
+      }
       closeMini("#add-note-modal");
       await renderNoteChips();
     } catch (e) {
