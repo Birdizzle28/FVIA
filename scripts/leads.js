@@ -1947,8 +1947,7 @@ function renderContacts() {
   });
 
   const head = document.createElement("div");
-  head.style.cssText =
-    "display:grid;grid-template-columns:40px 1fr 1fr 1fr;gap:8px;padding:10px 14px;border-bottom:1px solid #eef0f6;background:#f9fafe;";
+  head.className = "contacts-head";
   head.innerHTML = `
     <div>${selectMode ? '<i class="fa-regular fa-square-check"></i>' : ""}</div>
     <div><strong>Name</strong></div>
