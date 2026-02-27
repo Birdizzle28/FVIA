@@ -1267,3 +1267,40 @@ a, button{ outline-color: var(--brand); }
   font-weight: 900 !important;
   text-shadow: 0 0 10px rgba(255,42,42,.75) !important;
 }
+
+/* ============================
+   Contacts: ALWAYS 4 columns + horizontal scroll
+   (Overrides old mobile-hide behavior)
+   ============================ */
+
+#contacts-list{
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Force SAME grid on header + rows at all widths */
+#contacts-list .contacts-head,
+#contacts-list .contact-row{
+  display: grid !important;
+  grid-template-columns: 48px 1.2fr 1fr 1fr !important;
+  gap: 10px !important;
+  align-items: center !important;
+  min-width: 760px;  /* controls when scroll appears */
+}
+
+/* NEVER hide email column on mobile */
+#contacts-list .contacts-head > :last-child,
+#contacts-list .contact-row > :last-child{
+  display: block !important;
+}
+
+/* Keep header text from wrapping weird */
+#contacts-list .contacts-head > div{
+  white-space: nowrap;
+}
+
+/* Allow row cells to shrink properly without smashing together */
+#contacts-list .contacts-head > div,
+#contacts-list .contact-row > div{
+  min-width: 0;
+}
