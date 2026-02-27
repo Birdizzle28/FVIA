@@ -1002,13 +1002,14 @@ function statusAbbr(s) {
     "Called Back": "CB",
     "Dead Air": "DA",
     "Wrong Number": "WN",
+    "Appointment": "Appt",
     "Other": "O",
   };
   return map[s] || "O";
 }
 
 function statusColorClass(s) {
-  const blue = new Set(["Answered", "Answered (Door Knock)", "Called Back"]);
+  const blue = new Set(["Answered", "Answered (Door Knock)", "Called Back", "Appointment"]);
   const red  = new Set(["No Answer", "Straight to Voicemail", "No Answer (Door Knock)", "Dead Air", "Wrong Number"]);
   if (blue.has(s)) return "note-pill--blue";
   if (red.has(s))  return "note-pill--red";
