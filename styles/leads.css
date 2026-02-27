@@ -1199,10 +1199,10 @@ a, button{ outline-color: var(--brand); }
     gap: 10px;
   }
 
-  /* Hide title text (icon only) */
+  /* Hide title text (icon only) 
   .sec-title-text{
     display: none;
-  }
+  }*/
 
   /* Make filters stack */
   .notes-mid{
