@@ -1277,13 +1277,14 @@ async function openContactDetail(c) {
             <i class="fa-solid fa-note-sticky"></i> Notes
           </strong>
         
-          <div id="note-filters" style="display:flex;align-items:center;gap:8px;justify-content:center;flex:1;min-width:220px;">
-            <input
-              id="note-filter-date"
-              type="date"
-              style="padding:8px 10px;border:1px solid #d6d9e2;border-radius:10px;"
-              title="Filter by date"
-            />
+          <input
+            id="note-filter-range"
+            type="text"
+            placeholder="Date range"
+            readonly
+            style="padding:8px 10px;border:1px solid #d6d9e2;border-radius:10px;min-width:160px;"
+            title="Filter by date range"
+          />
             <select
               id="note-filter-status"
               style="padding:8px 10px;border:1px solid #d6d9e2;border-radius:10px;"
@@ -1408,7 +1409,58 @@ async function openContactDetail(c) {
   
   // Local timezone (from browser). If you later save agent timezone, use that instead.
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
-
+  let noteRange = { start: null, end: null }; // local dates (midnight to end of day)
+  let noteRangePicker = null;
+  
+  function parseYMD(ymd) {
+    // ymd = "YYYY-MM-DD"
+    const [y, m, d] = ymd.split("-").map(n => parseInt(n, 10));
+    if (!y || !m || !d) return null;
+    return new Date(y, m - 1, d);
+  }
+  
+  function startOfDay(d) {
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return x;
+  }
+  
+  function endOfDay(d) {
+    const x = new Date(d);
+    x.setHours(23, 59, 59, 999);
+    return x;
+  }
+  
+  // Flatpickr range init
+  if (window.flatpickr && $("#note-filter-range")) {
+    // destroy if modal reopens and re-inits
+    try { noteRangePicker?.destroy?.(); } catch(e) {}
+  
+    noteRangePicker = flatpickr("#note-filter-range", {
+      mode: "range",
+      dateFormat: "Y-m-d",
+      allowInput: false,
+      clickOpens: true,
+      onChange: (selectedDates, dateStr) => {
+        // selectedDates are JS Dates (local)
+        if (!selectedDates || selectedDates.length === 0) {
+          noteRange.start = null;
+          noteRange.end = null;
+        } else if (selectedDates.length === 1) {
+          noteRange.start = startOfDay(selectedDates[0]);
+          noteRange.end = endOfDay(selectedDates[0]);
+        } else {
+          const a = selectedDates[0];
+          const b = selectedDates[1];
+          const s = a < b ? a : b;
+          const e = a < b ? b : a;
+          noteRange.start = startOfDay(s);
+          noteRange.end = endOfDay(e);
+        }
+        renderNoteChips();
+      },
+    });
+  }
   // Load connected appointments
   const apptBox = $("#contact-appointments-list");
   const appts = await fetchContactAppointments(c.id);
@@ -1521,9 +1573,13 @@ async function openContactDetail(c) {
       list = list.filter(n => (n.status || "") === statusVal);
     }
   
-    // apply date filter (LOCAL to tz)
-    if (dateVal) {
-      list = list.filter(n => isoToLocalYMD(n.created_at, tz) === dateVal);
+    // apply date range filter (LOCAL)
+    if (noteRange.start && noteRange.end) {
+      list = list.filter(n => {
+        if (!n.created_at) return false;
+        const d = new Date(n.created_at); // created_at ISO -> Date
+        return d >= noteRange.start && d <= noteRange.end;
+      });
     }
   
     if (!list.length) {
@@ -1564,7 +1620,19 @@ async function openContactDetail(c) {
   }
 
   // Filters: rerender on change
-  $("#note-filter-date")?.addEventListener("change", renderNoteChips);
+  $("#note-filter-status")?.addEventListener("change", renderNoteChips);
+
+  $("#note-filter-clear")?.addEventListener("click", () => {
+    $("#note-filter-status") && ($("#note-filter-status").value = "");
+  
+    // clear flatpickr + stored range
+    noteRange.start = null;
+    noteRange.end = null;
+    if (noteRangePicker) noteRangePicker.clear();
+    $("#note-filter-range") && ($("#note-filter-range").value = "");
+  
+    renderNoteChips();
+  });
   $("#note-filter-status")?.addEventListener("change", renderNoteChips);
   
   $("#note-filter-clear")?.addEventListener("click", () => {
