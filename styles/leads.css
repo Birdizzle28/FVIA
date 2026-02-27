@@ -1255,3 +1255,10 @@ a, button{ outline-color: var(--brand); }
   box-shadow: 0 0 10px rgba(255,42,42,.55);
   line-height: 1;
 }
+.contact-sec-view a.contact-phone--wrong,
+.contact-sec-view a.contact-phone--wrong:visited,
+.contact-sec-view a.contact-phone--wrong:hover {
+  color: #ff2a2a !important;
+  font-weight: 900 !important;
+  text-shadow: 0 0 10px rgba(255,42,42,.75) !important;
+}
