@@ -1166,7 +1166,10 @@ async function openContactDetail(c) {
       <!-- Name -->
       <div class="contact-sec" data-sec="name">
         <div class="contact-sec-head">
-          <strong><i class="fa-solid fa-user"></i> Name</strong>
+          <strong class="sec-title">
+            <i class="fa-solid fa-note-sticky"></i>
+            <span class="sec-title-text">Name</span>
+          </strong>
           <button class="contact-edit-btn" data-edit="name" title="Edit name">
             <i class="fa-solid fa-pen-to-square"></i>
           </button>
@@ -1191,7 +1194,10 @@ async function openContactDetail(c) {
       <!-- Phones -->
       <div class="contact-sec" data-sec="phones">
         <div class="contact-sec-head">
-          <strong><i class="fa-solid fa-phone"></i> Phone(s)</strong>
+          <strong class="sec-title">
+            <i class="fa-solid fa-note-sticky"></i>
+            <span class="sec-title-text">Phone(s)</span>
+          </strong>
           <button class="contact-edit-btn" data-edit="phones" title="Edit phones">
             <i class="fa-solid fa-pen-to-square"></i>
           </button>
@@ -1218,7 +1224,10 @@ async function openContactDetail(c) {
       <!-- Emails -->
       <div class="contact-sec" data-sec="emails">
         <div class="contact-sec-head">
-          <strong><i class="fa-solid fa-envelope"></i> Email(s)</strong>
+          <strong class="sec-title">
+            <i class="fa-solid fa-note-sticky"></i>
+            <span class="sec-title-text">Email(s)</span>
+          </strong>
           <button class="contact-edit-btn" data-edit="emails" title="Edit emails">
             <i class="fa-solid fa-pen-to-square"></i>
           </button>
@@ -1245,7 +1254,10 @@ async function openContactDetail(c) {
       <!-- Address -->
       <div class="contact-sec" data-sec="address">
         <div class="contact-sec-head">
-          <strong><i class="fa-solid fa-location-dot"></i> Address</strong>
+          <strong class="sec-title">
+            <i class="fa-solid fa-note-sticky"></i>
+            <span class="sec-title-text">Address</span>
+          </strong>
           <button class="contact-edit-btn" data-edit="address" title="Edit address">
             <i class="fa-solid fa-pen-to-square"></i>
           </button>
@@ -1274,8 +1286,9 @@ async function openContactDetail(c) {
       <div class="contact-sec" data-sec="notes">
         <div class="contact-sec-head notes-head">
           <div class="notes-left">
-            <strong class="notes-title">
-              <i class="fa-solid fa-note-sticky"></i> Notes
+            <strong class="sec-title">
+              <i class="fa-solid fa-note-sticky"></i>
+              <span class="sec-title-text">Notes</span>
             </strong>
           </div>
       
