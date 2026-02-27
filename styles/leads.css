@@ -1304,3 +1304,21 @@ a, button{ outline-color: var(--brand); }
 #contacts-list .contact-row > div{
   min-width: 0;
 }
+/* ✅ floating label should lift on focus too */
+.field:focus-within label {
+  transform: translateY(-18px) scale(.9);
+  opacity: 0.9;
+}
+/* ✅ give Choices fields room for the label */
+.field .choices__inner {
+  padding-top: 18px !important;
+}
+
+/* optional: make label sit above the Choices text when filled/focused */
+.field.filled label,
+.field:focus-within label {
+  z-index: 2;
+}
+.field .choices {
+  z-index: 1;
+}
