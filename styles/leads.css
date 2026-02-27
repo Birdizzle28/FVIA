@@ -1190,3 +1190,16 @@ a, button{ outline-color: var(--brand); }
     height: 34px;
   }
 }
+@media (max-width: 560px) {
+  .sec-title-text{
+    display: none;
+  }
+
+  .sec-title{
+    gap: 0;
+  }
+
+  .sec-title i{
+    font-size: 18px;
+  }
+}
