@@ -1304,11 +1304,6 @@ a, button{ outline-color: var(--brand); }
 #contacts-list .contact-row > div{
   min-width: 0;
 }
-/* ✅ floating label should lift on focus too */
-.field:focus-within label {
-  transform: translateY(-18px) scale(.9);
-  opacity: 0.9;
-}
 /* ✅ give Choices fields room for the label */
 .field .choices__inner {
   padding-top: 18px !important;
