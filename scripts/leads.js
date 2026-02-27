@@ -1272,38 +1272,27 @@ async function openContactDetail(c) {
 
       <!-- Notes (structured) -->
       <div class="contact-sec" data-sec="notes">
-        <div class="contact-sec-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-          <strong style="display:flex;align-items:center;gap:8px;">
-            <i class="fa-solid fa-note-sticky"></i> Notes
-          </strong>
-        
-          <input
-            id="note-filter-range"
-            type="text"
-            placeholder="Date range"
-            readonly
-            style="padding:8px 10px;border:1px solid #d6d9e2;border-radius:10px;min-width:160px;"
-            title="Filter by date range"
-          />
-            <select
-              id="note-filter-status"
-              style="padding:8px 10px;border:1px solid #d6d9e2;border-radius:10px;"
-              title="Filter by type"
-            >
-              <option value="">All types</option>
+        <div class="contact-sec-head notes-head">
+          <div class="notes-left">
+            <strong class="notes-title">
+              <i class="fa-solid fa-note-sticky"></i> Notes
+            </strong>
+          </div>
+      
+          <div class="notes-mid">
+            <input id="note-filter-range" type="text" placeholder="Date" readonly title="Filter by date range" />
+            <select id="note-filter-status" title="Filter by type">
+              <option value="">Type</option>
               ${NOTE_STATUS.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("")}
             </select>
-        
-            <button id="note-filter-clear" class="see-all" type="button" style="padding:8px 12px;">
-              Clear
-            </button>
+            <button id="note-filter-clear" class="see-all" type="button" title="Clear filters">Clear</button>
           </div>
-        
-          <button id="add-note-btn" class="see-all" title="Add note" style="display:inline-flex;gap:8px;align-items:center;">
-            <i class="fa-solid fa-plus"></i> Add
-          </button>
+      
+          <div class="notes-right">
+            <button id="add-note-btn" class="see-all note-add-btn" type="button" title="Add note">+</button>
+          </div>
         </div>
-
+      
         <div id="contact-notes-chips" class="note-chip-row" style="margin-top:10px;opacity:.95;">
           Loading…
         </div>
@@ -1552,9 +1541,8 @@ async function openContactDetail(c) {
   }
   
   function getActiveNoteFilters() {
-    const dateVal = ($("#note-filter-date")?.value || "").trim();     // "YYYY-MM-DD"
-    const statusVal = ($("#note-filter-status")?.value || "").trim(); // exact enum string or ""
-    return { dateVal, statusVal };
+    const statusVal = ($("#note-filter-status")?.value || "").trim();
+    return { statusVal };
   }
   
   async function renderNoteChips() {
@@ -1564,7 +1552,7 @@ async function openContactDetail(c) {
     // load once each render (keeps it fresh after edits)
     noteCache = await fetchContactNoteDetails(c.id);
   
-    const { dateVal, statusVal } = getActiveNoteFilters();
+    const { statusVal } = getActiveNoteFilters();
   
     let list = noteCache.slice();
   
@@ -1633,14 +1621,7 @@ async function openContactDetail(c) {
   
     renderNoteChips();
   });
-  $("#note-filter-status")?.addEventListener("change", renderNoteChips);
-  
-  $("#note-filter-clear")?.addEventListener("click", () => {
-    $("#note-filter-date") && ($("#note-filter-date").value = "");
-    $("#note-filter-status") && ($("#note-filter-status").value = "");
-    renderNoteChips();
-  });
-  
+ 
   function openNoteDetail(note) {
     const bodyEl = $("#note-detail-body");
     if (!bodyEl) return;
