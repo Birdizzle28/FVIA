@@ -1601,7 +1601,7 @@ async function openContactDetail(c) {
         });
       }
       // ✅ If note indicates a real interaction, mark all un-contacted leads as contacted
-      const SHOULD_TOUCH = new Set(["Answered", "Answered (Door Knock)", "Called Back", "Other"]);
+      const SHOULD_TOUCH = new Set(["Answered", "Answered (Door Knock)", "Called Back", "Appointment", "Other"]);
       if (SHOULD_TOUCH.has(s)) {
         const { data: touched, error: touchErr } = await supabase.rpc("mark_leads_contacted", {
           p_contact_id: c.id
