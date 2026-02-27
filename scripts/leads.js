@@ -1379,7 +1379,7 @@ async function openContactDetail(c) {
       <div class="contact-sec" data-sec="policies">
         <div class="contact-sec-head">
           <strong class="sec-title">
-            <i class="fa-solid fa-note-sticky"></i>
+            <i class="fa-solid fa-file-shield"></i>
             <span class="sec-title-text">Policies</span>
           </strong>
         </div>
