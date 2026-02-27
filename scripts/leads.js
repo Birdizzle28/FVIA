@@ -780,7 +780,6 @@ async function ensureContactIdFromLeadForm() {
     city: $("#lead-city")?.value?.trim() || null,
     state: $("#lead-state")?.value || null,
     zip: $("#lead-zip")?.value?.trim() || null,
-    notes: $("#lead-notes")?.value?.trim() || null,
     needs_dnc_check: onNationalDnc,
   };
 
