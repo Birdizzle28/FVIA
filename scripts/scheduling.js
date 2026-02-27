@@ -494,8 +494,31 @@ document.addEventListener("DOMContentLoaded", async () => {
         remind_before_minutes: reminderChoice === "yes" ? remindBeforeMinutes : null,
       };
   
-      const { error } = await supabase.from("appointments").insert(payloadToInsert);
-      if (error) throw error;
+      const contactIds = Array.isArray(window.__contactIdsFromQuery)
+        ? window.__contactIdsFromQuery
+        : [];
+      
+      const isContactAppt = ((window.__newAppointmentType || "").toLowerCase() === "contact");
+      
+      // ✅ If multiple contact ids were passed, insert one appointment per contact
+      if (isContactAppt && contactIds.length > 1) {
+        const rows = contactIds.map((cid) => ({
+          ...payloadToInsert,
+          contact_id: cid,
+        }));
+      
+        const { error } = await supabase.from("appointments").insert(rows);
+        if (error) throw error;
+      
+      } else {
+        const row = {
+          ...payloadToInsert,
+          contact_id: (isContactAppt && contactIds.length ? contactIds[0] : payloadToInsert.contact_id || null),
+        };
+      
+        const { error } = await supabase.from("appointments").insert(row);
+        if (error) throw error;
+      }
   
       closeReminderModal();
   
