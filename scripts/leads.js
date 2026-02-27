@@ -2025,6 +2025,7 @@ async function loadContacts() {
   if (error) {
     console.error("contacts load error", error);
     contacts = [];
+    console.log("first contact emails:", contacts?.[0]?.emails, typeof contacts?.[0]?.emails);
     renderContacts();
     return;
   }
