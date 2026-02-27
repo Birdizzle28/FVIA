@@ -1959,9 +1959,7 @@ function renderContacts() {
   list.forEach((c) => {
     const row = document.createElement("div");
     row.className = "contact-row";
-    row.style.cssText =
-      "display:grid;grid-template-columns:40px 1fr 1fr 1fr;gap:8px;align-items:center;padding:12px 14px;border-bottom:1px solid #f1f2f6;cursor:pointer;";
-
+    
     const name = `${c.first_name || ""} ${c.last_name || ""}`.trim() || "(No name)";
     const phone = c.phones && c.phones[0] ? c.phones[0] : "";
     const email = (Array.isArray(c.emails) ? c.emails : [])
