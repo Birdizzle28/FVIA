@@ -1382,6 +1382,38 @@ async function openContactDetail(c) {
     // Local timezone (from browser). If you later save agent timezone, use that instead.
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
 
+  // Load connected appointments
+  const apptBox = $("#contact-appointments-list");
+  const appts = await fetchContactAppointments(c.id);
+
+  const fmtWhen = (iso) => formatLocalLong(iso, tz) || "—";
+
+  if (apptBox) {
+    if (!appts.length) {
+      apptBox.textContent = "—";
+    } else {
+      apptBox.innerHTML = `
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          ${appts.map(a => {
+            const when = `${fmtWhen(a.scheduled_for)} → ${fmtWhen(a.ends_at)}`;
+            const loc = (a.location_type || "—");
+            const url = (a.url || "").trim();
+
+            return `
+              <div style="border:1px solid #eef0f6;border-radius:12px;padding:10px;">
+                <div style="font-weight:800;">${escapeHtml(when)}</div>
+                <div style="opacity:.85;margin-top:4px;">
+                  ${escapeHtml(loc)}
+                  ${url ? ` • <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">Open link</a>` : ""}
+                </div>
+              </div>
+            `;
+          }).join("")}
+        </div>
+      `;
+    }
+  }
+  
   // mini modal open/close helpers
   function openMini(id) {
     const mm = $(id);
