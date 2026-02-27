@@ -1142,6 +1142,76 @@ function buildScheduleUrlFromContacts(picked) {
     `&contact_ids=${encodeURIComponent(JSON.stringify(picked.map(c => c.id)))}`
   );
 }
+function formatNoteStamp(iso, tz) {
+  const d = iso ? new Date(iso) : new Date();
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: tz || undefined,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  }).formatToParts(d);
+
+  const get = (t) => parts.find(p => p.type === t)?.value || "";
+  const mm = get("month");
+  const dd = get("day");
+  const yy = get("year");
+  const hh = get("hour");
+  const mi = get("minute");
+  const ap = get("dayPeriod"); // AM/PM
+
+  return `${mm}/${dd}/${yy} ${hh}:${mi} ${ap}`;
+}
+
+function buildContactNotesAppendLine({ status, created_at, details, phone, tz }) {
+  const abbr = statusAbbr(status); // your existing function
+  const stamp = formatNoteStamp(created_at, tz);
+
+  const det = (details || "").trim();
+  const ph  = (phone || "").trim();
+
+  // EXACT formatting requested: square brackets everywhere, phone bracket included if provided
+  // Ends with blank line + tab so next append doesn't need to add a tab first.
+  const line =
+    `[${abbr}] ` +
+    `[${stamp}] ` +
+    `[${det}] ` +
+    `${ph ? `[${formatUSPhone(ph)}]` : ""}` +
+    `\n\n\t`;
+
+  return line;
+}
+
+async function appendToContactNotes(contactId, appendLine) {
+  const { data: { session } } = await supabase.auth.getSession();
+  const user = session?.user;
+  if (!user) throw new Error("Not logged in.");
+
+  // Read current notes
+  const { data: row, error: readErr } = await supabase
+    .from("contacts")
+    .select("notes")
+    .eq("id", contactId)
+    .eq("owning_agent_id", user.id)
+    .single();
+
+  if (readErr) throw readErr;
+
+  const existing = String(row?.notes || "");
+
+  // If notes already exist, append directly (don’t trim; keep formatting)
+  const next = existing ? (existing + appendLine) : appendLine;
+
+  const { error: updErr } = await supabase
+    .from("contacts")
+    .update({ notes: next })
+    .eq("id", contactId)
+    .eq("owning_agent_id", user.id);
+
+  if (updErr) throw updErr;
+}
 
 async function openContactDetail(c) {
   const modal = $("#contact-detail-modal");
@@ -1757,12 +1827,28 @@ async function openContactDetail(c) {
         };
         await updateContactNote(noteId, patch);
       } else {
-        await insertContactNote({
+        const inserted = await insertContactNote({
           contactId: c.id,
           status: s,
           details,
           phone,
         });
+
+        // ✅ ALSO APPEND INTO contacts.notes (exact format + trailing blank line + tab)
+        const appendLine = buildContactNotesAppendLine({
+          status: inserted.status,
+          created_at: inserted.created_at,
+          details: inserted.details,
+          phone: inserted.phone,
+          tz
+        });
+
+        try {
+          await appendToContactNotes(c.id, appendLine);
+        } catch (e) {
+          console.error("appendToContactNotes failed:", e);
+          // don’t block note creation — but you’ll see the error
+        }
       }
       // ✅ If note indicates a real interaction, mark all un-contacted leads as contacted
       const SHOULD_TOUCH = new Set(["Answered", "Answered (Door Knock)", "Called Back", "Appointment", "Other"]);
