@@ -1272,8 +1272,32 @@ async function openContactDetail(c) {
 
       <!-- Notes (structured) -->
       <div class="contact-sec" data-sec="notes">
-        <div class="contact-sec-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
-          <strong><i class="fa-solid fa-note-sticky"></i> Notes</strong>
+        <div class="contact-sec-head" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+          <strong style="display:flex;align-items:center;gap:8px;">
+            <i class="fa-solid fa-note-sticky"></i> Notes
+          </strong>
+        
+          <div id="note-filters" style="display:flex;align-items:center;gap:8px;justify-content:center;flex:1;min-width:220px;">
+            <input
+              id="note-filter-date"
+              type="date"
+              style="padding:8px 10px;border:1px solid #d6d9e2;border-radius:10px;"
+              title="Filter by date"
+            />
+            <select
+              id="note-filter-status"
+              style="padding:8px 10px;border:1px solid #d6d9e2;border-radius:10px;"
+              title="Filter by type"
+            >
+              <option value="">All types</option>
+              ${NOTE_STATUS.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join("")}
+            </select>
+        
+            <button id="note-filter-clear" class="see-all" type="button" style="padding:8px 12px;">
+              Clear
+            </button>
+          </div>
+        
           <button id="add-note-btn" class="see-all" title="Add note" style="display:inline-flex;gap:8px;align-items:center;">
             <i class="fa-solid fa-plus"></i> Add
           </button>
@@ -1381,7 +1405,8 @@ async function openContactDetail(c) {
 
   modal.classList.add("open");
   modal.setAttribute("aria-hidden", "false");
-    // Local timezone (from browser). If you later save agent timezone, use that instead.
+  
+  // Local timezone (from browser). If you later save agent timezone, use that instead.
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || null;
 
   // Load connected appointments
@@ -1458,29 +1483,66 @@ async function openContactDetail(c) {
   // render chips
   let noteCache = [];
 
+  function isoToLocalYMD(iso, tz) {
+    if (!iso) return "";
+    const d = new Date(iso);
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: tz || undefined,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(d);
+  
+    const y = parts.find(p => p.type === "year")?.value || "0000";
+    const m = parts.find(p => p.type === "month")?.value || "00";
+    const da = parts.find(p => p.type === "day")?.value || "00";
+    return `${y}-${m}-${da}`; // matches <input type="date"> format
+  }
+  
+  function getActiveNoteFilters() {
+    const dateVal = ($("#note-filter-date")?.value || "").trim();     // "YYYY-MM-DD"
+    const statusVal = ($("#note-filter-status")?.value || "").trim(); // exact enum string or ""
+    return { dateVal, statusVal };
+  }
+  
   async function renderNoteChips() {
     const box = $("#contact-notes-chips");
     if (!box) return;
-
+  
+    // load once each render (keeps it fresh after edits)
     noteCache = await fetchContactNoteDetails(c.id);
-
-    if (!noteCache.length) {
-      box.innerHTML = `<div style="opacity:.7;">—</div>`;
+  
+    const { dateVal, statusVal } = getActiveNoteFilters();
+  
+    let list = noteCache.slice();
+  
+    // apply status filter
+    if (statusVal) {
+      list = list.filter(n => (n.status || "") === statusVal);
+    }
+  
+    // apply date filter (LOCAL to tz)
+    if (dateVal) {
+      list = list.filter(n => isoToLocalYMD(n.created_at, tz) === dateVal);
+    }
+  
+    if (!list.length) {
+      box.innerHTML = `<div style="opacity:.7;">No notes match your filters.</div>`;
       return;
     }
-
-    box.innerHTML = noteCache.map(n => {
+  
+    box.innerHTML = list.map(n => {
       const abbr = statusAbbr(n.status);
-      const glow = statusColorClass(n.status); // currently returns note-pill--blue/red/yellow
+      const glow = statusColorClass(n.status);
       const glow2 = glow
         .replace("note-pill--blue","note-glow--blue")
         .replace("note-pill--red","note-glow--red")
         .replace("note-pill--yellow","note-glow--yellow");
-    
+  
       const dt = formatLocalDateTime(n.created_at, tz);
       const det = (n.details || "").trim();
       const phone = (n.phone || "").trim();
-    
+  
       return `
         <div class="note-chip" data-note-id="${n.id}">
           <span class="note-bubble ${glow2}">${escapeHtml(abbr)}</span>
@@ -1490,18 +1552,27 @@ async function openContactDetail(c) {
         </div>
       `;
     }).join("");
-
-    // click -> open detail modal
+  
     box.querySelectorAll(".note-chip").forEach(chip => {
       chip.addEventListener("click", () => {
         const id = chip.dataset.noteId;
-        const note = noteCache.find(x => x.id === id);
+        const note = noteCache.find(x => x.id === id); // open real record
         if (!note) return;
         openNoteDetail(note);
       });
     });
   }
 
+  // Filters: rerender on change
+  $("#note-filter-date")?.addEventListener("change", renderNoteChips);
+  $("#note-filter-status")?.addEventListener("change", renderNoteChips);
+  
+  $("#note-filter-clear")?.addEventListener("click", () => {
+    $("#note-filter-date") && ($("#note-filter-date").value = "");
+    $("#note-filter-status") && ($("#note-filter-status").value = "");
+    renderNoteChips();
+  });
+  
   function openNoteDetail(note) {
     const bodyEl = $("#note-detail-body");
     if (!bodyEl) return;
