@@ -335,24 +335,6 @@ async function doAssign(agentId) {
   await loadLeads();
 }
 
-  if (me?.id) {
-    const historyRows = leadIds.map(id => ({
-      lead_id: id,
-      assigned_to: agentId,
-      assigned_by: me.id
-    }));
-
-    const { error: histErr } = await sb
-      .from('lead_assignments')
-      .insert(historyRows);
-
-    if (histErr) console.warn('lead_assignments insert error:', histErr);
-  }
-
-  clearSelectionUI();
-  await loadLeads();
-}
-
 function wireSelectionAndPagination() {
   $('select-all')?.addEventListener('change', () => {
     const checked = $('select-all').checked;
