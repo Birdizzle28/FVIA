@@ -1,6 +1,8 @@
 // scripts/admin-agent-stats.js
 const sb = window.supabaseClient || window.supabase;
 
+const DAY_MS = 864e5;
+
 let allAgents = [];
 let statPicker = null;
 
@@ -8,42 +10,11 @@ let chartWeekly = null;
 let chartProducts = null;
 let chartAssignments = null;
 
-const DAY_MS = 86400000;
-const PERSISTENCY_DAYS = 90;
-
 function $(id){ return document.getElementById(id); }
 
-function safeDiv(n, d){
-  if (!d) return 0;
-  return n / d;
-}
-
-function fmtPct(x){
-  if (!Number.isFinite(x)) return '—';
-  return `${Math.round(x * 100)}%`;
-}
-
-function isoYMD(d){
-  return new Date(d).toISOString().split('T')[0];
-}
-
-function endExclusiveISO(endISO){
-  // endISO is YYYY-MM-DD, make it exclusive by adding 1 day
-  const d = new Date(endISO + 'T00:00:00');
-  d.setDate(d.getDate() + 1);
-  return d.toISOString();
-}
-
-function inRange(dt, start, end){
-  const t = dt.getTime();
-  return t >= start.getTime() && t <= end.getTime();
-}
-
-function destroyCharts(){
-  try { chartWeekly?.destroy(); } catch(_) {}
-  try { chartProducts?.destroy(); } catch(_) {}
-  try { chartAssignments?.destroy(); } catch(_) {}
-  chartWeekly = chartProducts = chartAssignments = null;
+function setMsg(t){
+  const el = $('stats-msg');
+  if (el) el.textContent = t || '';
 }
 
 function wireAdminNavLinks(){
@@ -59,24 +30,54 @@ function wireAdminNavLinks(){
   });
 }
 
-// Try to infer a "stage" from many possible task shapes.
-// Source admin.js uses getTaskStage(t) internally; we mirror intent.
-function getTaskStage(t){
-  const raw =
-    (t?.stage || t?.task_stage || t?.type || t?.task_type || t?.category || t?.status || '')
-      .toString()
-      .toLowerCase();
+function pct(n, d){
+  if (!d) return '—';
+  return `${Math.round((n / d) * 100)}%`;
+}
 
-  if (raw.includes('close') || raw.includes('sale') || raw.includes('issue')) return 'close';
-  if (raw.includes('quote')) return 'quote';
-  if (raw.includes('contact') || raw.includes('call') || raw.includes('text') || raw.includes('email')) return 'contact';
+function mean(nums){
+  const arr = nums.filter(x => Number.isFinite(x));
+  if (!arr.length) return null;
+  const sum = arr.reduce((a,b) => a + b, 0);
+  return sum / arr.length;
+}
 
-  // fallback: if completed + has result fields suggesting quote/close
-  const note = (t?.notes || t?.result || '').toString().toLowerCase();
-  if (note.includes('sold') || note.includes('issued')) return 'close';
-  if (note.includes('quote')) return 'quote';
+function destroyCharts(){
+  try { if (chartWeekly) chartWeekly.destroy(); } catch(_) {}
+  try { if (chartProducts) chartProducts.destroy(); } catch(_) {}
+  try { if (chartAssignments) chartAssignments.destroy(); } catch(_) {}
+  chartWeekly = chartProducts = chartAssignments = null;
+}
 
-  return 'other';
+function getRange(){
+  const allTime = $('stat-all-time')?.checked === true;
+
+  if (allTime) return { startISO: null, endISO: null, allTime: true };
+
+  const selected = statPicker?.selectedDates || [];
+  const start = selected[0] || null;
+  const end   = selected[1] || null;
+
+  // if only one date picked, treat as that day
+  if (start && !end) return {
+    startISO: start.toISOString().slice(0,10),
+    endISO: start.toISOString().slice(0,10),
+    allTime: false
+  };
+
+  if (!start || !end) return { startISO: null, endISO: null, allTime: false };
+
+  return {
+    startISO: start.toISOString().slice(0,10),
+    endISO: end.toISOString().slice(0,10),
+    allTime: false
+  };
+}
+
+function isoEndExclusive(endISO){
+  const d = new Date(endISO + 'T00:00:00');
+  d.setDate(d.getDate() + 1);
+  return d.toISOString();
 }
 
 async function loadAgents(){
@@ -86,8 +87,7 @@ async function loadAgents(){
     .order('full_name', { ascending: true });
 
   if (error){
-    console.warn('[Agent Stats] loadAgents error:', error);
-    allAgents = [];
+    console.warn('loadAgents error:', error);
     return;
   }
 
@@ -105,6 +105,7 @@ function initStatRange(){
   if (!window.flatpickr) return;
 
   const thirtyDaysAgo = new Date(Date.now() - 30 * DAY_MS);
+
   statPicker = window.flatpickr('#stat-range-wrap', {
     mode: 'range',
     dateFormat: 'Y-m-d',
@@ -126,248 +127,180 @@ function initStatRange(){
       loadAgentStats();
     });
   }
-
-  $('stat-agent')?.addEventListener('change', loadAgentStats);
 }
 
-function getSelectedAgentId(){
-  return $('stat-agent')?.value || '';
-}
-
-function getRange(){
-  const isAll = $('stat-all-time')?.checked === true;
-  if (isAll) return { isAll: true, start: null, end: null, startISO: null, endISO: null, endISOExclusive: null };
-
-  const val = $('stat-range')?.value || '';
-  if (!val.includes(' to ')) return { isAll: false, start: null, end: null, startISO: null, endISO: null, endISOExclusive: null };
-
-  const [startISO, endISO] = val.split(' to ').map(s => (s || '').trim());
-  if (!startISO || !endISO) return { isAll: false, start: null, end: null, startISO: null, endISO: null, endISOExclusive: null };
-
-  const start = new Date(startISO + 'T00:00:00');
-  const end   = new Date(endISO + 'T23:59:59');
-
-  return {
-    isAll: false,
-    start,
-    end,
-    startISO,
-    endISO,
-    endISOExclusive: endExclusiveISO(endISO)
-  };
-}
-
-async function fetchLeads({ agentId, range }){
+async function fetchLeads({ startISO, endISO, agentId }){
   let q = sb
     .from('leads')
-    .select('id, created_at, assigned_to, assigned_at, age, product_type')
+    .select('id, created_at, age, product_type, assigned_to, assigned_at, contacted_at, quoted_at, closed_status')
     .order('created_at', { ascending: true });
 
-  if (agentId){
-    // Stats are for the agent the lead is assigned to
-    q = q.eq('assigned_to', agentId);
+  if (startISO && endISO){
+    q = q.gte('created_at', startISO).lt('created_at', isoEndExclusive(endISO));
   }
 
-  if (!range.isAll && range.startISO && range.endISOExclusive){
-    q = q.gte('created_at', range.startISO).lt('created_at', range.endISOExclusive);
+  // Agent filter in stats = assigned_to that agent
+  if (agentId){
+    q = q.eq('assigned_to', agentId);
   }
 
   const { data, error } = await q;
   if (error){
-    console.error('[Agent Stats] leads query error:', error);
+    console.warn('fetchLeads error:', error);
     return [];
   }
   return data || [];
 }
 
-async function fetchByLeadIds(table, fields, leadIds){
-  if (!leadIds.length) return [];
+async function fetchPolicies({ startISO, endISO, agentId }){
+  // NOTE: this is what makes Product Mix show "Final Expense", "Dental Vision Hearing", etc.
+  let q = sb
+    .from('policies')
+    .select('id, issued_at, agent_id, product_line, policy_type')
+    .order('issued_at', { ascending: true });
 
-  // chunk .in() to avoid URL limits / query limits
-  const chunkSize = 250;
-  const out = [];
-
-  for (let i = 0; i < leadIds.length; i += chunkSize){
-    const chunk = leadIds.slice(i, i + chunkSize);
-    const { data, error } = await sb
-      .from(table)
-      .select(fields)
-      .in('lead_id', chunk);
-
-    if (error){
-      console.warn(`[Agent Stats] ${table} query error:`, error);
-      continue;
-    }
-    out.push(...(data || []));
+  if (startISO && endISO){
+    q = q.gte('issued_at', startISO).lt('issued_at', isoEndExclusive(endISO));
   }
 
-  return out;
+  if (agentId){
+    q = q.eq('agent_id', agentId);
+  }
+
+  const { data, error } = await q;
+  if (error){
+    console.warn('fetchPolicies error:', error);
+    return [];
+  }
+  return data || [];
 }
 
-function setKPIs({ leadsArr, tasksArr, policiesArr, range }){
-  // Basic lead KPIs
-  const kNew = leadsArr.length;
+function renderKPIs(leadsArr, agentId){
+  const total = leadsArr.length;
 
-  const assignedInWindow = leadsArr.filter(l => {
-    if (!l.assigned_to || !l.assigned_at) return false;
-    if (range.isAll) return true;
-    const t = new Date(l.assigned_at).getTime();
-    return range.start && range.end ? (t >= range.start.getTime() && t <= range.end.getTime()) : true;
-  });
+  const assignedCount = leadsArr.filter(l => !!l.assigned_to).length;
+  const uniqueAgents = new Set(leadsArr.map(l => l.assigned_to).filter(Boolean)).size;
 
-  const kAssigned = assignedInWindow.length;
+  const contacted = leadsArr.filter(l => !!l.contacted_at).length;
+  const quoted    = leadsArr.filter(l => !!l.quoted_at).length;
+  const won       = leadsArr.filter(l => String(l.closed_status || '').toLowerCase() === 'won').length;
 
-  const ages = leadsArr
-    .map(l => Number(l.age))
-    .filter(n => Number.isFinite(n) && n > 0);
+  const avgAge = mean(leadsArr.map(l => (l.age == null ? null : Number(l.age))));
 
-  const avgAge = ages.length ? (ages.reduce((a,b)=>a+b,0) / ages.length) : NaN;
+  $('kpi-new').textContent = String(total);
+  $('kpi-assigned').textContent = String(assignedCount);
+  $('kpi-agents').textContent = String(agentId ? 1 : uniqueAgents);
 
-  const distinctAgents = new Set(assignedInWindow.map(l => l.assigned_to).filter(Boolean));
-  const kAgents = distinctAgents.size;
+  $('kpi-contact').textContent = pct(contacted, total);
+  $('kpi-quote').textContent   = pct(quoted, total);
+  $('kpi-close').textContent   = quoted ? pct(won, quoted) : '—';
 
-  $('kpi-new').textContent = String(kNew);
-  $('kpi-assigned').textContent = String(kAssigned);
-  $('kpi-avg-age').textContent = Number.isFinite(avgAge) ? String(Math.round(avgAge * 10) / 10) : '—';
-  $('kpi-agents').textContent = String(kAgents);
+  $('kpi-avg-age').textContent = (avgAge == null) ? '—' : String(Math.round(avgAge));
 
-  // Contact / Quote / Close via tasks + policies
-  const baseDen = leadsArr.length;
-  const contactLeadIds = new Set();
-  const quoteLeadIds   = new Set();
-  const closedLeadIds  = new Set();
-
-  tasksArr.forEach(t => {
-    const stage = getTaskStage(t);
-    const leadId = t.lead_id;
-    if (!leadId) return;
-
-    if (stage === 'contact') contactLeadIds.add(leadId);
-    if (stage === 'quote') { contactLeadIds.add(leadId); quoteLeadIds.add(leadId); }
-    if (stage === 'close') { contactLeadIds.add(leadId); quoteLeadIds.add(leadId); closedLeadIds.add(leadId); }
-  });
-
-  // Any issued policy counts as closed
-  policiesArr.forEach(p => {
-    if (!p.lead_id) return;
-    if (p.issued_at) closedLeadIds.add(p.lead_id);
-  });
-
-  const contactedCount = baseDen ? leadsArr.filter(l => contactLeadIds.has(l.id)).length : 0;
-  const quotedCount    = baseDen ? leadsArr.filter(l => quoteLeadIds.has(l.id) || closedLeadIds.has(l.id)).length : 0;
-  const closedCount    = baseDen ? leadsArr.filter(l => closedLeadIds.has(l.id)).length : 0;
-
-  const contactRate = safeDiv(contactedCount, baseDen);
-  const quoteRate   = safeDiv(quotedCount, baseDen);
-  const closeRate   = safeDiv(closedCount, baseDen);
-
-  $('kpi-contact').textContent = fmtPct(contactRate);
-  $('kpi-quote').textContent   = fmtPct(quoteRate);
-  $('kpi-close').textContent   = fmtPct(closeRate);
-
-  // Persistency 90-day (policies)
-  const now = Date.now();
-  const persistCandidates = policiesArr.filter(p => {
-    if (!p.issued_at) return false;
-    const ia = new Date(p.issued_at);
-
-    if (!range.isAll && range.start && range.end && !inRange(ia, range.start, range.end)){
-      return false;
-    }
-
-    return (now - ia.getTime()) >= (PERSISTENCY_DAYS * DAY_MS);
-  });
-
-  const persistentPolicies = persistCandidates.filter(p => {
-    const status = (p.status || '').toLowerCase();
-    return !['cancelled','canceled','terminated','lapsed'].includes(status);
-  });
-
-  const persistency = safeDiv(persistentPolicies.length, persistCandidates.length);
-  $('kpi-persistency').textContent = fmtPct(persistency);
+  // Placeholder (same as your current)
+  $('kpi-persistency').textContent = '—';
 }
 
-function buildCharts({ leadsArr, policiesArr, range }){
-  destroyCharts();
-
-  // Weekly/monthly new leads chart
+function buildTimeSeries(leadsArr, startISO, endISO){
+  // Mirrors the admin.js behavior: weekly if small window, monthly if big or all-time
   let timeLabels = [];
   let timeCounts = [];
   let chartLineLabel = 'Weekly New Leads';
 
-  if (range.isAll){
-    const nowD = new Date();
-    const monthStarts = Array.from({ length: 12 }, (_, i) =>
-      new Date(nowD.getFullYear(), nowD.getMonth() - (11 - i), 1)
-    );
-    const monthCounts = new Array(12).fill(0);
+  if (!startISO || !endISO){
+    // all-time / unknown window => last 12 months monthly
+    const now = new Date();
+    const monthStarts = [];
+    for (let i = 11; i >= 0; i--){
+      monthStarts.push(new Date(now.getFullYear(), now.getMonth() - i, 1));
+    }
+    const monthCounts = new Array(monthStarts.length).fill(0);
 
     for (const l of leadsArr){
       const dt = new Date(l.created_at);
-      const base = monthStarts[0];
-      const diffMonths = (dt.getFullYear() - base.getFullYear()) * 12 + (dt.getMonth() - base.getMonth());
-      if (diffMonths >= 0 && diffMonths < 12) monthCounts[diffMonths]++;
+      const idx = monthStarts.findIndex(m =>
+        dt.getFullYear() === m.getFullYear() && dt.getMonth() === m.getMonth()
+      );
+      if (idx !== -1) monthCounts[idx]++;
     }
 
-    timeLabels = monthStarts.map(d => `${d.toLocaleString('default', { month: 'short' })} ${String(d.getFullYear()).slice(-2)}`);
+    timeLabels = monthStarts.map(d =>
+      `${d.toLocaleString('default', { month: 'short' })} ${String(d.getFullYear()).slice(-2)}`
+    );
     timeCounts = monthCounts;
     chartLineLabel = 'Monthly New Leads';
-  } else if (range.start && range.end){
-    const totalDays = Math.max(1, Math.round((+range.end - +range.start) / DAY_MS) + 1);
+  } else {
+    const start = new Date(startISO + 'T00:00:00');
+    const end   = new Date(endISO + 'T00:00:00');
+
+    const totalDays = Math.max(1, Math.round((+end - +start) / DAY_MS) + 1);
     const useMonthly = totalDays > 120;
 
     if (useMonthly){
       const monthStarts = [];
-      const cursor = new Date(range.start.getFullYear(), range.start.getMonth(), 1);
-      const last   = new Date(range.end.getFullYear(), range.end.getMonth(), 1);
-
+      const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+      const last   = new Date(end.getFullYear(), end.getMonth(), 1);
       while (cursor <= last){
         monthStarts.push(new Date(cursor));
         cursor.setMonth(cursor.getMonth() + 1);
       }
 
       const monthCounts = new Array(monthStarts.length).fill(0);
-
       for (const l of leadsArr){
         const dt = new Date(l.created_at);
-        const idx = monthStarts.findIndex(m => dt.getFullYear() === m.getFullYear() && dt.getMonth() === m.getMonth());
+        const idx = monthStarts.findIndex(m =>
+          dt.getFullYear() === m.getFullYear() && dt.getMonth() === m.getMonth()
+        );
         if (idx !== -1) monthCounts[idx]++;
       }
 
-      timeLabels = monthStarts.map(d => `${d.toLocaleString('default', { month: 'short' })} ${String(d.getFullYear()).slice(-2)}`);
+      timeLabels = monthStarts.map(d =>
+        `${d.toLocaleString('default', { month: 'short' })} ${String(d.getFullYear()).slice(-2)}`
+      );
       timeCounts = monthCounts;
       chartLineLabel = 'Monthly New Leads';
     } else {
       const weekMs = 7 * DAY_MS;
-      const bucketCount = Math.max(1, Math.ceil(totalDays / 7));
+      const bucketCount = Math.min(24, Math.max(1, Math.ceil(totalDays / 7)));
       const bucketStarts = Array.from({ length: bucketCount }, (_, i) =>
-        new Date(range.start.getTime() + i * weekMs)
+        new Date(start.getTime() + i * weekMs)
       );
       const weeklyCounts = new Array(bucketCount).fill(0);
 
       for (const l of leadsArr){
         const t = new Date(l.created_at).getTime();
-        const idx = Math.floor((t - range.start.getTime()) / weekMs);
+        const idx = Math.floor((t - start.getTime()) / weekMs);
         if (idx >= 0 && idx < bucketCount) weeklyCounts[idx]++;
       }
 
-      timeLabels = bucketStarts.map(d => `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`);
+      timeLabels = bucketStarts.map(d =>
+        `${String(d.getMonth() + 1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`
+      );
       timeCounts = weeklyCounts;
       chartLineLabel = 'Weekly New Leads';
     }
   }
 
-  const weeklyCanvas = $('chart-weekly');
-  if (weeklyCanvas){
-    const weeklyTitleEl = weeklyCanvas.previousElementSibling;
-    if (weeklyTitleEl) weeklyTitleEl.textContent = chartLineLabel;
+  // Update title above the canvas (same approach as admin.js)
+  const weeklyTitleEl = document.querySelector('#chart-weekly')?.previousElementSibling;
+  if (weeklyTitleEl) weeklyTitleEl.textContent = chartLineLabel;
 
-    const weeklyCtx = weeklyCanvas.getContext('2d');
+  return { timeLabels, timeCounts, chartLineLabel };
+}
+
+function renderCharts({ leadsArr, policiesArr, startISO, endISO }){
+  destroyCharts();
+
+  // ----- Time series -----
+  const ts = buildTimeSeries(leadsArr, startISO, endISO);
+
+  const weeklyCtx = $('chart-weekly')?.getContext('2d');
+  if (weeklyCtx){
     chartWeekly = new Chart(weeklyCtx, {
       type: 'line',
       data: {
-        labels: timeLabels,
-        datasets: [{ label: chartLineLabel, data: timeCounts, tension: 0.3 }]
+        labels: ts.timeLabels,
+        datasets: [{ label: ts.chartLineLabel, data: ts.timeCounts, tension: 0.3 }]
       },
       options: {
         responsive: true,
@@ -378,16 +311,17 @@ function buildCharts({ leadsArr, policiesArr, range }){
     });
   }
 
-  // Product mix (prefer policies; fall back to leads)
+  // ----- Product mix (prefer policies; fall back to leads) -----
   const productCounts = {};
+
   if (policiesArr.length){
     policiesArr.forEach(p => {
-      const key = ((p.product_line || p.policy_type || 'Unknown') + '').trim() || 'Unknown';
+      const key = (p.product_line || p.policy_type || 'Unknown').trim() || 'Unknown';
       productCounts[key] = (productCounts[key] || 0) + 1;
     });
   } else {
     leadsArr.forEach(l => {
-      const key = ((l.product_type || 'Unknown') + '').trim() || 'Unknown';
+      const key = (l.product_type || 'Unknown').trim() || 'Unknown';
       productCounts[key] = (productCounts[key] || 0) + 1;
     });
   }
@@ -395,9 +329,8 @@ function buildCharts({ leadsArr, policiesArr, range }){
   const productLabels = Object.keys(productCounts);
   const productValues = productLabels.map(k => productCounts[k]);
 
-  const productsCanvas = $('chart-products');
-  if (productsCanvas){
-    const productsCtx = productsCanvas.getContext('2d');
+  const productsCtx = $('chart-products')?.getContext('2d');
+  if (productsCtx){
     chartProducts = new Chart(productsCtx, {
       type: 'doughnut',
       data: { labels: productLabels, datasets: [{ data: productValues }] },
@@ -409,33 +342,25 @@ function buildCharts({ leadsArr, policiesArr, range }){
     });
   }
 
-  // Assignments by agent (bar)
-  const nameById = new Map((allAgents || []).map(a => [a.id, a.full_name]));
+  // ----- Assignments by agent -----
+  const agentMap = new Map((allAgents || []).map(a => [a.id, a.full_name]));
   const assigns = {};
 
-  // only count assignments that are in-window (same as KPI logic uses assigned_at)
-  const assignedInWindow = leadsArr.filter(l => {
-    if (!l.assigned_to || !l.assigned_at) return false;
-    if (range.isAll) return true;
-    if (!range.start || !range.end) return true;
-    const t = new Date(l.assigned_at).getTime();
-    return t >= range.start.getTime() && t <= range.end.getTime();
-  });
+  const assignedInWindow = leadsArr.filter(l => !!l.assigned_to); // simple + consistent
 
   for (const l of assignedInWindow){
     const id = l.assigned_to || 'Unknown';
     assigns[id] = (assigns[id] || 0) + 1;
   }
 
-  const assignLabels = Object.keys(assigns).map(id => nameById.get(id) || 'Unassigned/Unknown');
+  const assignLabels = Object.keys(assigns).map(id => agentMap.get(id) || 'Unassigned/Unknown');
   const assignValues = Object.keys(assigns).map(id => assigns[id]);
 
-  const assignsCanvas = $('chart-assignments');
-  if (assignsCanvas){
-    const assignsCtx = assignsCanvas.getContext('2d');
-    chartAssignments = new Chart(assignsCtx, {
+  const assignCtx = $('chart-assignments')?.getContext('2d');
+  if (assignCtx){
+    chartAssignments = new Chart(assignCtx, {
       type: 'bar',
-      data: { labels: assignLabels, datasets: [{ label: 'Assignments', data: assignValues }] },
+      data: { labels: assignLabels, datasets: [{ data: assignValues }] },
       options: {
         responsive: true,
         maintainAspectRatio: false,
@@ -447,29 +372,25 @@ function buildCharts({ leadsArr, policiesArr, range }){
 }
 
 async function loadAgentStats(){
-  const msg = $('stats-msg');
-  if (msg) msg.textContent = 'Loading…';
+  setMsg('Loading…');
 
-  const agentId = getSelectedAgentId();
-  const range = getRange();
+  const agentId = $('stat-agent')?.value || '';
+  const { startISO, endISO } = getRange();
 
-  // Leads are the base dataset (source does charts based on leads too)
-  const leadsArr = await fetchLeads({ agentId, range });
-  const leadIds = leadsArr.map(l => l.id).filter(Boolean);
+  const [leadsArr, policiesArr] = await Promise.all([
+    fetchLeads({ startISO, endISO, agentId }),
+    fetchPolicies({ startISO, endISO, agentId })
+  ]);
 
-  // Tasks + Policies are attached to lead_id
-  const tasksArr = await fetchByLeadIds('tasks', 'id, lead_id, stage, task_stage, type, task_type, category, status, notes, result, created_at', leadIds);
-  const policiesArr = await fetchByLeadIds('policies', 'id, lead_id, issued_at, status, product_line, policy_type', leadIds);
+  renderKPIs(leadsArr, agentId);
+  renderCharts({ leadsArr, policiesArr, startISO, endISO });
 
-  setKPIs({ leadsArr, tasksArr, policiesArr, range });
-  buildCharts({ leadsArr, policiesArr, range });
-
-  if (msg) msg.textContent = '';
+  setMsg('');
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!sb){
-    console.warn('[Agent Stats] Supabase client missing (window.supabaseClient/window.supabase).');
+    console.warn('Supabase client missing (window.supabaseClient/window.supabase).');
     return;
   }
 
@@ -478,7 +399,10 @@ document.addEventListener('DOMContentLoaded', async () => {
   const section = $('admin-stats-section');
   if (section) section.style.display = 'block';
 
-  await loadAgents();
   initStatRange();
+
+  $('stat-agent')?.addEventListener('change', loadAgentStats);
+
+  await loadAgents();
   await loadAgentStats();
 });
