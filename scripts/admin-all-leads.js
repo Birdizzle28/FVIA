@@ -211,12 +211,12 @@ async function loadLeads() {
       <td class="lead-last">${escapeHtml(lead.last_name || '')}</td>
       <td class="lead-age">${escapeHtml(lead.age ?? '')}</td>
       <td class="lead-phone">${escapeHtml(phones)}</td>
-      <td class="lead-address">${escapeHtml(lead.address || '')}</td>
+      <td class="lead-address"><div class="cell-box">${escapeHtml(lead.address || '')}</div></td>
       <td class="lead-city">${escapeHtml(lead.city || '')}</td>
       <td class="lead-state">${escapeHtml(lead.state || '')}</td>
       <td class="lead-zip">${escapeHtml(lead.zip || '')}</td>
       <td class="lead-type">${escapeHtml(lead.lead_type || '')}</td>
-      <td class="lead-notes">${escapeHtml(lead.notes || '')}</td>
+      <td class="lead-notes"><div class="cell-box cell-notes">${escapeHtml(lead.notes || '')}</div></td>
       <td class="lead-product">${escapeHtml(lead.product_type || '')}</td>
     `;
 
