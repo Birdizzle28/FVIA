@@ -5,7 +5,7 @@ const DAY_MS = 864e5;
 
 let allAgents = [];
 let statPicker = null;
-
+let chartPersistency = null;
 let chartWeekly = null;
 let chartProducts = null;
 let chartAssignments = null;
@@ -51,7 +51,12 @@ function destroyCharts(){
   try { if (chartWeekly) chartWeekly.destroy(); } catch(_) {}
   try { if (chartProducts) chartProducts.destroy(); } catch(_) {}
   try { if (chartAssignments) chartAssignments.destroy(); } catch(_) {}
-  chartWeekly = chartProducts = chartAssignments = null;
+  try { if (chartPersistency) chartPersistency.destroy(); } catch(_) {}
+
+  chartWeekly = null;
+  chartProducts = null;
+  chartAssignments = null;
+  chartPersistency = null;
 }
 
 function getRange(){
@@ -161,8 +166,7 @@ async function fetchPolicies({ startISO, endISO, agentId }){
   // Annualized Premium needs premium_annual + status
   let q = sb
     .from('policies')
-    .select('id, issued_at, agent_id, product_line, policy_type, status, premium_annual')
-    .in('status', ['in_force', 'issued'])
+    .select('id, issued_at, agent_id, product_line, policy_type, status, premium_annual, lapsed_at, cancelled_at')
     .order('issued_at', { ascending: true });
 
   if (startISO && endISO){
@@ -193,7 +197,9 @@ function renderKPIs(leadsArr, policiesArr, agentId){
   const avgAge = mean(leadsArr.map(l => (l.age == null ? null : Number(l.age))));
 
   // ✅ Annualized Premium = sum of premium_annual for in_force/issued policies in filters
-  const annualizedPremium = (policiesArr || []).reduce((sum, p) => {
+  const annualizedPremium = (policiesArr || [])
+  .filter(p => ['in_force','issued','reinstated','renewed'].includes(String(p.status || '').toLowerCase()))
+  .reduce((sum, p) => {
     const n = Number(p?.premium_annual);
     return sum + (Number.isFinite(n) ? n : 0);
   }, 0);
@@ -306,7 +312,6 @@ function renderCharts({ leadsArr, policiesArr, startISO, endISO }){
 
   // ----- Time series -----
   const ts = buildTimeSeries(leadsArr, startISO, endISO);
-
   const weeklyCtx = $('chart-weekly')?.getContext('2d');
   if (weeklyCtx){
     chartWeekly = new Chart(weeklyCtx, {
@@ -381,9 +386,181 @@ function renderCharts({ leadsArr, policiesArr, startISO, endISO }){
         scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
       }
     });
+    // ----- Persistency Over Time (30/60/90) -----
+    const pCtx = $('chart-persistency')?.getContext('2d');
+    if (pCtx){
+      const p = calcPersistencySeries(policiesArr, startISO, endISO);
+  
+      chartPersistency = new Chart(pCtx, {
+        type: 'line',
+        data: {
+          labels: p.labels,
+          datasets: [
+            { label: '30-day', data: p.series[30], tension: 0.3, spanGaps: false },
+            { label: '60-day', data: p.series[60], tension: 0.3, spanGaps: false },
+            { label: '90-day', data: p.series[90], tension: 0.3, spanGaps: false }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { position: 'bottom' } },
+          scales: {
+            y: { beginAtZero: true, max: 100, ticks: { callback: (v) => `${v}%` } }
+          }
+        }
+      });
+    }
   }
 }
 
+function addDaysISO(dateISO, days){
+  const d = new Date(dateISO);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+
+function minDate(a, b){
+  const da = a ? new Date(a) : null;
+  const db = b ? new Date(b) : null;
+  if (da && db) return (da <= db) ? da : db;
+  return da || db;
+}
+
+function bucketKeyForDate(dt, useMonthly){
+  const d = new Date(dt);
+  if (isNaN(d)) return null;
+
+  if (useMonthly){
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2,'0');
+    return `${y}-${m}-01`;
+  }
+
+  // weekly bucket start (Mon)
+  const day = d.getDay(); // 0 Sun..6 Sat
+  const diff = (day === 0 ? -6 : 1) - day; // shift to Monday
+  d.setDate(d.getDate() + diff);
+  d.setHours(0,0,0,0);
+  return d.toISOString().slice(0,10);
+}
+
+function labelForBucket(bucketISO, useMonthly){
+  const d = new Date(bucketISO + 'T00:00:00');
+  if (useMonthly){
+    return `${d.toLocaleString('default', { month: 'short' })} ${String(d.getFullYear()).slice(-2)}`;
+  }
+  return `${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+}
+
+function calcPersistencySeries(policiesArr, startISO, endISO){
+  // decide weekly vs monthly same style as your leads series
+  let useMonthly = false;
+
+  if (!startISO || !endISO){
+    useMonthly = true;
+    // default buckets = last 12 months
+    const now = new Date();
+    const buckets = [];
+    for (let i = 11; i >= 0; i--){
+      buckets.push(new Date(now.getFullYear(), now.getMonth() - i, 1).toISOString().slice(0,10));
+    }
+    return buildPersistencyFromBuckets(policiesArr, buckets, true, null, new Date());
+  }
+
+  const start = new Date(startISO + 'T00:00:00');
+  const end   = new Date(endISO + 'T00:00:00');
+  const totalDays = Math.max(1, Math.round((+end - +start) / DAY_MS) + 1);
+  useMonthly = totalDays > 120;
+
+  let buckets = [];
+  if (useMonthly){
+    const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
+    const last   = new Date(end.getFullYear(), end.getMonth(), 1);
+    while (cursor <= last){
+      buckets.push(new Date(cursor).toISOString().slice(0,10));
+      cursor.setMonth(cursor.getMonth() + 1);
+    }
+  } else {
+    // weekly buckets
+    const weekMs = 7 * DAY_MS;
+    const bucketCount = Math.min(24, Math.max(1, Math.ceil(totalDays / 7)));
+    for (let i = 0; i < bucketCount; i++){
+      const d = new Date(start.getTime() + i * weekMs);
+      const key = bucketKeyForDate(d.toISOString(), false);
+      if (key && !buckets.includes(key)) buckets.push(key);
+    }
+    buckets = buckets.sort();
+  }
+
+  return buildPersistencyFromBuckets(policiesArr, buckets, useMonthly, start, end);
+}
+
+function buildPersistencyFromBuckets(policiesArr, bucketISOs, useMonthly, startDateObj, endDateObj){
+  // Group policies into cohorts based on issued_at bucket
+  const cohorts = {}; // bucketISO -> policy list
+  for (const p of (policiesArr || [])){
+    if (!p?.issued_at) continue;
+    const key = bucketKeyForDate(p.issued_at, useMonthly);
+    if (!key) continue;
+
+    // If we have an explicit range, keep only cohorts inside it
+    if (startDateObj && endDateObj){
+      const kDate = new Date(key + 'T00:00:00');
+      if (kDate < startDateObj || kDate > endDateObj) continue;
+    }
+
+    cohorts[key] = cohorts[key] || [];
+    cohorts[key].push(p);
+  }
+
+  const endCutoff = endDateObj || new Date(); // used for maturity checks
+  const labels = bucketISOs.map(b => labelForBucket(b, useMonthly));
+
+  const windows = [30, 60, 90];
+  const series = {
+    30: new Array(bucketISOs.length).fill(null),
+    60: new Array(bucketISOs.length).fill(null),
+    90: new Array(bucketISOs.length).fill(null)
+  };
+
+  bucketISOs.forEach((bucketISO, idx) => {
+    const cohort = cohorts[bucketISO] || [];
+    if (!cohort.length) return;
+
+    for (const w of windows){
+      // cohort maturity: bucket start must be <= endCutoff - w days
+      const matureBy = new Date(endCutoff.getTime() - w * DAY_MS);
+      const bucketStart = new Date(bucketISO + 'T00:00:00');
+      if (bucketStart > matureBy){
+        series[w][idx] = null; // not mature yet
+        continue;
+      }
+
+      let survived = 0;
+      let total = 0;
+
+      for (const p of cohort){
+        if (!p.issued_at) continue;
+        const issued = new Date(p.issued_at);
+        if (isNaN(issued)) continue;
+
+        total += 1;
+
+        const endEvent = minDate(p.lapsed_at, p.cancelled_at);
+        const threshold = new Date(issued.getTime() + w * DAY_MS);
+
+        if (!endEvent || endEvent >= threshold){
+          survived += 1;
+        }
+      }
+
+      series[w][idx] = total ? Math.round((survived / total) * 100) : null;
+    }
+  });
+
+  return { labels, series, useMonthly };
+}
 async function loadAgentStats(){
   setMsg('Loading…');
 
