@@ -89,37 +89,9 @@
       <!-- Lead Requests Section -->
       <section id="admin-requests-section" class="admin-section" style="display:none;">
         <h3>Lead Requests</h3>
-
-        <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom:12px;">
-          <div class="filter-group" style="max-width:260px;">
-            <label for="req-status-filter">Status</label>
-            <select id="req-status-filter">
-              <option value="">All</option>
-              <option value="pending">Pending</option>
-              <option value="approved">Approved</option>
-              <option value="denied">Denied</option>
-              <option value="fulfilled">Fulfilled</option>
-            </select>
-          </div>
-
-          <div class="filter-group" style="max-width:260px;">
-            <label for="req-order">Order</label>
-            <select id="req-order">
-              <option value="desc">Most Recent</option>
-              <option value="asc">Oldest</option>
-            </select>
-          </div>
-
-          <button id="refresh-requests" style="height:42px; padding:0 14px; border:0; cursor:pointer; font-weight:800; background: var(--indigo); color:#fff;">
-            Refresh
-          </button>
-
-          <small id="req-msg" style="margin-left:auto; color:#555;"></small>
-        </div>
-
         <div id="requested-leads-container" class="scroll-container"></div>
       </section>
-
+      
     </main>
 
     <!-- Footer -->
