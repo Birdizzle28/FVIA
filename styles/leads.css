@@ -618,7 +618,6 @@ a, button{ outline-color: var(--brand); }
 
 #agent-leads-table th:nth-child(2),
 #agent-leads-table td:nth-child(2) { min-width: 44px; }
-*/
 #agent-leads-table {
   table-layout: auto;   /* default, but we force it */
   width: max-content;   /* lets columns be as wide as they want */
