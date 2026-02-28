@@ -1,6 +1,10 @@
 /* styles/leads-modern.css
-   Clean + consolidated for Leads (View, Submit, Request, Contacts)
-   No patchwork overrides; Choices + floating labels are first-class.
+   Consolidated + de-duplicated for Leads (View, Submit, Request, Contacts)
+   - Floating labels
+   - Choices.js integrated (opaque dropdown + correct stacking)
+   - Lead table row-height cap (requires <div class="cell"> inside each td)
+   - Contacts list forced 4 columns w/ horizontal scroll
+   - Contact detail modal + notes chips (WHITE notes area)
 */
 
 /* ---------- Design tokens ---------- */
@@ -27,6 +31,9 @@
   --field-pad-top: 16px;  /* space for floating label */
   --field-pad-bot: 10px;
   --field-min-h: 44px;
+
+  /* Lead viewer row height cap */
+  --lead-row-max: 96px; /* try 80px / 96px / 120px */
 }
 
 /* ---------- Page rhythm ---------- */
@@ -164,7 +171,9 @@ body#dashboardbody{
 .field{
   position: relative;
   min-width: 0;
+  z-index: 1; /* helps stacking when focused */
 }
+.field:focus-within{ z-index: 9999; }
 
 /* Base interactive controls */
 .field input,
@@ -256,12 +265,64 @@ body#dashboardbody{
 /* Row separators in cards */
 .form-row{ margin-top: 10px; }
 
-/* ---------- Choices (contact picker) integrated, not “patched” ---------- */
+/* Stop "Attach to Contact" from spanning the full row */
+#lead-form .field:has(#contact-picker){
+  grid-column: auto !important;
+}
+
+/* ---------- Phone row helpers ---------- */
+.phone-row{
+  display:grid;
+  grid-template-columns: 1fr auto;
+  gap:8px;
+  align-items:center;
+}
+
+/* Phone rows: input + trash inside the same row */
+.phone-field .phone-row{
+  display: grid;
+  grid-template-columns: 1fr 40px;
+  gap: 8px;
+  align-items: center;
+}
+.phone-field .lead-phone-input{
+  min-height: var(--field-min-h);
+}
+/* trash button looks like an input icon */
+.phone-field .remove-phone{
+  height: var(--field-min-h);
+  width: 40px;
+  border: 1px solid var(--line);
+  background: #fff;
+  border-radius: var(--field-radius);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.phone-field .remove-phone:hover{
+  background: var(--soft);
+}
+
+/* ---------- Icon button (optional) ---------- */
+.icon-btn{
+  appearance:none;
+  border:1px solid var(--line);
+  background:#fff;
+  color: var(--muted);
+  border-radius: 8px;
+  padding: 8px 10px;
+  cursor:pointer;
+  transition: background .15s ease, color .15s ease, border-color .15s ease;
+}
+.icon-btn:hover{ background: var(--soft); color: var(--ink); }
+
+/* ---------- Choices (contact picker) integrated ---------- */
 .field .choices{
   width:100%;
   margin:0;
   position:relative;
-  z-index: 1;
+  z-index: auto !important; /* don't trap dropdown */
 }
 
 /* Choices “input box” should match .field controls */
@@ -272,7 +333,9 @@ body#dashboardbody{
   color: var(--ink);
   min-height: var(--field-min-h);
   padding: var(--field-pad-top) var(--field-pad-x) var(--field-pad-bot);
+  padding-top: 18px !important; /* give label room */
   box-shadow:none;
+  box-sizing: border-box !important;
 }
 
 /* kill the ghost placeholder behind label */
@@ -282,32 +345,42 @@ body#dashboardbody{
 .field .choices__list--single{ padding:0; }
 .field .choices__item{ color: var(--ink); }
 
-/* Dropdown must overlay other fields (fix label bleed-through) */
-.field .choices__list--dropdown,
-.field .choices__list[aria-expanded]{
-  z-index: 9999;
-  border:1px solid var(--line);
-  border-radius: 10px;
-  box-shadow: var(--shadow-2);
-}
-
-/* When Choices is focused/open, label should float (same behavior as select) */
-.field .choices.is-open ~ label,
-.field .choices.is-focused ~ label{
+/* Keep label floated when Choices has a real selected value */
+.field:has(.choices__list--single .choices__item--selectable:not(.choices__placeholder)) > label,
+.field:has(.choices.is-open) > label,
+.field:has(.choices.is-focused) > label{
   color: var(--ink);
   font-size: .76rem;
   top: -6px;
   background:#fff;
   padding: 0 6px;
-  z-index: 10000;
+  z-index: 10;
 }
 
-/* (Choices sometimes sets inline styles; this is one of the few places where !important is justified) */
-.field .choices__inner{ box-sizing: border-box !important; }
+/* ============================
+   Choices: dropdown opacity + stacking (single source of truth)
+   ============================ */
+.field .choices__list--dropdown,
+.field .choices__list[aria-expanded]{
+  position: absolute !important;
+  z-index: 999999 !important;
+  background: #fff !important;
+  opacity: 1 !important;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: var(--shadow-2);
+}
+.field .choices__list--dropdown .choices__list,
+.field .choices__list--dropdown .choices__item{
+  background: #fff !important;
+}
 
 /* ---------- Leads table ---------- */
 #agent-leads-table{
-  width:100%;
+  table-layout: auto;   /* allow natural sizing */
+  width: max-content;   /* columns can be as wide as needed */
+  min-width: 100%;      /* still fills container */
+
   border-collapse: separate;
   border-spacing: 0;
   background:#fff;
@@ -316,41 +389,109 @@ body#dashboardbody{
   overflow:hidden;
   box-shadow: var(--shadow-1);
 }
+
 #agent-leads-table thead th{
   background: var(--soft);
   font-weight: 800;
   color: #1d2433;
   padding: 12px 10px;
   border-bottom: 1px solid var(--line);
+  text-align: left !important;
 }
+
 #agent-leads-table td{
-  padding: 10px 10px;
+  padding: 10px 12px;
   border-bottom: 1px solid var(--line);
   vertical-align: top;
   color: var(--ink);
+  text-align: left;
 }
+
 #agent-leads-table tbody tr:hover{ background:#fbfdff; }
+
 #agent-leads-table td:first-child,
 #agent-leads-table th:first-child{ width:44px; }
 
 #agent-current-page{ font-weight:700; color:#1d2433; }
 
+/* Column minimums */
+#agent-leads-table th,
+#agent-leads-table td { min-width: 120px; }
+#agent-leads-table th:first-child,
+#agent-leads-table td:first-child { min-width: 36px; }
+#agent-leads-table th:nth-child(2),
+#agent-leads-table td:nth-child(2) { min-width: 44px; }
+
+/* ===== Lead viewer: cap row height ===== */
+#agent-leads-table tbody tr { height: var(--lead-row-max); }
+#agent-leads-table tbody td { max-height: var(--lead-row-max); }
+
+/* Requires <div class="cell"> inside each td */
+#agent-leads-table tbody td > .cell{
+  display:block;
+  width:100%;
+  min-width:100%;
+  box-sizing:border-box;
+  max-height: calc(var(--lead-row-max) - 20px);
+  overflow:auto;
+  white-space: normal;
+  word-break: break-word;
+}
+
+/* Optional: Notes column gets the scroll behavior strongest (adjust index) */
+#agent-leads-table td:nth-child(15) > .cell{ overflow:auto; }
+
+/* iOS/WebKit scrollbars */
+#agent-leads-table tbody td > .cell::-webkit-scrollbar { width: 8px; }
+#agent-leads-table tbody td > .cell::-webkit-scrollbar-thumb{
+  background: rgba(0,0,0,.18);
+  border-radius: 10px;
+}
+
+/* ---------- DNC status dot ---------- */
+.dnc-dot{
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  display: inline-block;
+  vertical-align: middle;
+  box-shadow: 0 0 10px rgba(0,0,0,.25);
+}
+.dnc-dot--ok{
+  background: #23b6ff;
+  box-shadow:
+    0 0 6px rgba(35,182,255,.9),
+    0 0 14px rgba(35,182,255,.65);
+}
+.dnc-dot--bad{
+  background: #ff2e6f;
+  box-shadow:
+    0 0 6px rgba(255,46,111,.9),
+    0 0 14px rgba(255,46,111,.65);
+}
+.dnc-cell{ text-align: center; }
+
 /* ---------- Contacts list ---------- */
 #contacts-list{
   padding:0;
-  overflow:hidden;
   border-radius:12px;
   box-shadow: var(--shadow-1);
+
+  overflow-x: auto;                 /* always allow scroll */
+  -webkit-overflow-scrolling: touch;
 }
+
+/* Force SAME grid on header + rows at all widths */
 #contacts-list .contacts-head,
 #contacts-list .contact-row{
-  display:grid;
-  grid-template-columns: 48px 1.2fr 1fr 1fr;
-  gap:10px;
-  align-items:center;
+  display:grid !important;
+  grid-template-columns: 48px 1.2fr 1fr 1fr !important;
+  gap:10px !important;
+  align-items:center !important;
   padding: 14px 16px;
   border-bottom: 1px solid var(--line);
   background:#fff;
+  min-width: 760px;  /* controls when horizontal scroll appears */
 }
 #contacts-list .contacts-head{
   background: var(--soft);
@@ -358,6 +499,18 @@ body#dashboardbody{
   color:#1d2433;
 }
 #contacts-list .contact-row:hover{ background:#fbfdff; }
+
+/* Keep header text from wrapping weird */
+#contacts-list .contacts-head > div{ white-space: nowrap; }
+
+/* Allow row cells to shrink properly */
+#contacts-list .contacts-head > div,
+#contacts-list .contact-row > div{ min-width: 0; }
+
+/* NEVER hide email column on mobile */
+#contacts-list .contacts-head > :last-child,
+#contacts-list .contact-row > :last-child{ display:block !important; }
+
 #contacts-bulk-actions{
   position: sticky;
   bottom:0;
@@ -415,291 +568,57 @@ a, button{ outline-color: var(--brand); }
   border-radius: 8px;
 }
 
-/* ---------- Phone row helpers (optional) ---------- */
-.icon-btn{
-  appearance:none;
-  border:1px solid var(--line);
-  background:#fff;
-  color: var(--muted);
-  border-radius: 8px;
-  padding: 8px 10px;
-  cursor:pointer;
-  transition: background .15s ease, color .15s ease, border-color .15s ease;
-}
-.icon-btn:hover{ background: var(--soft); color: var(--ink); }
-
-.phone-row{
-  display:grid;
-  grid-template-columns: 1fr auto;
-  gap:8px;
-  align-items:center;
-}
-
-/* ---------- Responsive ---------- */
-@media (max-width: 980px){
-  #contacts-list{
-    overflow-x:auto;
-  }
-
-  #contacts-list .contacts-head,
-  #contacts-list .contact-row{
-    min-width: 760px; /* adjust */
-    grid-template-columns: 48px 1.2fr 1fr 1fr; /* keep all 4 */
-  }
-}
-@media (max-width: 640px){
-  .lead-tabs{ gap:6px; }
-  .lead-tabs .tab-button{ padding:8px 10px; }
-  #contacts-list .contacts-head,
-  #contacts-list .contact-row{ grid-template-columns: 36px 1fr; }
-}
-/* FIX: stop seeing labels through the Choices dropdown */
-.field .choices__list--dropdown,
-.field .choices__list[aria-expanded]{
-  background: #fff !important;      /* <- key: opaque background */
-}
-
-.field .choices__list--dropdown .choices__list{
-  background: #fff !important;      /* inner list also opaque */
-}
-
-/* optional: make each option paint solid too */
-.field .choices__list--dropdown .choices__item{
-  background: #fff;
-}
-/* dropdown must win the stacking war */
-.field .choices__list--dropdown{
-  position: absolute !important;
-  z-index: 999999 !important;
-}
-/* Stop "Attach to Contact" from spanning the full row */
-#lead-form .field:has(#contact-picker){
-  grid-column: auto !important; /* back to normal 1-column behavior */
-}
-/* ---------------------------
-   Phone rows: input + trash inside the same row
----------------------------- */
-.phone-field .phone-row{
-  display: grid;
-  grid-template-columns: 1fr 40px;
-  gap: 8px;
-  align-items: center;
-}
-
-.phone-field .lead-phone-input{
-  min-height: var(--field-min-h);
-}
-
-/* trash button looks like an input icon */
-.phone-field .remove-phone{
-  height: var(--field-min-h);
-  width: 40px;
-  border: 1px solid var(--line);
-  background: #fff;
-  border-radius: var(--field-radius);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.phone-field .remove-phone:hover{
-  background: var(--soft);
-}
-/* ---------------------------
-   Choices dropdown must be fully opaque and above labels
----------------------------- */
-.field .choices__list--dropdown,
-.field .choices__list[aria-expanded]{
-  background: #fff !important;
-  opacity: 1 !important;
-  z-index: 999999 !important;
-}
-
-.field .choices__list--dropdown *{
-  background: #fff !important;
-}
-/* STOP trapping the dropdown in a low z-index stacking context */
-.field .choices{
-  z-index: auto !important;
-}
-
-/* Make sure dropdown is positioned within the .field and wins */
-.field{
-  z-index: 1;
-}
-.field:focus-within{
-  z-index: 9999;
-}
-
-/* Dropdown is fully opaque */
-.field .choices__list--dropdown,
-.field .choices__list[aria-expanded]{
-  background:#fff !important;
-  z-index: 999999 !important;
-}
-/* DNC status dot */
-.dnc-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  display: inline-block;
-  vertical-align: middle;
-  box-shadow: 0 0 10px rgba(0,0,0,.25);
-}
-
-.dnc-dot--ok {
-  background: #23b6ff; /* neon blue */
-  box-shadow:
-    0 0 6px rgba(35,182,255,.9),
-    0 0 14px rgba(35,182,255,.65);
-}
-
-.dnc-dot--bad {
-  background: #ff2e6f; /* neon red/pink */
-  box-shadow:
-    0 0 6px rgba(255,46,111,.9),
-    0 0 14px rgba(255,46,111,.65);
-}
-
-.dnc-cell {
-  text-align: center;
-}
-
-/* ===== Lead viewer: cap row height ===== */
-
-/* choose your row height */
-:root { --lead-row-max: 96px; } /* try 80px / 96px / 120px */
-
-/* keep rows from growing infinitely */
-#agent-leads-table tbody tr {
-  height: var(--lead-row-max);
-}
-
-/* IMPORTANT: cells don't expand the row; content becomes scrollable */
-#agent-leads-table tbody td {
-  max-height: var(--lead-row-max);
-  padding: 10px 12px;
-  vertical-align: top;
-}
-
-/* Wrap cell content so we can clamp/scroll safely */
-#agent-leads-table tbody td > .cell {
-   display: block;
-   width: 100%;
-   min-width: 100%;
-   box-sizing: border-box;
-   max-height: calc(var(--lead-row-max) - 20px); /* accounts for padding */
-   overflow: auto;                /* scroll if too much */
-   white-space: normal;           /* allow wrapping */
-   word-break: break-word;        /* long words won't blow up layout */
-}
-
-/* Optional: Notes column gets the scroll behavior strongest */
-#agent-leads-table td:nth-child(15) > .cell {
-  overflow: auto;
-}
-
-/* Optional: make the scrollbars look cleaner on iOS/WebKit */
-#agent-leads-table tbody td > .cell::-webkit-scrollbar {
-  width: 8px;
-}
-#agent-leads-table tbody td > .cell::-webkit-scrollbar-thumb {
-  background: rgba(0,0,0,.18);
-  border-radius: 10px;
-}
-#agent-leads-table th,
-#agent-leads-table td {
-  min-width: 120px; /* tweak */
-}
-
-#agent-leads-table th:first-child,
-#agent-leads-table td:first-child { min-width: 36px; }
-
-#agent-leads-table th:nth-child(2),
-#agent-leads-table td:nth-child(2) { min-width: 44px; }
-#agent-leads-table {
-  table-layout: auto;   /* default, but we force it */
-  width: max-content;   /* lets columns be as wide as they want */
-  min-width: 100%;      /* still fills the container */
-}
-/* Force table headers left-aligned */
-#agent-leads-table th {
-  text-align: left !important;
-}
-
-/* Optional: also align body cells left if any are centered */
-#agent-leads-table td {
-  text-align: left;
-}
-
-/* If your .cell wrapper is centering content */
-#agent-leads-table th .cell,
-#agent-leads-table td .cell {
-  text-align: left;
-}
-
 /* ============================
-   Contacts Modal (Detail View)
+   Contact Detail Modal (Detail View)
    ============================ */
+#contact-detail-modal .overlay-body{ padding: 18px 18px 22px; }
 
-/* Make modal body breathe */
-#contact-detail-modal .overlay-body{
-  padding: 18px 18px 22px;
-}
-
-/* Modal content wrapper */
 #contact-detail-modal .contact-ov{
-  display: flex;
-  flex-direction: column;
-  gap: 14px;              /* ✅ vertical space between sections */
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  padding-bottom:84px; /* space so content doesn't hide under sticky bar */
 }
 
-/* Each section becomes a card-like block */
 #contact-detail-modal .contact-sec{
   border: 1px solid var(--line);
   border-radius: 12px;
   background: #fff;
   box-shadow: var(--shadow-1);
-  overflow: hidden;
+  overflow:hidden;
 }
 
-/* Section header row */
 #contact-detail-modal .contact-sec-head{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap: 10px;
-
+  gap:10px;
   padding: 12px 14px;
   background: var(--soft);
   border-bottom: 1px solid var(--line);
 }
 
-/* View mode content */
 #contact-detail-modal .contact-sec-view{
   padding: 12px 14px;
   color: var(--ink);
   line-height: 1.35;
 }
 
-/* ✅ Preserve newlines + tabs in Notes (and any other view block if you want) */
+/* preserve formatting in notes view */
 #contact-detail-modal .contact-sec[data-sec="notes"] .contact-sec-view{
-  white-space: pre-wrap;   /* preserves newlines; wraps long lines */
-  tab-size: 4;             /* preserves the “feel” of tabs */
+  white-space: pre-wrap;
+  tab-size: 4;
 }
 
-/* Optional: make phone/email links look nicer */
+/* links */
 #contact-detail-modal .contact-sec-view a{
   color: var(--brand);
-  text-decoration: none;
-  font-weight: 700;
+  text-decoration:none;
+  font-weight:700;
 }
-#contact-detail-modal .contact-sec-view a:hover{
-  text-decoration: underline;
-}
+#contact-detail-modal .contact-sec-view a:hover{ text-decoration: underline; }
 
-/* Edit button (pencil) */
+/* edit button */
 #contact-detail-modal .contact-edit-btn{
   appearance:none;
   border:1px solid var(--line);
@@ -714,12 +633,8 @@ a, button{ outline-color: var(--brand); }
   color: var(--ink);
 }
 
-/* Edit mode content wrapper */
-#contact-detail-modal .contact-sec-edit{
-  padding: 12px 14px 14px;
-}
-
-/* Make edit inputs match your system */
+/* edit fields */
+#contact-detail-modal .contact-sec-edit{ padding: 12px 14px 14px; }
 #contact-detail-modal .contact-sec-edit input,
 #contact-detail-modal .contact-sec-edit textarea{
   width:100%;
@@ -732,23 +647,12 @@ a, button{ outline-color: var(--brand); }
   color: var(--ink);
   background:#fff;
 }
-
-/* Textareas should preserve formatting while editing too */
 #contact-detail-modal .contact-sec-edit textarea{
   white-space: pre-wrap;
   tab-size: 4;
 }
 
-/* Footer button row */
-#contact-detail-modal .contact-ov > div:last-child{
-  margin-top: 2px;
-}
-
-/* Contact detail modal: sticky bottom actions */
-.contact-ov{
-  padding-bottom: 84px; /* space so content doesn't hide under sticky bar */
-}
-
+/* sticky actions bar */
 .contact-actions-sticky{
   position: sticky;
   bottom: 0;
@@ -756,232 +660,34 @@ a, button{ outline-color: var(--brand); }
   background: #fff;
   border-top: 1px solid #e9eaf0;
   padding: 10px;
-  display: flex;
-  gap: 10px;
-  justify-content: flex-end;
-  align-items: center;
+  display:flex;
+  gap:10px;
+  justify-content:flex-end;
+  align-items:center;
 }
-
-/* optional: make buttons fill on small screens */
 @media (max-width: 520px){
-  .contact-actions-sticky{
-    justify-content: space-between;
-  }
+  .contact-actions-sticky{ justify-content: space-between; }
   .contact-actions-sticky .see-all{
     flex: 1;
     justify-content: center;
   }
 }
-/* Notes chips */
-.note-chip-row{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
 
-.note-chip{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  padding:10px 10px;
-  border:1px solid rgba(39,183,255,.35);
-  background:rgba(10,16,26,.35);
-  cursor:pointer;
-  user-select:none;
-}
-
-.note-chip:hover{
-  transform:translateY(-1px);
-}
-
-.note-pill{
-  font-weight:900;
-  font-size:12px;
-  padding:4px 8px;
-  border-radius:999px;
-  border:1px solid rgba(255,255,255,.25);
-  letter-spacing:.4px;
-}
-
-.note-pill--blue{
-  color:#bfefff;
-  border-color:rgba(39,183,255,.55);
-  box-shadow:0 0 10px rgba(39,183,255,.35), 0 0 18px rgba(39,183,255,.18);
-}
-.note-pill--red{
-  color:#ffd0d0;
-  border-color:rgba(255,42,42,.55);
-  box-shadow:0 0 10px rgba(255,42,42,.35), 0 0 18px rgba(255,42,42,.18);
-}
-.note-pill--yellow{
-  color:#fff4b8;
-  border-color:rgba(255,215,0,.55);
-  box-shadow:0 0 10px rgba(255,215,0,.25), 0 0 18px rgba(255,215,0,.12);
-}
-
-.note-chip-meta{
-  display:flex;
-  gap:10px;
-  flex-wrap:wrap;
-  align-items:center;
-  font-size:12.5px;
-  opacity:.92;
-}
-
-.note-chip-meta .muted{
-  opacity:.7;
-}
-
-.note-ellipsis{
-  max-width:260px;
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
-}
-
-/* Sticky bottom actions inside contact modal */
-.contact-sticky-actions{
-  position:sticky;
-  bottom:0;
-  background:#fff;
-  border-top:1px solid #e9eaf0;
-  padding:12px;
-  display:flex;
-  gap:10px;
-  justify-content:flex-end;
-  z-index:10;
-}
-
-/* Small modal overlays used inside contact modal */
-.mini-modal{
-  position:fixed;
-  inset:0;
-  display:none;
-  align-items:center;
-  justify-content:center;
-  z-index:2000;
-}
-.mini-modal.open{ display:flex; }
-.mini-modal .mm-backdrop{
-  position:absolute; inset:0;
-  background:rgba(0,0,0,.55);
-}
-.mini-modal .mm-panel{
-  position:relative;
-  width:min(520px, calc(100% - 28px));
-  background:#fff;
-  border:1px solid #e9eaf0;
-  box-shadow:0 24px 60px rgba(0,0,0,.25);
-  padding:14px;
-}
-.mini-modal .mm-head{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-  margin-bottom:10px;
-}
-.mini-modal .mm-close{
-  border:none;
-  background:transparent;
-  font-size:28px;
-  cursor:pointer;
-  line-height:1;
-}
-/* Notes area background (no white gaps) */
-.contact-sec[data-sec="notes"]{
-  background: rgba(10,16,26,.35);
-  border: 1px solid rgba(39,183,255,.12);
-  padding: 12px;
-}
-
-/* The list container */
-.note-chip-row{
-  display:flex;
-  flex-direction:column;
-  gap:10px;
-}
-
-/* Each note line */
-.note-chip{
-  display:flex;
-  align-items:center;
-  gap:8px;
-  padding:10px;
-  cursor:pointer;
-  user-select:none;
-
-  /* same gray as you liked */
-  background: rgba(10,16,26,.35);
-  border: 1px solid rgba(255,255,255,.06);
-}
-
-.note-chip:hover{
-  transform: translateY(-1px);
-}
-
-/* Each “bubble” */
-.note-bubble{
-  display:inline-flex;
-  align-items:center;
-  padding:4px 10px;
-  border-radius:999px;
-  font-weight:800;
-  font-size:12px;
-  letter-spacing:.35px;
-  border:1px solid rgba(255,255,255,.18);
-  white-space:nowrap;
-}
-
-/* Date bubble is subtle gray */
-.note-bubble--date{
-  font-weight:700;
-  opacity:.9;
-  border-color: rgba(255,255,255,.12);
-  box-shadow: 0 0 10px rgba(255,255,255,.06);
-}
-
-/* Details bubble gets ellipsis */
-.note-bubble--details{
-  max-width: 320px;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  font-weight:700;
-  opacity:.95;
-  border-color: rgba(255,255,255,.12);
-  box-shadow: 0 0 10px rgba(255,255,255,.06);
-}
-
-/* Phone bubble subtle */
-.note-bubble--phone{
-  font-weight:700;
-  opacity:.85;
-  border-color: rgba(255,255,255,.12);
-  box-shadow: 0 0 10px rgba(255,255,255,.06);
-}
-
-/* Neon color themes (apply to ANY bubble) */
-.note-glow--blue{
-  color:#bfefff;
-  border-color:rgba(39,183,255,.55);
-  box-shadow:0 0 10px rgba(39,183,255,.35), 0 0 18px rgba(39,183,255,.18);
-}
-.note-glow--red{
-  color:#ffd0d0;
-  border-color:rgba(255,42,42,.55);
-  box-shadow:0 0 10px rgba(255,42,42,.35), 0 0 18px rgba(255,42,42,.18);
-}
-.note-glow--yellow{
-  color:#fff4b8;
-  border-color:rgba(255,215,0,.55);
-  box-shadow:0 0 10px rgba(255,215,0,.25), 0 0 18px rgba(255,215,0,.12);
-}
-/* Keep notes area WHITE */
+/* ============================
+   Notes chips (WHITE notes area)
+   ============================ */
 .contact-sec[data-sec="notes"]{
   background:#fff;
   border:1px solid #eef0f6;
   padding:12px;
   border-radius:12px;
+}
+
+/* list container */
+.note-chip-row{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
 }
 
 /* each note row */
@@ -995,7 +701,10 @@ a, button{ outline-color: var(--brand); }
   cursor:pointer;
   user-select:none;
   background:#fff;
+  flex-wrap:nowrap;
 }
+.note-chip:hover{ transform: translateY(-1px); }
+.note-chip > *{ min-width:0; } /* critical for ellipsis in flex */
 
 /* each bubble */
 .note-bubble{
@@ -1007,11 +716,11 @@ a, button{ outline-color: var(--brand); }
   font-size:12px;
   letter-spacing:.35px;
   white-space:nowrap;
-  color:#fff;                  /* ✅ letters white */
-  border:1px solid transparent; /* set by glow class */
+  color:#fff;
+  border:1px solid transparent;
 }
 
-/* NEON FILLED (background + glow) */
+/* neon filled themes */
 .note-glow--blue{
   background: rgba(39,183,255,.95);
   border-color: rgba(39,183,255,.95);
@@ -1028,46 +737,72 @@ a, button{ outline-color: var(--brand); }
   box-shadow: 0 0 10px rgba(255,215,0,.5), 0 0 18px rgba(255,215,0,.28);
 }
 
-/* Date bubble a bit less “loud” but still neon filled */
 .note-bubble--date{ opacity:.95; font-weight:800; }
-
-/* Phone bubble slightly softer */
 .note-bubble--phone{ opacity:.92; font-weight:800; }
-/* IMPORTANT for ellipsis in flex row */
-.note-chip{ flex-wrap:nowrap; }
-.note-chip > *{ min-width:0; } /* ✅ critical */
 
 .note-bubble--details{
-  flex: 1 1 auto;       /* ✅ allow shrink */
-  min-width: 0;         /* ✅ allow ellipsis */
-  max-width: 360px;     /* adjust if you want */
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 360px;
   overflow:hidden;
   text-overflow:ellipsis;
   white-space:nowrap;
   font-weight:800;
 }
-/* Holds ~5 note rows; scroll for rest */
-#contact-notes-chips{
-  max-height: 270px;    /* ≈ 5 rows depending on padding */
-  overflow-y:auto;
-  padding-right:6px;    /* room for scrollbar */
-}
 
-/* optional: nicer scrollbar */
+/* holds ~5 rows; scroll rest */
+#contact-notes-chips{
+  max-height: 270px;
+  overflow-y:auto;
+  padding-right:6px;
+}
 #contact-notes-chips::-webkit-scrollbar{ width:8px; }
 #contact-notes-chips::-webkit-scrollbar-thumb{
   background:#dfe6f2;
   border-radius:999px;
 }
-/* modal layout fixes */
-.mini-modal *{ box-sizing:border-box; }
 
+/* ============================
+   Mini modal used inside contact modal
+   ============================ */
+.mini-modal{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:2000;
+}
+.mini-modal.open{ display:flex; }
+.mini-modal .mm-backdrop{
+  position:absolute; inset:0;
+  background:rgba(0,0,0,.55);
+}
+.mini-modal *{ box-sizing:border-box; }
 .mini-modal .mm-panel{
+  position:relative;
   width: min(560px, 94vw);
+  background:#fff;
+  border:1px solid #e9eaf0;
+  box-shadow:0 24px 60px rgba(0,0,0,.25);
+  padding:14px;
   border-radius:16px;
   overflow:hidden;
 }
-
+.mini-modal .mm-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:10px;
+  margin-bottom:10px;
+}
+.mini-modal .mm-close{
+  border:none;
+  background:transparent;
+  font-size:28px;
+  cursor:pointer;
+  line-height:1;
+}
 .mm-grid{
   display:grid;
   grid-template-columns: 1fr 1fr;
@@ -1076,8 +811,6 @@ a, button{ outline-color: var(--brand); }
 @media (max-width: 520px){
   .mm-grid{ grid-template-columns:1fr; }
 }
-
-/* Match your rounded inputs */
 .mini-modal .mm-panel select,
 .mini-modal .mm-panel input{
   width:100%;
@@ -1087,8 +820,6 @@ a, button{ outline-color: var(--brand); }
   outline:none;
   background:#fff;
 }
-
-/* label style inside modal */
 .mm-label{
   display:block;
   font-size:12px;
@@ -1096,7 +827,7 @@ a, button{ outline-color: var(--brand); }
   margin-bottom:6px;
 }
 
-/* Notes header layout */
+/* ---------- Notes header layout ---------- */
 .notes-head{
   display:flex;
   align-items:center;
@@ -1104,9 +835,7 @@ a, button{ outline-color: var(--brand); }
   gap:10px;
   flex-wrap:wrap;
 }
-
 .notes-left{ display:flex; align-items:center; gap:8px; }
-
 .notes-mid{
   display:flex;
   align-items:center;
@@ -1115,7 +844,6 @@ a, button{ outline-color: var(--brand); }
   justify-content:center;
   min-width:220px;
 }
-
 .notes-mid input,
 .notes-mid select{
   padding:6px 8px;
@@ -1124,15 +852,9 @@ a, button{ outline-color: var(--brand); }
   font-size:14px;
   max-width:160px;
 }
-
 #note-filter-range{ max-width:170px; }
-
 #note-filter-status{ max-width:150px; }
-
-#note-filter-clear{
-  padding:6px 10px;
-}
-
+#note-filter-clear{ padding:6px 10px; }
 .notes-right{ display:flex; align-items:center; justify-content:flex-end; }
 
 .note-add-btn{
@@ -1145,70 +867,15 @@ a, button{ outline-color: var(--brand); }
   font-size:20px;
   line-height:1;
 }
-/* ---------- Mobile: Notes header spacing + wrapping ---------- */
-@media (max-width: 560px) {
-  .notes-head{
-    gap: 8px;
-  }
 
-  /* Row 1: left + add button */
-  .notes-left{
-    flex: 1;
-    min-width: 0;
-  }
-
-  .notes-right{
-    margin-left: auto;
-  }
-
-  /* Row 2: filters take full width and wrap nicely */
-  .notes-mid{
-    flex: 0 0 100%;
-    justify-content: flex-start;
-    gap: 8px;
-  }
-
-  .notes-mid input,
-  .notes-mid select{
-    max-width: none;
-    width: 100%;
-    min-width: 0;
-  }
-
-  /* Make filters 2-column so they don’t stack weird */
-  .notes-mid{
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    align-items: center;
-  }
-
-  /* Put Clear full-width on its own row */
-  #note-filter-clear{
-    grid-column: 1 / -1;
-    width: 100%;
-  }
-
-  /* Keep + button compact */
-  .note-add-btn{
-    width: 34px;
-    height: 34px;
-  }
-}
-/* ---------- Mobile: Stack notes controls cleanly ---------- */
-@media (max-width: 560px) {
-
+/* Mobile: Notes header stacking */
+@media (max-width: 560px){
   .contact-sec-head{
     flex-direction: column;
     align-items: stretch;
     gap: 10px;
   }
 
-  /* Hide title text (icon only) 
-  .sec-title-text{
-    display: none;
-  }*/
-
-  /* Make filters stack */
   .notes-mid{
     display: flex;
     flex-direction: column;
@@ -1224,104 +891,46 @@ a, button{ outline-color: var(--brand); }
     max-width: none;
   }
 
-  /* Make + button same style height as others */
   .note-add-btn{
     height: 38px;
     font-size: 18px;
   }
 
-  /* Keep + in its own row */
-  .notes-right{
-    width: 100%;
-  }
+  .notes-right{ width: 100%; }
 }
 
-.contact-phone {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  text-decoration: none;
+/* ---------- Contact phone helpers ---------- */
+.contact-phone{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  text-decoration:none;
 }
-
-.contact-phone--wrong {
-  color: #ff2a2a !important;
-  font-weight: 800;
+.contact-phone--wrong{
+  color:#ff2a2a !important;
+  font-weight:800;
   text-shadow: 0 0 10px rgba(255,42,42,.75);
 }
-
-.contact-phone--wrong::before {
-  content: "WN";
-  font-size: 11px;
-  font-weight: 900;
-  padding: 2px 6px;
-  border-radius: 999px;
-  border: 1px solid rgba(255,42,42,.65);
-  box-shadow: 0 0 10px rgba(255,42,42,.55);
-  line-height: 1;
+.contact-phone--wrong::before{
+  content:"WN";
+  font-size:11px;
+  font-weight:900;
+  padding:2px 6px;
+  border-radius:999px;
+  border:1px solid rgba(255,42,42,.65);
+  box-shadow:0 0 10px rgba(255,42,42,.55);
+  line-height:1;
 }
 .contact-sec-view a.contact-phone--wrong,
 .contact-sec-view a.contact-phone--wrong:visited,
-.contact-sec-view a.contact-phone--wrong:hover {
-  color: #ff2a2a !important;
-  font-weight: 900 !important;
-  text-shadow: 0 0 10px rgba(255,42,42,.75) !important;
+.contact-sec-view a.contact-phone--wrong:hover{
+  color:#ff2a2a !important;
+  font-weight:900 !important;
+  text-shadow:0 0 10px rgba(255,42,42,.75) !important;
 }
 
-/* ============================
-   Contacts: ALWAYS 4 columns + horizontal scroll
-   (Overrides old mobile-hide behavior)
-   ============================ */
-
-#contacts-list{
-  overflow-x: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/* Force SAME grid on header + rows at all widths */
-#contacts-list .contacts-head,
-#contacts-list .contact-row{
-  display: grid !important;
-  grid-template-columns: 48px 1.2fr 1fr 1fr !important;
-  gap: 10px !important;
-  align-items: center !important;
-  min-width: 760px;  /* controls when scroll appears */
-}
-
-/* NEVER hide email column on mobile */
-#contacts-list .contacts-head > :last-child,
-#contacts-list .contact-row > :last-child{
-  display: block !important;
-}
-
-/* Keep header text from wrapping weird */
-#contacts-list .contacts-head > div{
-  white-space: nowrap;
-}
-
-/* Allow row cells to shrink properly without smashing together */
-#contacts-list .contacts-head > div,
-#contacts-list .contact-row > div{
-  min-width: 0;
-}
-/* ✅ give Choices fields room for the label */
-.field .choices__inner {
-  padding-top: 18px !important;
-}
-
-/* optional: make label sit above the Choices text when filled/focused */
-.field.filled label,
-.field:focus-within label {
-  z-index: 2;
-}
-.field .choices {
-  z-index: 1;
-}
-/* ✅ Keep label floated when Choices has a real selected value (not placeholder) */
-.field:has(.choices__list--single .choices__item--selectable:not(.choices__placeholder)) > label{
-  color: var(--ink);
-  font-size: .76rem;
-  top: -6px;
-  background:#fff;
-  padding: 0 6px;
-  z-index: 10;
+/* ---------- Responsive ---------- */
+@media (max-width: 640px){
+  .lead-tabs{ gap:6px; }
+  .lead-tabs .tab-button{ padding:8px 10px; }
 }
