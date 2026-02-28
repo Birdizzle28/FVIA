@@ -554,3 +554,43 @@ hr{ border:0; height:1px; background:#ececf5; }
   max-height: calc(100vh - 40px);
   overflow-y: auto;
 }
+/* ===== Admin All Leads: sane row height ===== */
+#leads-table {
+  table-layout: fixed; /* prevents rows from exploding due to long notes */
+  width: 100%;
+}
+
+#leads-table th,
+#leads-table td {
+  vertical-align: top;
+}
+
+#leads-table tbody tr {
+  height: 64px; /* ✅ pick your vibe: 56/64/72 */
+}
+
+#leads-table tbody td {
+  padding: 10px 8px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap; /* default: keep cells from wrapping */
+}
+
+/* allow notes to wrap + scroll inside the cell */
+#leads-table td.lead-notes {
+  white-space: normal;      /* allow wrapping */
+  max-width: 320px;         /* adjust if you want wider notes */
+}
+
+#leads-table td.lead-notes {
+  max-height: 56px;         /* slightly less than row height */
+  overflow: auto;           /* ✅ scroll inside notes */
+  line-height: 1.2;
+}
+
+/* optional: make Address wrap too (usually long) */
+#leads-table td.lead-address {
+  white-space: normal;
+  max-height: 56px;
+  overflow: auto;
+}
