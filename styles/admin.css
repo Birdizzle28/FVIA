@@ -554,43 +554,44 @@ hr{ border:0; height:1px; background:#ececf5; }
   max-height: calc(100vh - 40px);
   overflow-y: auto;
 }
-/* ===== Admin All Leads: sane row height ===== */
+/* ================================
+   ADMIN ALL LEADS - FIXED HEIGHT
+================================ */
+
+/* Prevent table from expanding unpredictably */
 #leads-table {
-  table-layout: fixed; /* prevents rows from exploding due to long notes */
+  table-layout: fixed;
   width: 100%;
 }
 
-#leads-table th,
-#leads-table td {
-  vertical-align: top;
-}
-
+/* Force row height */
 #leads-table tbody tr {
-  height: 64px; /* ✅ pick your vibe: 56/64/72 */
+  height: 60px !important;   /* change to 56 / 60 / 64 if you want */
+  max-height: 60px !important;
 }
 
+/* Force cell height */
 #leads-table tbody td {
-  padding: 10px 8px;
+  height: 60px !important;
+  max-height: 60px !important;
+  padding: 8px 6px;
+  vertical-align: middle;
   overflow: hidden;
   text-overflow: ellipsis;
-  white-space: nowrap; /* default: keep cells from wrapping */
+  white-space: nowrap;  /* stop wrapping */
 }
 
-/* allow notes to wrap + scroll inside the cell */
+/* Notes column: allow scroll inside */
 #leads-table td.lead-notes {
-  white-space: normal;      /* allow wrapping */
-  max-width: 320px;         /* adjust if you want wider notes */
-}
-
-#leads-table td.lead-notes {
-  max-height: 56px;         /* slightly less than row height */
-  overflow: auto;           /* ✅ scroll inside notes */
+  white-space: normal;
+  overflow-y: auto;
+  overflow-x: hidden;
   line-height: 1.2;
 }
 
-/* optional: make Address wrap too (usually long) */
+/* Address column optional scroll */
 #leads-table td.lead-address {
   white-space: normal;
-  max-height: 56px;
-  overflow: auto;
-}
+  overflow-y: auto;
+  overflow-x: hidden;
+}f
