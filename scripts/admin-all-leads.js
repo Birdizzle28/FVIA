@@ -554,12 +554,35 @@ function exportPDF() {
     doc.save('leads.pdf');
   };
 }
+function wireAdminNav() {
+  const nav = document.getElementById('admin-page-nav');
+  if (!nav) return;
 
+  // highlight active based on current file name
+  const current = (location.pathname.split('/').pop() || '').toLowerCase();
+
+  nav.querySelectorAll('button[data-href]').forEach(btn => {
+    const href = (btn.getAttribute('data-href') || '').toLowerCase();
+    if (!href) return;
+
+    // set active
+    if (href === current) btn.classList.add('active');
+    else btn.classList.remove('active');
+
+    // click -> navigate
+    btn.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      location.href = btn.getAttribute('data-href');
+    });
+  });
+}
 document.addEventListener('DOMContentLoaded', async () => {
   if (!sb) {
     console.warn('Supabase client missing (window.supabaseClient/window.supabase).');
     return;
   }
+  wireAdminNav();
   const section = $('admin-all-section');
   if (section) section.style.display = 'block';
   await loadMe();
