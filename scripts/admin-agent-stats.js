@@ -201,7 +201,7 @@ function renderKPIs(leadsArr, policiesArr, agentId){
   $('kpi-new').textContent = String(total);
 
   // ✅ Replaces "Assigned"
-  $('kpi-assigned').textContent = money(annualizedPremium);
+  $('kpi-ap').textContent = money(annualizedPremium);
 
   $('kpi-agents').textContent = String(agentId ? 1 : uniqueAgents);
 
