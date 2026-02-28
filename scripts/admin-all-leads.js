@@ -410,137 +410,80 @@ function wireExport() {
   if (exportBtn && exportOptions) {
     exportBtn.addEventListener('click', (e) => {
       e.preventDefault(); e.stopPropagation();
+      if (!selectedLeads.size) return alert("Select at least one lead first.");
       exportOptions.style.display = (exportOptions.style.display === 'block') ? 'none' : 'block';
     });
+
     exportOptions.addEventListener('click', (e) => e.stopPropagation());
     document.addEventListener('click', () => { exportOptions.style.display = 'none'; });
   }
 
   const closeExport = () => { if (exportOptions) exportOptions.style.display = 'none'; };
-  $('export-csv')?.addEventListener('click', () => { closeExport(); exportCSV(); });
-  $('export-print')?.addEventListener('click', () => { closeExport(); exportPrint(); });
-  $('export-pdf')?.addEventListener('click', () => { closeExport(); exportPDF(); });
+
+  $('export-csv')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    closeExport();
+    await exportSelectedLeadsViaFunction("csv");
+  });
+
+  $('export-print')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    closeExport();
+    await exportSelectedLeadsViaFunction("print");
+  });
+
+  $('export-pdf')?.addEventListener('click', async (e) => {
+    e.preventDefault();
+    closeExport();
+    await exportSelectedLeadsViaFunction("pdf");
+  });
 }
 
-function exportCSV() {
-  const leads = getSelectedLeadsData();
-  if (!leads.length) { alert('No leads selected.'); return; }
+/* Export selected leads via Netlify function (same as leads.js) */
+async function exportSelectedLeadsViaFunction(format) {
+  const ids = Array.from(selectedLeads);
+  if (!ids.length) return alert("Select at least one lead first.");
 
-  const headers = Object.keys(leads[0]).join(',');
-  const rows = leads.map(lead => Object.values(lead).map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(','));
-  const csvContent = [headers, ...rows].join('\n');
+  const { data: { session } = {} } = await sb.auth.getSession();
+  const token = session?.access_token;
+  if (!token) return alert("Please log in again.");
 
-  const blob = new Blob([csvContent], { type: 'text/csv' });
-  const link = document.createElement('a');
-  link.href = URL.createObjectURL(blob);
-  link.download = 'leads.csv';
-  link.click();
+  const url =
+    `/.netlify/functions/exportLeads?format=${encodeURIComponent(format)}` +
+    `&ids=${encodeURIComponent(JSON.stringify(ids))}`;
+
+  const resp = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
+
+  if (!resp.ok) {
+    const txt = await resp.text();
+    return alert(txt || `Export failed (${resp.status})`);
+  }
+
+  if (format === "print") {
+    const html = await resp.text();
+    const w = window.open("", "_blank");
+    w.document.open();
+    w.document.write(html);
+    w.document.close();
+    return;
+  }
+
+  const blob = await resp.blob();
+  const blobUrl = URL.createObjectURL(blob);
+
+  const a = document.createElement("a");
+  a.href = blobUrl;
+  a.download = (format === "csv")
+    ? `FVIA_Leads_${ids.length}.csv`
+    : `FVIA_Leads_${ids.length}.pdf`;
+
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 1500);
 }
 
-function exportPrint() {
-  const leads = getSelectedLeadsData();
-  if (!leads.length) { alert('No leads selected.'); return; }
-
-  const win = window.open('', '_blank');
-  win.document.write(`
-    <html><head>
-      <link href="https://fonts.googleapis.com/css2?family=Bellota+Text&display=swap" rel="stylesheet">
-      <style>
-        body { font-family: 'Bellota Text', sans-serif; padding: 30px; text-align: center; }
-        .logo { width: 60px; height: 60px; object-fit: contain; display: block; margin: 0 auto 10px auto; }
-        .label { display: inline-block; font-weight: bold; width: 150px; text-align: right; margin-right: 10px; }
-        .value { display: inline-block; text-align: left; }
-        p { text-align: left; margin: 6px 0 6px 100px; }
-        .footer { margin-top: 30px; font-size: 10px; text-align: center; color: #777; }
-        .lead-page { page-break-after: always; }
-      </style>
-      </head><body>
-      ${leads.map(lead => `
-        <div class="lead-page">
-          <img src="/Pics/img6.png" class="logo" />
-          <h2>Family Values Insurance Agency</h2>
-          <h4>Lead Confirmation Form</h4>
-          <p><span class="label">First Name:</span> <span class="value">${escapeHtml(lead.first_name)}</span></p>
-          <p><span class="label">Last Name:</span> <span class="value">${escapeHtml(lead.last_name)}</span></p>
-          <p><span class="label">Age:</span> <span class="value">${escapeHtml(lead.age)}</span></p>
-          <p><span class="label">Phone:</span> <span class="value">${escapeHtml(lead.phone)}</span></p>
-          <p><span class="label">Lead Type:</span> <span class="value">${escapeHtml(lead.leadType)}</span></p>
-          <p><span class="label">City:</span> <span class="value">${escapeHtml(lead.city)}</span></p>
-          <p><span class="label">State:</span> <span class="value">${escapeHtml(lead.state)}</span></p>
-          <p><span class="label">ZIP:</span> <span class="value">${escapeHtml(lead.zip)}</span></p>
-          <p><span class="label">Address:</span> <span class="value">${escapeHtml(lead.address)}</span></p>
-          <p><span class="label">Agent Assigned:</span> <span class="value">${escapeHtml(lead.agent)}</span></p>
-          <p><span class="label">Submitted At:</span> <span class="value">${escapeHtml(lead.submittedAt)}</span></p>
-          <div class="footer">Generated on ${new Date().toLocaleDateString()}</div>
-        </div>
-      `).join('')}
-    </body></html>
-  `);
-  win.document.close();
-  win.print();
-}
-
-function exportPDF() {
-  const leads = getSelectedLeadsData();
-  if (!leads.length) { alert('No leads selected.'); return; }
-
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  const logoImg = new Image();
-  logoImg.src = '/Pics/img6.png';
-
-  logoImg.onload = () => {
-    leads.forEach((lead, i) => {
-      if (i) doc.addPage();
-
-      doc.addImage(logoImg, 'PNG', 90, 10, 30, 30);
-
-      doc.setFontSize(18);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Family Values Insurance Agency', 105, 50, { align: 'center' });
-
-      doc.setFontSize(14);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Lead Confirmation Form', 105, 60, { align: 'center' });
-
-      doc.setFontSize(12);
-      const lines = [
-        `First Name: ${lead.first_name}`,
-        `Last Name: ${lead.last_name}`,
-        `Age: ${lead.age}`,
-        `Phone: ${lead.phone}`,
-        `Lead Type: ${lead.leadType}`,
-        `Product: ${lead.product_type}`,
-        `Address: ${lead.address}`,
-        `City: ${lead.city}`,
-        `State: ${lead.state}`,
-        `ZIP: ${lead.zip}`,
-        `Agent: ${lead.agent}`,
-        `Submitted At: ${lead.submittedAt}`,
-      ];
-
-      let y = 75;
-      lines.forEach(t => { doc.text(String(t), 20, y); y += 8; });
-
-      doc.setFontSize(10);
-      doc.text(`Generated on ${new Date().toLocaleDateString()}`, 105, 285, { align: 'center' });
-    });
-
-    doc.save('leads.pdf');
-  };
-
-  logoImg.onerror = () => {
-    leads.forEach((lead, i) => {
-      if (i) doc.addPage();
-      doc.setFontSize(16);
-      doc.text('Family Values Insurance Agency - Lead', 20, 20);
-      doc.setFontSize(12);
-      doc.text(JSON.stringify(lead, null, 2), 20, 30);
-    });
-    doc.save('leads.pdf');
-  };
-}
 function wireAdminNav() {
   const nav = document.getElementById('admin-page-nav');
   if (!nav) return;
