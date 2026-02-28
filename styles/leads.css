@@ -1317,12 +1317,12 @@ a, button{ outline-color: var(--brand); }
 .field .choices {
   z-index: 1;
 }
-/* If Choices has a selected item, keep the label floated */
-.field .choices[data-type="select-one"] .choices__item--selectable:not(.choices__placeholder) ~ label,
-.field .choices[data-type="select-one"] .choices__inner:not(:empty) ~ label{
+/* ✅ Keep label floated when Choices has a real selected value (not placeholder) */
+.field:has(.choices__list--single .choices__item--selectable:not(.choices__placeholder)) > label{
   color: var(--ink);
   font-size: .76rem;
   top: -6px;
   background:#fff;
   padding: 0 6px;
+  z-index: 10;
 }
