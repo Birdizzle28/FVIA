@@ -469,7 +469,82 @@ document.addEventListener("DOMContentLoaded", async () => {
     timewheelModal.hidden = true;
     timewheelModal.setAttribute("aria-hidden", "true");
   }
-
+  function formatApptStampLocal(isoString) {
+    const d = new Date(isoString);
+    // ex: 02/27/26 12:00 PM
+    return d.toLocaleString("en-US", {
+      month: "2-digit",
+      day: "2-digit",
+      year: "2-digit",
+      hour: "numeric",
+      minute: "2-digit",
+      hour12: true,
+    }).replace(",", ""); // removes the comma after date
+  }
+  
+  function digitsOnly(s) {
+    return String(s || "").replace(/\D/g, "");
+  }
+  
+  function formatUsPhone(s) {
+    const d = digitsOnly(s);
+    if (d.length === 10) return `(${d.slice(0,3)}) ${d.slice(3,6)}-${d.slice(6)}`;
+    if (d.length === 11 && d.startsWith("1")) return `(${d.slice(1,4)}) ${d.slice(4,7)}-${d.slice(7)}`;
+    return (s || "").trim() || "—";
+  }
+  
+  function buildContactNotesBlock({ stamp, details, phone }) {
+    const safeDetails = (details || "").trim() || "—";
+    const safePhone = (phone || "").trim() || "—";
+  
+    // Your exact style with the leading tab + blank line spacing
+    return `\n[O][${stamp}][${safeDetails}][${safePhone}]\t\n\n`;
+  }
+  
+  async function appendAppointmentToContactsNotes(contactIds, payloadToInsert) {
+    const ids = Array.isArray(contactIds) ? contactIds.filter(Boolean) : [];
+    if (!ids.length) return;
+  
+    // Pull existing notes + phone(s)
+    const { data: contacts, error } = await supabase
+      .from("contacts")
+      .select("id, notes, phone, phones")
+      .in("id", ids);
+  
+    if (error) throw error;
+    if (!contacts?.length) return;
+  
+    const stamp = formatApptStampLocal(payloadToInsert.scheduled_for);
+    const details = (payloadToInsert.notes || payloadToInsert.title || "").trim();
+  
+    // Build updates
+    const updates = contacts.map((c) => {
+      const phoneCandidate =
+        (Array.isArray(c.phones) && c.phones.length ? c.phones[0] : null) || c.phone || null;
+  
+      const block = buildContactNotesBlock({
+        stamp,
+        details,
+        phone: formatUsPhone(phoneCandidate),
+      });
+  
+      // Prepend new block to the top
+      const existing = c.notes || "";
+      const nextNotes = (block + existing).trimEnd(); // keeps your trailing spacing sane
+  
+      return { id: c.id, notes: nextNotes };
+    });
+  
+    // Push updates (one-by-one; simplest + safest for RLS/debugging)
+    for (const u of updates) {
+      const { error: upErr } = await supabase
+        .from("contacts")
+        .update({ notes: u.notes })
+        .eq("id", u.id);
+  
+      if (upErr) throw upErr;
+    }
+  }
   // close by clicking backdrop
   document.querySelectorAll("[data-reminder-close]").forEach(el => el.addEventListener("click", closeReminderModal));
   document.querySelectorAll("[data-timewheel-close]").forEach(el => el.addEventListener("click", closeTimewheel));
@@ -510,6 +585,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       
         const { error: apptErr } = await supabase.from("appointments").insert(apptRows);
         if (apptErr) throw apptErr;
+        // ✅ Append into contacts.notes too
+        await appendAppointmentToContactsNotes(contactIds, payloadToInsert);
       
         // ✅ ALSO write "Appointment" notes for each contact
         const noteRows = contactIds.map((cid) => ({
@@ -544,9 +621,10 @@ document.addEventListener("DOMContentLoaded", async () => {
             details: (payloadToInsert.notes || payloadToInsert.title || "").trim() || null,
             phone: null,
           };
-      
+          await appendAppointmentToContactsNotes([cid], payloadToInsert);
           const { error: noteErr } = await supabase.from("contact_notes_details").insert(noteRow);
           if (noteErr) throw noteErr;
+          
         }
       }
   
