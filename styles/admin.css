@@ -554,3 +554,37 @@ hr{ border:0; height:1px; background:#ececf5; }
   max-height: calc(100vh - 40px);
   overflow-y: auto;
 }
+
+/* ===== Fixed row height (NO width changes) ===== */
+
+/* pick your row height */
+:root { --lead-row-h: 62px; }
+
+/* keep cells from expanding row height */
+#leads-table tbody td {
+  padding: 8px 6px;
+  vertical-align: middle;
+}
+
+/* This box controls height + scrolling INSIDE the cell */
+#leads-table tbody td .cell-box {
+  height: var(--lead-row-h);
+  max-height: var(--lead-row-h);
+  overflow: hidden;           /* default: clip */
+  display: flex;
+  align-items: center;        /* vertically center short text */
+  line-height: 1.15;
+}
+
+/* Notes (and Address) get internal scroll */
+#leads-table tbody td.lead-notes .cell-box,
+#leads-table tbody td.lead-address .cell-box {
+  align-items: flex-start;    /* top align for multi-line */
+  overflow: auto;             /* ✅ scroll inside */
+  padding-right: 6px;         /* space from scrollbar */
+}
+
+/* Optional: keep most columns from wrapping */
+#leads-table tbody td:not(.lead-notes):not(.lead-address) {
+  white-space: nowrap;
+}
