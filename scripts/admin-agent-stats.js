@@ -312,6 +312,7 @@ function renderCharts({ leadsArr, policiesArr, startISO, endISO }){
 
   // ----- Time series -----
   const ts = buildTimeSeries(leadsArr, startISO, endISO);
+
   const weeklyCtx = $('chart-weekly')?.getContext('2d');
   if (weeklyCtx){
     chartWeekly = new Chart(weeklyCtx, {
@@ -363,8 +364,7 @@ function renderCharts({ leadsArr, policiesArr, startISO, endISO }){
   // ----- Assignments by agent -----
   const agentMap = new Map((allAgents || []).map(a => [a.id, a.full_name]));
   const assigns = {};
-
-  const assignedInWindow = leadsArr.filter(l => !!l.assigned_to); // simple + consistent
+  const assignedInWindow = leadsArr.filter(l => !!l.assigned_to);
 
   for (const l of assignedInWindow){
     const id = l.assigned_to || 'Unknown';
@@ -386,31 +386,32 @@ function renderCharts({ leadsArr, policiesArr, startISO, endISO }){
         scales: { y: { beginAtZero: true, ticks: { precision: 0 } } }
       }
     });
-    // ----- Persistency Over Time (30/60/90) -----
-    const pCtx = $('chart-persistency')?.getContext('2d');
-    if (pCtx){
-      const p = calcPersistencySeries(policiesArr, startISO, endISO);
-  
-      chartPersistency = new Chart(pCtx, {
-        type: 'line',
-        data: {
-          labels: p.labels,
-          datasets: [
-            { label: '30-day', data: p.series[30], tension: 0.3, spanGaps: false },
-            { label: '60-day', data: p.series[60], tension: 0.3, spanGaps: false },
-            { label: '90-day', data: p.series[90], tension: 0.3, spanGaps: false }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom' } },
-          scales: {
-            y: { beginAtZero: true, max: 100, ticks: { callback: (v) => `${v}%` } }
-          }
+  }
+
+  // ----- Persistency Over Time (30/60/90) -----
+  const pCtx = $('chart-persistency')?.getContext('2d');
+  if (pCtx){
+    const p = calcPersistencySeries(policiesArr, startISO, endISO);
+
+    chartPersistency = new Chart(pCtx, {
+      type: 'line',
+      data: {
+        labels: p.labels,
+        datasets: [
+          { label: '30-day', data: p.series[30], tension: 0.3, spanGaps: false },
+          { label: '60-day', data: p.series[60], tension: 0.3, spanGaps: false },
+          { label: '90-day', data: p.series[90], tension: 0.3, spanGaps: false }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { position: 'bottom' } },
+        scales: {
+          y: { beginAtZero: true, max: 100, ticks: { callback: (v) => `${v}%` } }
         }
-      });
-    }
+      }
+    });
   }
 }
 
