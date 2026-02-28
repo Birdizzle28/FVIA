@@ -314,21 +314,26 @@ async function assignLeads(agentId) {
 
 async function doAssign(agentId) {
   const leadIds = Array.from(selectedLeads);
+  if (!agentId) { alert('Select an agent first.'); return; }
+  if (!leadIds.length) { alert('Select at least one lead.'); return; }
 
-  // IMPORTANT: use sb (your actual client)
-  const { error: upErr } = await sb
-    .from('leads')
-    .update({
-      assigned_to: agentId,
-      assigned_at: new Date().toISOString()
-    })
-    .in('id', leadIds);
+  const { data, error } = await sb.rpc('transfer_leads_clone_contacts', {
+    p_lead_ids: leadIds,
+    p_agent_id: agentId
+  });
 
-  if (upErr) {
-    console.warn('assign update error:', upErr);
-    alert('Assign failed.');
+  if (error) {
+    console.warn('transfer_leads_clone_contacts error:', error);
+    alert(error.message || 'Assign failed.');
     return;
   }
+
+  // optional: show a nice result message in console
+  console.log('[TRANSFER OK]', data);
+
+  clearSelectionUI();
+  await loadLeads();
+}
 
   if (me?.id) {
     const historyRows = leadIds.map(id => ({
