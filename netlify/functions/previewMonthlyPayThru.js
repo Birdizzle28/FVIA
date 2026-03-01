@@ -14,6 +14,8 @@ const supabase = createClient(supabaseUrl, serviceKey);
    AUTH HELPERS
    --------------------------- */
 
+const ELIGIBLE_POLICY_STATUSES = ['issued', 'in_force', 'renewed', 'reinstated'];
+
 function getBearerToken(event) {
   const h = event.headers || {};
   const raw = h.authorization || h.Authorization || '';
@@ -301,7 +303,7 @@ export async function handler(event) {
       .from('policies')
       .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, premium_modal, issued_at, as_earned, status')
       .eq('agent_id', targetAgentId)
-      .in('status', ['issued', 'in_force'])
+      .in('status', ['issued', 'in_force', 'renewed', 'reinstated'])
       .not('issued_at', 'is', null)
       .lte('issued_at', cutoffIso);
 
@@ -548,21 +550,59 @@ export async function handler(event) {
 
     simulatedNewGross = round2(simulatedNewGross);
 
-    // ---- existing unpaid rows for target agent (match run: <= payMonthKey) ----
-    const { data: unpaidExisting, error: unpaidErr } = await supabase
+    // ---- existing unpaid rows for target agent (<= payMonthKey) ----
+    // ✅ now includes policy_id so we can filter out rows whose policies are cancelled/lapsed/etc.
+    const { data: unpaidExistingRaw, error: unpaidErr } = await supabase
       .from('commission_ledger')
-      .select('id, agent_id, amount')
+      .select('id, agent_id, amount, policy_id')
       .eq('entry_type', 'paythru')
       .eq('is_settled', false)
       .eq('agent_id', targetAgentId)
       .lte('meta->>pay_month', payMonthKey);
-
+    
     if (unpaidErr) {
       return { statusCode: 500, body: JSON.stringify({ error: 'Failed to load unpaid paythru rows', details: unpaidErr }) };
     }
-
+    
+    const unpaidExistingAll = unpaidExistingRaw || [];
+    
+    // ✅ Filter unpaid ledger rows to ONLY those whose policy is still in eligible status
+    const unpaidPolicyIds = Array.from(
+      new Set(unpaidExistingAll.map(r => r.policy_id).filter(Boolean))
+    );
+    
+    let eligiblePolicyIdSet = new Set();
+    
+    if (unpaidPolicyIds.length > 0) {
+      const { data: polStatusRows, error: polStatusErr } = await supabase
+        .from('policies')
+        .select('id, status')
+        .in('id', unpaidPolicyIds);
+    
+      if (polStatusErr) {
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ error: 'Failed to load policy statuses for unpaid paythru rows', details: polStatusErr })
+        };
+      }
+    
+      for (const p of (polStatusRows || [])) {
+        if (ELIGIBLE_POLICY_STATUSES.includes(p.status)) {
+          eligiblePolicyIdSet.add(p.id);
+        }
+      }
+    }
+    
+    const unpaidExisting = unpaidExistingAll.filter(r => {
+      if (!r.policy_id) return false;
+      return eligiblePolicyIdSet.has(r.policy_id);
+    });
+    
+    const filteredOutUnpaidCount = unpaidExistingAll.length - unpaidExisting.length;
+    
+    // ---- threshold accrual = (eligible unpaid existing) + (simulated new) ----
     let grossTowardThreshold = 0;
-    for (const row of (unpaidExisting || [])) grossTowardThreshold += Number(row.amount || 0);
+    for (const row of unpaidExisting) grossTowardThreshold += Number(row.amount || 0);
     for (const row of simulatedRows) grossTowardThreshold += Number(row.amount || 0);
     grossTowardThreshold = round2(grossTowardThreshold);
 
