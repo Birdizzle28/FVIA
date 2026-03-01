@@ -415,13 +415,20 @@ function renderPoliciesList(rows) {
           <div>${carrier} • ${line} • ${type}</div>
           <div>$${prem} • ${st} • Issue: ${dt}</div>
         </div>
-
-        <div style="flex:0 0 auto;">
+    
+        <div style="flex:0 0 auto; display:flex; gap:8px; align-items:center;">
           <button type="button"
             class="policy-edit-btn"
             data-policy-id="${p.id}"
             style="padding:6px 10px; border-radius:8px;">
             Edit
+          </button>
+    
+          <button type="button"
+            class="policy-renew-btn"
+            data-policy-id="${p.id}"
+            style="padding:6px 10px; border-radius:8px;">
+            Add renewal
           </button>
         </div>
       </div>
@@ -668,11 +675,17 @@ async function loadPayoutBatchesIntoList() {
     return n.toLocaleString(undefined, { style: "currency", currency: "USD" });
   };
 
-  const fmtDate = (v) => {
+  const fmtDateTime = (v) => {
     if (!v) return "—";
     const d = new Date(v);
     if (Number.isNaN(d.getTime())) return String(v);
     return d.toLocaleString();
+  };
+  
+  const fmtDateOnly = (v) => {
+    if (!v) return "—";
+    // v is YYYY-MM-DD (date)
+    return String(v).slice(0, 10);
   };
 
   const setBusy = (el, busy, labelBusy) => {
@@ -734,7 +747,7 @@ async function loadPayoutBatchesIntoList() {
 
       <div style="margin-top:6px; font-size:13px; line-height:1.35;">
         <div><span style="opacity:.75;">Total Net:</span> <span class="total-net-text">${money(b.total_net)}</span></div>
-        <div><span style="opacity:.75;">Created:</span> ${fmtDate(b.created_at)}</div>
+        <div><span style="opacity:.75;">Pay Date:</span> ${fmtDate(b.created_at)}</div>
         ${b.run_at ? `<div><span style="opacity:.75;">Run At:</span> ${fmtDate(b.run_at)}</div>` : ``}
         <div><span style="opacity:.75;">Status:</span> <span class="status-text">${currentStatus}</span></div>
       </div>
@@ -1287,7 +1300,8 @@ function wirePolicyEditSubmit() {
     const agent_id = document.getElementById('policy-edit-agent')?.value || null;
     const policy_number = document.getElementById('policy-edit-number')?.value?.trim() || null;
     const premium_annual = Number(document.getElementById('policy-edit-annual-premium')?.value || 0);
-
+    const premium_modal = premium_annual > 0 ? (premium_annual / 12) : null;
+    
     const carrier_name = document.getElementById('policy-edit-carrier')?.value?.trim() || null;
     const product_line = document.getElementById('policy-edit-product-line')?.value?.trim() || null;
     const policy_type = document.getElementById('policy-edit-policy-type')?.value?.trim() || null;
@@ -1313,6 +1327,7 @@ function wirePolicyEditSubmit() {
       policy_type,
       policy_number,
       premium_annual,
+      policy_modal,
       submitted_at,
       status,
       as_earned,
@@ -1515,7 +1530,8 @@ function wirePolicySubmit() {
       const policy_number = document.getElementById('policy-number')?.value?.trim() || null;
 
       const premium_annual = Number(document.getElementById('policy-annual-premium')?.value || 0);
-
+      const premium_modal = premium_annual > 0 ? (premium_annual / 12) : null;
+      
       const submitted_raw = document.getElementById('policy-submitted-date')?.value || null;
       const submitted_at = submitted_raw ? new Date(submitted_raw).toISOString() : null;
       const as_earned = (document.getElementById('policy-as-earned')?.value === 'true');
@@ -1589,6 +1605,7 @@ function wirePolicySubmit() {
           policy_type,
           policy_number,
           premium_annual,
+          premium_modal,
           submitted_at,
           issued_at,
           status,
@@ -1825,6 +1842,100 @@ function ensureChoicesForSelect(selectEl, existingInstance, opts = {}) {
 }
 
 /* ---------- Init ---------- */
+function ymdToday(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+
+function openRenewalModal(policyId){
+  const modal = document.getElementById('renewal-modal');
+  const errEl = document.getElementById('renewal-error');
+  if (errEl) errEl.textContent = '';
+
+  document.getElementById('renewal-policy-id').value = policyId || '';
+  const startEl = document.getElementById('renewal-term-start');
+  const endEl = document.getElementById('renewal-term-end');
+  const monthsEl = document.getElementById('renewal-term-months');
+  const premEl = document.getElementById('renewal-term-premium');
+  const noteEl = document.getElementById('renewal-note');
+
+  if (startEl) startEl.value = ymdToday();
+  if (endEl) endEl.value = '';
+  if (monthsEl) monthsEl.value = 12;
+  if (premEl) premEl.value = '';
+  if (noteEl) noteEl.value = '';
+
+  openModal(modal);
+}
+
+function wireRenewalButtons(){
+  const list = document.getElementById('policy-list');
+  if (!list) return;
+
+  list.addEventListener('click', (e) => {
+    const btn = e.target.closest('.policy-renew-btn');
+    if (!btn) return;
+    const policyId = btn.dataset.policyId;
+    if (!policyId) return;
+    openRenewalModal(policyId);
+  });
+}
+
+function wireRenewalModalButtons(){
+  document.getElementById('renewal-cancel')?.addEventListener('click', () => {
+    closeModal(document.getElementById('renewal-modal'));
+  });
+
+  document.getElementById('renewal-modal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'renewal-modal') closeModal(e.currentTarget);
+  });
+}
+
+function wireRenewalSubmit(){
+  document.getElementById('renewal-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const errEl = document.getElementById('renewal-error');
+    if (errEl) errEl.textContent = '';
+
+    const policy_id = document.getElementById('renewal-policy-id')?.value || null;
+    const term_start = document.getElementById('renewal-term-start')?.value || null;
+    const term_end = document.getElementById('renewal-term-end')?.value || null;
+    const term_months = Number(document.getElementById('renewal-term-months')?.value || 0);
+    const term_premium = Number(document.getElementById('renewal-term-premium')?.value || 0);
+    const note = document.getElementById('renewal-note')?.value?.trim() || null;
+
+    if (!policy_id || !term_start || !(term_months > 0) || !(term_premium >= 0)) {
+      if (errEl) errEl.textContent = 'Please complete required fields.';
+      return;
+    }
+
+    const payload = {
+      policy_id,
+      term_start,
+      term_end: term_end || null,
+      term_months,
+      term_premium,
+      note
+    };
+
+    const { error } = await sb
+      .from('policy_terms')
+      .insert([payload]);
+
+    if (error) {
+      console.error('Add renewal error:', error);
+      if (errEl) errEl.textContent = error.message || 'Could not add renewal.';
+      return;
+    }
+
+    closeModal(document.getElementById('renewal-modal'));
+    alert('Renewal term added.');
+  });
+}
 
 document.addEventListener('DOMContentLoaded', async () => {
   if (!sb) {
@@ -1855,4 +1966,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await loadPayoutBatchesIntoList();
   wirePayoutBatchFilters();
   await loadPayoutBatchesIntoList();
+  wireRenewalButtons();
+  wireRenewalModalButtons();
+  wireRenewalSubmit();
 });
