@@ -368,7 +368,7 @@ export async function handler(event) {
     const { data: policies, error: polErr } = await supabase
       .from('policies')
       .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, premium_modal, issued_at, as_earned, status')
-      .in('status', ['issued', 'in_force'])
+      .in('status', ['issued', 'in_force', 'renewed', 'reinstated'])
       .not('issued_at', 'is', null)
       .lte('issued_at', cutoffIso);
 
