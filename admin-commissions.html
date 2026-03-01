@@ -380,6 +380,49 @@
         </div>
       </div>
 
+      <!-- Add Renewal Modal -->
+      <div id="renewal-modal" class="modal-backdrop" style="display:none;">
+        <div class="modal">
+          <h3>Add Renewal Term</h3>
+      
+          <form id="renewal-form">
+            <input id="renewal-policy-id" type="hidden">
+      
+            <label>
+              Term Start
+              <input id="renewal-term-start" type="date" required>
+            </label>
+      
+            <label>
+              Term End (optional)
+              <input id="renewal-term-end" type="date">
+            </label>
+      
+            <label>
+              Term Months
+              <input id="renewal-term-months" type="number" min="1" step="1" value="12" required>
+            </label>
+      
+            <label>
+              Term Premium
+              <input id="renewal-term-premium" type="number" min="0" step="0.01" required>
+            </label>
+      
+            <label>
+              Note (optional)
+              <input id="renewal-note" type="text" placeholder="Optional note">
+            </label>
+      
+            <div class="modal-actions">
+              <button type="button" id="renewal-cancel">Cancel</button>
+              <button type="submit">Save Renewal</button>
+            </div>
+      
+            <p id="renewal-error" class="modal-error"></p>
+          </form>
+        </div>
+      </div>
+      
       <!-- Add Debit / Credit Modal -->
       <div id="adjustment-modal" class="modal-backdrop" style="display:none;">
         <div class="modal">
