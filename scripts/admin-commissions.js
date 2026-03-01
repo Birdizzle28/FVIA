@@ -688,6 +688,8 @@ async function loadPayoutBatchesIntoList() {
     return String(v).slice(0, 10);
   };
 
+  const fmtDate = fmtDateTime;
+  
   const setBusy = (el, busy, labelBusy) => {
     if (!el) return;
     el.disabled = !!busy;
@@ -1327,7 +1329,7 @@ function wirePolicyEditSubmit() {
       policy_type,
       policy_number,
       premium_annual,
-      policy_modal,
+      premium_modal,
       submitted_at,
       status,
       as_earned,
@@ -1511,6 +1513,57 @@ function wireAdjustmentDependencies() {
 
 /* ---------- Policy submit (FIXED to match admin.js policies table) ---------- */
 
+async function attachLeadsToPolicy({ policyId, leadIds, submitted_at_iso, policy_number, created_by }) {
+  const ids = Array.isArray(leadIds) ? leadIds.filter(Boolean) : [];
+  if (!policyId || !ids.length) return;
+
+  // 1) Insert junction rows (ignore duplicates safely)
+  const rows = ids.map(lead_id => ({
+    policy_id: policyId,
+    lead_id,
+    created_by: created_by || null
+  }));
+
+  const { error: linkErr } = await sb
+    .from('policy_leads')
+    .insert(rows);
+
+  // If duplicates happen, the unique index may throw. If you want "ignore duplicates",
+  // tell me and I’ll switch to an RPC for upsert/ignore.
+  if (linkErr) {
+    console.error('policy_leads insert error:', linkErr);
+    // don't return; still try to close leads
+  }
+
+  // 2) Update leads closed fields
+  const { error: leadUpErr } = await sb
+    .from('leads')
+    .update({
+      closed_at: submitted_at_iso,
+      closed_status: 'won',
+      closed_reason: `Sold policy ${policy_number || ''}`.trim()
+    })
+    .in('id', ids);
+
+  if (leadUpErr) {
+    console.error('leads close update error:', leadUpErr);
+  }
+
+  // 3) Optionally set primary lead on policies (first selected)
+  const primaryLeadId = ids[0] || null;
+  if (primaryLeadId) {
+    // If you renamed the column, change 'lead_id' to 'primary_lead_id'
+    const { error: polUpErr } = await sb
+      .from('policies')
+      .update({ lead_id: primaryLeadId })
+      .eq('id', policyId);
+
+    if (polUpErr) {
+      console.warn('policy primary lead update error:', polUpErr);
+    }
+  }
+}
+
 function wirePolicySubmit() {
   document.getElementById('policy-form')?.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -1619,30 +1672,23 @@ function wirePolicySubmit() {
         if (errEl) errEl.textContent = 'Could not save policy.';
         return;
       }
-
-      // If admin selected one or more leads, mark them closed/sold
+      
+      // collect selected lead ids (if any)
       const leadsSelEl = document.getElementById('policy-leads');
-      const selectedLeadIds = window.Choices && policyLeadsChoices
+      const selectedLeadIds = (window.Choices && policyLeadsChoices)
         ? (policyLeadsChoices.getValue(true) || [])
         : Array.from(leadsSelEl?.selectedOptions || []).map(o => o.value);
       
       const leadIds = Array.isArray(selectedLeadIds) ? selectedLeadIds.filter(Boolean) : [];
       
-      if (leadIds.length) {
-        const { error: leadUpErr } = await sb
-          .from('leads')
-          .update({
-            closed_at: submitted_at,
-            closed_status: 'sold',
-            closed_reason: `Sold policy ${policy_number || ''}`.trim()
-          })
-          .in('id', leadIds);
-      
-        if (leadUpErr) {
-          console.error('Failed updating selected leads to sold:', leadUpErr);
-          // don't block policy save
-        }
-      }
+      // attach leads + close them as WON (matches your DB constraint)
+      await attachLeadsToPolicy({
+        policyId: newPolicy.id,
+        leadIds,
+        submitted_at_iso: submitted_at,
+        policy_number,
+        created_by: userId
+      });
 
       // admin.js runs the commission flow right after policy create
       if (typeof window.runPolicyCommissionFlow === 'function') {
