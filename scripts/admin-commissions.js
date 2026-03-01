@@ -749,7 +749,7 @@ async function loadPayoutBatchesIntoList() {
 
       <div style="margin-top:6px; font-size:13px; line-height:1.35;">
         <div><span style="opacity:.75;">Total Net:</span> <span class="total-net-text">${money(b.total_net)}</span></div>
-        <div><span style="opacity:.75;">Pay Date:</span> ${fmtDate(b.created_at)}</div>
+        <div><span style="opacity:.75;">Pay Date:</span> ${fmtDate(b.pay_date)}</div>
         ${b.run_at ? `<div><span style="opacity:.75;">Run At:</span> ${fmtDate(b.run_at)}</div>` : ``}
         <div><span style="opacity:.75;">Status:</span> <span class="status-text">${currentStatus}</span></div>
       </div>
