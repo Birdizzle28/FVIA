@@ -13,3 +13,6 @@
 
 [functions."monthly-followups-tasks"]
   schedule = "0 14 2 * *"
+
+[functions."sendPolicyStatusPushes"]
+  schedule = "*/2 * * * *"
