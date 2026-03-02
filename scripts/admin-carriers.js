@@ -939,7 +939,7 @@ console.log("[admin-carriers] loaded from file");
 
     // wire events
     wireEvents();
-
+   showTab("carriers");
     // schedules default load only if tab is opened; but if user lands and clicks schedules it refreshes.
     // If you prefer immediate load, uncomment:
     // await refreshSchedules();
