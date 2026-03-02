@@ -10,3 +10,6 @@
 
 [functions."monthly-top-producers"]
   schedule = "0 12 1 * *"
+
+[functions."monthly-followups-tasks"]
+  schedule = "0 14 2 * *"
