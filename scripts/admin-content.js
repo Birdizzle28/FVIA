@@ -502,7 +502,10 @@ function wireAnnouncementForm() {
           prefix: 'annc',
         });
       }
-
+      
+      audience.repeat = { frequency: repeat };
+      if (repeat_until) audience.repeat.until = repeat_until;
+      
       const payload = {
         title,
         body,
@@ -515,8 +518,31 @@ function wireAnnouncementForm() {
         is_active: true
       };
 
-      const { error } = await sb.from('announcements').insert(payload);
+      const { data: created, error } = await sb
+        .from('announcements')
+        .insert(payload)
+        .select('id, publish_at')
+        .single();
+      
       if (error) throw error;
+      
+      // Push behavior:
+      // - If publish_at is empty (publish now) OR publish_at <= now -> push immediately
+      // - If publish_at is in the future -> scheduled function will handle it
+      const publishAtMs = created?.publish_at ? new Date(created.publish_at).getTime() : null;
+      const nowMs = Date.now();
+      
+      if (!publishAtMs || publishAtMs <= nowMs) {
+        try {
+          await fetch('/.netlify/functions/send-push', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ type: 'announcement', announcement_id: created.id })
+          });
+        } catch (e) {
+          console.warn('Announcement push failed (non-fatal):', e);
+        }
+      }
 
       form.reset();
       // reset choices selections
@@ -1037,6 +1063,15 @@ function wireTaskForm() {
         .maybeSingle();
 
       if (taskErr) throw taskErr;
+      try {
+        await fetch('/.netlify/functions/send-push', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ type: 'task', task_id: taskRow.id })
+        });
+      } catch (e) {
+        console.warn('Task push failed (non-fatal):', e);
+      }
 
       // ===== Optionally Insert Appointment =====
       if (addToSchedule) {
@@ -1166,7 +1201,7 @@ async function loadMyTasks() {
         ? new Date(task.due_at).toLocaleString()
         : 'No due date';
 
-      const notes = (meta.notes || '').toString();
+      const notes = (meta.body || '').toString();
       const shortNotes =
         notes.length > 200 ? notes.slice(0, 200) + '…' : notes;
 
