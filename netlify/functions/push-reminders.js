@@ -37,6 +37,7 @@ export default async () => {
     );
 
     const now = new Date();
+    const nowIso = now.toISOString();
     const in24h = new Date(now.getTime() + 24 * 60 * 60 * 1000);
 
     const { data: appts, error: apptErr } = await supabase
@@ -66,6 +67,9 @@ export default async () => {
     let sentCount = 0;
 
     for (const appt of due) {
+      const occStartIso = new Date(appt.scheduled_for).toISOString();
+      const beforeMin = Number(appt.remind_before_minutes ?? 0);
+      const remindAtIso = new Date(new Date(appt.scheduled_for).getTime() - beforeMin * 60 * 1000).toISOString();
       const { data: subs, error: subErr } = await supabase
         .from("push_subscriptions")
         .select("id, endpoint, p256dh, auth")
@@ -134,11 +138,25 @@ export default async () => {
       }
 
       if (anySuccess) {
+        // ✅ log successful reminder send (once per appointment reminder)
+        await supabase
+          .from("reminder_log")
+          .upsert(
+            {
+              appointment_id: appt.id,
+              occurrence_start: occStartIso,
+              remind_at: remindAtIso,
+              sent_at: nowIso,
+            },
+            { onConflict: "appointment_id,occurrence_start,remind_at" }
+          );
+      
+        // ✅ mark appointment reminder as sent so it won't resend
         await supabase
           .from("appointments")
-          .update({ remind_sent: true, remind_sent_at: new Date().toISOString() })
+          .update({ remind_sent: true, remind_sent_at: nowIso })
           .eq("id", appt.id);
-
+      
         sentCount++;
       }
     }
