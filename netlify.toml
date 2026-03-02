@@ -4,3 +4,9 @@
 
 [dev]
   functionsPort = 8888
+  
+[functions]
+  directory = "netlify/functions"
+
+[functions."monthly-top-producers"]
+  schedule = "0 12 1 * *"
