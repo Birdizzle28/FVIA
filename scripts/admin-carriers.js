@@ -1,3 +1,4 @@
+console.log("[admin-carriers] loaded from file");
 /* scripts/admin-carriers.js
    Works with your admin-carriers.html as provided.
    Requires:
