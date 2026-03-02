@@ -939,11 +939,17 @@ console.log("[admin-carriers] loaded from file");
     // await refreshSchedules();
   }
 
-  document.addEventListener("DOMContentLoaded", () => {
-    init().catch((err) => {
-      console.error(err);
-      setStatus(els.carrierAddMsg, err.message || "Init failed.", "err");
-      setStatus(els.schedulesMsg, err.message || "Init failed.", "err");
-    });
-  });
+  function start() {
+     init().catch((err) => {
+       console.error(err);
+       setStatus(els.carrierAddMsg, err.message || "Init failed.", "err");
+       setStatus(els.schedulesMsg, err.message || "Init failed.", "err");
+     });
+   }
+   
+   if (document.readyState === "loading") {
+     document.addEventListener("DOMContentLoaded", start);
+   } else {
+     start(); // DOM already ready
+   }
 })();
