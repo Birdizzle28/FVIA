@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="manifest" href="/manifest.json">
+    <title>Admin • Carriers | Family Values Group</title>
+
+    <link rel="stylesheet" href="styles/agentstyle.css" />
+    <link rel="stylesheet" href="styles/admin.css" />
+    <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <!-- Lock visual display until we confirm admin in script at bottom -->
+    <style>
+      html { visibility: hidden; }
+
+      /* minimal, non-invasive helpers (no touching your existing CSS files) */
+      .two-col { display:grid; grid-template-columns: 1fr 1.2fr; gap:16px; }
+      @media (max-width: 980px){ .two-col{ grid-template-columns:1fr; } }
+
+      .cardlike {
+        background: rgba(255,255,255,0.92);
+        border-radius: 12px;
+        padding: 14px;
+        border: 1px solid rgba(0,0,0,0.08);
+      }
+
+      .row { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+      .row > * { flex: 1 1 180px; }
+      .row .tight { flex: 0 0 auto; }
+      .mini { font-size: 12px; opacity: 0.8; }
+      .table-wrap { overflow:auto; max-height: 420px; border:1px solid rgba(0,0,0,0.08); border-radius:10px; }
+      table { width:100%; border-collapse: collapse; min-width: 820px; }
+      th, td { padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.08); vertical-align: top; }
+      th { position: sticky; top: 0; background: #fff; z-index: 1; text-align:left; }
+      .btn { cursor:pointer; }
+      .btn-danger { background:#c0392b; color:#fff; border:none; padding:8px 10px; border-radius:8px; }
+      .btn-primary { background:#353468; color:#fff; border:none; padding:8px 10px; border-radius:8px; }
+      .btn-muted { background:#545454; color:#fff; border:none; padding:8px 10px; border-radius:8px; }
+
+      .pill {
+        display:inline-flex; align-items:center; gap:6px;
+        padding: 4px 8px; border-radius: 999px;
+        background: rgba(53,52,104,0.08);
+        font-size: 12px;
+      }
+
+      .tabs { display:flex; gap:8px; margin-bottom: 12px; flex-wrap:wrap; }
+      .tabs button {
+        border: 1px solid rgba(0,0,0,0.12);
+        padding: 8px 10px; border-radius: 10px;
+        background: #fff;
+      }
+      .tabs button.active { background: rgba(53,52,104,0.12); border-color: rgba(53,52,104,0.35); }
+
+      .band-row { display:grid; grid-template-columns: 1fr 1fr 1fr auto; gap:8px; align-items:end; margin-top:8px; }
+      .band-row input { width: 100%; }
+      .band-actions { display:flex; gap:8px; justify-content:flex-end; margin-top:10px; }
+
+      .overlay {
+        display:none; position:fixed; inset:0; background: rgba(0,0,0,0.55);
+        z-index: 9999; align-items:center; justify-content:center;
+      }
+      .overlay .panel {
+        background:#fff; width:min(720px, 92vw); max-height: 86vh; overflow:auto;
+        border-radius: 14px; padding: 14px;
+      }
+      .overlay .head { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+      .overlay .close { font-size: 26px; background: transparent; border:none; cursor:pointer; }
+      .status { margin-top:10px; font-size: 13px; }
+      .status.ok { color: #1f7a1f; }
+      .status.err { color: #b00020; }
+      .clickable { cursor:pointer; }
+    </style>
+
+    <noscript>
+      <meta http-equiv="refresh" content="0; url=dashboard.html">
+    </noscript>
+  </head>
+
+  <body id="dashboardbody">
+
+    <!-- Header -->
+    <header class="index-grid-header">
+      <div id="logofvcontainer">
+        <div id="logodiv">
+          <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+        </div>
+        <div id="fvdiv">
+          <p><strong>Family Values Group</strong></p>
+        </div>
+      </div>
+      <div id="navcontainer">
+        <nav class="header-flex-container">
+          <a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
+          <a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
+          <div id="menu-toggle">
+            <i class="fa-solid fa-bars"></i>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu">
+      <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
+
+      <button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
+        <i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
+        <i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
+      </button>
+
+      <div id="toolkit-submenu" class="submenu" hidden>
+        <a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
+        <a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
+        <a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
+        <a href="calculator.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
+        <a href="marketing.html"><i class="fa-solid fa-handshake"></i><span>Marketing</span></a>
+      </div>
+
+      <a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
+      <a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
+      <a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
+      <a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
+      <a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
+    </div>
+
+    <main class="auth-container">
+
+      <!-- Admin page navigation -->
+      <nav id="admin-page-nav">
+        <button id="nav-all" data-href="admin-all-leads.html">All Leads</button>
+        <button id="nav-requests" data-href="admin-lead-requests.html">Lead Requests</button>
+        <button id="nav-history" data-href="admin-assignment-history.html">Assignment History</button>
+        <button id="nav-stats" data-href="admin-agent-stats.html">Agent Stats</button>
+        <button id="nav-commissions" data-href="admin-commissions.html">Commissions</button>
+        <button id="nav-content" data-href="admin-content.html">Content</button>
+        <button id="nav-dnc" data-href="admin-dnc.html">DNC</button>
+
+        <!-- NEW PAGE BUTTON -->
+        <button id="nav-carriers" class="active" data-href="admin-carriers.html">Carriers</button>
+      </nav>
+
+      <section class="admin-section">
+        <h3 style="margin-bottom: 6px;">Carrier Setup</h3>
+        <div class="mini">Add carriers, then generate 5-row commission schedules (agent → area manager) with renewal bands.</div>
+      </section>
+
+      <div class="tabs">
+        <button id="tab-carriers" class="active" type="button">Carriers</button>
+        <button id="tab-schedules" type="button">Commission Schedules</button>
+      </div>
+
+      <!-- =============== TAB 1: CARRIERS =============== -->
+      <section id="panel-carriers" class="admin-section">
+        <div class="two-col">
+          <!-- Add Carrier -->
+          <div class="cardlike">
+            <h3 style="margin-top:0;">Add New Carrier</h3>
+
+            <div class="row">
+              <label>
+                <div class="mini">Carrier Name</div>
+                <input id="carrier-name" type="text" placeholder="e.g., Progressive" />
+              </label>
+              <label>
+                <div class="mini">Logo URL (optional)</div>
+                <input id="carrier-logo" type="text" placeholder="https://..." />
+              </label>
+            </div>
+
+            <div class="row" style="margin-top:10px;">
+              <label>
+                <div class="mini">Carrier URL (optional)</div>
+                <input id="carrier-url" type="text" placeholder="https://..." />
+              </label>
+            </div>
+
+            <div class="row" style="margin-top:10px;">
+              <label style="flex:1 1 100%;">
+                <div class="mini">Notes (optional)</div>
+                <textarea id="carrier-notes" rows="3" placeholder="Anything important…"></textarea>
+              </label>
+            </div>
+
+            <div class="row" style="margin-top:10px;">
+              <button id="add-carrier-btn" class="btn btn-primary tight" type="button">
+                <i class="fa-solid fa-plus"></i> Add Carrier
+              </button>
+              <span id="carrier-add-msg" class="status"></span>
+            </div>
+          </div>
+
+          <!-- Carrier List -->
+          <div class="cardlike">
+            <div style="display:flex; justify-content:space-between; align-items:end; gap:10px; flex-wrap:wrap;">
+              <div>
+                <h3 style="margin:0;">Current Carriers</h3>
+                <div class="mini">Tap a carrier to filter schedules on the other tab.</div>
+              </div>
+              <label style="min-width:240px;">
+                <div class="mini">Search</div>
+                <input id="carrier-search" type="text" placeholder="Search carriers..." />
+              </label>
+            </div>
+
+            <div class="table-wrap" style="margin-top:10px;">
+              <table id="carriers-table">
+                <thead>
+                  <tr>
+                    <th>Carrier</th>
+                    <th>URL</th>
+                    <th>Logo</th>
+                    <th>Notes</th>
+                    <th style="width:180px;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- filled by JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <div class="mini" style="margin-top:8px;">
+              Tip: deleting a carrier will also delete its commission schedules (cascade).
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- =============== TAB 2: SCHEDULES =============== -->
+      <section id="panel-schedules" class="admin-section" style="display:none;">
+        <div class="two-col">
+          <!-- Create schedule batch -->
+          <div class="cardlike">
+            <h3 style="margin-top:0;">Create Commission Schedule (5 rows)</h3>
+
+            <div class="row">
+              <label>
+                <div class="mini">Carrier</div>
+                <select id="sched-carrier"></select>
+              </label>
+              <label>
+                <div class="mini">Product Line</div>
+                <input id="sched-product-line" type="text" placeholder="e.g., P&C, Life, Health" />
+              </label>
+            </div>
+
+            <div class="row" style="margin-top:10px;">
+              <label>
+                <div class="mini">Policy Type (optional)</div>
+                <input id="sched-policy-type" type="text" placeholder="e.g., Auto, Homeowners, Term" />
+              </label>
+              <label>
+                <div class="mini">Term Length (months)</div>
+                <input id="sched-term-length" type="number" min="1" max="24" placeholder="e.g., 6 or 12" />
+              </label>
+            </div>
+
+            <div class="row" style="margin-top:10px;">
+              <label>
+                <div class="mini">FVG Base Commission Rate (decimal)</div>
+                <input id="sched-fvg-rate" type="number" step="0.0001" placeholder="e.g., 0.1000" />
+              </label>
+              <label>
+                <div class="mini">Advance Rate (decimal)</div>
+                <input id="sched-advance-rate" type="number" step="0.0001" placeholder="e.g., 0.7500" />
+              </label>
+            </div>
+
+            <div class="row" style="margin-top:10px;">
+              <label>
+                <div class="mini">Effective From</div>
+                <input id="sched-effective-from" type="date" />
+              </label>
+              <label>
+                <div class="mini">Effective To (optional)</div>
+                <input id="sched-effective-to" type="date" />
+              </label>
+            </div>
+
+            <div style="margin-top:12px;">
+              <div class="pill">
+                <i class="fa-solid fa-wand-magic-sparkles"></i>
+                Auto-calculates levels: area_manager 90% • mga 85% • manager 80% • mit 75% • agent 70%
+              </div>
+            </div>
+
+            <hr style="margin:14px 0;" />
+
+            <h4 style="margin:0;">Renewal Trail Rule (Bands)</h4>
+            <div class="mini" style="margin-top:4px;">
+              Example: Year 2+ at 0.068 → start_year=2, end_year=null, rate=0.068
+            </div>
+
+            <div id="bands-container" style="margin-top:10px;">
+              <!-- band rows injected -->
+            </div>
+
+            <div class="band-actions">
+              <button id="add-band-btn" class="btn btn-muted" type="button">
+                <i class="fa-solid fa-plus"></i> Add Band
+              </button>
+              <button id="preview-json-btn" class="btn btn-muted" type="button">
+                <i class="fa-solid fa-code"></i> Preview JSON
+              </button>
+            </div>
+
+            <div style="margin-top:10px;">
+              <label style="display:block;">
+                <div class="mini">Notes (optional)</div>
+                <textarea id="sched-notes" rows="2" placeholder="Anything special…"></textarea>
+              </label>
+            </div>
+
+            <div class="row" style="margin-top:12px;">
+              <button id="create-schedule-btn" class="btn btn-primary tight" type="button">
+                <i class="fa-solid fa-floppy-disk"></i> Create 5 Rows
+              </button>
+              <span id="sched-create-msg" class="status"></span>
+            </div>
+          </div>
+
+          <!-- List / filters -->
+          <div class="cardlike">
+            <div style="display:flex; justify-content:space-between; align-items:end; gap:10px; flex-wrap:wrap;">
+              <div>
+                <h3 style="margin:0;">Commission Schedules</h3>
+                <div class="mini">Filter and edit individual rows.</div>
+              </div>
+              <button id="refresh-schedules-btn" class="btn btn-muted tight" type="button">
+                <i class="fa-solid fa-rotate"></i> Refresh
+              </button>
+            </div>
+
+            <div class="row" style="margin-top:10px;">
+              <label>
+                <div class="mini">Carrier</div>
+                <select id="filter-carrier"></select>
+              </label>
+              <label>
+                <div class="mini">Product Line</div>
+                <input id="filter-product-line" type="text" placeholder="e.g., P&C" />
+              </label>
+              <label>
+                <div class="mini">Policy Type</div>
+                <input id="filter-policy-type" type="text" placeholder="e.g., Auto" />
+              </label>
+            </div>
+
+            <div class="row" style="margin-top:10px;">
+              <label>
+                <div class="mini">Agent Level</div>
+                <select id="filter-agent-level">
+                  <option value="">All</option>
+                  <option value="agent">agent</option>
+                  <option value="mit">mit</option>
+                  <option value="manager">manager</option>
+                  <option value="mga">mga</option>
+                  <option value="area_manager">area_manager</option>
+                </select>
+              </label>
+
+              <label class="tight" style="flex:0 0 auto; display:flex; align-items:center; gap:8px;">
+                <input id="filter-active-only" type="checkbox" />
+                <span class="mini" style="margin-top:18px;">Active only</span>
+              </label>
+
+              <button id="apply-schedule-filters" class="btn btn-primary tight" type="button" style="margin-top:18px;">
+                Apply
+              </button>
+              <button id="reset-schedule-filters" class="btn btn-muted tight" type="button" style="margin-top:18px;">
+                Reset
+              </button>
+            </div>
+
+            <div class="table-wrap" style="margin-top:12px;">
+              <table id="schedules-table">
+                <thead>
+                  <tr>
+                    <th>Carrier</th>
+                    <th>Product Line</th>
+                    <th>Policy Type</th>
+                    <th>Level</th>
+                    <th>Base</th>
+                    <th>Advance</th>
+                    <th>Term</th>
+                    <th>Effective</th>
+                    <th>Renewal Bands</th>
+                    <th style="width:180px;">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- filled by JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <span id="schedules-msg" class="status"></span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Edit Carrier Modal -->
+      <div id="edit-carrier-modal" class="overlay" aria-hidden="true">
+        <div class="panel">
+          <div class="head">
+            <h3 style="margin:0;">Edit Carrier</h3>
+            <button class="close" type="button" id="close-edit-carrier">&times;</button>
+          </div>
+
+          <input type="hidden" id="edit-carrier-id" />
+
+          <div class="row" style="margin-top:10px;">
+            <label>
+              <div class="mini">Carrier Name</div>
+              <input id="edit-carrier-name" type="text" />
+            </label>
+            <label>
+              <div class="mini">Carrier URL</div>
+              <input id="edit-carrier-url" type="text" />
+            </label>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <label>
+              <div class="mini">Logo URL</div>
+              <input id="edit-carrier-logo" type="text" />
+            </label>
+          </div>
+
+          <div style="margin-top:10px;">
+            <label style="display:block;">
+              <div class="mini">Notes</div>
+              <textarea id="edit-carrier-notes" rows="3"></textarea>
+            </label>
+          </div>
+
+          <div class="row" style="margin-top:12px;">
+            <button id="save-carrier-btn" class="btn btn-primary tight" type="button">Save</button>
+            <button id="cancel-carrier-btn" class="btn btn-muted tight" type="button">Cancel</button>
+            <span id="edit-carrier-msg" class="status"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Edit Schedule Modal -->
+      <div id="edit-schedule-modal" class="overlay" aria-hidden="true">
+        <div class="panel">
+          <div class="head">
+            <h3 style="margin:0;">Edit Commission Schedule Row</h3>
+            <button class="close" type="button" id="close-edit-schedule">&times;</button>
+          </div>
+
+          <input type="hidden" id="edit-sched-id" />
+
+          <div class="row" style="margin-top:10px;">
+            <label>
+              <div class="mini">Carrier Name</div>
+              <input id="edit-sched-carrier-name" type="text" disabled />
+            </label>
+            <label>
+              <div class="mini">Agent Level</div>
+              <select id="edit-sched-agent-level" disabled>
+                <option value="agent">agent</option>
+                <option value="mit">mit</option>
+                <option value="manager">manager</option>
+                <option value="mga">mga</option>
+                <option value="area_manager">area_manager</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <label>
+              <div class="mini">Product Line</div>
+              <input id="edit-sched-product-line" type="text" />
+            </label>
+            <label>
+              <div class="mini">Policy Type</div>
+              <input id="edit-sched-policy-type" type="text" />
+            </label>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <label>
+              <div class="mini">Base Commission Rate</div>
+              <input id="edit-sched-base" type="number" step="0.0001" />
+            </label>
+            <label>
+              <div class="mini">Advance Rate</div>
+              <input id="edit-sched-advance" type="number" step="0.0001" />
+            </label>
+          </div>
+
+          <div class="row" style="margin-top:10px;">
+            <label>
+              <div class="mini">Term Length (months)</div>
+              <input id="edit-sched-term" type="number" min="1" max="24" />
+            </label>
+            <label>
+              <div class="mini">Effective From</div>
+              <input id="edit-sched-effective-from" type="date" />
+            </label>
+            <label>
+              <div class="mini">Effective To</div>
+              <input id="edit-sched-effective-to" type="date" />
+            </label>
+          </div>
+
+          <div style="margin-top:10px;">
+            <label style="display:block;">
+              <div class="mini">Renewal Trail Rule JSON (advanced)</div>
+              <textarea id="edit-sched-renewal-json" rows="6" placeholder='{"bands":[{"rate":0.068,"start_year":2,"end_year":null}]}'></textarea>
+            </label>
+            <div class="mini" style="margin-top:6px;">
+              Must be valid JSON with <code>bands</code> array. Use <code>null</code> for end_year if open-ended.
+            </div>
+          </div>
+
+          <div style="margin-top:10px;">
+            <label style="display:block;">
+              <div class="mini">Notes</div>
+              <textarea id="edit-sched-notes" rows="2"></textarea>
+            </label>
+          </div>
+
+          <div class="row" style="margin-top:12px;">
+            <button id="save-sched-btn" class="btn btn-primary tight" type="button">Save</button>
+            <button id="cancel-sched-btn" class="btn btn-muted tight" type="button">Cancel</button>
+            <span id="edit-sched-msg" class="status"></span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Preview JSON Modal -->
+      <div id="json-preview-modal" class="overlay" aria-hidden="true">
+        <div class="panel">
+          <div class="head">
+            <h3 style="margin:0;">Renewal JSON Preview</h3>
+            <button class="close" type="button" id="close-json-preview">&times;</button>
+          </div>
+          <pre id="json-preview" style="white-space:pre-wrap; background:#f6f6f6; padding:10px; border-radius:10px; margin-top:10px;"></pre>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="index-grid-footer">
+      <img id="footerlogo" src="Pics/img17.png">
+      <hr class="footerhr">
+      <div id="footercontact">
+        <a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
+          <span class="fa fa-envelope"></span>
+          <span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+        </a>
+        <p> | </p>
+        <a class="contactcontainer" href="tel:+16292437980">
+          <span class="fa fa-phone"></span>
+          <span class="contactcontcontacts">+1-629-243-7980</span>
+        </a>
+      </div>
+      <hr class="footerhr">
+      <div id="footersocial">
+        <a class="fab fa-facebook-f" href="https://www.facebook.com/familyvaluesgroup"></a>
+        <a class="fab fa-linkedin-in" href="https://www.linkedin.com/in/demisi-johnson-026227391?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"></a>
+        <a class="fab fa-instagram" href="https://www.instagram.com/family.values.group?igsh=OHl3dGdnd3RwMTV0&utm_source=qr"></a>
+        <a class="fab fa-youtube" href="https://youtube.com/@familyvaluesgroup?si=mauqWp5nxyczgCJd"></a>
+        <a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
+      </div>
+      <div id="footerlinks">
+        <a href="faqs.html">FAQs</a>
+        <a href="terms.html">Terms</a>
+        <a href="accessibility.html">Accessibility</a>
+        <a href="privacy.html">Privacy</a>
+      </div>
+      <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="scripts/supabase-client.js"></script>
+    <script src="scripts/general.js"></script>
+    <script src="scripts/admin-carriers.js"></script>
+
+    <!-- Admin-only gate -->
+    <script>
+      (async () => {
+        const supabase = window.supabaseClient;
+        if (!supabase) return;
+
+        const { data: { session } = {} } = await supabase.auth.getSession();
+        if (!session) { location.replace('login.html'); return; }
+
+        const { data: profile } = await supabase
+          .from('agents')
+          .select('is_admin')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (profile?.is_admin === true) {
+          document.documentElement.style.visibility = 'visible';
+        } else {
+          location.replace('dashboard.html');
+        }
+      })();
+    </script>
+  </body>
+</html>
