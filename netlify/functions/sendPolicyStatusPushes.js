@@ -1,4 +1,3 @@
-// netlify/functions/sendPolicyStatusPushes.js
 import webpush from "web-push";
 import { createClient } from "@supabase/supabase-js";
 
@@ -15,7 +14,21 @@ function must(v, name) {
 }
 
 function titleCaseStatus(s) {
-  return String(s || "").replace(/_/g, " ").replace(/\b\w/g, m => m.toUpperCase());
+  return String(s || "")
+    .replace(/_/g, " ")
+    .toLowerCase()
+    .replace(/\b\w/g, (m) => m.toUpperCase());
+}
+
+function buildSub(row) {
+  if (!row?.endpoint || !row?.p256dh || !row?.auth) return null;
+  return {
+    endpoint: row.endpoint,
+    keys: {
+      p256dh: row.p256dh,
+      auth: row.auth
+    }
+  };
 }
 
 export const handler = async () => {
@@ -32,18 +45,19 @@ export const handler = async () => {
     // 1) pull unsent queue rows
     const { data: queueRows, error: qErr } = await sb
       .from("policy_status_push_queue")
-      .select("id, policy_id, agent_id, contact_id, old_status, new_status, event_ts")
+      .select("id, policy_id, agent_id, old_status, new_status, event_ts")
       .eq("push_sent", false)
       .order("created_at", { ascending: true })
       .limit(200);
 
     if (qErr) throw qErr;
+
     if (!queueRows?.length) {
       return { statusCode: 200, body: JSON.stringify({ message: "No queued pushes." }) };
     }
 
-    // 2) load policy + contact details for message text
-    const policyIds = [...new Set(queueRows.map(r => r.policy_id).filter(Boolean))];
+    // 2) load policy + contact details
+    const policyIds = [...new Set(queueRows.map((r) => r.policy_id).filter(Boolean))];
 
     const { data: policies, error: pErr } = await sb
       .from("policies")
@@ -52,7 +66,7 @@ export const handler = async () => {
 
     if (pErr) throw pErr;
 
-    const contactIds = [...new Set((policies || []).map(p => p.contact_id).filter(Boolean))];
+    const contactIds = [...new Set((policies || []).map((p) => p.contact_id).filter(Boolean))];
 
     const { data: contacts, error: cErr } = await sb
       .from("contacts")
@@ -62,54 +76,59 @@ export const handler = async () => {
     if (cErr) throw cErr;
 
     const policyMap = {};
-    (policies || []).forEach(p => { policyMap[p.id] = p; });
+    (policies || []).forEach((p) => (policyMap[p.id] = p));
 
     const contactMap = {};
-    (contacts || []).forEach(c => {
-      const nm = c.full_name?.trim() || [c.first_name, c.last_name].filter(Boolean).join(" ").trim() || "Client";
+    (contacts || []).forEach((c) => {
+      const nm =
+        c.full_name?.trim() ||
+        [c.first_name, c.last_name].filter(Boolean).join(" ").trim() ||
+        "Client";
       contactMap[c.id] = nm;
     });
 
     // 3) group events by agent
     const byAgent = new Map();
     for (const r of queueRows) {
+      if (!r.agent_id) continue;
       if (!byAgent.has(r.agent_id)) byAgent.set(r.agent_id, []);
       byAgent.get(r.agent_id).push(r);
     }
 
-    // 4) load push subscriptions for those agents
     const agentIds = [...byAgent.keys()];
+    if (!agentIds.length) {
+      return { statusCode: 200, body: JSON.stringify({ message: "No agent_id on queued rows." }) };
+    }
 
-    // ✅ CHANGE THIS if your subscription table is named differently
-    // Expected schema: push_subscriptions(user_id, subscription jsonb)
-    const { data: subs, error: sErr } = await sb
+    // 4) load push subscriptions (your schema)
+    const { data: subsRows, error: sErr } = await sb
       .from("push_subscriptions")
-      .select("user_id, subscription")
+      .select("id, user_id, endpoint, p256dh, auth")
       .in("user_id", agentIds);
 
     if (sErr) throw sErr;
 
-    const subsMap = new Map();
-    (subs || []).forEach(r => {
+    const subsMap = new Map(); // agentId -> [{id, sub}]
+    (subsRows || []).forEach((r) => {
+      const sub = buildSub(r);
+      if (!sub) return;
       if (!subsMap.has(r.user_id)) subsMap.set(r.user_id, []);
-      subsMap.get(r.user_id).push(r.subscription);
+      subsMap.get(r.user_id).push({ id: r.id, sub });
     });
 
-    // 5) send pushes
     const sentQueueIds = [];
+    const deadSubIds = [];
 
+    // 5) send pushes
     for (const [agentId, events] of byAgent.entries()) {
       const agentSubs = subsMap.get(agentId) || [];
       if (!agentSubs.length) continue;
 
-      // build a readable notification
-      // If multiple events, show the newest one in push text and mention count
       const newest = events[events.length - 1];
       const pol = policyMap[newest.policy_id] || {};
       const clientName = contactMap[pol.contact_id] || "Client";
       const carrier = pol.carrier_name || "Carrier";
       const polNum = pol.policy_number || "Policy";
-
       const newStatus = titleCaseStatus(newest.new_status);
 
       const title = `Policy ${newStatus}`;
@@ -123,25 +142,29 @@ export const handler = async () => {
         body,
         tag: `policy-status-${agentId}`,
         data: {
-          url: "/agent-policies.html", // ✅ change to your policies page
-          agent_id: agentId
+          url: "/admin-commissions.html" // ✅ change to agent-facing policy page if you have one
         }
       });
 
-      // send to all devices for that agent
-      for (const sub of agentSubs) {
+      for (const row of agentSubs) {
         try {
-          await webpush.sendNotification(sub, payload);
+          await webpush.sendNotification(row.sub, payload);
         } catch (e) {
-          // if subscription is dead, you may want to delete it here
-          console.warn("Push send failed:", e?.message || e);
+          const code = e?.statusCode || e?.status || null;
+
+          // If subscription is gone, delete it
+          if (code === 404 || code === 410) {
+            deadSubIds.push(row.id);
+          } else {
+            console.warn("Push send failed:", e?.message || e);
+          }
         }
       }
 
-      // mark all those queued rows as sent
-      events.forEach(ev => sentQueueIds.push(ev.id));
+      events.forEach((ev) => sentQueueIds.push(ev.id));
     }
 
+    // 6) mark queue rows sent
     if (sentQueueIds.length) {
       await sb
         .from("policy_status_push_queue")
@@ -149,11 +172,17 @@ export const handler = async () => {
         .in("id", sentQueueIds);
     }
 
+    // 7) cleanup dead subscriptions
+    if (deadSubIds.length) {
+      await sb.from("push_subscriptions").delete().in("id", deadSubIds);
+    }
+
     return {
       statusCode: 200,
       body: JSON.stringify({
         queued: queueRows.length,
-        marked_sent: sentQueueIds.length
+        marked_sent: sentQueueIds.length,
+        deleted_dead_subscriptions: deadSubIds.length
       })
     };
   } catch (e) {
