@@ -195,7 +195,7 @@ function initPickers() {
   const repeatEndEl = document.getElementById('annc-repeat-end');
   const taskDueEl = document.getElementById('task-due');
 
-  const opts = { enableTime: true, dateFormat: 'Y-m-d H:i', time_24hr: false };
+  const opts = { enableTime: true, dateFormat: "Z" };
 
   if (publishEl) flatpickr(publishEl, opts);
   if (expiresEl) flatpickr(expiresEl, opts);
@@ -1968,10 +1968,7 @@ function parseTags(raw) {
 
 function parseMaybeDate(str) {
   const v = (str || '').trim();
-  if (!v) return null;
-  const d = new Date(v);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString();
+  return v || null; // already ISO from flatpickr "Z"
 }
 
 function formatDate(iso) {
