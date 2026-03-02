@@ -498,7 +498,48 @@
                 <input id="task-due" type="text" placeholder=" " />
                 <label for="task-due">Due date/time (optional)</label>
               </div>
-
+              <div class="form-group" style="margin-top:10px;">
+                <label style="display:flex; align-items:center; gap:10px; font-size:14px;">
+                  <input id="task-add-to-schedule" type="checkbox" />
+                  <span><strong>Also add to agent schedule</strong> (creates an appointment)</span>
+                </label>
+                <small style="display:block; margin-top:6px; color:#666;">
+                  If enabled, the Due date/time becomes the appointment start time.
+                </small>
+              </div>
+              
+              <div id="task-schedule-fields" style="display:none; margin-top:10px;">
+                <div class="float-field">
+                  <select id="task-location-type">
+                    <option value="virtual">Virtual</option>
+                    <option value="in_person">In Person</option>
+                    <option value="phone">Phone</option>
+                  </select>
+                  <label for="task-location-type">Location type</label>
+                </div>
+              
+                <div class="float-field" id="task-location-address-wrap" style="display:none;">
+                  <input id="task-location-address" type="text" placeholder=" " />
+                  <label for="task-location-address">Address (only for In Person)</label>
+                </div>
+              
+                <div class="float-field">
+                  <input id="task-duration-minutes" type="number" min="5" step="5" placeholder=" " value="30" />
+                  <label for="task-duration-minutes">Duration (minutes)</label>
+                </div>
+              
+                <div class="form-group" style="margin-top:10px;">
+                  <label style="display:flex; align-items:center; gap:10px; font-size:14px;">
+                    <input id="task-remind-enabled" type="checkbox" />
+                    <span>Enable reminder</span>
+                  </label>
+                </div>
+              
+                <div class="float-field" id="task-remind-before-wrap" style="display:none;">
+                  <input id="task-remind-before-minutes" type="number" min="0" step="5" placeholder=" " value="30" />
+                  <label for="task-remind-before-minutes">Remind before (minutes)</label>
+                </div>
+              </div>
               <div style="display:flex; gap:10px; justify-content:flex-end; margin-top: 10px;">
                 <button type="button" data-close>Cancel</button>
                 <button type="submit" class="see-all">Save Task</button>
