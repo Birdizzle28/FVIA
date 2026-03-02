@@ -194,20 +194,26 @@ console.log("[admin-carriers] loaded from file");
     });
   }
 
-  // ---------- Tabs ----------
-  function showTab(name) {
-    if (name === "carriers") {
-      els.tabCarriers?.classList.add("active");
-      els.tabSchedules?.classList.remove("active");
-      if (els.panelCarriers) els.panelCarriers.style.display = "";
-      if (els.panelSchedules) els.panelSchedules.style.display = "none";
-      return;
-    }
-    els.tabSchedules?.classList.add("active");
-    els.tabCarriers?.classList.remove("active");
-    if (els.panelSchedules) els.panelSchedules.style.display = "";
-    if (els.panelCarriers) els.panelCarriers.style.display = "none";
-  }
+    function showTab(name) {
+     const carriersPanel = els.panelCarriers;
+     const schedulesPanel = els.panelSchedules;
+   
+     if (name === "carriers") {
+       els.tabCarriers?.classList.add("active");
+       els.tabSchedules?.classList.remove("active");
+   
+       if (carriersPanel) carriersPanel.style.display = "block";     // ✅ force visible
+       if (schedulesPanel) schedulesPanel.style.display = "none";
+       return;
+     }
+   
+     // schedules
+     els.tabSchedules?.classList.add("active");
+     els.tabCarriers?.classList.remove("active");
+   
+     if (schedulesPanel) schedulesPanel.style.display = "block";     // ✅ force visible
+     if (carriersPanel) carriersPanel.style.display = "none";
+   }
 
   // ---------- Carriers ----------
   async function loadCarriers() {
