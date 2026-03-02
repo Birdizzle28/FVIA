@@ -543,25 +543,37 @@
       return;
     }
 
-    // create 5 rows
-    const rows = LEVEL_MULTIPLIERS.map(({ level, mult }) => {
-      const base_commission_rate = round4(fvgRate * mult);
-      return {
-        carrier_id: carrier.id,
-        carrier_name: carrier.carrier_name,
-        product_line,
-        policy_type,
-        agent_level: level,
-        base_commission_rate,
-        advance_rate: round4(advance_rate),
-        effective_from,
-        effective_to,
-        created_by: sessionUserId,
-        notes: toNullableStr(els.schedNotes?.value),
-        renewal_trail_rule,
-        term_length_months,
-      };
-    });
+    // read the "FVG renewal bands" once
+   const baseRule = buildRenewalTrailRuleJSON(); // { bands: [...] }
+   
+   // create 5 rows
+   const rows = LEVEL_MULTIPLIERS.map(({ level, mult }) => {
+     const base_commission_rate = round4(fvgRate * mult);
+   
+     // ✅ scale renewal band rates per agent level (same mult as base)
+     const renewal_trail_rule = {
+       bands: (baseRule.bands || []).map(b => ({
+         ...b,
+         rate: round4(Number(b.rate) * mult),
+       }))
+     };
+   
+     return {
+       carrier_id: carrier.id,
+       carrier_name: carrier.carrier_name,
+       product_line,
+       policy_type,
+       agent_level: level,
+       base_commission_rate,
+       advance_rate: round4(advance_rate),
+       effective_from,
+       effective_to,
+       created_by: sessionUserId,
+       notes: toNullableStr(els.schedNotes?.value),
+       renewal_trail_rule,
+       term_length_months,
+     };
+   });
 
     els.createScheduleBtn.disabled = true;
     try {
