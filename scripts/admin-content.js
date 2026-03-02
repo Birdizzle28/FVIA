@@ -32,6 +32,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   populateTaskAgentSelect();
   hydrateAnnouncementAudienceSelects();
   wireContentButtons();
+  wireTaskScheduleUI();
   await loadWaitlist();
   showOnlyContentSection();
 });
@@ -982,8 +983,25 @@ function wireTaskForm() {
       const link_url = document.getElementById('task-link')?.value.trim() || null;
       const due_at = parseMaybeDate(document.getElementById('task-due')?.value);
 
+      const addToSchedule = !!document.getElementById('task-add-to-schedule')?.checked;
+
+      const location_type = (document.getElementById('task-location-type')?.value || 'virtual').trim();
+      const location_address = (document.getElementById('task-location-address')?.value || '').trim() || null;
+
+      const durationMinRaw = Number(document.getElementById('task-duration-minutes')?.value ?? 30);
+      const durationMin = Number.isFinite(durationMinRaw) && durationMinRaw > 0 ? durationMinRaw : 30;
+
+      const remind_enabled = !!document.getElementById('task-remind-enabled')?.checked;
+      const remind_before_raw = Number(document.getElementById('task-remind-before-minutes')?.value ?? 0);
+      const remind_before_minutes = Number.isFinite(remind_before_raw) && remind_before_raw >= 0 ? remind_before_raw : 0;
+
       if (!assigned_to) throw new Error('Select an agent.');
       if (!title) throw new Error('Task title is required.');
+
+      // If adding to schedule, we REQUIRE a due date (used as scheduled_for)
+      if (addToSchedule && !due_at) {
+        throw new Error('To add this to the schedule, you must set a Due date/time.');
+      }
 
       let image_url = null;
       const fileInput = document.getElementById('task-image');
@@ -995,6 +1013,7 @@ function wireTaskForm() {
         });
       }
 
+      // ===== Insert Task =====
       const metadata = {
         created_by: me.id,
         source: 'admin_panel',
@@ -1002,8 +1021,8 @@ function wireTaskForm() {
         link_url,
         image_url
       };
-      
-      const payload = {
+
+      const taskPayload = {
         assigned_to,
         title,
         status: 'open',
@@ -1011,10 +1030,57 @@ function wireTaskForm() {
         metadata
       };
 
-      const { error } = await sb.from('tasks').insert(payload);
-      if (error) throw error;
+      const { data: taskRow, error: taskErr } = await sb
+        .from('tasks')
+        .insert(taskPayload)
+        .select('id')
+        .maybeSingle();
+
+      if (taskErr) throw taskErr;
+
+      // ===== Optionally Insert Appointment =====
+      if (addToSchedule) {
+        const scheduled_for = due_at; // ISO string
+        const startMs = new Date(scheduled_for).getTime();
+        const ends_at = new Date(startMs + durationMin * 60 * 1000).toISOString();
+
+        const apptPayload = {
+          agent_id: assigned_to,
+          title: title,
+          scheduled_for,
+          ends_at,
+          location_type,
+          location_address: location_type === 'in_person' ? location_address : null,
+          url: link_url || '/scheduling.html',
+          notes: body || null,
+          appointment_type: 'task',
+          remind_enabled: remind_enabled,
+          remind_before_minutes: remind_enabled ? remind_before_minutes : null,
+          remind_sent: false,
+          remind_sent_at: null
+        };
+
+        const { data: apptRow, error: apptErr } = await sb
+          .from('appointments')
+          .insert(apptPayload)
+          .select('id')
+          .maybeSingle();
+
+        if (apptErr) throw apptErr;
+
+        // Save appointment id back onto the task metadata (nice for linking later)
+        if (taskRow?.id && apptRow?.id) {
+          const newMeta = { ...(metadata || {}), appointment_id: apptRow.id };
+          await sb.from('tasks').update({ metadata: newMeta }).eq('id', taskRow.id);
+        }
+      }
 
       form.reset();
+
+      // Hide schedule fields again after reset
+      const scheduleBox = document.getElementById('task-schedule-fields');
+      if (scheduleBox) scheduleBox.style.display = 'none';
+
       if (msg) msg.textContent = 'Saved ✅';
       closeOverlay(document.getElementById('task-modal'));
 
@@ -1029,6 +1095,38 @@ function wireTaskForm() {
   });
 }
 
+function wireTaskScheduleUI() {
+  const addCb = document.getElementById('task-add-to-schedule');
+  const box = document.getElementById('task-schedule-fields');
+
+  const locType = document.getElementById('task-location-type');
+  const addrWrap = document.getElementById('task-location-address-wrap');
+
+  const remindCb = document.getElementById('task-remind-enabled');
+  const remindWrap = document.getElementById('task-remind-before-wrap');
+
+  if (addCb && box) {
+    addCb.addEventListener('change', () => {
+      box.style.display = addCb.checked ? '' : 'none';
+    });
+  }
+
+  if (locType && addrWrap) {
+    const syncAddr = () => {
+      addrWrap.style.display = (locType.value === 'in_person') ? '' : 'none';
+    };
+    locType.addEventListener('change', syncAddr);
+    syncAddr();
+  }
+
+  if (remindCb && remindWrap) {
+    const syncRemind = () => {
+      remindWrap.style.display = remindCb.checked ? '' : 'none';
+    };
+    remindCb.addEventListener('change', syncRemind);
+    syncRemind();
+  }
+}
 async function loadMyTasks() {
   const listEl = document.getElementById('task-list');
   if (!listEl) return;
