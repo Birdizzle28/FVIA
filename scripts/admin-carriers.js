@@ -21,6 +21,38 @@ console.log("[admin-carriers] loaded from file");
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
+   async function uploadCarrierLogoFile(file, carrierName) {
+     if (!file) return null;
+   
+     // bucket name you created in Supabase Storage:
+     const BUCKET = "carrier-logos";
+   
+     // safe-ish filename
+     const ext = (file.name.split(".").pop() || "png").toLowerCase();
+     const safeName = String(carrierName || "carrier")
+       .toLowerCase()
+       .replace(/[^a-z0-9]+/g, "-")
+       .replace(/(^-|-$)/g, "");
+   
+     const path = `${safeName}/${crypto.randomUUID()}.${ext}`;
+   
+     // upload
+     const { error: upErr } = await supabase
+       .storage
+       .from(BUCKET)
+       .upload(path, file, {
+         cacheControl: "3600",
+         upsert: false,
+         contentType: file.type || undefined
+       });
+   
+     if (upErr) throw upErr;
+   
+     // get PUBLIC URL (bucket must be public)
+     const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+     return data?.publicUrl || null;
+   }
+   
   function setStatus(el, msg, type = "") {
     if (!el) return;
     el.textContent = msg || "";
@@ -110,6 +142,7 @@ console.log("[admin-carriers] loaded from file");
     carrierNotes: $("#carrier-notes"),
     addCarrierBtn: $("#add-carrier-btn"),
     carrierAddMsg: $("#carrier-add-msg"),
+     carrierLogoFile: $("#carrier-logo-file"),
 
     // carriers list
     carrierSearch: $("#carrier-search"),
@@ -313,39 +346,54 @@ console.log("[admin-carriers] loaded from file");
   }
 
   async function addCarrier() {
-    setStatus(els.carrierAddMsg, "", "");
-    const carrier_name = (els.carrierName?.value || "").trim();
-    const carrier_logo = toNullableStr(els.carrierLogo?.value);
-    const carrier_url = toNullableStr(els.carrierUrl?.value);
-    const notes = toNullableStr(els.carrierNotes?.value);
-
-    if (!carrier_name) {
-      setStatus(els.carrierAddMsg, "Carrier name is required.", "err");
-      return;
-    }
-
-    els.addCarrierBtn.disabled = true;
-    try {
-      const { error } = await supabase
-        .from("carriers")
-        .insert([{ carrier_name, carrier_logo, carrier_url, notes }]);
-
-      if (error) throw error;
-
-      // clear form
-      if (els.carrierName) els.carrierName.value = "";
-      if (els.carrierLogo) els.carrierLogo.value = "";
-      if (els.carrierUrl) els.carrierUrl.value = "";
-      if (els.carrierNotes) els.carrierNotes.value = "";
-
-      setStatus(els.carrierAddMsg, "Carrier added.", "ok");
-      await loadCarriers();
-    } catch (err) {
-      setStatus(els.carrierAddMsg, err.message || "Failed to add carrier.", "err");
-    } finally {
-      els.addCarrierBtn.disabled = false;
-    }
-  }
+     setStatus(els.carrierAddMsg, "", "");
+   
+     const carrier_name = (els.carrierName?.value || "").trim();
+     if (!carrier_name) {
+       setStatus(els.carrierAddMsg, "Carrier name is required.", "err");
+       return;
+     }
+   
+     const carrier_url = toNullableStr(els.carrierUrl?.value);
+     const notes = toNullableStr(els.carrierNotes?.value);
+   
+     // optional manual URL (if you kept the text box)
+     const manualLogoUrl = toNullableStr(els.carrierLogo?.value);
+   
+     // optional uploaded file
+     const file = els.carrierLogoFile?.files?.[0] || null;
+   
+     els.addCarrierBtn.disabled = true;
+   
+     try {
+       let carrier_logo = manualLogoUrl;
+   
+       // ✅ if a file is selected, upload it and use its URL
+       if (file) {
+         carrier_logo = await uploadCarrierLogoFile(file, carrier_name);
+       }
+   
+       const { error } = await supabase
+         .from("carriers")
+         .insert([{ carrier_name, carrier_logo, carrier_url, notes }]);
+   
+       if (error) throw error;
+   
+       // clear form
+       if (els.carrierName) els.carrierName.value = "";
+       if (els.carrierLogo) els.carrierLogo.value = "";
+       if (els.carrierLogoFile) els.carrierLogoFile.value = "";
+       if (els.carrierUrl) els.carrierUrl.value = "";
+       if (els.carrierNotes) els.carrierNotes.value = "";
+   
+       setStatus(els.carrierAddMsg, "Carrier added.", "ok");
+       await loadCarriers();
+     } catch (err) {
+       setStatus(els.carrierAddMsg, err.message || "Failed to add carrier.", "err");
+     } finally {
+       els.addCarrierBtn.disabled = false;
+     }
+   }
 
   function openEditCarrier(carrier) {
     setStatus(els.editCarrierMsg, "", "");
