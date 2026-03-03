@@ -159,6 +159,7 @@ console.log("[admin-carriers] loaded from file");
     cancelCarrierBtn: $("#cancel-carrier-btn"),
     closeEditCarrier: $("#close-edit-carrier"),
     editCarrierMsg: $("#edit-carrier-msg"),
+     editCarrierLogoFile: $("#edit-carrier-logo-file"),
 
     // schedule create form
     schedCarrier: $("#sched-carrier"),
@@ -402,44 +403,61 @@ console.log("[admin-carriers] loaded from file");
     els.editCarrierUrl.value = carrier.carrier_url || "";
     els.editCarrierLogo.value = carrier.carrier_logo || "";
     els.editCarrierNotes.value = carrier.notes || "";
+     if (els.editCarrierLogoFile) els.editCarrierLogoFile.value = "";
     openOverlay(els.editCarrierModal);
   }
 
   async function saveCarrier() {
-    setStatus(els.editCarrierMsg, "", "");
-
-    const id = els.editCarrierId.value;
-    const carrier_name = (els.editCarrierName.value || "").trim();
-    if (!carrier_name) {
-      setStatus(els.editCarrierMsg, "Carrier name is required.", "err");
-      return;
-    }
-
-    const payload = {
-      carrier_name,
-      carrier_url: toNullableStr(els.editCarrierUrl.value),
-      carrier_logo: toNullableStr(els.editCarrierLogo.value),
-      notes: toNullableStr(els.editCarrierNotes.value),
-    };
-
-    els.saveCarrierBtn.disabled = true;
-    try {
-      const { error } = await supabase
-        .from("carriers")
-        .update(payload)
-        .eq("id", id);
-
-      if (error) throw error;
-
-      setStatus(els.editCarrierMsg, "Saved.", "ok");
-      await loadCarriers();
-      // keep modal open briefly; you can close manually
-    } catch (err) {
-      setStatus(els.editCarrierMsg, err.message || "Failed to save.", "err");
-    } finally {
-      els.saveCarrierBtn.disabled = false;
-    }
-  }
+     setStatus(els.editCarrierMsg, "", "");
+   
+     const id = els.editCarrierId.value;
+     const carrier_name = (els.editCarrierName.value || "").trim();
+     if (!carrier_name) {
+       setStatus(els.editCarrierMsg, "Carrier name is required.", "err");
+       return;
+     }
+   
+     const carrier_url = toNullableStr(els.editCarrierUrl.value);
+     const notes = toNullableStr(els.editCarrierNotes.value);
+   
+     // manual URL field
+     const manualLogoUrl = toNullableStr(els.editCarrierLogo.value);
+   
+     // optional uploaded file
+     const file = els.editCarrierLogoFile?.files?.[0] || null;
+   
+     els.saveCarrierBtn.disabled = true;
+   
+     try {
+       let carrier_logo = manualLogoUrl;
+   
+       // ✅ if user picked a file, upload it and use that URL
+       if (file) {
+         carrier_logo = await uploadCarrierLogoFile(file, carrier_name);
+       }
+   
+       const payload = {
+         carrier_name,
+         carrier_url,
+         carrier_logo,
+         notes,
+       };
+   
+       const { error } = await supabase
+         .from("carriers")
+         .update(payload)
+         .eq("id", id);
+   
+       if (error) throw error;
+   
+       setStatus(els.editCarrierMsg, "Saved.", "ok");
+       await loadCarriers();
+     } catch (err) {
+       setStatus(els.editCarrierMsg, err.message || "Failed to save.", "err");
+     } finally {
+       els.saveCarrierBtn.disabled = false;
+     }
+   }
 
   async function deleteCarrier(carrier) {
     const ok = confirm(
