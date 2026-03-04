@@ -30,6 +30,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
+  window.FVG_AGENT_PAGE_AGENT = agent;
+
   // Expose agent context for freequote.js to use
   window.AGENT_PAGE = {
     agent_id: agent.id,
