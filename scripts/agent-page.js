@@ -32,9 +32,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   window.FVG_AGENT_PAGE_AGENT = agent;
 
-  // Expose agent context for freequote.js to use
+  // ✅ Expose BOTH UUID + NPN for other scripts
   window.AGENT_PAGE = {
-    agent_id: agent.id,
+    agent_uuid: agent.id,        // UUID
+    agent_npn: agent.agent_id,   // NPN text
     agent_slug: agent.agent_slug,
     source: "agent_page"
   };
@@ -75,14 +76,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // Now load freequote.js AFTER the funnel markup exists
-  // (prevents null element errors)
+  // ✅ MUST load override BEFORE freequote
+  await loadScriptOnce("/scripts/agent-quote-override.js");
   await loadScriptOnce("/scripts/freequote.js");
 });
 
 function loadScriptOnce(src) {
   return new Promise((resolve, reject) => {
-    // Already loaded?
     if ([...document.scripts].some(s => s.src && s.src.includes(src))) {
       resolve();
       return;
