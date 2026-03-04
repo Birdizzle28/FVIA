@@ -16,3 +16,8 @@
 
 [functions."sendPolicyStatusPushes"]
   schedule = "*/2 * * * *"
+
+[[redirects]]
+  from = "/a/*"
+  to = "/a.html"
+  status = 200
