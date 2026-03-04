@@ -242,7 +242,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         // e.g. window.VAPID_PUBLIC_KEY = "BOr...."
         const VAPID_PUBLIC_KEY = window.VAPID_PUBLIC_KEY;
         if (!VAPID_PUBLIC_KEY) {
-          alert("Missing VAPID public key (window.FVG_VAPID_PUBLIC_KEY).");
+          alert("Missing VAPID public key (window.VAPID_PUBLIC_KEY).");
           return;
         }
 
