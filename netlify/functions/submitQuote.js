@@ -395,36 +395,6 @@ export const handler = async (event) => {
       return rows.some(r => rowMatchesToken(r, token));
     }
 
-    async function hasLicensedUplineChainForToken(agentRow, token) {
-      let current = agentRow;
-      const visited = new Set();
-
-      while (true) {
-        const currentId = current?.id;
-        if (!currentId) return true;
-
-        if (visited.has(currentId)) return false;
-        visited.add(currentId);
-
-        const upId = current?.recruiter_id || null;
-        if (!upId) return true;
-        if (upId === FVG_ID) return true;
-
-        const { data: upAgent, error: upErr } = await supabase
-          .from("agents")
-          .select("id, agent_id, recruiter_id")
-          .eq("id", upId)
-          .maybeSingle();
-
-        if (upErr) throw new Error(upErr.message);
-        if (!upAgent || !upAgent.agent_id) return false;
-
-        if (!agentKeyHasToken(upAgent.agent_id, token)) return false;
-
-        current = upAgent;
-      }
-    }
-
     async function loadAgentRowById(agentId) {
       const { data, error } = await supabase
         .from("agents")
@@ -456,8 +426,6 @@ export const handler = async (event) => {
           const token = lineTokenMap[line];
           if (!token) { okAll = false; break; }
           if (!row.agent_id || !agentKeyHasToken(row.agent_id, token)) { okAll = false; break; }
-          const okChain = await hasLicensedUplineChainForToken(row, token);
-          if (!okChain) { okAll = false; break; }
         }
         if (okAll) connectedEligible.push(row);
       }
@@ -498,8 +466,8 @@ export const handler = async (event) => {
         let okAll = true;
         for (const line of neededLines) {
           const token = lineTokenMap[line];
-          const okChain = await hasLicensedUplineChainForToken(ag, token);
-          if (!okChain) { okAll = false; break; }
+          if (!token) { okAll = false; break; }
+          if (!ag.agent_id || !agentKeyHasToken(ag.agent_id, token)) { okAll = false; break; }
         }
         if (okAll) fullyEligible.push(ag);
       }
