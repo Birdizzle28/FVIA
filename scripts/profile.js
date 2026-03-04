@@ -27,6 +27,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
+  // ✅ Sync agents.email to auth email (after confirmation)
+  if ((profile.email || "").toLowerCase() !== (user.email || "").toLowerCase()) {
+    const { error: syncErr } = await supabase
+      .from("agents")
+      .update({ email: user.email })
+      .eq("id", user.id);
+  
+    if (syncErr) console.warn("Could not sync agents.email:", syncErr);
+  }
   // Show/hide admin links
   document.querySelectorAll("[data-admin-link]")
     .forEach(el => el.classList.toggle("admin-hidden", !profile.is_admin));
