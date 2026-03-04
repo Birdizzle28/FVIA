@@ -162,23 +162,26 @@
     const origFetch = window.fetch.bind(window);
     window.fetch = async (url, options) => {
       try {
-        if (
-          typeof url === "string" &&
-          url.endsWith("/.netlify/functions/submitQuote") &&
-          options?.body
-        ) {
+        if (typeof url === "string" && url.includes("/.netlify/functions/submitQuote") && options?.body) {
+          // ✅ reroute ONLY on agent pages
+          url = "/.netlify/functions/submitAgentQuote";
+    
           const bodyObj = JSON.parse(options.body);
-
+    
           const selections = Array.isArray(bodyObj.selections) ? bodyObj.selections : [];
           const requiredLines = computeRequiredLinesFromSelections(selections);
           const productTypes = productTypesFromRequiredLines(requiredLines);
-
+    
           bodyObj.requiredLines = requiredLines;
           bodyObj.productTypes = productTypes;
-
-          bodyObj.forcedAgentId = agent.id;
+    
+          // ✅ hard-force the slug agent
+          bodyObj.forcedAgentId = agent.id; // UUID
           bodyObj.skipHierarchy = true;
-
+    
+          // ✅ make agent page free leads (optional, but aligns with what you said)
+          bodyObj.totalDebtCharge = 0;
+    
           options.body = JSON.stringify(bodyObj);
         }
       } catch (err) {
