@@ -170,3 +170,105 @@ main{
 }
 
 }
+/* ================================
+   FORCE "MOBILE HEADER" LAYOUT ON ALL SIZES
+   (Overrides general.css without editing it)
+================================ */
+
+/* Header becomes the mobile layout always */
+.index-grid-header{
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  background-color: #545454;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  width: 100%;
+}
+
+/* Keep your scrolled effect compatible */
+.index-grid-header.scrolled{
+  background-color: rgba(0, 0, 0, 0.7) !important;
+  transition: background-color 0.3s ease;
+}
+
+/* Hide desktop nav + hr always */
+.header-flex-container,
+.index-grid-header > hr{
+  display: none !important;
+}
+
+/* Logo on the left always */
+#headerlogo{
+  order: 1;
+  width: 52px;          /* fixed size that looks good on desktop too */
+  max-width: 52px;
+  margin-top: 0 !important;
+}
+
+/* Title centered always */
+.index-grid-header > p{
+  order: 2;
+  flex-grow: 1;
+  text-align: center;
+  font-size: clamp(12px, 2vw, 20px);
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+/* Hamburger always visible */
+#menu-toggle{
+  order: 3;
+  display: block !important;
+  background: none;
+  border: none;
+  color: white;
+  cursor: pointer;
+  font-size: 34px;      /* looks good on desktop */
+  line-height: 1;
+}
+
+/* Slide-out menu always available */
+#mobile-menu{
+  position: fixed;
+  display: block !important;
+  top: 0;
+  right: 0;
+  width: min(320px, 80vw);  /* desktop = 320px, mobile = 80vw */
+  background: #545454;
+  transform: translateX(100%);
+  transition: transform 0.3s ease;
+  z-index: 9999;
+  max-height: 100vh;
+  overflow-y: auto;
+  padding-top: 10px;
+}
+
+/* Keep your custom ordering */
+#mobile-menu a:nth-of-type(1){ order: 2; }
+#mobile-menu a:nth-of-type(2){ order: 3; }
+#mobile-menu a:nth-of-type(3){ order: 1; }
+#mobile-menu a:nth-of-type(4){ order: 4; }
+#mobile-menu a:nth-of-type(5){ order: 5; }
+
+/* open state */
+#mobile-menu.open{
+  transform: translateX(0);
+}
+
+/* menu links */
+#mobile-menu a{
+  display: block;
+  padding: 12px 20px;
+  color: #fff;
+  text-decoration: none;
+  text-align: center;
+}
+
+#mobile-menu a:hover{
+  background: #272727;
+}
+
