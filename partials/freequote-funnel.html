@@ -1,0 +1,118 @@
+<main class="auth-container">
+    <section id="free-quote-form">
+      <h2 id="quote-heading">Let’s get you covered</h2>
+
+      <form id="life-form" novalidate>
+        <!-- STEP 1 -->
+        <section class="step-card active" id="step-1">
+          <h3><span class="step-num">Step 1:</span> Let’s start with the basics.</h3>
+
+          <div class="row row-zip-age">
+            <div class="fl-field grow">
+              <input type="text" id="zip" placeholder=" " inputmode="numeric" maxlength="5" pattern="\d{5}" required />
+              <label for="zip">Zip Code</label>
+            </div>
+
+            <div class="fl-field age-box">
+              <input type="number" id="age" placeholder=" " min="0" max="120" required />
+              <label for="age">Age</label>
+            </div>
+			<input id="company_website" name="company_website" type="text" value="" autocomplete="off" autocapitalize="off" spellcheck="false" tabindex="-1" style="position:absolute;left:-9999px;opacity:0;height:0;width:0;" />
+          </div>
+
+          <!-- Floating label wrapper for the multi-select -->
+          <div class="fl-field" id="cover-fl">
+            <div class="multi-select" id="cover-select" tabindex="0" aria-haspopup="listbox" aria-expanded="false">
+              <div class="ms-value" id="cover-display"></div>
+              <i class="fa-solid fa-chevron-down ms-caret"></i>
+            </div>
+            <label for="cover-select">I want to cover…(click all that apply)</label>
+
+            <div class="ms-menu" id="cover-menu" role="listbox" aria-multiselectable="true">
+              <label class="ms-option"><input type="checkbox" value="Myself" /> Myself</label>
+              <label class="ms-option"><input type="checkbox" value="Someone Else" /> Someone Else</label>
+              <label class="ms-option"><input type="checkbox" value="My Health" /> My Health</label>
+              <label class="ms-option"><input type="checkbox" value="My Business" /> My Business</label>
+              <label class="ms-option"><input type="checkbox" value="My Car" /> My Car</label>
+              <label class="ms-option"><input type="checkbox" value="My Home" /> My Home</label>
+              <!--<label class="ms-option"><input type="checkbox" value="Legal Protection Plan" /> Legal Protection Plan</label>
+              <label class="ms-option"><input type="checkbox" value="My Identity" /> My Identity</label>-->
+            </div>
+            <input type="hidden" id="cover_csv" />
+          </div>
+
+          <button type="button" class="cta" id="btn-step1">Get Started</button>
+        </section>
+
+        <!-- STEP 2 (conditional for business) -->
+        <section class="step-card" id="step-2">
+          <h3><span class="step-num">Step 2:</span> Let’s explore some details about your business.</h3>
+
+          <div class="fl-field">
+            <select id="employee_count" required>
+              <option value="" disabled selected></option>
+              <option>1</option>
+              <option>2–9</option>
+              <option>10–24</option>
+              <option>25–49</option>
+              <option>50–99</option>
+              <option>100+</option>
+            </select>
+            <label for="employee_count">Employee Count</label>
+          </div>
+
+          <div class="fl-field">
+            <input type="text" id="business_name" placeholder=" " required />
+            <label for="business_name">Business Name</label>
+          </div>
+
+          <div class="step-nav">
+            <button type="button" class="link like-back" data-back="1">&lt; Go Back</button>
+            <button type="button" class="cta" id="btn-step2">Continue</button>
+          </div>
+        </section>
+
+        <!-- STEP 3 -->
+        <section class="step-card" id="step-3">
+          <h3><span class="step-num">Step 3:</span> Go ahead and introduce yourself.</h3>
+
+          <div class="row row-name">
+            <div class="fl-field grow">
+              <input type="text" id="first_name" placeholder=" " required />
+              <label for="first_name">First Name</label>
+            </div>
+            <div class="fl-field grow">
+              <input type="text" id="last_name" placeholder=" " required />
+              <label for="last_name">Last Name</label>
+            </div>
+          </div>
+
+          <div class="fl-field">
+            <input type="tel" id="phone" placeholder=" " inputmode="tel" required />
+            <label for="phone">Phone Number</label>
+          </div>
+
+          <div class="fl-field">
+            <input type="email" id="email" placeholder=" " required />
+            <label for="email">Email</label>
+          </div>
+
+          <p class="tcpa">
+            By clicking <strong>Submit</strong>, you agree that you are providing express written consent for Family Values Group to contact you at the phone number and email address you provided, including through automated texts, calls, and prerecorded messages, regarding insurance products or services. Consent is not required to purchase. Message and data rates may apply.
+          </p>
+
+          <div class="step-nav">
+            <button type="button" class="link like-back" data-back="2">&lt; Go Back</button>
+            <button type="button" class="cta" id="btn-submit">Get Free Quote</button>
+          </div>
+        </section>
+
+        <!-- RESULT -->
+        <section class="step-card" id="result-screen" style="display:none;">
+          <h3 id="result-title"></h3>
+          <p id="result-body"></p>
+          <div class="step-nav" id="result-actions"></div>
+        </section>
+      </form>
+    </section>
+  </main>
