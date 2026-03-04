@@ -1,5 +1,5 @@
 // scripts/freequote.js
-document.addEventListener('DOMContentLoaded', () => {
+function initFreequote() {
   const startedAt = Date.now();
   // Panels
   const step1 = document.getElementById('step-1');
@@ -508,5 +508,9 @@ document.addEventListener('DOMContentLoaded', () => {
       btnSubmit.disabled = false;
       btnSubmit.textContent = prev;
     }
-  });
-});
+  });}
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initFreequote, { once: true });
+  } else {
+    initFreequote();
+  }
