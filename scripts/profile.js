@@ -219,7 +219,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const { error } = await supabase
       .from("push_subscriptions")
-      .upsert(payload, { onConflict: "endpoint" });
+      .upsert(payload, { onConflict: "user_id,endpoint" });
 
     if (error) throw error;
   }
