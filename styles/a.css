@@ -1,0 +1,172 @@
+/* MAIN LAYOUT */
+main{
+    max-width:1100px;
+    margin:auto;
+    padding:40px 20px 60px;
+    display:flex;
+    flex-direction:column;
+    gap:40px;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+}
+
+/* -------------------- */
+/* HERO SECTION */
+/* -------------------- */
+
+#agent-hero{
+    display:flex;
+    align-items:center;
+    gap:30px;
+    padding:30px;
+    background:#ffffff;
+    border-radius:12px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.06);
+}
+
+#agent-photo{
+    width:120px;
+    height:120px;
+    border-radius:50%;
+    object-fit:cover;
+    background:#eee;
+}
+
+#agent-name{
+    font-size:2rem;
+    margin:0;
+}
+
+#agent-bio{
+    margin-top:10px;
+    color:#555;
+    line-height:1.5;
+    max-width:600px;
+}
+
+/* -------------------- */
+/* CONTACT BUTTONS */
+/* -------------------- */
+
+#agent-contact{
+    display:flex;
+    gap:14px;
+    flex-wrap:wrap;
+}
+
+#agent-contact a,
+#agent-contact button{
+    padding:12px 18px;
+    border-radius:8px;
+    text-decoration:none;
+    border:none;
+    cursor:pointer;
+    font-size:.95rem;
+    font-weight:600;
+    transition:.2s;
+}
+
+#agent-call{
+    background:#0f766e;
+    color:white;
+}
+
+#agent-text{
+    background:#2563eb;
+    color:white;
+}
+
+#agent-email{
+    background:#4f46e5;
+    color:white;
+}
+
+#agent-vcard{
+    background:#e5e7eb;
+}
+
+#agent-contact a:hover,
+#agent-contact button:hover{
+    transform:translateY(-2px);
+    opacity:.92;
+}
+
+/* -------------------- */
+/* DETAILS SECTION */
+/* -------------------- */
+
+#agent-details{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:20px;
+}
+
+#agent-details div{
+    background:white;
+    padding:20px;
+    border-radius:10px;
+    box-shadow:0 4px 14px rgba(0,0,0,0.05);
+}
+
+/* headings inside dynamic sections */
+
+#agent-details h3{
+    margin-top:0;
+    margin-bottom:12px;
+    font-size:1rem;
+    font-weight:600;
+}
+
+/* list styling */
+
+#agent-details ul{
+    padding-left:18px;
+    margin:0;
+}
+
+#agent-details li{
+    margin-bottom:6px;
+    color:#444;
+}
+
+/* -------------------- */
+/* QUOTE SECTION */
+/* -------------------- */
+
+#agent-quote{
+    margin-top:10px;
+}
+
+#agent-quote h2{
+    font-size:1.6rem;
+    margin-bottom:16px;
+}
+
+/* DO NOT style inside the quote form */
+
+#quote-container{
+    background:white;
+    padding:30px;
+    border-radius:12px;
+    box-shadow:0 6px 20px rgba(0,0,0,0.06);
+}
+
+/* -------------------- */
+/* MOBILE */
+/* -------------------- */
+
+@media (max-width:800px){
+
+#agent-hero{
+    flex-direction:column;
+    text-align:center;
+}
+
+#agent-details{
+    grid-template-columns:1fr;
+}
+
+#agent-contact{
+    justify-content:center;
+}
+
+}
