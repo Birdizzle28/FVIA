@@ -239,8 +239,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         // You MUST set this somewhere safe (build-time / config):
-        // e.g. window.FVG_VAPID_PUBLIC_KEY = "BOr...."
-        const VAPID_PUBLIC_KEY = window.FVG_VAPID_PUBLIC_KEY;
+        // e.g. window.VAPID_PUBLIC_KEY = "BOr...."
+        const VAPID_PUBLIC_KEY = window.VAPID_PUBLIC_KEY;
         if (!VAPID_PUBLIC_KEY) {
           alert("Missing VAPID public key (window.FVG_VAPID_PUBLIC_KEY).");
           return;
