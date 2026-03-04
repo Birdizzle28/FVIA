@@ -70,11 +70,13 @@
         <input type="file" id="profile-photo-input" accept="image/*" style="display:none;" />
       </div>
       <form id="profile-form">
-        <div class="form-group"><label for="first-name">First Name</label><input type="text" id="first-name" placeholder="John" /></div>
-        <div class="form-group"><label for="last-name">Last Name</label><input type="text" id="last-name" placeholder="Doe" /></div>
-        <div class="form-group"><label for="profile-email">Email</label><input type="email" id="profile-email" disabled /></div>
+        <div class="form-group"><label for="first-name">First Name</label><input type="text" id="first-name" placeholder="John" disabled /></div>
+        <div class="form-group"><label for="last-name">Last Name</label><input type="text" id="last-name" placeholder="Doe" disabled /></div>
+        <div class="form-group"><label for="profile-email">Email</label><input type="email" id="profile-email" /></div>
         <div class="form-group"><label for="profile-agent-id">Agent ID</label><input type="text" id="profile-agent-id" disabled /></div>
         <div class="form-group"><label for="profile-bio">Bio</label><textarea id="profile-bio" placeholder="Tell us about yourself..."></textarea></div>
+		<button type="button" id="enable-notifications-btn">Enable Notifications</button>
+		<p id="push-status-message"></p>
         <button type="submit">Save Changes</button>
         <p id="edit-profile-message"></p>
       </form>
