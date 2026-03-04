@@ -1,23 +1,27 @@
-document.addEventListener("DOMContentLoaded", async () => {
+// /scripts/agent-page.js
 
+document.addEventListener("DOMContentLoaded", async () => {
   const supabase = window.supabase;
-  if (!supabase) { 
-    console.error("window.supabase missing"); return; 
+  if (!supabase) {
+    console.error("window.supabase missing");
+    return;
   }
-  
+
+  // /a/<slug> -> parts[0]="a", parts[1]="<slug>"
   const parts = window.location.pathname.split("/").filter(Boolean);
   const slug = (parts[0] === "a" && parts[1]) ? parts[1] : null;
   if (!slug) {
-    console.error("Missing slug in URL"); return; 
+    console.error("Missing slug in URL");
+    return;
   }
-  
+
   const { data: agent, error } = await supabase
     .from("agent_public_profiles")
     .select("*")
     .eq("agent_slug", slug)
     .single();
-  
-  if (!agent || error || !agent.agent_page_enabled) {
+
+  if (error || !agent || !agent.agent_page_enabled) {
     document.body.innerHTML = `
       <h2 style="text-align:center;margin-top:120px;">
         This agent page is not active.
@@ -25,84 +29,67 @@ document.addEventListener("DOMContentLoaded", async () => {
     `;
     return;
   }
-  
-  document.getElementById("agent-name").textContent = `${agent.first_name} ${agent.last_name}`;
-  document.getElementById("agent-bio").textContent = agent.bio || "";
-  
-  if (agent.profile_picture_url) {
-    document.getElementById("agent-photo").src =
-    agent.profile_picture_url;
-  }
-  
+
+  // Expose agent context for freequote.js to use
+  window.AGENT_PAGE = {
+    agent_id: agent.id,
+    agent_slug: agent.agent_slug,
+    source: "agent_page"
+  };
+
+  // Render hero/contact info
+  const nameEl = document.getElementById("agent-name");
+  const bioEl = document.getElementById("agent-bio");
+  const photoEl = document.getElementById("agent-photo");
+
+  if (nameEl) nameEl.textContent = `${agent.first_name} ${agent.last_name}`;
+  if (bioEl) bioEl.textContent = agent.bio || "";
+  if (photoEl && agent.profile_picture_url) photoEl.src = agent.profile_picture_url;
+
+  const callEl = document.getElementById("agent-call");
+  const textEl = document.getElementById("agent-text");
+  const emailEl = document.getElementById("agent-email");
+
   if (agent.phone) {
-    document.getElementById("agent-call").href =
-    `tel:${agent.phone}`;
-    document.getElementById("agent-text").href =
-    `sms:${agent.phone}`;
+    if (callEl) callEl.href = `tel:${agent.phone}`;
+    if (textEl) textEl.href = `sms:${agent.phone}`;
   }
-  
-  if (agent.email) {
-    document.getElementById("agent-email").href =
-    `mailto:${agent.email}`;
+  if (agent.email && emailEl) {
+    emailEl.href = `mailto:${agent.email}`;
   }
 
-    // ===== Save Contact (vCard) =====
-  const vcardBtn = document.getElementById("agent-vcard");
-  if (vcardBtn) {
-    vcardBtn.addEventListener("click", async () => {
-      try {
-        const fullName = `${agent.first_name || ""} ${agent.last_name || ""}`.trim();
-
-        // Optional: include photo if we can fetch it (works if the image URL is public + CORS allows it)
-        let photoBlock = "";
-        if (agent.profile_picture_url) {
-          try {
-            const res = await fetch(agent.profile_picture_url, { mode: "cors" });
-            if (res.ok) {
-              const blob = await res.blob();
-              const b64 = await new Promise((resolve, reject) => {
-                const reader = new FileReader();
-                reader.onload = () => resolve(String(reader.result).split(",")[1] || "");
-                reader.onerror = reject;
-                reader.readAsDataURL(blob);
-              });
-
-              if (b64) {
-                // vCard 3.0 photo line (JPEG is most compatible)
-                photoBlock = `\nPHOTO;ENCODING=b;TYPE=JPEG:${b64}`;
-              }
-            }
-          } catch (_) {
-            // If photo fetch fails, we still generate the vCard without the image.
-          }
-        }
-
-        const vcard =
-          `BEGIN:VCARD
-          VERSION:3.0
-          FN:${fullName}
-          N:${agent.last_name || ""};${agent.first_name || ""};;;
-          ORG:Family Values Group
-          TITLE:Insurance Broker
-          TEL;TYPE=CELL:${agent.phone || ""}
-          EMAIL;TYPE=INTERNET:${agent.email || ""}${photoBlock}
-          END:VCARD`;
-
-        const blob = new Blob([vcard], { type: "text/vcard;charset=utf-8" });
-        const url = URL.createObjectURL(blob);
-
-        const a = document.createElement("a");
-        a.href = url;
-        a.download = `${(agent.first_name || "agent")}-${(agent.last_name || "contact")}.vcf`;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        console.error("vCard error:", err);
-        alert("Could not generate contact card. Please try again.");
+  // Load freequote funnel partial into #quote-container
+  const quoteContainer = document.getElementById("quote-container");
+  if (quoteContainer) {
+    try {
+      const res = await fetch("/partials/freequote-funnel.html", { cache: "no-store" });
+      if (!res.ok) {
+        console.error("Failed to load freequote partial:", res.status);
+      } else {
+        quoteContainer.innerHTML = await res.text();
       }
-    });
+    } catch (e) {
+      console.error("Error fetching freequote partial:", e);
+    }
   }
+
+  // Now load freequote.js AFTER the funnel markup exists
+  // (prevents null element errors)
+  await loadScriptOnce("/scripts/freequote.js");
 });
+
+function loadScriptOnce(src) {
+  return new Promise((resolve, reject) => {
+    // Already loaded?
+    if ([...document.scripts].some(s => s.src && s.src.includes(src))) {
+      resolve();
+      return;
+    }
+    const s = document.createElement("script");
+    s.src = src;
+    s.defer = true;
+    s.onload = () => resolve();
+    s.onerror = (e) => reject(e);
+    document.body.appendChild(s);
+  });
+}
