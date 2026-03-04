@@ -60,6 +60,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("profile-agent-id").value = profile.agent_id ?? "";
   document.getElementById("profile-bio").value = profile.bio ?? "";
+  const agentPageToggle = document.getElementById("agent-page-enabled");
+  if (agentPageToggle) {
+    agentPageToggle.checked = !!profile.agent_page_enabled;
+  }
 
   // Profile photo
   const photoEl = document.getElementById("profile-photo");
@@ -80,7 +84,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Only update fields you actually want agents to edit in "agents"
     const updates = {
-      bio: (document.getElementById("profile-bio").value || "").trim()
+      bio: (document.getElementById("profile-bio").value || "").trim(),
+      agent_page_enabled: document.getElementById("agent-page-enabled")?.checked ?? false
     };
 
     // 1) Update agents row
