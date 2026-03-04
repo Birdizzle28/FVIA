@@ -71,8 +71,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     // Only update fields you actually want agents to edit in "agents"
     const updates = {
-      bio: (document.getElementById("profile-bio").value || "").trim(),
-      show_on_about: document.getElementById("profile-public-status").value === "true"
+      bio: (document.getElementById("profile-bio").value || "").trim()
     };
 
     // 1) Update agents row
