@@ -106,7 +106,6 @@ export const handler = async (event) => {
       productTypes,
       perTypeNotes,
       contactInfo,
-      totalDebtCharge = 0, // ✅ agent page should be free leads by default
       submittedBy,
       submittedByName,
 
@@ -118,6 +117,7 @@ export const handler = async (event) => {
       elapsed_ms,
     } = body;
 
+    const totalDebtCharge = 0; // ✅ agent page should be free leads by default
     // --- Required forced agent ---
     if (!forcedAgentId) {
       return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ ok: false, error: "Missing forcedAgentId" }) };
@@ -378,21 +378,6 @@ export const handler = async (event) => {
       const insertedOrExisting = [];
 
       for (const pt of productTypesArr) {
-        const dup = await findDuplicateLeadByNamePlusOne({
-          first_name: ci.first_name,
-          last_name: ci.last_name,
-          phoneArr: leadPhone,
-          email: candidateEmail,
-          zip: ci.zip || null,
-          product_type: pt,
-          windowDays: 90,
-        });
-
-        if (dup) {
-          insertedOrExisting.push({ id: dup.id, product_type: dup.product_type, duplicate: true, assigned_to: pickedAgent.id });
-          continue;
-        }
-
         const payload = {
           first_name: ci.first_name,
           last_name: ci.last_name,
