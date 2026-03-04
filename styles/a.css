@@ -272,3 +272,10 @@ main{
   background: #272727;
 }
 
+/* Fix header title size when mobile layout is forced */
+
+.index-grid-header > p{
+  font-size: clamp(18px, 3vw, 32px) !important;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+}
