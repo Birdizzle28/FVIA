@@ -72,7 +72,14 @@
       const n = normStr(name);
 
       if (n.includes("life")) lines.add("life");
-      if (n.includes("health") || n.includes("accident")) lines.add("health");
+      if (
+        n.includes("health") ||
+        n.includes("accident & health") ||
+        n.includes("accident and health") ||
+        n.includes("sickness")
+      ) {
+        lines.add("health");
+      }
       if (n.includes("property")) lines.add("property");
       if (n.includes("casualty")) lines.add("casualty");
       if (n.includes("property") && n.includes("casualty")) {
