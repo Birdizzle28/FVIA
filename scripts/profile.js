@@ -52,10 +52,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   document.getElementById("profile-agent-id").value = profile.agent_id ?? "";
   document.getElementById("profile-bio").value = profile.bio ?? "";
 
-  // Public toggle (show_on_about)
-  const showOnAbout = profile.show_on_about === true;
-  document.getElementById("profile-public-status").value = showOnAbout ? "true" : "false";
-
   // Profile photo
   const photoEl = document.getElementById("profile-photo");
   if (profile.profile_picture_url) {
