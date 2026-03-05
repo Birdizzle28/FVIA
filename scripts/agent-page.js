@@ -7,6 +7,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
+  // Force header translucency on scroll (works on all sizes)
+  (function initHeaderScrollEffect() {
+    const header = document.querySelector(".index-grid-header");
+    if (!header) return;
+  
+    const onScroll = () => {
+      if (window.scrollY > 10) header.classList.add("scrolled");
+      else header.classList.remove("scrolled");
+    };
+  
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+  })();
+  
   // /a/<slug> -> parts[0]="a", parts[1]="<slug>"
   const parts = window.location.pathname.split("/").filter(Boolean);
   const slug = (parts[0] === "a" && parts[1]) ? parts[1] : null;
