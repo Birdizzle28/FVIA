@@ -125,13 +125,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const html = licenses.map((x) => {
         const loas = (x.loas || []).join(", ");
+      
         return `
-          <div class="license-pill">
-            <div class="license-left">
-              <img class="state-icon" src="/Pics/states/${x.state}.svg" alt="${x.state}"/>
-              <span class="license-state">${x.state}</span>
-            </div>
-            <div class="license-loas">${loas || "—"}</div>
+          <div class="license-row">
+            <span class="license-state">${x.state}</span>
+            <span class="license-divider">—</span>
+            <span class="license-loas">${loas || "—"}</span>
           </div>
         `;
       }).join("");
