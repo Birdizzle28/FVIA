@@ -146,6 +146,18 @@
     }
   }
 
+  function showNotCoveredAlertOnce({ zip5, stateUp }) {
+    const key = `${zip5}:${stateUp}`;
+    if (lastAlertKey === key) return;
+    lastAlertKey = key;
+  
+    alert(
+      `Sorry — this agent can’t help with coverage in ${stateUp} for that ZIP right now.\n\n` +
+      `That’s based on agent + agency licensing rules.\n\n` +
+      `Try another agent or contact our main office for help.`
+    );
+  }
+  
   function initAgentOverride() {
     const supabase = window.supabase;
     if (!supabase) return console.warn("[agent-quote-override] window.supabase missing");
@@ -221,8 +233,14 @@
 
         if (allowedCover.size === 0) {
           showAllCoverOptions();
+        
+          // ✅ alert once per ZIP/state after agent+agency check completes
+          showNotCoveredAlertOnce({ zip5, stateUp: String(geo.state || "").toUpperCase() });
         } else {
           filterCoverMenuToAllowed(allowedCover);
+        
+          // reset alert key if user finds a valid ZIP later
+          lastAlertKey = "";
         }
 
         setCoverLoading(false);
