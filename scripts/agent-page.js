@@ -20,6 +20,41 @@ document.addEventListener("DOMContentLoaded", async () => {
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
   })();
+
+  async function setFooterToAgentContact(agentUuid) {
+    const footer = document.getElementById("footercontact");
+    if (!footer) return;
+  
+    const mailLink = footer.querySelector('a[href^="mailto:"]');
+    const mailText = mailLink?.querySelector(".contactcontcontacts");
+  
+    const phoneLink = footer.querySelector('a[href^="tel:"]');
+    const phoneText = phoneLink?.querySelector(".contactcontcontacts");
+  
+    try {
+      const res = await fetch(`/.netlify/functions/getAgentFooterContact?agent_uuid=${encodeURIComponent(agentUuid)}`, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+  
+      const email = String(json?.email || "").trim();
+      const phone = String(json?.phone || "").trim();
+  
+      if (email && mailLink && mailText) {
+        mailLink.href = `mailto:${email}`;
+        mailText.textContent = email;
+      }
+  
+      if (phone && phoneLink && phoneText) {
+        phoneLink.href = `tel:${phone}`;
+        phoneText.textContent = phone;
+      }
+    } catch (e) {
+      console.error("[agent-page] footer contact failed:", e);
+    }
+  }
+  
+  // call it
+  setFooterToAgentContact(agent.id);
   
   // /a/<slug> -> parts[0]="a", parts[1]="<slug>"
   const parts = window.location.pathname.split("/").filter(Boolean);
