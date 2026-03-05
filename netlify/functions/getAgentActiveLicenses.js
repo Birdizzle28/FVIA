@@ -13,19 +13,54 @@ const RLP_AGENT_UUIDS = [
   "56ef28c7-3c39-4045-beb3-dfb8e67a1eb3",
 ];
 
-function toTitle(s) {
-  return String(s || "")
-    .trim()
-    .replace(/\s+/g, " ")
-    .replace(/(^|\s)\S/g, (m) => m.toUpperCase());
-}
-
-function normLoa(s) {
-  return toTitle(String(s || "").trim());
-}
-
 function normState(s) {
   return String(s || "").trim().toUpperCase();
+}
+
+function normStr(s) {
+  return String(s || "").trim().toLowerCase();
+}
+
+// Map any LOA string -> Set of canonical lines
+function canonicalLinesFromLoaNames(loaNames) {
+  const lines = new Set();
+  const arr = Array.isArray(loaNames) ? loaNames : [];
+
+  for (const raw of arr) {
+    const n = normStr(raw);
+
+    // life
+    if (n.includes("life")) lines.add("life");
+
+    // health
+    if (
+      n.includes("health") ||
+      n.includes("accident") ||
+      n.includes("sickness") ||
+      n.includes("accident & health") ||
+      n.includes("accident and health")
+    ) {
+      lines.add("health");
+    }
+
+    // property
+    if (n.includes("property")) lines.add("property");
+
+    // casualty
+    if (n.includes("casualty")) lines.add("casualty");
+  }
+
+  return lines;
+}
+
+function prettyLine(line) {
+  switch (line) {
+    case "life": return "Life";
+    case "health": return "Health";
+    case "property": return "Property";
+    case "casualty": return "Casualty";
+    default: return line;
+  }
 }
 
 export const handler = async (event) => {
@@ -46,9 +81,7 @@ export const handler = async (event) => {
 
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
 
-    // ------------------------------------------------------------
-    // 1) Fetch RLP NPNs from agents table using UUIDs
-    // ------------------------------------------------------------
+    // 1) Fetch RLP NPNs
     const { data: rlpAgents, error: rlpErr } = await supabase
       .from("agents")
       .select("id, agent_id")
@@ -70,10 +103,8 @@ export const handler = async (event) => {
       };
     }
 
-    // ------------------------------------------------------------
-    // 2) Build allowed map from RLP active licenses:
-    //    allowed[state] = Set(loaName)
-    // ------------------------------------------------------------
+    // 2) Build agency allowed bounds from RLP active licenses:
+    // allowed[state] = Set(canonicalLine)
     const { data: rlpLicRows, error: rlpLicErr } = await supabase
       .from("agent_nipr_licenses")
       .select("agent_id, state, active, loa_names")
@@ -85,67 +116,55 @@ export const handler = async (event) => {
       return { statusCode: 500, headers, body: JSON.stringify({ ok: false, error: rlpLicErr.message }) };
     }
 
-    const allowed = new Map(); // state -> Set(loa)
+    const allowed = new Map(); // state -> Set(line)
     for (const r of (rlpLicRows || [])) {
       const st = normState(r?.state);
       if (!st) continue;
 
-      if (!allowed.has(st)) allowed.set(st, new Set());
+      const lines = canonicalLinesFromLoaNames(r?.loa_names);
+      if (lines.size === 0) continue;
 
+      if (!allowed.has(st)) allowed.set(st, new Set());
       const set = allowed.get(st);
-      const loaArr = Array.isArray(r?.loa_names) ? r.loa_names : [];
-      for (const loa of loaArr) {
-        const clean = normLoa(loa);
-        if (clean) set.add(clean);
-      }
+      for (const line of lines) set.add(line);
     }
 
-    // If for some reason allowed is empty, return nothing (safe)
     if (allowed.size === 0) {
       return { statusCode: 200, headers, body: JSON.stringify({ ok: true, licenses: [] }) };
     }
 
-    // ------------------------------------------------------------
-    // 3) Fetch target agent licenses
-    // ------------------------------------------------------------
-    const { data, error } = await supabase
+    // 3) Fetch target agent active licenses
+    const { data: agentLicRows, error: agentLicErr } = await supabase
       .from("agent_nipr_licenses")
       .select("state, active, loa_names, created_at")
       .eq("agent_id", agent_id)
+      .eq("active", true)
       .order("created_at", { ascending: false })
-      .limit(500);
+      .limit(2000);
 
-    if (error) {
-      return { statusCode: 500, headers, body: JSON.stringify({ ok: false, error: error.message }) };
+    if (agentLicErr) {
+      return { statusCode: 500, headers, body: JSON.stringify({ ok: false, error: agentLicErr.message }) };
     }
 
-    const rows = Array.isArray(data) ? data : [];
-    const activeRows = rows.filter((r) => r?.active === true);
-
-    // ------------------------------------------------------------
-    // 4) Filter to agency bounds (RLP union):
-    //    keep only LOAs that are allowed in that state
-    // ------------------------------------------------------------
-    const map = new Map(); // state -> Set(loa)
-    for (const r of activeRows) {
+    // 4) Filter to agency bounds + return grouped
+    const outMap = new Map(); // state -> Set(prettyLine)
+    for (const r of (agentLicRows || [])) {
       const st = normState(r?.state);
       if (!st) continue;
 
-      const allowedLoas = allowed.get(st);
-      if (!allowedLoas || allowedLoas.size === 0) continue; // state not allowed at all
+      const allowedLines = allowed.get(st);
+      if (!allowedLines || allowedLines.size === 0) continue;
 
-      const loaArr = Array.isArray(r?.loa_names) ? r.loa_names : [];
-      for (const loa of loaArr) {
-        const clean = normLoa(loa);
-        if (!clean) continue;
-        if (!allowedLoas.has(clean)) continue; // LOA not in RLP bounds
+      const agentLines = canonicalLinesFromLoaNames(r?.loa_names);
+      const kept = Array.from(agentLines).filter((l) => allowedLines.has(l));
+      if (!kept.length) continue;
 
-        if (!map.has(st)) map.set(st, new Set());
-        map.get(st).add(clean);
-      }
+      if (!outMap.has(st)) outMap.set(st, new Set());
+      const set = outMap.get(st);
+      for (const l of kept) set.add(prettyLine(l));
     }
 
-    const out = Array.from(map.entries())
+    const out = Array.from(outMap.entries())
       .map(([state, loaSet]) => ({ state, loas: Array.from(loaSet).sort() }))
       .sort((a, b) => a.state.localeCompare(b.state));
 
