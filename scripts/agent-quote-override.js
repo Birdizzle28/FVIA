@@ -18,20 +18,22 @@
   }
 
   function linesRequiredForCoverOption(label) {
-    switch (label) {
-      case "Myself":
-      case "Someone Else":
-        return ["life"];
-      case "My Health":
-        return ["health"];
-      case "My Business":
-      case "My Car":
-      case "My Home":
-        return ["property", "casualty"];
-      default:
-        return [];
-    }
+  switch (label) {
+    case "Myself":
+    case "Someone Else":
+      return ["life"];
+    case "My Health":
+      return ["health"];
+    case "My Home":
+      return ["property"];
+    case "My Car":
+      return ["casualty"];
+    case "My Business":
+      return ["property", "casualty"];
+    default:
+      return [];
   }
+}
 
   function computeRequiredLinesFromSelections(selections) {
     const out = new Set();
@@ -63,8 +65,10 @@
 
     if (error || !data || data.length === 0) return new Set();
 
-    const row = data.find(r => r?.active === true) || data[0];
-    const loaNames = Array.isArray(row?.loa_names) ? row.loa_names : [];
+    const activeRows = data.filter(r => r?.active === true);
+    const rowsToUse = activeRows.length ? activeRows : data;
+    
+    const loaNames = rowsToUse.flatMap(r => Array.isArray(r.loa_names) ? r.loa_names : []);
 
     const lines = new Set();
 
@@ -127,6 +131,28 @@
 
     const btnStep1 = document.getElementById("btn-step1");
     const zipEl = document.getElementById("zip");
+    if (zipEl) {
+      zipEl.addEventListener("input", async () => {
+        const zip5 = String(zipEl.value || "").trim();
+        if (!/^\d{5}$/.test(zip5)) return;
+    
+        const geo = await getGeoFromZip(zip5);
+        if (!geo?.state) return;
+    
+        const agentNpn = agent.agent_id;
+        const licensedLines = await getAgentLicensedLinesForState(supabase, agentNpn, geo.state);
+    
+        const coverOptions = ["Myself", "Someone Else", "My Health", "My Business", "My Car", "My Home"];
+        const allowedCover = new Set(
+          coverOptions.filter((opt) => {
+            const req = linesRequiredForCoverOption(opt);
+            return req.length && req.every((line) => licensedLines.has(line));
+          })
+        );
+    
+        filterCoverMenuToAllowed(allowedCover);
+      });
+    }
 
     if (btnStep1) {
       btnStep1.addEventListener("click", async (e) => {
