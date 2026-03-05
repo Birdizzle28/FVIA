@@ -120,7 +120,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         return `
           <div class="license-pill">
             <div class="license-left">
-              <i class="fa-regular fa-map"></i>
+              <img class="state-icon" src="/Pics/states/${x.state}.svg" alt="${x.state}"/>
               <span class="license-state">${x.state}</span>
             </div>
             <div class="license-loas">${loas || "—"}</div>
