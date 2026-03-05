@@ -332,3 +332,91 @@ main{
   padding: 10px 0;
   color: #666;
 }
+
+/* Make hero support right-side content */
+#agent-hero{
+  display:flex;
+  align-items:center;
+  gap:30px;
+  padding:30px;
+  background:#ffffff;
+  border-radius:12px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.06);
+}
+
+.agent-hero-right{
+  flex:1;
+  min-width:0;
+}
+
+/* Contact buttons inside hero */
+#agent-contact{
+  margin-top:14px;
+  display:flex;
+  gap:12px;
+  flex-wrap:wrap;
+}
+
+/* Licenses section should feel like ONE panel */
+#agent-details{
+  display:block;              /* since you now only have agent-licenses inside */
+}
+
+#agent-licenses{
+  background:white;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 4px 14px rgba(0,0,0,0.05);
+}
+
+/* First child area: NO extra box */
+#agent-licenses h3{
+  margin:0 0 12px 0;
+  padding:0;
+  border:none;
+  background:transparent;
+}
+
+/* License rows: subtle separators, NOT separate big white cards */
+.license-list{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.license-pill{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+
+  background:rgba(0,0,0,0.03);
+  border:1px solid rgba(0,0,0,0.06);
+  border-radius:10px;
+  padding:12px 14px;
+}
+
+.license-left{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:88px;
+}
+
+.state-icon{
+  width:26px;
+  height:26px;
+  object-fit:contain;
+  display:block;
+}
+
+.license-state{
+  font-weight:800;
+  letter-spacing:.5px;
+}
+
+.license-loas{
+  flex:1;
+  color:#333;
+  line-height:1.35;
+}
