@@ -143,11 +143,12 @@ main{
 
 /* DO NOT style inside the quote form */
 
+/* Quote container must be transparent (freequote.css handles the form UI) */
 #quote-container{
-    background:white;
-    padding:30px;
-    border-radius:12px;
-    box-shadow:0 6px 20px rgba(0,0,0,0.06);
+  background: transparent !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+  border-radius: 0 !important;
 }
 
 /* -------------------- */
