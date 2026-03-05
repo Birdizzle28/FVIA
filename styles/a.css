@@ -280,3 +280,55 @@ main{
   font-weight: bold;
   letter-spacing: 0.5px;
 }
+/* Licenses UI */
+#agent-licenses{
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 4px 14px rgba(0,0,0,0.05);
+}
+
+.license-list{
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.license-pill{
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(0,0,0,0.08);
+  border-radius: 10px;
+  background: rgba(127,171,191,0.08);
+}
+
+.license-left{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 90px;
+  font-weight: 800;
+}
+
+.license-left i{
+  opacity: .85;
+}
+
+.license-state{
+  letter-spacing: .5px;
+}
+
+.license-loas{
+  flex: 1;
+  color: #333;
+  line-height: 1.35;
+  font-size: .95rem;
+}
+
+.license-empty{
+  padding: 10px 0;
+  color: #666;
+}
