@@ -39,6 +39,51 @@ function looksLikeGibberish(s) {
   return false;
 }
 
+async function getAgencyAllowedLinesForState(supabase, stateUp) {
+  const RLP_UUIDS = [
+    "1153ef63-bfb1-4d94-ad21-9c4031e5fd77",
+    "56ef28c7-3c39-4045-beb3-dfb8e67a1eb3"
+  ];
+
+  // 1) Get the RLP NPNs
+  const { data: rlpAgents, error: rlpErr } = await supabase
+    .from("agents")
+    .select("id, agent_id")
+    .in("id", RLP_UUIDS);
+
+  if (rlpErr) throw new Error(rlpErr.message);
+
+  const rlpNpns = (rlpAgents || []).map(a => String(a.agent_id || "").trim()).filter(Boolean);
+  if (!rlpNpns.length) return new Set(); // no RLP NPNs found => nothing allowed
+
+  // 2) Get active NIPR rows for those RLPs in that state
+  const { data: rows, error } = await supabase
+    .from("agent_nipr_licenses")
+    .select("agent_id, active, loa_names")
+    .eq("state", stateUp)
+    .in("agent_id", rlpNpns);
+
+  if (error) throw new Error(error.message);
+
+  // 3) Convert LOAs -> allowed lines
+  const allowed = new Set();
+
+  for (const r of (rows || [])) {
+    if (r?.active !== true) continue;
+    const loaArr = Array.isArray(r.loa_names) ? r.loa_names : [];
+
+    for (const loa of loaArr) {
+      const n = String(loa || "").toLowerCase();
+      if (n.includes("life")) allowed.add("life");
+      if (n.includes("accident") || n.includes("health") || n.includes("sickness")) allowed.add("health");
+      if (n.includes("property")) allowed.add("property");
+      if (n.includes("casualty")) allowed.add("casualty");
+    }
+  }
+
+  return allowed;
+}
+
 function getClientIp(event) {
   const h = event.headers || {};
   // Netlify common headers
@@ -593,6 +638,24 @@ export const handler = async (event) => {
     ));
 
     if (!neededLines.length) neededLines.push("life");
+
+    const agencyAllowed = await getAgencyAllowedLinesForState(supabase, stateUp);
+
+    // If the agency itself isn't licensed for these lines in this state, block the submission
+    const outsideAgencyBounds = neededLines.some(line => !agencyAllowed.has(line));
+    
+    if (outsideAgencyBounds) {
+      return {
+        statusCode: 200,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          ok: false,
+          reason: "none_fit",
+          ver: VER,
+          dbg: { why: "outside_agency_bounds", state: stateUp, neededLines, agencyAllowed: Array.from(agencyAllowed) }
+        })
+      };
+    }
 
     const pickedAgent = await pickSingleAgentForSubmission(contactId, neededLines);
 
