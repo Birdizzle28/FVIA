@@ -161,6 +161,7 @@
     let lastAllowedCover = null;
     let lastEnforced = null; // { state, agentLines, agencyLines, effectiveLines }
     let inFlight = null;
+    let lastAlertKey = ""; // prevents repeated alerts for same ZIP+state
 
     async function computeAndApply() {
       const zip5 = String(zipEl?.value || "").trim();
