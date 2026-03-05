@@ -54,47 +54,21 @@
     return Array.from(new Set((requiredLines || []).map((l) => map[l]).filter(Boolean)));
   }
 
-  async function getAgentLicensedLinesForState(supabase, agentNpn, state2) {
-    const { data, error } = await supabase
-      .from("agent_nipr_licenses")
-      .select("active, loa_names")
-      .eq("agent_id", agentNpn)
-      .eq("state", state2)
-      .order("created_at", { ascending: false })
-      .limit(25);
-
-    if (error || !data || data.length === 0) return new Set();
-
-    // Use ALL active rows; if none active, fall back to all rows (but this is rare)
-    const activeRows = data.filter(r => r?.active === true);
-    const rowsToUse = activeRows.length ? activeRows : data;
-
-    const loaNames = rowsToUse.flatMap(r => Array.isArray(r.loa_names) ? r.loa_names : []);
-    const lines = new Set();
-
-    for (const name of loaNames) {
-      const n = normStr(name);
-
-      // life
-      if (n.includes("life")) lines.add("life");
-
-      // health
-      if (
-        n.includes("health") ||
-        n.includes("accident & health") ||
-        n.includes("accident and health") ||
-        n.includes("sickness") ||
-        n.includes("accident") && n.includes("health")
-      ) {
-        lines.add("health");
-      }
-
-      // property / casualty
-      if (n.includes("property")) lines.add("property");
-      if (n.includes("casualty")) lines.add("casualty");
+  async function getAgentLicensedLinesForState(_supabaseIgnored, agentNpn, state2) {
+    const agentKey = String(agentNpn || "").trim();
+    const st = String(state2 || "").trim().toUpperCase();
+  
+    try {
+      const resp = await fetch(`/.netlify/functions/getAgentLicensedLines?agent_id=${encodeURIComponent(agentKey)}&state=${encodeURIComponent(st)}`, {
+        cache: "no-store",
+      });
+      if (!resp.ok) return new Set();
+      const json = await resp.json();
+      const lines = Array.isArray(json?.lines) ? json.lines : [];
+      return new Set(lines);
+    } catch {
+      return new Set();
     }
-
-    return lines;
   }
 
   function showAllCoverOptions() {
