@@ -11,51 +11,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   (function initHeaderScrollEffect() {
     const header = document.querySelector(".index-grid-header");
     if (!header) return;
-  
+
     const onScroll = () => {
       if (window.scrollY > 10) header.classList.add("scrolled");
       else header.classList.remove("scrolled");
     };
-  
+
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
   })();
 
-  async function setFooterToAgentContact(agentUuid) {
-    const footer = document.getElementById("footercontact");
-    if (!footer) return;
-  
-    const mailLink = footer.querySelector('a[href^="mailto:"]');
-    const mailText = mailLink?.querySelector(".contactcontcontacts");
-  
-    const phoneLink = footer.querySelector('a[href^="tel:"]');
-    const phoneText = phoneLink?.querySelector(".contactcontcontacts");
-  
-    try {
-      const res = await fetch(`/.netlify/functions/getAgentFooterContact?agent_uuid=${encodeURIComponent(agentUuid)}`, { cache: "no-store" });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const json = await res.json();
-  
-      const email = String(json?.email || "").trim();
-      const phone = String(json?.phone || "").trim();
-  
-      if (email && mailLink && mailText) {
-        mailLink.href = `mailto:${email}`;
-        mailText.textContent = email;
-      }
-  
-      if (phone && phoneLink && phoneText) {
-        phoneLink.href = `tel:${phone}`;
-        phoneText.textContent = phone;
-      }
-    } catch (e) {
-      console.error("[agent-page] footer contact failed:", e);
-    }
-  }
-  
-  // call it
-  setFooterToAgentContact(agent.id);
-  
   // /a/<slug> -> parts[0]="a", parts[1]="<slug>"
   const parts = window.location.pathname.split("/").filter(Boolean);
   const slug = (parts[0] === "a" && parts[1]) ? parts[1] : null;
@@ -89,20 +54,58 @@ document.addEventListener("DOMContentLoaded", async () => {
     source: "agent_page"
   };
 
+  async function setFooterToAgentContact(agentUuid) {
+    const footer = document.getElementById("footercontact");
+    if (!footer) return;
+
+    const mailLink = footer.querySelector('a[href^="mailto:"]');
+    const mailText = mailLink?.querySelector(".contactcontcontacts");
+
+    const phoneLink = footer.querySelector('a[href^="tel:"]');
+    const phoneText = phoneLink?.querySelector(".contactcontcontacts");
+
+    try {
+      const res = await fetch(
+        `/.netlify/functions/getAgentFooterContact?agent_uuid=${encodeURIComponent(agentUuid)}`,
+        { cache: "no-store" }
+      );
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+
+      const email = String(json?.email || "").trim();
+      const phone = String(json?.phone || "").trim();
+
+      if (email && mailLink && mailText) {
+        mailLink.href = `mailto:${email}`;
+        mailText.textContent = email;
+      }
+
+      if (phone && phoneLink && phoneText) {
+        phoneLink.href = `tel:${phone}`;
+        phoneText.textContent = phone;
+      }
+    } catch (e) {
+      console.error("[agent-page] footer contact failed:", e);
+    }
+  }
+
   async function loadAndRenderLicenses(agentNpn) {
     const wrap = document.getElementById("agent-licenses");
     if (!wrap) return;
-  
+
     wrap.innerHTML = `
       <h3>Active Licenses</h3>
       <div class="license-list loading">Loading licenses…</div>
     `;
-  
+
     try {
-      const res = await fetch(`/.netlify/functions/getAgentActiveLicenses?agent_id=${encodeURIComponent(agentNpn)}`, { cache: "no-store" });
+      const res = await fetch(
+        `/.netlify/functions/getAgentActiveLicenses?agent_id=${encodeURIComponent(agentNpn)}`,
+        { cache: "no-store" }
+      );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
       const json = await res.json();
-  
+
       const licenses = Array.isArray(json?.licenses) ? json.licenses : [];
       if (!licenses.length) {
         wrap.innerHTML = `
@@ -111,7 +114,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         `;
         return;
       }
-  
+
       const html = licenses.map((x) => {
         const loas = (x.loas || []).join(", ");
         return `
@@ -124,7 +127,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
         `;
       }).join("");
-  
+
       wrap.innerHTML = `
         <h3>Active Licenses</h3>
         <div class="license-list">${html}</div>
@@ -137,8 +140,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       console.error("[agent-page] licenses load failed:", e);
     }
   }
-  
-  // call it
+
+  // ✅ call these AFTER agent is loaded
+  setFooterToAgentContact(agent.id);
   loadAndRenderLicenses(agent.agent_id);
 
   // Render hero/contact info
