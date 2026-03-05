@@ -69,6 +69,60 @@ function noneFit(headers, dbg) {
   };
 }
 
+async function createTaskForNewLead({ supabase, contactId, leadId, agentId, contactInfo, productType, sourceSlug }) {
+  const now = new Date();
+  const due = new Date(now.getTime() + 10 * 60 * 1000); // due in 10 minutes
+
+  const title =
+    `New Agent Page Lead: ${productType || "Lead"} — ${String(contactInfo?.first_name || "").trim()} ${String(contactInfo?.last_name || "").trim()}`.trim();
+
+  const payload = {
+    contact_id: contactId,
+    lead_id: leadId,
+    assigned_to: agentId,
+    title,
+    scheduled_at: now.toISOString(),
+    due_at: due.toISOString(),
+    status: "open",
+    channel: "call",
+    metadata: {
+      source: "agent_page",
+      agent_slug: sourceSlug || null,
+      product_type: productType || null,
+      phone: contactInfo?.phone || null,
+      email: contactInfo?.email || null,
+      zip: contactInfo?.zip || null,
+      city: contactInfo?.city || null,
+      state: contactInfo?.state || null,
+    },
+    push_sent: false,
+  };
+
+  const { data: task, error } = await supabase
+    .from("tasks")
+    .insert(payload)
+    .select("id, assigned_to")
+    .single();
+
+  if (error) throw new Error(error.message || "Failed to create task");
+  return task;
+}
+
+// Calls another Netlify function that actually sends push
+async function triggerPushForTask({ taskId, agentId }) {
+  try {
+    const resp = await fetch(`${process.env.URL || ""}/.netlify/functions/pushTask`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId, agentId }),
+    });
+    // don’t hard-fail the lead if push fails
+    return resp.ok;
+  } catch {
+    return false;
+  }
+}
+
 export const handler = async (event) => {
   if (event.httpMethod === "OPTIONS") {
     return { statusCode: 204, headers: corsHeaders, body: "" };
@@ -553,6 +607,29 @@ export const handler = async (event) => {
       pickedAgent,
     });
 
+    // -------------------------
+    // 6) Create a task + push notif for each created lead
+    // -------------------------
+    const createdLeads = (leads || []).filter(l => l?.id && !l.duplicate);
+    
+    const sourceSlug = String(body?.agent_slug || body?.sourceSlug || "").trim() || null; 
+    // ^ optional; if you don't send it from client, it'll just be null.
+    
+    for (const l of createdLeads) {
+      const task = await createTaskForNewLead({
+        supabase,
+        contactId,
+        leadId: l.id,
+        agentId: pickedAgent.id,
+        contactInfo,
+        productType: l.product_type,
+        sourceSlug
+      });
+    
+      // fire push immediately (best-effort)
+      await triggerPushForTask({ taskId: task.id, agentId: pickedAgent.id });
+    }
+    
     await createLeadDebtsForSubmission({
       leads,
       total: Number(totalDebtCharge) || 0,
