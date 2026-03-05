@@ -54,6 +54,58 @@ document.addEventListener("DOMContentLoaded", async () => {
     source: "agent_page"
   };
 
+  async function loadAndRenderLicenses(agentNpn) {
+    const wrap = document.getElementById("agent-licenses");
+    if (!wrap) return;
+  
+    wrap.innerHTML = `
+      <h3>Active Licenses</h3>
+      <div class="license-list loading">Loading licenses…</div>
+    `;
+  
+    try {
+      const res = await fetch(`/.netlify/functions/getAgentActiveLicenses?agent_id=${encodeURIComponent(agentNpn)}`, { cache: "no-store" });
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      const json = await res.json();
+  
+      const licenses = Array.isArray(json?.licenses) ? json.licenses : [];
+      if (!licenses.length) {
+        wrap.innerHTML = `
+          <h3>Active Licenses</h3>
+          <div class="license-empty">No active licenses found.</div>
+        `;
+        return;
+      }
+  
+      const html = licenses.map((x) => {
+        const loas = (x.loas || []).join(", ");
+        return `
+          <div class="license-pill">
+            <div class="license-left">
+              <i class="fa-regular fa-map"></i>
+              <span class="license-state">${x.state}</span>
+            </div>
+            <div class="license-loas">${loas || "—"}</div>
+          </div>
+        `;
+      }).join("");
+  
+      wrap.innerHTML = `
+        <h3>Active Licenses</h3>
+        <div class="license-list">${html}</div>
+      `;
+    } catch (e) {
+      wrap.innerHTML = `
+        <h3>Active Licenses</h3>
+        <div class="license-empty">Couldn’t load licenses.</div>
+      `;
+      console.error("[agent-page] licenses load failed:", e);
+    }
+  }
+  
+  // call it
+  loadAndRenderLicenses(agent.agent_id);
+
   // Render hero/contact info
   const nameEl = document.getElementById("agent-name");
   const bioEl = document.getElementById("agent-bio");
