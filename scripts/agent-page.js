@@ -21,6 +21,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     onScroll();
   })();
 
+  function formatPhoneUS(s) {
+    const d = String(s || "").replace(/\D/g, "");
+    const ten = d.length >= 10 ? d.slice(-10) : "";
+    if (!ten) return String(s || "").trim();
+    return `(${ten.slice(0,3)}) ${ten.slice(3,6)}-${ten.slice(6)}`;
+  }
+  
   // /a/<slug> -> parts[0]="a", parts[1]="<slug>"
   const parts = window.location.pathname.split("/").filter(Boolean);
   const slug = (parts[0] === "a" && parts[1]) ? parts[1] : null;
@@ -73,7 +80,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       const json = await res.json();
 
       const email = String(json?.email || "").trim();
-      const phone = String(json?.phone || "").trim();
+      const phoneRaw = String(json?.phone || "").trim();
+      const phone = formatPhoneUS(phoneRaw);
 
       if (email && mailLink && mailText) {
         mailLink.href = `mailto:${email}`;
