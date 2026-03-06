@@ -109,14 +109,13 @@ async function createTaskForNewLead({ supabase, contactId, leadId, agentId, cont
 }
 
 // Calls another Netlify function that actually sends push
-async function triggerPushForTask({ taskId, agentId }) {
+async function triggerPushForTask({ taskId, userId }) {
   try {
     const resp = await fetch(`${process.env.URL || ""}/.netlify/functions/pushTask`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ taskId, agentId }),
+      body: JSON.stringify({ taskId, userId }),
     });
-    // don’t hard-fail the lead if push fails
     return resp.ok;
   } catch {
     return false;
@@ -627,7 +626,7 @@ export const handler = async (event) => {
       });
     
       // fire push immediately (best-effort)
-      await triggerPushForTask({ taskId: task.id, agentId: pickedAgent.id });
+      await triggerPushForTask({ taskId: task.id, userId: pickedAgent.id });
     }
     
     await createLeadDebtsForSubmission({
