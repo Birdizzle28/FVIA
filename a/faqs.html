@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="canonical" href="https://familyvaluesgroup.com/a/faqs.html" />
+    <link rel="manifest" href="/manifest.json" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="/styles/freequote.css" />
+    <link rel="stylesheet" href="/styles/general.css" />
+    <link rel="stylesheet" href="/styles/a.css" />
+    <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <title>FAQs | Family Values Group</title>
+    <meta name="description" content="" />
+  </head>
+
+  <body id="indexbody">
+    <header class="index-grid-header">
+      <a href="a.html">
+        <img id="headerlogo" src="/Pics/img6.png" alt="Family Values Group" />
+      </a>
+      <p><strong>Family Values Group</strong></p>
+      <button id="menu-toggle" aria-label="Toggle menu">
+        <i class="fas fa-bars"></i>
+      </button>
+      <hr />
+      <nav class="header-flex-container">
+        <a id="nav-home">Home</a>
+        <a id="nav-about">About</a>
+        <a id="nav-careers">Careers</a>
+        <a id="nav-faqs">FAQs</a>
+      </nav>
+      <hr />
+    </header>
+
+    <div id="mobile-menu">
+      <a id="m-nav-home">Home</a>
+      <a id="m-nav-about">About</a>
+      <a id="m-nav-careers">Careers</a>
+      <a id="m-nav-faqs">FAQs</a>
+    </div>
+
+    <main class="faq-container" role="main">
+      <section class="faq-intro">
+        <h1 id="agent-faq-title"></h1>
+        <p id="agent-faq-intro"></p>
+      </section>
+
+      <section class="faq-list-section">
+        <h2 id="faq-list-heading">Frequently Asked Questions</h2>
+
+        <!-- JS will append unlimited FAQ items here -->
+        <div id="faq-list"></div>
+      </section>
+
+      <section class="faq-contact">
+        <h2 id="faq-contact-title"></h2>
+        <p id="faq-contact-text"></p>
+        <a id="faq-contact-link" class="apply-button"></a>
+      </section>
+    </main>
+
+    <footer class="index-grid-footer">
+      <img id="footerlogo" src="/Pics/img6.png" alt="" />
+      <hr class="footerhr" />
+
+      <div id="footercontact">
+        <a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
+          <span class="fa fa-envelope"></span>
+          <span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+        </a>
+        <p> | </p>
+        <a class="contactcontainer" href="tel:+16292437980">
+          <span class="fa fa-phone"></span>
+          <span class="contactcontcontacts">+1-629-243-7980</span>
+        </a>
+      </div>
+
+      <hr class="footerhr" />
+
+      <div id="footersocial">
+        <a class="fab fa-facebook-f" href="https://www.facebook.com/familyvaluesgroup"></a>
+        <a
+          class="fab fa-linkedin-in"
+          href="https://www.linkedin.com/in/demisi-johnson-026227391?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"
+        ></a>
+        <!--<a class="fab fa-instagram" href="https://www.instagram.com/family.values.group?igsh=OHl3dGdnd3RwMTV0&utm_source=qr"></a>-->
+        <a class="fab fa-youtube" href="https://youtube.com/@familyvaluesgroup?si=mauqWp5nxyczgCJd"></a>
+        <a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
+      </div>
+
+      <div id="footerlinks">
+        <a href="faqs.html">FAQs</a>
+        <a href="terms.html">Terms</a>
+        <a href="accessibility.html">Accessibility</a>
+        <a href="privacy.html">Privacy</a>
+      </div>
+
+      <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+    </footer>
+
+    <script>
+      window.FVG_SUPABASE_URL = "https://ddlbgkolnayqrxslzsxn.supabase.co";
+      window.FVG_SUPABASE_ANON =
+        "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho";
+      window.FVG_WEBSITE_SUBMITTER_ID = "11111111-2222-3333-4444-555555555555";
+      window.FVG_WEBSITE_SUBMITTER_NAME = "Website Lead";
+    </script>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+
+    <script>
+      const { createClient } = supabase;
+
+      window.supabase = createClient(window.FVG_SUPABASE_URL, window.FVG_SUPABASE_ANON, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          storage: {
+            getItem: () => null,
+            setItem: () => {},
+            removeItem: () => {}
+          }
+        }
+      });
+    </script>
+
+    <script src="/scripts/general.js"></script>
+    <script src="/scripts/agent-page.js"></script>
+  </body>
+</html>
