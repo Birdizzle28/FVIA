@@ -15,15 +15,15 @@ function getEnvConfig(envName = "beta") {
 
   if (env === "prod") {
     return {
-      username: process.env.NETLIFY_PROD_USERNAME,
-      password: process.env.NETLIFY_PROD_PASSWORD,
+      username: process.env.NIPR_PROD_USERNAME,
+      password: process.env.NIPR_PROD_PASSWORD,
       url: "https://pdb-alerts-industry-services.api.nipr.com/pdb-alerts-industry-services/services/industry-ws",
     };
   }
 
   return {
-    username: process.env.NETLIFY_BETA_USERNAME,
-    password: process.env.NETLIFY_BETA_PASSWORD,
+    username: process.env.NIPR_BETA_USERNAME,
+    password: process.env.NIPR_BETA_PASSWORD,
     url: "https://pdb-alerts-industry-services.api.beta.nipr.com/pdb-alerts-industry-services/services/industry-ws",
   };
 }
