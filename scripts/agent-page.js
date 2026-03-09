@@ -7,7 +7,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
-  // Force header translucency on scroll (works on all sizes)
   (function initHeaderScrollEffect() {
     const header = document.querySelector(".index-grid-header");
     if (!header) return;
@@ -25,16 +24,47 @@ document.addEventListener("DOMContentLoaded", async () => {
     const d = String(s || "").replace(/\D/g, "");
     const ten = d.length >= 10 ? d.slice(-10) : "";
     if (!ten) return String(s || "").trim();
-    return `(${ten.slice(0,3)}) ${ten.slice(3,6)}-${ten.slice(6)}`;
+    return `(${ten.slice(0, 3)}) ${ten.slice(3, 6)}-${ten.slice(6)}`;
   }
-  
-  // /a/<slug> -> parts[0]="a", parts[1]="<slug>"
+
+  function wireAgentNav(slug) {
+    const homeHref = `/a/${slug}`;
+    const aboutHref = `/a/about?slug=${encodeURIComponent(slug)}`;
+    const careersHref = `/a/careers?slug=${encodeURIComponent(slug)}`;
+    const faqsHref = `/a/faqs?slug=${encodeURIComponent(slug)}`;
+
+    const linkMap = [
+      ["nav-home", homeHref],
+      ["nav-about", aboutHref],
+      ["nav-careers", careersHref],
+      ["nav-faqs", faqsHref],
+      ["m-nav-home", homeHref],
+      ["m-nav-about", aboutHref],
+      ["m-nav-careers", careersHref],
+      ["m-nav-faqs", faqsHref]
+    ];
+
+    linkMap.forEach(([id, href]) => {
+      const el = document.getElementById(id);
+      if (el) el.href = href;
+    });
+
+    const logoLink = document.querySelector(".index-grid-header > a");
+    if (logoLink) logoLink.href = homeHref;
+  }
+
   const parts = window.location.pathname.split("/").filter(Boolean);
-  const slug = (parts[0] === "a" && parts[1]) ? parts[1] : null;
+  const slug =
+    (parts[0] === "a" && parts[1] && !["about", "careers", "faqs"].includes(parts[1]))
+      ? parts[1]
+      : new URLSearchParams(window.location.search).get("slug");
+
   if (!slug) {
     console.error("Missing slug in URL");
     return;
   }
+
+  wireAgentNav(slug);
 
   const { data: agent, error } = await supabase
     .from("agent_public_profiles")
@@ -53,10 +83,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   window.FVG_AGENT_PAGE_AGENT = agent;
 
-  // ✅ Expose BOTH UUID + NPN for other scripts
   window.AGENT_PAGE = {
-    agent_uuid: agent.id,        // UUID
-    agent_npn: agent.agent_id,   // NPN text
+    agent_uuid: agent.id,
+    agent_npn: agent.agent_id,
     agent_slug: agent.agent_slug,
     source: "agent_page"
   };
@@ -89,7 +118,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       if (phone && phoneLink && phoneText) {
-        phoneLink.href = `tel:${phone}`;
+        phoneLink.href = `tel:${phoneRaw}`;
         phoneText.textContent = phone;
       }
     } catch (e) {
@@ -125,7 +154,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       const html = licenses.map((x) => {
         const loas = (x.loas || []).join(", ");
-      
         return `
           <div class="license-row">
             <span class="license-state">${x.state}</span>
@@ -148,11 +176,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // ✅ call these AFTER agent is loaded
   setFooterToAgentContact(agent.id);
   loadAndRenderLicenses(agent.agent_id);
 
-  // Render hero/contact info
   const nameEl = document.getElementById("agent-name");
   const bioEl = document.getElementById("agent-bio");
   const photoEl = document.getElementById("agent-photo");
@@ -173,7 +199,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     emailEl.href = `mailto:${agent.email}`;
   }
 
-  // Load freequote funnel partial into #quote-container
   const quoteContainer = document.getElementById("quote-container");
   if (quoteContainer) {
     try {
@@ -188,7 +213,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  // ✅ MUST load override BEFORE freequote
   await loadScriptOnce("/scripts/agent-quote-override.js");
   await loadScriptOnce("/scripts/freequote.js");
 });
