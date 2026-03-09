@@ -18,6 +18,21 @@
   schedule = "*/2 * * * *"
 
 [[redirects]]
+  from = "/a/about"
+  to = "/a/about.html"
+  status = 200
+
+[[redirects]]
+  from = "/a/careers"
+  to = "/a/careers.html"
+  status = 200
+
+[[redirects]]
+  from = "/a/faqs"
+  to = "/a/faqs.html"
+  status = 200
+
+[[redirects]]
   from = "/a/*"
   to = "/a.html"
   status = 200
