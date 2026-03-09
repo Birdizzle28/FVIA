@@ -508,7 +508,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Pull existing notes + phone(s)
     const { data: contacts, error } = await supabase
       .from("contacts")
-      .select("id, notes, phone, phones")
+      .select("id, notes, phones")
       .in("id", ids);
   
     if (error) throw error;
@@ -520,8 +520,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     // Build updates
     const updates = contacts.map((c) => {
       const phoneCandidate =
-        (Array.isArray(c.phones) && c.phones.length ? c.phones[0] : null) || c.phone || null;
-  
+        Array.isArray(c.phones) && c.phones.length ? c.phones[0] : null;
+      
       const block = buildContactNotesBlock({
         stamp,
         details,
