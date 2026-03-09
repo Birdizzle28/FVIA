@@ -39,6 +39,16 @@ function buildAddSubscriptionEnvelope({
     .map((type) => `<ind:alertTypeList>${escapeXml(type)}</ind:alertTypeList>`)
     .join("");
 
+  let stateListXml = "";
+
+  if (allStates) {
+    stateListXml = `<ind:allStates>true</ind:allStates>`;
+  } else if (residentStateOnly) {
+    stateListXml = `<ind:residentStateOnly>true</ind:residentStateOnly>`;
+  } else {
+    stateListXml = `<ind:allStates>false</ind:allStates>`;
+  }
+
   return `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope
   xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
@@ -56,13 +66,10 @@ function buildAddSubscriptionEnvelope({
         </ind:affiliationList>
 
         <ind:stateList>
-          <ind:allStates>${allStates ? "true" : "false"}</ind:allStates>
-          <ind:residentStateOnly>${residentStateOnly ? "true" : "false"}</ind:residentStateOnly>
+          ${stateListXml}
         </ind:stateList>
 
-        <ind:alertTypeList>
-          ${alertTypeXml}
-        </ind:alertTypeList>
+        ${alertTypeXml}
       </ind:subscriptionInputData>
     </ind:addSubscription>
   </soapenv:Body>
