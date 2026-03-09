@@ -136,7 +136,6 @@ export async function handler(event) {
       headers: {
         Authorization: `Basic ${auth}`,
         "Content-Type": "text/xml; charset=utf-8",
-        SOAPAction: "addSubscription",
         Accept: "text/xml, application/xml",
       },
       body: xmlBody,
