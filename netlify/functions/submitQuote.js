@@ -759,6 +759,24 @@ export const handler = async (event) => {
       pickedAgent
     });
 
+    const createdLeads = (leads || []).filter(l => l?.id && !l.duplicate && l.assigned_to);
+    for (const l of createdLeads) {
+      const task = await createTaskForNewLead({
+        supabase,
+        contactId,
+        leadId: l.id,
+        agentId: l.assigned_to,
+        contactInfo,
+        productType: l.product_type,
+        sourceSlug: "freequote"
+      });
+
+      await triggerPushForTask({
+        taskId: task.id,
+        userId: l.assigned_to
+      });
+    }
+
     await createLeadDebtsForSubmission({
       leads,
       total: Number(totalDebtCharge) || 60,
