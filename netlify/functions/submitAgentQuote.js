@@ -111,7 +111,12 @@ async function createTaskForNewLead({ supabase, contactId, leadId, agentId, cont
 // Calls another Netlify function that actually sends push
 async function triggerPushForTask({ taskId, userId }) {
   try {
-    const resp = await fetch(`${process.env.URL || ""}/.netlify/functions/pushTask`, {
+    const base =
+      process.env.DEPLOY_PRIME_URL ||
+      process.env.URL ||
+      "http://localhost:8888";
+
+    const resp = await fetch(`${base}/.netlify/functions/pushTask`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ taskId, userId }),
