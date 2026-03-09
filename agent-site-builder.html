@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent Site Builder | Family Values Group</title>
+    <link rel="stylesheet" href="/styles/agentstyle.css" />
+    <link rel="stylesheet" href="/styles/agent-site-builder.css" />
+    <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+  </head>
+  <body>
+    <main class="builder-shell">
+      <aside class="builder-sidebar">
+        <h1>Agent Site Builder</h1>
+
+        <div class="builder-block">
+          <label for="builder-page-select">Page</label>
+          <select id="builder-page-select">
+            <option value="home">Home</option>
+            <option value="about">About</option>
+            <option value="careers">Careers</option>
+            <option value="faqs">FAQs</option>
+          </select>
+        </div>
+
+        <div class="builder-block">
+          <label for="builder-theme-mode">Theme</label>
+          <select id="builder-theme-mode">
+            <option value="dark">Dark</option>
+            <option value="light">Light</option>
+          </select>
+        </div>
+
+        <div class="builder-block">
+          <label for="builder-photo-shape">Photo Shape</label>
+          <select id="builder-photo-shape">
+            <option value="circle">Circle</option>
+            <option value="square">Square</option>
+            <option value="diamond">Diamond</option>
+          </select>
+        </div>
+
+        <div class="builder-block">
+          <label for="builder-font-preset">Font</label>
+          <select id="builder-font-preset"></select>
+        </div>
+
+        <div class="builder-block">
+          <label for="builder-button-style">Button Style</label>
+          <select id="builder-button-style">
+            <option value="soft-dark">Soft Dark</option>
+            <option value="soft-light">Soft Light</option>
+            <option value="pill-dark">Pill Dark</option>
+            <option value="pill-light">Pill Light</option>
+            <option value="outline-dark">Outline Dark</option>
+            <option value="outline-light">Outline Light</option>
+          </select>
+        </div>
+
+        <div class="builder-block">
+          <h2>Page Toggles</h2>
+          <label><input type="checkbox" id="toggle-home-page" /> Home</label>
+          <label><input type="checkbox" id="toggle-about-page" /> About</label>
+          <label><input type="checkbox" id="toggle-careers-page" /> Careers</label>
+          <label><input type="checkbox" id="toggle-faqs-page" /> FAQs</label>
+        </div>
+
+        <div class="builder-block">
+          <h2>Current Page Sections</h2>
+          <div id="section-toggle-list"></div>
+        </div>
+
+        <div class="builder-block">
+          <button id="save-draft-btn" type="button">Save Draft</button>
+          <button id="submit-review-btn" type="button">Submit for Approval</button>
+          <button id="preview-draft-btn" type="button">Preview</button>
+        </div>
+      </aside>
+
+      <section class="builder-editor">
+        <div id="builder-editor-fields"></div>
+      </section>
+
+      <section class="builder-preview">
+        <iframe id="builder-preview-frame" title="Page Preview"></iframe>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script>
+      window.FVG_SUPABASE_URL = "YOUR_SUPABASE_URL";
+      window.FVG_SUPABASE_ANON = "YOUR_SUPABASE_ANON_KEY";
+
+      const { createClient } = supabase;
+      window.supabase = createClient(window.FVG_SUPABASE_URL, window.FVG_SUPABASE_ANON, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true
+        }
+      });
+    </script>
+    <script src="/scripts/agent-site-builder.js"></script>
+  </body>
+</html>
