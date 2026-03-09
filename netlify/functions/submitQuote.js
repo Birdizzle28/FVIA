@@ -39,6 +39,62 @@ function looksLikeGibberish(s) {
   return false;
 }
 
+async function createTaskForNewLead({ supabase, contactId, leadId, agentId, contactInfo, productType, sourceSlug }) {
+  const now = new Date();
+  const due = new Date(now.getTime() + 10 * 60 * 1000);
+
+  const title =
+    `New Website Lead: ${productType || "Lead"} — ${String(contactInfo?.first_name || "").trim()} ${String(contactInfo?.last_name || "").trim()}`.trim();
+
+  const payload = {
+    contact_id: contactId,
+    lead_id: leadId,
+    assigned_to: agentId,
+    title,
+    scheduled_at: now.toISOString(),
+    due_at: due.toISOString(),
+    status: "open",
+    channel: "call",
+    metadata: {
+      source: "freequote",
+      product_type: productType || null,
+      phone: contactInfo?.phone || null,
+      email: contactInfo?.email || null,
+      zip: contactInfo?.zip || null,
+      city: contactInfo?.city || null,
+      state: contactInfo?.state || null,
+      source_slug: sourceSlug || null,
+    },
+    push_sent: false,
+  };
+
+  const { data: task, error } = await supabase
+    .from("tasks")
+    .insert(payload)
+    .select("id, assigned_to")
+    .single();
+
+  if (error) throw new Error(error.message || "Failed to create task");
+  return task;
+}
+
+async function triggerPushForTask({ taskId, userId }) {
+  try {
+    const baseUrl = process.env.URL || process.env.DEPLOY_PRIME_URL || "";
+    if (!baseUrl) return false;
+
+    const resp = await fetch(`${baseUrl}/.netlify/functions/pushTask`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ taskId, userId }),
+    });
+
+    return resp.ok;
+  } catch {
+    return false;
+  }
+}
+
 async function getAgencyAllowedLinesForState(supabase, stateUp) {
   const RLP_UUIDS = [
     "1153ef63-bfb1-4d94-ad21-9c4031e5fd77",
