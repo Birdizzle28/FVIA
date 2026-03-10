@@ -252,6 +252,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         const file = input.files?.[0];
         const sectionId = input.dataset.sectionId;
         if (!file || !sectionId) return;
+        
+        if (!file.type.startsWith("image/")) {
+          alert("Please upload an image file.");
+          return;
+        }
+
+        if (file.size > 5 * 1024 * 1024) {
+          alert("Please keep images under 5MB.");
+          return;
+        }
 
         const imageUrl = await uploadSectionImage(file, sectionId);
         if (!imageUrl) return;
