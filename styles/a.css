@@ -560,3 +560,61 @@ main{
   border-color: #ed9ea5;
   border-radius: 10px;
 }
+
+/* LIGHT MODE OVERRIDES */
+body.agent-theme-light#indexbody {
+  background-image: none !important;
+  background-color: white !important;
+}
+
+body.agent-theme-light .index-grid-header,
+body.agent-theme-light .index-grid-footer {
+  background-color: #ed9ea5 !important;
+}
+
+body.agent-theme-light .index-grid-header.scrolled {
+  background-color: rgba(237, 158, 165, 0.7) !important;
+}
+
+body.agent-theme-light #headerlogo,
+body.agent-theme-light #footerlogo {
+  content: url("/Pics/img17.png");
+}
+
+body.agent-theme-light .index-grid-header > p {
+  color: #353468 !important;
+  background: none !important;
+  -webkit-text-fill-color: #353468 !important;
+}
+
+body.agent-theme-light .index-grid-header > p::after {
+  display: none !important;
+}
+
+body.agent-theme-light #menu-toggle {
+  color: #353468 !important;
+}
+
+body.agent-theme-light #footercontact > p,
+body.agent-theme-light .contactcontainer span,
+body.agent-theme-light .contactcontainer {
+  color: #353468 !important;
+}
+
+body.agent-theme-light .footerhr {
+  border-color: black !important;
+}
+
+body.agent-theme-light .header-flex-container > a,
+body.agent-theme-light #mobile-menu a {
+  color: #353468 !important;
+}
+
+body.agent-theme-light .header-flex-container > a:hover,
+body.agent-theme-light #mobile-menu a:hover {
+  background-color: rgba(0,0,0,0.08) !important;
+}
+
+body.agent-theme-light #mobile-menu {
+  background: #ed9ea5 !important;
+}
