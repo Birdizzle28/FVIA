@@ -200,3 +200,86 @@ body {
 .faq-answer [style*="text-align:left"] {
   text-align: left;
 }
+.status-badge {
+  display: inline-block;
+  padding: 8px 12px;
+  border-radius: 999px;
+  font-weight: 700;
+  text-transform: capitalize;
+  width: fit-content;
+}
+
+.status-draft {
+  background: #fff3a3;
+  color: #272727;
+}
+
+.status-pending_review {
+  background: #cfe8ff;
+  color: #1d4f91;
+}
+
+.status-published {
+  background: #d7f5dd;
+  color: #1d6b34;
+}
+
+.preview-toolbar {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.preview-toolbar button {
+  width: auto;
+  padding: 10px 14px;
+  border: 1px solid #ccc;
+  border-radius: 10px;
+  background: white;
+  cursor: pointer;
+}
+
+.preview-toolbar button.active {
+  background: #545454;
+  color: white;
+  border-color: #545454;
+}
+
+#builder-preview-frame.preview-mobile {
+  width: 390px;
+  max-width: 100%;
+  margin: 0 auto;
+  display: block;
+}
+
+.social-preview-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.social-preview-icon {
+  width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #545454;
+  color: white;
+  font-size: 14px;
+}
+
+.image-preview {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+  margin-top: 8px;
+  background: #f2f2f2;
+}
+
+.image-preview.hidden {
+  display: none;
+}
