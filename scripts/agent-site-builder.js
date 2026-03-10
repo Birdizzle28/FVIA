@@ -551,6 +551,127 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  function bindDragList(listEl, itemSelector, idAttr, onDropSave) {
+    if (!listEl) return;
+
+    let draggedEl = null;
+
+    listEl.querySelectorAll(itemSelector).forEach(item => {
+      const handle = item.querySelector(".drag-handle");
+      if (!handle) return;
+
+      handle.addEventListener("mousedown", () => {
+        item.draggable = true;
+      });
+
+      item.addEventListener("dragstart", (e) => {
+        draggedEl = item;
+        item.classList.add("dragging");
+        e.dataTransfer.effectAllowed = "move";
+      });
+
+      item.addEventListener("dragend", async () => {
+        item.classList.remove("dragging");
+        listEl.querySelectorAll(itemSelector).forEach(el => el.classList.remove("drag-over"));
+
+        if (draggedEl) {
+          await onDropSave(
+            Array.from(listEl.querySelectorAll(itemSelector)).map((el, index) => ({
+              id: el.dataset[idAttr],
+              sort_order: index + 1
+            }))
+          );
+        }
+
+        draggedEl = null;
+      });
+
+      item.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        if (!draggedEl || draggedEl === item) return;
+        item.classList.add("drag-over");
+      });
+
+      item.addEventListener("dragleave", () => {
+        item.classList.remove("drag-over");
+      });
+
+      item.addEventListener("drop", (e) => {
+        e.preventDefault();
+        item.classList.remove("drag-over");
+
+        if (!draggedEl || draggedEl === item) return;
+
+        const items = Array.from(listEl.querySelectorAll(itemSelector));
+        const draggedIndex = items.indexOf(draggedEl);
+        const targetIndex = items.indexOf(item);
+
+        if (draggedIndex < targetIndex) {
+          item.after(draggedEl);
+        } else {
+          item.before(draggedEl);
+        }
+      });
+    });
+  }
+
+  async function saveFaqOrderFromList(orderRows) {
+    for (const row of orderRows) {
+      const { error } = await supabase
+        .from("agent_page_faqs")
+        .update({
+          sort_order: row.sort_order,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", row.id);
+
+      if (error) {
+        console.error("[builder] faq drag reorder failed", error);
+        showToast("Failed to reorder FAQs.", "error");
+        return;
+      }
+    }
+
+    faqs = faqs.map(faq => {
+      const match = orderRows.find(r => r.id === faq.id);
+      return match ? { ...faq, sort_order: match.sort_order } : faq;
+    }).sort((a, b) => {
+      if (a.page_key !== b.page_key) return a.page_key.localeCompare(b.page_key);
+      return (a.sort_order || 0) - (b.sort_order || 0);
+    });
+
+    showToast("FAQ order updated.", "success");
+    renderPageEditor(pageSelect.value);
+    refreshPreview();
+  }
+
+  async function saveSocialOrderFromList(orderRows) {
+    for (const row of orderRows) {
+      const { error } = await supabase
+        .from("agent_social_links")
+        .update({
+          sort_order: row.sort_order,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", row.id);
+
+      if (error) {
+        console.error("[builder] social drag reorder failed", error);
+        showToast("Failed to reorder socials.", "error");
+        return;
+      }
+    }
+
+    socials = socials.map(social => {
+      const match = orderRows.find(r => r.id === social.id);
+      return match ? { ...social, sort_order: match.sort_order } : social;
+    }).sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+    showToast("Social order updated.", "success");
+    renderPageEditor(pageSelect.value);
+    refreshPreview();
+  }
+  
   function bindRichPasteHandling() {
     editorFields.querySelectorAll(".rich-editor").forEach(editor => {
       editor.addEventListener("paste", (e) => {
@@ -762,10 +883,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   
   function renderFaqEditor(pageKey) {
     const faqWrap = document.createElement("div");
-    faqWrap.className = "editor-field-group";
-    faqWrap.innerHTML = `
+    faqWrap.className = "editor-field-group";    faqWrap.innerHTML = `
       <h3>${prettyLabel(pageKey)} FAQs</h3>
-      <div id="faq-editor-list"></div>
+      <div id="faq-editor-list" class="drag-list"></div>
       <button type="button" id="add-faq-btn">Add FAQ</button>
     `;
 
@@ -776,17 +896,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     pageFaqs.forEach(faq => {
       const row = document.createElement("div");
-      row.className = "editor-field-group";
+      row.className = "editor-field-group drag-item";
       row.dataset.faqId = faq.id;
+      row.draggable = true;
+
       row.innerHTML = `
-        <div class="order-btn-row">
-          <button type="button" class="move-faq-up-btn" data-faq-id="${faq.id}">↑ Move Up</button>
-          <button type="button" class="move-faq-down-btn" data-faq-id="${faq.id}">↓ Move Down</button>
-        </div>
-      
+        <button type="button" class="drag-handle" title="Drag to reorder">☰ Drag FAQ</button>
+
         <label>Question</label>
         <input type="text" data-faq-type="question" data-faq-id="${faq.id}" value="${escapeHtml(faq.draft_question || "")}" />
-      
+
         <label>Answer</label>
         <div class="rt-toolbar" data-toolbar-for="faq-${faq.id}">
           <button type="button" class="rt-btn faq-rt-btn" data-cmd="bold" data-faq-id="${faq.id}"><b>B</b></button>
@@ -800,19 +919,19 @@ document.addEventListener("DOMContentLoaded", async () => {
           <button type="button" class="rt-btn faq-rt-btn" data-cmd="justifyRight" data-faq-id="${faq.id}">Right</button>
           <button type="button" class="rt-btn faq-rt-btn" data-cmd="removeFormat" data-faq-id="${faq.id}">Clear</button>
         </div>
-      
+
         <div
           class="rich-editor faq-rich-editor"
           contenteditable="true"
           data-faq-type="answer-html"
           data-faq-id="${faq.id}"
         >${faq.draft_answer || ""}</div>
-      
+
         <label>
           <input type="checkbox" class="faq-enabled-toggle" data-faq-id="${faq.id}" ${faq.is_enabled ? "checked" : ""} />
           Enabled
         </label>
-      
+
         <button type="button" class="delete-faq-btn" data-faq-id="${faq.id}">
           Delete FAQ
         </button>
@@ -830,6 +949,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindRichTextToolbar();
     bindRichPasteHandling();
     bindRichEditorParagraphHandling();
+    bindDragList(
+      faqList,
+      ".drag-item[data-faq-id]",
+      "faqId",
+      saveFaqOrderFromList
+    );
   }
 
   function renderSocialEditor() {
@@ -838,10 +963,10 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     socialWrap = document.createElement("div");
     socialWrap.className = "editor-field-group";
-    socialWrap.id = "social-editor-wrap";
+    socialWrap.id = "social-editor-wrap";    
     socialWrap.innerHTML = `
       <h3>Social Links</h3>
-      <div id="social-editor-list"></div>
+      <div id="social-editor-list" class="drag-list"></div>
       <button type="button" id="add-social-btn">Add Social Link</button>
     `;
 
@@ -851,13 +976,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     socials.forEach(social => {
       const row = document.createElement("div");
-      row.className = "editor-field-group";
+      row.className = "editor-field-group drag-item";
       row.dataset.socialId = social.id;
+      row.draggable = true;
+
       row.innerHTML = `
-        <div class="order-btn-row">
-          <button type="button" class="move-social-up-btn" data-social-id="${social.id}">↑ Move Up</button>
-          <button type="button" class="move-social-down-btn" data-social-id="${social.id}">↓ Move Down</button>
-        </div>
+        <button type="button" class="drag-handle" title="Drag to reorder">☰ Drag Social</button>
 
         <div class="social-preview-row">
           <span class="social-preview-icon ${getSocialIconClass(social.platform)}"></span>
@@ -894,6 +1018,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     bindSocialAutosave();
     bindSocialOrderButtons();
+    bindDragList(
+      list,
+      ".drag-item[data-social-id]",
+      "socialId",
+      saveSocialOrderFromList
+    );
   }
 
   function bindSectionFieldAutosave() {
