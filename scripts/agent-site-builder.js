@@ -290,6 +290,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
 
         await saveSectionDraft(sectionId);
+        showToast("Image uploaded.", "success");
         refreshPreview();
       });
     });
@@ -303,22 +304,23 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function validateBeforePublish() {
     const errors = [];
-  
+
     sections.forEach(section => {
       if (!section.is_enabled) return;
-  
+
       const c = section.draft_content || {};
       const hasAnyContent = Object.values(c).some(v => {
         if (v == null) return false;
         return String(v).trim() !== "";
       });
-  
+
       if (!hasAnyContent) {
         errors.push(section.section_key);
       }
     });
-  
+
     if (errors.length) {
+      showToast("Some enabled sections are empty.", "error");
       alert(
         "These sections are empty but enabled:\n\n" +
         errors.join("\n") +
@@ -326,7 +328,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       );
       return false;
     }
-  
+
     return true;
   }
   
@@ -377,6 +379,52 @@ document.addEventListener("DOMContentLoaded", async () => {
       .replaceAll('"', "&quot;");
   }
 
+  function showToast(message, type = "info") {
+    const wrap = document.getElementById("builder-toast-wrap");
+    if (!wrap) return;
+
+    const toast = document.createElement("div");
+    toast.className = `builder-toast ${type}`;
+    toast.textContent = message;
+
+    wrap.appendChild(toast);
+
+    setTimeout(() => {
+      toast.classList.add("hide");
+      setTimeout(() => toast.remove(), 250);
+    }, 2200);
+  }
+
+  function setSaveStatus(state, text = "") {
+    const el = document.getElementById("builder-save-status");
+    if (!el) return;
+
+    el.className = `save-status ${state}`;
+    el.textContent = text || state;
+  }
+
+  function getSectionCompleteness(section) {
+    const c = section?.draft_content || {};
+    const values = Object.values(c)
+      .map(v => String(v || "").trim())
+      .filter(Boolean);
+
+    if (values.length === 0) return "empty";
+    if (values.length < 2) return "partial";
+    return "ready";
+  }
+
+  function bindSectionCardCollapse() {
+    editorFields.querySelectorAll(".builder-section-head").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        if (e.target.closest('input, select, textarea, button:not(.builder-section-head)')) return;
+        const card = btn.closest(".builder-section-card");
+        if (!card) return;
+        card.classList.toggle("collapsed");
+      });
+    });
+  }
+  
   function sanitizeRichHtml(html) {
     const wrapper = document.createElement("div");
     wrapper.innerHTML = html || "";
@@ -503,7 +551,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-    function bindRichPasteHandling() {
+  function bindRichPasteHandling() {
     editorFields.querySelectorAll(".rich-editor").forEach(editor => {
       editor.addEventListener("paste", (e) => {
         e.preventDefault();
@@ -593,93 +641,106 @@ document.addEventListener("DOMContentLoaded", async () => {
     pageSections.forEach(section => {
       const content = section.draft_content || {};
       const style = section.draft_style || {};
+      const completeness = getSectionCompleteness(section);
 
       const wrap = document.createElement("div");
-      wrap.className = "editor-field-group";
+      wrap.className = "builder-section-card";
+
       wrap.innerHTML = `
-        <h3>${prettyLabel(pageKey)} / ${prettyLabel(section.section_key)}</h3>
+        <button type="button" class="builder-section-head">
+          <div class="builder-section-head-left">
+            <span class="builder-section-title">${prettyLabel(pageKey)} / ${prettyLabel(section.section_key)}</span>
+            <div class="builder-section-meta">
+              <span class="section-badge ${completeness}">${completeness}</span>
+              <span class="section-toggle-mini">${section.is_enabled ? "Enabled" : "Disabled"}</span>
+            </div>
+          </div>
+          <span class="builder-section-caret">▾</span>
+        </button>
 
-        <label>Heading</label>
-        <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="heading" value="${escapeHtml(content.heading || "")}" />
+        <div class="builder-section-body">
+          <label>Heading</label>
+          <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="heading" value="${escapeHtml(content.heading || "")}" />
 
-        <label>Subheading</label>
-        <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="subheading" value="${escapeHtml(content.subheading || "")}" />
+          <label>Subheading</label>
+          <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="subheading" value="${escapeHtml(content.subheading || "")}" />
 
-        <label>Body</label>
-        <div class="rt-toolbar" data-toolbar-for="${section.id}">
-          <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}"><b>B</b></button>
-          <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}"><i>I</i></button>
-          <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}"><u>U</u></button>
-          <button type="button" class="rt-btn" data-cmd="highlight" data-section-id="${section.id}">Highlight</button>
-          <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}">• List</button>
-          <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}">H2</button>
-          <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}">H3</button>
-          <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}">Left</button>
-          <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}">Center</button>
-          <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}">Right</button>
-          <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}">Clear</button>
+          <label>Body</label>
+          <div class="rt-toolbar" data-toolbar-for="${section.id}">
+            <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}"><b>B</b></button>
+            <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}"><i>I</i></button>
+            <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}"><u>U</u></button>
+            <button type="button" class="rt-btn" data-cmd="highlight" data-section-id="${section.id}">Highlight</button>
+            <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}">• List</button>
+            <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}">H2</button>
+            <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}">H3</button>
+            <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}">Left</button>
+            <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}">Center</button>
+            <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}">Right</button>
+            <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}">Clear</button>
+          </div>
+
+          <div
+            class="rich-editor"
+            contenteditable="true"
+            data-field-type="section-content-html"
+            data-section-id="${section.id}"
+            data-key="body"
+          >${content.body || ""}</div>
+
+          <label>Button Text</label>
+          <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="button_text" value="${escapeHtml(content.button_text || "")}" />
+
+          <label>Button Link</label>
+          <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="button_link" value="${escapeHtml(content.button_link || "")}" />
+
+          <label>Image URL</label>
+          <input
+            type="text"
+            data-field-type="section-content"
+            data-section-id="${section.id}"
+            data-key="image_url"
+            value="${escapeHtml(content.image_url || "")}"
+          />
+
+          <label>Upload Image</label>
+          <input
+            type="file"
+            accept="image/*"
+            class="section-image-upload"
+            data-section-id="${section.id}"
+          />
+
+          <img
+            class="image-preview ${(content.image_url || "").trim() ? "" : "hidden"}"
+            data-image-preview="${section.id}"
+            src="${escapeHtml(content.image_url || "")}"
+            alt=""
+          />
+
+          <label>Text Align</label>
+          <select data-field-type="section-style" data-section-id="${section.id}" data-key="text_align">
+            <option value="left" ${style.text_align === "left" ? "selected" : ""}>Left</option>
+            <option value="center" ${style.text_align === "center" ? "selected" : ""}>Center</option>
+            <option value="right" ${style.text_align === "right" ? "selected" : ""}>Right</option>
+          </select>
+
+          <label>Heading Size</label>
+          <select data-field-type="section-style" data-section-id="${section.id}" data-key="heading_size">
+            <option value="sm" ${style.heading_size === "sm" ? "selected" : ""}>Small</option>
+            <option value="md" ${!style.heading_size || style.heading_size === "md" ? "selected" : ""}>Medium</option>
+            <option value="lg" ${style.heading_size === "lg" ? "selected" : ""}>Large</option>
+          </select>
+
+          <label>Color Preset</label>
+          <select data-field-type="section-style" data-section-id="${section.id}" data-key="color_preset">
+            <option value="default" ${!style.color_preset || style.color_preset === "default" ? "selected" : ""}>Default</option>
+            <option value="pink" ${style.color_preset === "pink" ? "selected" : ""}>Pink</option>
+            <option value="blue" ${style.color_preset === "blue" ? "selected" : ""}>Blue</option>
+            <option value="dark" ${style.color_preset === "dark" ? "selected" : ""}>Dark</option>
+            <option value="light" ${style.color_preset === "light" ? "selected" : ""}>Light</option>
+          </select>
         </div>
-
-        <div
-          class="rich-editor"
-          contenteditable="true"
-          data-field-type="section-content-html"
-          data-section-id="${section.id}"
-          data-key="body"
-        >${content.body || ""}</div>
-
-        <label>Button Text</label>
-        <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="button_text" value="${escapeHtml(content.button_text || "")}" />
-
-        <label>Button Link</label>
-        <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="button_link" value="${escapeHtml(content.button_link || "")}" />
-
-        <label>Image URL</label>
-        <input
-          type="text"
-          data-field-type="section-content"
-          data-section-id="${section.id}"
-          data-key="image_url"
-          value="${escapeHtml(content.image_url || "")}"
-        />
-
-        <label>Upload Image</label>
-        <input
-          type="file"
-          accept="image/*"
-          class="section-image-upload"
-          data-section-id="${section.id}"
-        />
-
-        <img
-          class="image-preview ${(content.image_url || "").trim() ? "" : "hidden"}"
-          data-image-preview="${section.id}"
-          src="${escapeHtml(content.image_url || "")}"
-          alt=""
-        />
-
-        <label>Text Align</label>
-        <select data-field-type="section-style" data-section-id="${section.id}" data-key="text_align">
-          <option value="left" ${style.text_align === "left" ? "selected" : ""}>Left</option>
-          <option value="center" ${style.text_align === "center" ? "selected" : ""}>Center</option>
-          <option value="right" ${style.text_align === "right" ? "selected" : ""}>Right</option>
-        </select>
-
-        <label>Heading Size</label>
-        <select data-field-type="section-style" data-section-id="${section.id}" data-key="heading_size">
-          <option value="sm" ${style.heading_size === "sm" ? "selected" : ""}>Small</option>
-          <option value="md" ${!style.heading_size || style.heading_size === "md" ? "selected" : ""}>Medium</option>
-          <option value="lg" ${style.heading_size === "lg" ? "selected" : ""}>Large</option>
-        </select>
-
-        <label>Color Preset</label>
-        <select data-field-type="section-style" data-section-id="${section.id}" data-key="color_preset">
-          <option value="default" ${!style.color_preset || style.color_preset === "default" ? "selected" : ""}>Default</option>
-          <option value="pink" ${style.color_preset === "pink" ? "selected" : ""}>Pink</option>
-          <option value="blue" ${style.color_preset === "blue" ? "selected" : ""}>Blue</option>
-          <option value="dark" ${style.color_preset === "dark" ? "selected" : ""}>Dark</option>
-          <option value="light" ${style.color_preset === "light" ? "selected" : ""}>Light</option>
-        </select>
       `;
 
       editorFields.appendChild(wrap);
@@ -696,8 +757,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindRichEditorParagraphHandling();
     bindImagePreviewUpdates();
     bindSectionImageUploads();
+    bindSectionCardCollapse();
   }
-
+  
   function renderFaqEditor(pageKey) {
     const faqWrap = document.createElement("div");
     faqWrap.className = "editor-field-group";
@@ -943,6 +1005,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function saveSettings() {
+    setSaveStatus("saving", "Saving...");
+
     const payload = {
       theme_mode: themeModeEl.value,
       photo_shape: photoShapeEl.value,
@@ -962,11 +1026,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (error) {
       console.error("[builder] save settings failed", error);
-      alert("Failed to save settings.");
+      setSaveStatus("error", "Save failed");
+      showToast("Failed to save settings.", "error");
       return false;
     }
 
     Object.assign(settings, payload);
+    setSaveStatus("saved", "Saved just now");
     return true;
   }
 
@@ -995,6 +1061,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function saveSectionDraft(sectionId) {
     const row = sections.find(s => s.id === sectionId);
     if (!row) return;
+
+    setSaveStatus("saving", "Saving...");
 
     const contentInputs = editorFields.querySelectorAll(`[data-field-type="section-content"][data-section-id="${sectionId}"]`);
     const styleInputs = editorFields.querySelectorAll(`[data-field-type="section-style"][data-section-id="${sectionId}"]`);
@@ -1026,7 +1094,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (error) {
       console.error("[builder] save section draft failed", error);
-      alert("Failed to save section.");
+      setSaveStatus("error", "Save failed");
+      showToast("Failed to save section.", "error");
       return;
     }
 
@@ -1034,6 +1103,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     row.draft_style = draftStyle;
 
     await saveSettings();
+    renderPageEditor(pageSelect.value);
     refreshPreview();
   }
 
@@ -1063,6 +1133,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     faqs.push(data);
+    showToast("FAQ added.", "success");
     renderPageEditor(pageSelect.value);
     refreshPreview();
   }
@@ -1070,6 +1141,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function saveFaqDraft(faqId) {
     const faq = faqs.find(f => f.id === faqId);
     if (!faq) return;
+
+    setSaveStatus("saving", "Saving...");
 
     const questionEl = editorFields.querySelector(`[data-faq-type="question"][data-faq-id="${faqId}"]`);
     const answerEl = editorFields.querySelector(`.faq-rich-editor[data-faq-id="${faqId}"]`);
@@ -1089,12 +1162,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (error) {
       console.error("[builder] save faq failed", error);
-      alert("Failed to save FAQ.");
+      setSaveStatus("error", "Save failed");
+      showToast("Failed to save FAQ.", "error");
       return;
     }
 
     Object.assign(faq, payload);
     await saveSettings();
+    renderPageEditor(pageSelect.value);
     refreshPreview();
   }
 
@@ -1114,6 +1189,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     faqs = faqs.filter(f => f.id !== faqId);
+    showToast("FAQ deleted.", "info");
     renderPageEditor(pageSelect.value);
     refreshPreview();
   }
@@ -1253,6 +1329,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     socials.push(data);
+    showToast("Social link added.", "success");
     renderPageEditor(pageSelect.value);
     refreshPreview();
   }
@@ -1260,6 +1337,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function saveSocialDraft(socialId) {
     const social = socials.find(s => s.id === socialId);
     if (!social) return;
+
+    setSaveStatus("saving", "Saving...");
 
     const platformEl = editorFields.querySelector(`.social-platform[data-social-id="${socialId}"]`);
     const urlEl = editorFields.querySelector(`.social-url[data-social-id="${socialId}"]`);
@@ -1279,12 +1358,14 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (error) {
       console.error("[builder] save social failed", error);
-      alert("Failed to save social link.");
+      setSaveStatus("error", "Save failed");
+      showToast("Failed to save social link.", "error");
       return;
     }
 
     Object.assign(social, payload);
     await saveSettings();
+    renderPageEditor(pageSelect.value);
     refreshPreview();
   }
 
@@ -1304,6 +1385,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     socials = socials.filter(s => s.id !== socialId);
+    showToast("Social link deleted.", "info");
     renderPageEditor(pageSelect.value);
     refreshPreview();
   }
@@ -1329,7 +1411,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     settings.status = "pending_review";
     setStatusBadge("pending_review");
-    alert("Draft submitted for approval.");
+    showToast("Draft submitted for approval.", "success");
   }
 
   async function publishNow() {
@@ -1361,7 +1443,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     settings.status = "published";
     setStatusBadge("published");
-    alert("Page published successfully.");
+    showToast("Page published successfully.", "success");
     refreshPreview();
   }
 
@@ -1394,7 +1476,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     settings.status = "draft";
     setStatusBadge("draft");
-    alert("Draft rejected and moved back to draft status.");
+    showToast("Draft rejected.", "info");
   }
 
   async function resetCurrentPage() {
@@ -1427,7 +1509,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     await loadAll();
-    alert(`${prettyLabel(pageKey)} reset to defaults.`);
+    showToast(`${prettyLabel(pageKey)} reset to defaults.`, "success");
   }
 
   async function resetCurrentSection() {
@@ -1479,7 +1561,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     await loadAll();
-    alert(`Section "${sectionKey}" reset to defaults.`);
+    showToast(`Section "${sectionKey}" reset to defaults.`, "success");
   }
   
   function setPreviewMode(mode) {
@@ -1545,7 +1627,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     saveDraftBtn.addEventListener("click", async () => {
       const ok = await saveSettings();
       if (ok) {
-        alert("Draft saved.");
+        showToast("Draft saved.", "success");
         refreshPreview();
       }
     });
@@ -1593,5 +1675,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   const ok = await loadCurrentUserPermissions();
   if (!ok) return;
   setPreviewMode("desktop");
+  setSaveStatus("idle", "Idle");
   await loadAll();
 });
