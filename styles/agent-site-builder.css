@@ -283,3 +283,22 @@ body {
 .image-preview.hidden {
   display: none;
 }
+
+.order-btn-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.order-btn-row button {
+  width: auto !important;
+  padding: 8px 10px !important;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: white;
+  cursor: pointer;
+}
+
+.order-btn-row button:hover {
+  background: #f2f2f2;
+}
