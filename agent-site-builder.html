@@ -89,7 +89,9 @@
       <section class="builder-editor">
         <div id="builder-editor-fields"></div>
       </section>
-
+      
+      <div id="builder-save-status" class="save-status idle">Idle</div>
+      
       <section class="builder-preview">
         <div class="preview-toolbar">
           <button type="button" id="preview-desktop-btn">Desktop</button>
@@ -98,7 +100,9 @@
         <iframe id="builder-preview-frame" title="Page Preview"></iframe>
       </section>
     </main>
-
+    
+    <div id="builder-toast-wrap"></div>
+    
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script>
       window.FVG_SUPABASE_URL = "YOUR_SUPABASE_URL";
