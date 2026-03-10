@@ -217,6 +217,65 @@ document.addEventListener("DOMContentLoaded", async () => {
      styleBuilderButtonsPreview();
   }
 
+  async function uploadSectionImage(file, sectionId) {
+    if (!file || !sectionId) return null;
+
+    const section = sections.find(s => s.id === sectionId);
+    if (!section) return null;
+
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const safeExt = ext.replace(/[^a-z0-9]/g, "") || "jpg";
+    const fileName = `${targetAgentId}/${section.page_key}/${section.section_key}-${Date.now()}.${safeExt}`;
+
+    const { error: uploadErr } = await supabase.storage
+      .from("agent-page-images")
+      .upload(fileName, file, {
+        upsert: true
+      });
+
+    if (uploadErr) {
+      console.error("[builder] image upload failed", uploadErr);
+      alert("Failed to upload image.");
+      return null;
+    }
+
+    const { data } = supabase.storage
+      .from("agent-page-images")
+      .getPublicUrl(fileName);
+
+    return data?.publicUrl || null;
+  }
+
+  function bindSectionImageUploads() {
+    editorFields.querySelectorAll(".section-image-upload").forEach(input => {
+      input.addEventListener("change", async () => {
+        const file = input.files?.[0];
+        const sectionId = input.dataset.sectionId;
+        if (!file || !sectionId) return;
+
+        const imageUrl = await uploadSectionImage(file, sectionId);
+        if (!imageUrl) return;
+
+        const urlInput = editorFields.querySelector(
+          `[data-field-type="section-content"][data-section-id="${sectionId}"][data-key="image_url"]`
+        );
+        const preview = editorFields.querySelector(`[data-image-preview="${sectionId}"]`);
+
+        if (urlInput) {
+          urlInput.value = imageUrl;
+        }
+
+        if (preview) {
+          preview.src = imageUrl;
+          preview.classList.remove("hidden");
+        }
+
+        await saveSectionDraft(sectionId);
+        refreshPreview();
+      });
+    });
+  }
+  
   function prettyLabel(value) {
     return String(value || "")
       .replaceAll("_", " ")
@@ -536,6 +595,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           value="${escapeHtml(content.image_url || "")}"
         />
 
+        <label>Upload Image</label>
+        <input
+          type="file"
+          accept="image/*"
+          class="section-image-upload"
+          data-section-id="${section.id}"
+        />
+
         <img
           class="image-preview ${(content.image_url || "").trim() ? "" : "hidden"}"
           data-image-preview="${section.id}"
@@ -580,6 +647,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindRichPasteHandling();
     bindRichEditorParagraphHandling();
     bindImagePreviewUpdates();
+    bindSectionImageUploads();
   }
 
   function renderFaqEditor(pageKey) {
