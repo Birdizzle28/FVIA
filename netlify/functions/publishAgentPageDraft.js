@@ -115,7 +115,9 @@ export const handler = async (event) => {
         .from("agent_page_settings")
         .update({
           status: "draft",
-          draft_updated_at: new Date().toISOString()
+          draft_updated_at: new Date().toISOString(),
+          rejection_notes:rejection_reason,
+          reviewed_at:new Date().toISOString()
         })
         .eq("agent_id", agentId);
 
