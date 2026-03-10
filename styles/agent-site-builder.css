@@ -494,3 +494,40 @@ margin-bottom:16px;
     align-items: flex-start;
   }
 }
+
+.drag-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.drag-item {
+  position: relative;
+}
+
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: auto !important;
+  padding: 8px 10px !important;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: white;
+  cursor: grab;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
+
+.drag-item.dragging {
+  opacity: 0.5;
+}
+
+.drag-item.drag-over {
+  outline: 2px dashed #7fabbf;
+  outline-offset: 4px;
+}
