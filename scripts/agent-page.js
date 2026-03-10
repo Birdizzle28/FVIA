@@ -219,7 +219,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (mobileEl) mobileEl.style.display = enabled ? "" : "none";
     });
   }
-
+  
   function sectionKeyToElementIds(pageKey, sectionKey) {
     const map = {
       home: {
