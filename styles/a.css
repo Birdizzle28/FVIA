@@ -501,3 +501,62 @@ main{
 .faq-answer p {
   margin: 8px 0;
 }
+.fvg-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 18px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: 0.2s ease;
+  border-width: 2px;
+  border-style: solid;
+  cursor: pointer;
+}
+
+.fvg-btn:hover {
+  transform: translateY(-2px);
+  opacity: 0.94;
+}
+
+.btn-soft-dark {
+  background: #545454;
+  color: white;
+  border-color: #545454;
+  border-radius: 10px;
+}
+
+.btn-soft-light {
+  background: #ed9ea5;
+  color: #272727;
+  border-color: #ed9ea5;
+  border-radius: 10px;
+}
+
+.btn-pill-dark {
+  background: #545454;
+  color: white;
+  border-color: #545454;
+  border-radius: 999px;
+}
+
+.btn-pill-light {
+  background: #ed9ea5;
+  color: #272727;
+  border-color: #ed9ea5;
+  border-radius: 999px;
+}
+
+.btn-outline-dark {
+  background: transparent;
+  color: #545454;
+  border-color: #545454;
+  border-radius: 10px;
+}
+
+.btn-outline-light {
+  background: transparent;
+  color: #ed9ea5;
+  border-color: #ed9ea5;
+  border-radius: 10px;
+}
