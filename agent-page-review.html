@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Agent Page Review | Family Values Group</title>
+    <link rel="stylesheet" href="/styles/agentstyle.css" />
+    <link rel="stylesheet" href="/styles/agent-page-review.css" />
+    <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+  </head>
+  <body>
+    <main class="review-shell">
+      <header class="review-header">
+        <div>
+          <h1>Agent Page Review</h1>
+          <p>Review, publish, and reject agent website drafts.</p>
+        </div>
+
+        <div class="review-actions">
+          <label for="review-status-filter">Status</label>
+          <select id="review-status-filter">
+            <option value="all">All</option>
+            <option value="draft">Draft</option>
+            <option value="pending_review">Pending Review</option>
+            <option value="published">Published</option>
+          </select>
+        </div>
+      </header>
+
+      <section class="review-table-wrap">
+        <table class="review-table">
+          <thead>
+            <tr>
+              <th>Agent</th>
+              <th>Status</th>
+              <th>Pages Enabled</th>
+              <th>Draft Updated</th>
+              <th>Submitted</th>
+              <th>Published</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="review-table-body"></tbody>
+        </table>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script>
+      window.FVG_SUPABASE_URL = "YOUR_SUPABASE_URL";
+      window.FVG_SUPABASE_ANON = "YOUR_SUPABASE_ANON_KEY";
+
+      const { createClient } = supabase;
+      window.supabase = createClient(window.FVG_SUPABASE_URL, window.FVG_SUPABASE_ANON, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true
+        }
+      });
+    </script>
+    <script src="/scripts/agent-page-review.js"></script>
+  </body>
+</html>
