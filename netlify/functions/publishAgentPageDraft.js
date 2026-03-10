@@ -50,31 +50,6 @@ export const handler = async (event) => {
     const reviewerId = body.reviewer_id ? String(body.reviewer_id).trim() : null;
     const rejectionReason = String(body.rejection_reason || "").trim();
 
-    const { data: settings } = await supabase
-      .from("agent_page_settings")
-      .select("*")
-      .eq("agent_id", agent_id)
-      .single();
-    
-    const enabledPages = [
-      settings.home_enabled,
-      settings.about_enabled,
-      settings.careers_enabled,
-      settings.faqs_enabled
-    ].filter(Boolean);
-    
-    if (enabledPages.length === 0) {
-    
-      return {
-        statusCode: 400,
-        body: JSON.stringify({
-          ok:false,
-          error:"At least one page must be enabled."
-        })
-      };
-    
-    }
-
     if (!agentId) {
       return {
         statusCode: 400,
@@ -88,6 +63,32 @@ export const handler = async (event) => {
         statusCode: 400,
         headers: corsHeaders,
         body: JSON.stringify({ ok: false, error: "Invalid action" })
+      };
+    }
+
+    const { data: settings, error: settingsLoadErr } = await supabase
+      .from("agent_page_settings")
+      .select("*")
+      .eq("agent_id", agentId)
+      .single();
+
+    if (settingsLoadErr) throw settingsLoadErr;
+
+    const enabledPages = [
+      settings.home_enabled,
+      settings.about_enabled,
+      settings.careers_enabled,
+      settings.faqs_enabled
+    ].filter(Boolean);
+
+    if (enabledPages.length === 0) {
+      return {
+        statusCode: 400,
+        headers: corsHeaders,
+        body: JSON.stringify({
+          ok: false,
+          error: "At least one page must be enabled."
+        })
       };
     }
 
@@ -116,8 +117,8 @@ export const handler = async (event) => {
         .update({
           status: "draft",
           draft_updated_at: new Date().toISOString(),
-          rejection_notes:rejection_reason,
-          reviewed_at:new Date().toISOString()
+          rejection_notes: rejectionReason,
+          reviewed_at: new Date().toISOString()
         })
         .eq("agent_id", agentId);
 
@@ -134,14 +135,17 @@ export const handler = async (event) => {
       };
     }
 
-    const { data: sections } = await supabase
+    const { data: sections, error: sectionsErr } = await supabase
       .from("agent_page_sections")
       .select("*")
-      .eq("agent_id", agent_id);
-    
+      .eq("agent_id", agentId);
+
+    if (sectionsErr) throw sectionsErr;
+
     if (!sections || sections.length === 0) {
       return {
         statusCode: 400,
+        headers: corsHeaders,
         body: JSON.stringify({
           ok: false,
           error: "Agent page has no sections."
@@ -159,21 +163,18 @@ export const handler = async (event) => {
         !c.image_url
       );
     });
-    
+
     if (emptySections.length === sections.length) {
       return {
         statusCode: 400,
+        headers: corsHeaders,
         body: JSON.stringify({
           ok: false,
           error: "Cannot publish an empty site."
         })
       };
     }
-    // ------------------------------------
-    // PUBLISH
-    // ------------------------------------
 
-    // 1) copy section drafts -> published
     const { data: sectionRows, error: sectionLoadErr } = await supabase
       .from("agent_page_sections")
       .select("id, draft_content, draft_style")
@@ -194,7 +195,6 @@ export const handler = async (event) => {
       if (updateErr) throw updateErr;
     }
 
-    // 2) copy FAQ drafts -> published
     const { data: faqRows, error: faqLoadErr } = await supabase
       .from("agent_page_faqs")
       .select("id, draft_question, draft_answer")
@@ -215,7 +215,6 @@ export const handler = async (event) => {
       if (updateErr) throw updateErr;
     }
 
-    // 3) copy social drafts -> published
     const { data: socialRows, error: socialLoadErr } = await supabase
       .from("agent_social_links")
       .select("id, draft_url")
@@ -235,7 +234,6 @@ export const handler = async (event) => {
       if (updateErr) throw updateErr;
     }
 
-    // 4) update settings status
     const nowIso = new Date().toISOString();
 
     const { error: settingsErr } = await supabase
