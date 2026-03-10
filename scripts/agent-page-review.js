@@ -7,7 +7,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const statusFilter = document.getElementById("review-status-filter");
   const tableBody = document.getElementById("review-table-body");
-
+  const reason = window.prompt("Reason for rejection?");
+  
   let currentUser = null;
   let currentAgent = null;
   let rows = [];
@@ -217,7 +218,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       body: JSON.stringify({
         action: "publish",
         agent_id: agentId,
-        reviewer_id: currentAgent.id
+        reviewer_id: currentAgent.id,
       })
     });
 
