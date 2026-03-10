@@ -294,7 +294,22 @@ document.addEventListener("DOMContentLoaded", async () => {
         <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="subheading" value="${escapeHtml(content.subheading || "")}" />
 
         <label>Body</label>
-        <textarea rows="5" data-field-type="section-content" data-section-id="${section.id}" data-key="body">${escapeHtml(content.body || "")}</textarea>
+        <div class="rt-toolbar" data-toolbar-for="${section.id}">
+          <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}"><b>B</b></button>
+          <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}"><i>I</i></button>
+          <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}"><u>U</u></button>
+          <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}">• List</button>
+          <button type="button" class="rt-btn" data-cmd="highlight" data-section-id="${section.id}">Highlight</button>
+          <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}">Clear</button>
+        </div>
+
+        <div
+          class="rich-editor"
+          contenteditable="true"
+          data-field-type="section-content-html"
+          data-section-id="${section.id}"
+          data-key="body"
+        >${content.body || ""}</div>
 
         <label>Button Text</label>
         <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="button_text" value="${escapeHtml(content.button_text || "")}" />
