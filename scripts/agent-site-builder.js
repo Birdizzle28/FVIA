@@ -1281,6 +1281,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const row = sections.find(s => s.id === sectionId);
     if (row) row.is_enabled = isEnabled;
 
+    renderSectionToggles(pageSelect.value);
     await saveSettings();
     refreshPreview();
   }
