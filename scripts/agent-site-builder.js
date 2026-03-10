@@ -292,6 +292,35 @@ document.addEventListener("DOMContentLoaded", async () => {
       .replace(/\b\w/g, m => m.toUpperCase());
   }
 
+  function validateBeforePublish() {
+    const errors = [];
+  
+    sections.forEach(section => {
+      if (!section.is_enabled) return;
+  
+      const c = section.draft_content || {};
+      const hasAnyContent = Object.values(c).some(v => {
+        if (v == null) return false;
+        return String(v).trim() !== "";
+      });
+  
+      if (!hasAnyContent) {
+        errors.push(section.section_key);
+      }
+    });
+  
+    if (errors.length) {
+      alert(
+        "These sections are empty but enabled:\n\n" +
+        errors.join("\n") +
+        "\n\nDisable them or add content."
+      );
+      return false;
+    }
+  
+    return true;
+  }
+  
   function getSocialIconClass(platform) {
     const p = String(platform || "").toLowerCase();
 
@@ -679,9 +708,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       row.className = "editor-field-group";
       row.dataset.faqId = faq.id;
       row.innerHTML = `
+        <div class="order-btn-row">
+          <button type="button" class="move-faq-up-btn" data-faq-id="${faq.id}">↑ Move Up</button>
+          <button type="button" class="move-faq-down-btn" data-faq-id="${faq.id}">↓ Move Down</button>
+        </div>
+      
         <label>Question</label>
         <input type="text" data-faq-type="question" data-faq-id="${faq.id}" value="${escapeHtml(faq.draft_question || "")}" />
-
+      
         <label>Answer</label>
         <div class="rt-toolbar" data-toolbar-for="faq-${faq.id}">
           <button type="button" class="rt-btn faq-rt-btn" data-cmd="bold" data-faq-id="${faq.id}"><b>B</b></button>
@@ -695,19 +729,19 @@ document.addEventListener("DOMContentLoaded", async () => {
           <button type="button" class="rt-btn faq-rt-btn" data-cmd="justifyRight" data-faq-id="${faq.id}">Right</button>
           <button type="button" class="rt-btn faq-rt-btn" data-cmd="removeFormat" data-faq-id="${faq.id}">Clear</button>
         </div>
-  
+      
         <div
           class="rich-editor faq-rich-editor"
           contenteditable="true"
           data-faq-type="answer-html"
           data-faq-id="${faq.id}"
         >${faq.draft_answer || ""}</div>
-
+      
         <label>
           <input type="checkbox" class="faq-enabled-toggle" data-faq-id="${faq.id}" ${faq.is_enabled ? "checked" : ""} />
           Enabled
         </label>
-
+      
         <button type="button" class="delete-faq-btn" data-faq-id="${faq.id}">
           Delete FAQ
         </button>
@@ -1524,10 +1558,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (publishNowBtn) {
     publishNowBtn.addEventListener("click", async () => {
       await saveSettings();
+      if (!validateBeforePublish()) return;
       await publishNow();
     });
   }
-
+  
   if (rejectDraftBtn) {
     rejectDraftBtn.addEventListener("click", async () => {
       await rejectDraft();
