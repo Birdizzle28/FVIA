@@ -107,6 +107,41 @@ export const handler = async (event) => {
       };
     }
 
+    const { data: sections } = await supabase
+      .from("agent_page_sections")
+      .select("*")
+      .eq("agent_id", agent_id);
+    
+    if (!sections || sections.length === 0) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          ok: false,
+          error: "Agent page has no sections."
+        })
+      };
+    }
+
+    const emptySections = sections.filter(s => {
+      const c = s.draft_content || {};
+      return (
+        !c.heading &&
+        !c.subheading &&
+        !c.body &&
+        !c.button_text &&
+        !c.image_url
+      );
+    });
+    
+    if (emptySections.length === sections.length) {
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          ok: false,
+          error: "Cannot publish an empty site."
+        })
+      };
+    }
     // ------------------------------------
     // PUBLISH
     // ------------------------------------
