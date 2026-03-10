@@ -1158,3 +1158,54 @@ body {
 .builder-center-pane.collapsed .builder-center-toggle i {
   transform: rotate(180deg);
 }
+
+.builder-pill-toggle {
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.08);
+  color: white;
+  cursor: pointer;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.builder-pill-toggle.active {
+  background: #ed9ea5;
+  color: #222;
+  border-color: #ed9ea5;
+}
+
+.builder-pill-toggle.inactive {
+  opacity: 0.8;
+}
+
+.pill-text {
+  flex: 1;
+  text-align: left;
+}
+
+.pill-badge {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.72rem;
+}
+
+.pill-badge.enabled {
+  background: #d7f5dd;
+  color: #1d6b34;
+}
+
+.pill-badge.disabled {
+  background: #ffe0e0;
+  color: #992222;
+}
