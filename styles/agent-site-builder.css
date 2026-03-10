@@ -162,3 +162,41 @@ body {
   background: #fff3a3;
   padding: 0 2px;
 }
+
+.rich-editor h2,
+.rich-editor h3,
+.faq-answer h2,
+.faq-answer h3 {
+  margin: 10px 0 6px;
+  line-height: 1.2;
+}
+
+.rich-editor h2,
+.faq-answer h2 {
+  font-size: 1.35rem;
+}
+
+.rich-editor h3,
+.faq-answer h3 {
+  font-size: 1.1rem;
+}
+
+.rich-editor p,
+.faq-answer p {
+  margin: 8px 0;
+}
+
+.rich-editor [style*="text-align:center"],
+.faq-answer [style*="text-align:center"] {
+  text-align: center;
+}
+
+.rich-editor [style*="text-align:right"],
+.faq-answer [style*="text-align:right"] {
+  text-align: right;
+}
+
+.rich-editor [style*="text-align:left"],
+.faq-answer [style*="text-align:left"] {
+  text-align: left;
+}
