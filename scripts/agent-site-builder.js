@@ -114,8 +114,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     const { data: me, error: meErr } = await supabase
       .from("agents")
-      .select("id, user_id, is_admin, is_active")
-      .eq("user_id", currentUser.id)
+      .select("id, is_admin, is_active")
+      .eq("id", currentUser.id)
       .maybeSingle();
 
     if (meErr || !me?.id) {
