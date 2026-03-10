@@ -86,6 +86,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     return;
   }
 
+  if (settings.rejection_notes) {
+    const box = document.createElement("div");
+    box.className = "review-warning";
+    box.innerHTML =
+      "<strong>Admin Feedback:</strong><br>" +
+      settings.rejection_notes;
+    editorFields.prepend(box);
+  }
+  
   let currentUser = null;
   let currentAgentRow = null;
   let isAdmin = false;
