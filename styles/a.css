@@ -452,3 +452,52 @@ main{
   background: #fff3a3;
   padding: 0 2px;
 }
+
+#agent-about-summary h2,
+#agent-story h2,
+#agent-approach h2,
+#agent-who-i-help h2,
+#agent-careers-intro h2,
+#agent-hiring-message h2,
+#agent-role-description h2,
+#setter-role-description h2,
+#careers-contact-description h2,
+#agent-faq-intro h2,
+#faq-contact-text h2,
+.faq-answer h2 {
+  font-size: 1.5rem;
+  line-height: 1.2;
+  margin: 12px 0 8px;
+}
+
+#agent-about-summary h3,
+#agent-story h3,
+#agent-approach h3,
+#agent-who-i-help h3,
+#agent-careers-intro h3,
+#agent-hiring-message h3,
+#agent-role-description h3,
+#setter-role-description h3,
+#careers-contact-description h3,
+#agent-faq-intro h3,
+#faq-contact-text h3,
+.faq-answer h3 {
+  font-size: 1.2rem;
+  line-height: 1.2;
+  margin: 10px 0 6px;
+}
+
+#agent-about-summary p,
+#agent-story p,
+#agent-approach p,
+#agent-who-i-help p,
+#agent-careers-intro p,
+#agent-hiring-message p,
+#agent-role-description p,
+#setter-role-description p,
+#careers-contact-description p,
+#agent-faq-intro p,
+#faq-contact-text p,
+.faq-answer p {
+  margin: 8px 0;
+}
