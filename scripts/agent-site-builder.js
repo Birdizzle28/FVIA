@@ -81,6 +81,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   const targetAgentId = query.get("agent_id");
   const slug = query.get("slug") || "preview-agent";
 
+    const builderLayout = document.querySelector(".builder-layout");
+  const leftPane = document.getElementById("builder-left-pane");
+  const centerPane = document.getElementById("builder-center-pane");
+  const leftToggleBtn = document.getElementById("builder-left-toggle");
+  const centerToggleBtn = document.getElementById("builder-center-toggle");
+
   if (!targetAgentId) {
     editorFields.innerHTML = "<p>Missing agent_id in URL.</p>";
     return;
@@ -452,6 +458,32 @@ document.addEventListener("DOMContentLoaded", async () => {
       .replaceAll("<", "&lt;")
       .replaceAll(">", "&gt;")
       .replaceAll('"', "&quot;");
+  }
+
+  function applyPaneState() {
+    if (!builderLayout || !leftPane || !centerPane) return;
+
+    const leftCollapsed = leftPane.classList.contains("collapsed");
+    const centerCollapsed = centerPane.classList.contains("collapsed");
+
+    builderLayout.classList.toggle("left-collapsed", leftCollapsed);
+    builderLayout.classList.toggle("center-collapsed", centerCollapsed);
+  }
+
+  function bindPaneToggles() {
+    if (leftToggleBtn && leftPane) {
+      leftToggleBtn.addEventListener("click", () => {
+        leftPane.classList.toggle("collapsed");
+        applyPaneState();
+      });
+    }
+
+    if (centerToggleBtn && centerPane) {
+      centerToggleBtn.addEventListener("click", () => {
+        centerPane.classList.toggle("collapsed");
+        applyPaneState();
+      });
+    }
   }
 
   function showToast(message, type = "info") {
@@ -1759,6 +1791,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (!ok) return;
   
   bindPageTogglePills();
+  bindPaneToggles();
+    leftPane.classList.add("collapsed");
+  applyPaneState();
   setPreviewMode("desktop");
   setSaveStatus("idle", "Idle");
   await loadAll();
