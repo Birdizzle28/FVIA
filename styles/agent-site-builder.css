@@ -118,3 +118,47 @@ body {
   background: #272727;
   color: white;
 }
+
+.rt-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.rt-btn {
+  width: auto !important;
+  padding: 8px 10px !important;
+  border: 1px solid #ccc !important;
+  background: white;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.rt-btn:hover {
+  background: #f2f2f2;
+}
+
+.rich-editor {
+  min-height: 140px;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: white;
+  line-height: 1.45;
+}
+
+.rich-editor:focus {
+  outline: 2px solid #7fabbf;
+  border-color: #7fabbf;
+}
+
+.rich-editor ul,
+.rich-editor ol {
+  padding-left: 22px;
+}
+
+.rich-editor mark {
+  background: #fff3a3;
+  padding: 0 2px;
+}
