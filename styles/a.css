@@ -420,3 +420,35 @@ main{
   color:#333;
   line-height:1.35;
 }
+
+.faq-answer ul,
+.faq-answer ol,
+#agent-about-summary ul,
+#agent-story ul,
+#agent-approach ul,
+#agent-who-i-help ul,
+#agent-careers-intro ul,
+#agent-hiring-message ul,
+#agent-role-description ul,
+#setter-role-description ul,
+#careers-contact-description ul,
+#agent-faq-intro ul,
+#faq-contact-text ul {
+  padding-left: 22px;
+}
+
+.faq-answer mark,
+#agent-about-summary mark,
+#agent-story mark,
+#agent-approach mark,
+#agent-who-i-help mark,
+#agent-careers-intro mark,
+#agent-hiring-message mark,
+#agent-role-description mark,
+#setter-role-description mark,
+#careers-contact-description mark,
+#agent-faq-intro mark,
+#faq-contact-text mark {
+  background: #fff3a3;
+  padding: 0 2px;
+}
