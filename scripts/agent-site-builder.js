@@ -421,7 +421,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   
   function getSocialIconClass(platform) {
     const p = String(platform || "").toLowerCase();
-
+  
     const map = {
       facebook: "fab fa-facebook-f",
       instagram: "fab fa-instagram",
@@ -444,8 +444,37 @@ document.addEventListener("DOMContentLoaded", async () => {
       messenger: "fab fa-facebook-messenger",
       linktree: "fa fa-link"
     };
-
+  
     return map[p] || "fa fa-link";
+  }
+  
+  function getSocialColorClass(platform) {
+    const p = String(platform || "").toLowerCase();
+  
+    const map = {
+      facebook: "social-color-facebook",
+      instagram: "social-color-instagram",
+      linkedin: "social-color-linkedin",
+      youtube: "social-color-youtube",
+      tiktok: "social-color-tiktok",
+      x: "social-color-x",
+      threads: "social-color-threads",
+      reddit: "social-color-reddit",
+      pinterest: "social-color-pinterest",
+      snapchat: "social-color-snapchat",
+      whatsapp: "social-color-whatsapp",
+      telegram: "social-color-telegram",
+      calendly: "social-color-calendly",
+      google: "social-color-google",
+      yelp: "social-color-yelp",
+      website: "social-color-website",
+      email: "social-color-email",
+      phone: "social-color-phone",
+      messenger: "social-color-messenger",
+      linktree: "social-color-linktree"
+    };
+  
+    return map[p] || "social-color-default";
   }
   
   function setStatusBadge(status) {
@@ -1111,7 +1140,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               <i class="fa-solid fa-grip-lines"></i>
             </button>
             <div class="social-preview-row">
-              <span class="social-preview-icon ${getSocialIconClass(social.platform)}"></span>
+              <span class="social-preview-icon ${getSocialIconClass(social.platform)} ${getSocialColorClass(social.platform)}"></span>
               <strong>${prettyLabel(social.platform)}</strong>
             </div>
           </div>
