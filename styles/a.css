@@ -618,3 +618,35 @@ body.agent-theme-light #mobile-menu a:hover {
 body.agent-theme-light #mobile-menu {
   background: #ed9ea5 !important;
 }
+
+.social-preview-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.social-color-facebook { background: #3B5998; }
+.social-color-instagram { background: #125688; }
+.social-color-linkedin { background: #007bb5; }
+.social-color-youtube { background: #bb0000; }
+.social-color-google { background: #dd4b39; }
+.social-color-tiktok { background: #111111; }
+.social-color-x { background: #111111; }
+.social-color-threads { background: #111111; }
+.social-color-reddit { background: #ff4500; }
+.social-color-pinterest { background: #bd081c; }
+.social-color-snapchat { background: #fffc00; color: #111; }
+.social-color-whatsapp { background: #25d366; }
+.social-color-telegram { background: #229ED9; }
+.social-color-calendly { background: #006bff; }
+.social-color-yelp { background: #d32323; }
+.social-color-website { background: #545454; }
+.social-color-email { background: #7fabbf; }
+.social-color-phone { background: #2e8b57; }
+.social-color-messenger { background: #0084ff; }
+.social-color-linktree { background: #39e09b; color: #111; }
+.social-color-default { background: #545454; }
