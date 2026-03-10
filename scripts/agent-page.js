@@ -109,6 +109,21 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  function applySectionImage(pageKey, sectionKey, content = {}) {
+    const imageUrl = String(content.image_url || "").trim();
+    if (!imageUrl) return;
+
+    if (pageKey === "home" && sectionKey === "hero") {
+      const photoEl = document.getElementById("agent-photo");
+      if (photoEl) photoEl.src = imageUrl;
+    }
+
+    if (pageKey === "about" && sectionKey === "hero") {
+      const photoEl = document.getElementById("agent-photo");
+      if (photoEl) photoEl.src = imageUrl;
+    }
+  }
+  
   function applyTheme(settings) {
     const body = document.getElementById("indexbody");
     const header = document.querySelector(".index-grid-header");
@@ -717,6 +732,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     setSectionVisibility(pageKey, section.section_key, !!section.is_enabled);
     fillSectionContent(pageKey, section.section_key, content || {});
     applySectionStyle(pageKey, section.section_key, style || {});
+    applySectionImage(pageKey, section.section_key, content || {});
   });
 
   if (pageKey === "home" || pageKey === "about") {
