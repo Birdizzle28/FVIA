@@ -259,19 +259,19 @@ document.addEventListener("DOMContentLoaded", async () => {
   function fillSectionContent(pageKey, sectionKey, content = {}) {
     if (pageKey === "about") {
       if (sectionKey === "summary") {
-        setTextIfExists("agent-about-summary", content.body || "");
+        setHtmlIfExists("agent-about-summary", content.body || "");
       }
       if (sectionKey === "story") {
-        setTextIfExists("agent-story", content.body || "");
+        setHtmlIfExists("agent-story", content.body || "");
       }
       if (sectionKey === "approach") {
-        setTextIfExists("agent-approach", content.body || "");
+        setHtmlIfExists("agent-approach", content.body || "");
       }
       if (sectionKey === "who_i_help") {
-        setTextIfExists("agent-who-i-help", content.body || "");
+        setHtmlIfExists("agent-who-i-help", content.body || "");
       }
       if (sectionKey === "cta") {
-        setTextIfExists("agent-about-cta-text", content.body || "");
+        setHtmlIfExists("agent-about-cta-text", content.body || "");
         setHrefIfExists("agent-call-cta", document.getElementById("agent-call")?.href || "");
         setHrefIfExists("agent-text-cta", document.getElementById("agent-text")?.href || "");
         setHrefIfExists("agent-email-cta", document.getElementById("agent-email")?.href || "");
@@ -280,31 +280,31 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (pageKey === "careers") {
       if (sectionKey === "intro") {
-        setTextIfExists("agent-careers-title", content.heading || "");
+        setHtmlIfExists("agent-careers-title", content.heading || "");
         setTextIfExists("agent-careers-intro", content.body || "");
         setTextIfExists("agent-careers-region", content.subheading || "");
       }
 
       if (sectionKey === "notice") {
         setTextIfExists("agent-hiring-status", content.heading || "");
-        setTextIfExists("agent-hiring-message", content.body || "");
+        setHtmlIfExists("agent-hiring-message", content.body || "");
       }
 
       if (sectionKey === "roles") {
         setTextIfExists("agent-role-title", content.agent_role_title || "");
         setTextIfExists("agent-role-location", content.agent_role_location || "");
         setTextIfExists("agent-role-type", content.agent_role_type || "");
-        setTextIfExists("agent-role-description", content.agent_role_description || "");
+        setHtmlIfExists("agent-role-description", content.agent_role_description || "");
 
         setTextIfExists("setter-role-title", content.setter_role_title || "");
         setTextIfExists("setter-role-location", content.setter_role_location || "");
         setTextIfExists("setter-role-type", content.setter_role_type || "");
-        setTextIfExists("setter-role-description", content.setter_role_description || "");
+        setHtmlIfExists("setter-role-description", content.setter_role_description || "");
       }
 
       if (sectionKey === "cta") {
         setTextIfExists("careers-contact-title", content.heading || "");
-        setTextIfExists("careers-contact-description", content.body || "");
+        setHtmlIfExists("careers-contact-description", content.body || "");
         setHrefIfExists("careers-contact-email", content.button_link || "", content.button_text || "");
       }
     }
@@ -312,12 +312,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (pageKey === "faqs") {
       if (sectionKey === "intro") {
         setTextIfExists("agent-faq-title", content.heading || "");
-        setTextIfExists("agent-faq-intro", content.body || "");
+        setHtmlIfExists("agent-faq-intro", content.body || "");
       }
 
       if (sectionKey === "cta") {
         setTextIfExists("faq-contact-title", content.heading || "");
-        setTextIfExists("faq-contact-text", content.body || "");
+        setHtmlIfExists("faq-contact-text", content.body || "");
         setHrefIfExists("faq-contact-link", content.button_link || "", content.button_text || "");
       }
     }
@@ -457,7 +457,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       details.className = "faq-item";
       details.innerHTML = `
         <summary>${escapeHtml(q)}</summary>
-        <p>${escapeHtml(a)}</p>
+        <div class="faq-answer">${a || ""}</div>
       `;
       faqList.appendChild(details);
     });
