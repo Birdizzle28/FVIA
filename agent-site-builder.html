@@ -67,7 +67,7 @@
 
         <div class="builder-block">
           <h2>Status</h2>
-          <p id="builder-status-text">Draft</p>
+          <p id="builder-status-text" class="status-badge status-draft">Draft</p>
         </div>
         
         <div class="builder-block">
@@ -91,6 +91,10 @@
       </section>
 
       <section class="builder-preview">
+        <div class="preview-toolbar">
+          <button type="button" id="preview-desktop-btn">Desktop</button>
+          <button type="button" id="preview-mobile-btn">Mobile</button>
+        </div>
         <iframe id="builder-preview-frame" title="Page Preview"></iframe>
       </section>
     </main>
