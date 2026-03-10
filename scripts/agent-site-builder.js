@@ -244,7 +244,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       "UL", "OL", "LI",
       "BR",
       "P",
-      "DIV"
+      "DIV",
+      "H2",
+      "H3"
     ]);
 
     const nodes = wrapper.querySelectorAll("*");
@@ -258,6 +260,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
 
       [...node.attributes].forEach(attr => {
+        const name = attr.name.toLowerCase();
+        const value = String(attr.value || "").toLowerCase();
+
+        if (name === "style") {
+          const safeStyles = [];
+
+          if (value.includes("text-align:center")) safeStyles.push("text-align:center");
+          if (value.includes("text-align:right")) safeStyles.push("text-align:right");
+          if (value.includes("text-align:left")) safeStyles.push("text-align:left");
+
+          if (safeStyles.length) {
+            node.setAttribute("style", safeStyles.join(";"));
+          } else {
+            node.removeAttribute("style");
+          }
+
+          return;
+        }
+
         node.removeAttribute(attr.name);
       });
     });
@@ -272,6 +293,16 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (cmd === "highlight") {
       document.execCommand("insertHTML", false, "<mark>Highlighted text</mark>");
+      return;
+    }
+
+    if (cmd === "formatBlock-h2") {
+      document.execCommand("formatBlock", false, "h2");
+      return;
+    }
+
+    if (cmd === "formatBlock-h3") {
+      document.execCommand("formatBlock", false, "h3");
       return;
     }
 
@@ -303,6 +334,47 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+    function bindRichPasteHandling() {
+    editorFields.querySelectorAll(".rich-editor").forEach(editor => {
+      editor.addEventListener("paste", (e) => {
+        e.preventDefault();
+
+        const clipboard = e.clipboardData || window.clipboardData;
+        const html = clipboard.getData("text/html");
+        const text = clipboard.getData("text/plain");
+
+        if (html) {
+          const clean = sanitizeRichHtml(html);
+          document.execCommand("insertHTML", false, clean);
+        } else {
+          const safeText = String(text || "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll("\n", "<br>");
+          document.execCommand("insertHTML", false, safeText);
+        }
+      });
+    });
+  }
+
+  function bindRichEditorParagraphHandling() {
+    editorFields.querySelectorAll(".rich-editor").forEach(editor => {
+      editor.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && !e.shiftKey) {
+          const selection = window.getSelection();
+          const node = selection?.anchorNode?.parentElement;
+
+          if (node && ["LI", "H2", "H3", "P", "DIV"].includes(node.tagName)) {
+            return;
+          }
+
+          document.execCommand("formatBlock", false, "p");
+        }
+      });
+    });
+  }
+  
   function getCurrentPageSections(pageKey) {
     return sections.filter(s => s.page_key === pageKey);
   }
@@ -369,8 +441,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}"><b>B</b></button>
           <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}"><i>I</i></button>
           <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}"><u>U</u></button>
-          <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}">• List</button>
           <button type="button" class="rt-btn" data-cmd="highlight" data-section-id="${section.id}">Highlight</button>
+          <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}">• List</button>
+          <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}">H2</button>
+          <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}">H3</button>
+          <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}">Left</button>
+          <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}">Center</button>
+          <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}">Right</button>
           <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}">Clear</button>
         </div>
 
@@ -425,6 +502,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderSocialEditor();
     bindSectionFieldAutosave();
     bindRichTextToolbar();
+    bindRichPasteHandling();
+    bindRichEditorParagraphHandling();
   }
 
   function renderFaqEditor(pageKey) {
@@ -454,8 +533,12 @@ document.addEventListener("DOMContentLoaded", async () => {
           <button type="button" class="rt-btn faq-rt-btn" data-cmd="bold" data-faq-id="${faq.id}"><b>B</b></button>
           <button type="button" class="rt-btn faq-rt-btn" data-cmd="italic" data-faq-id="${faq.id}"><i>I</i></button>
           <button type="button" class="rt-btn faq-rt-btn" data-cmd="underline" data-faq-id="${faq.id}"><u>U</u></button>
-          <button type="button" class="rt-btn faq-rt-btn" data-cmd="insertUnorderedList" data-faq-id="${faq.id}">• List</button>
           <button type="button" class="rt-btn faq-rt-btn" data-cmd="highlight" data-faq-id="${faq.id}">Highlight</button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="insertUnorderedList" data-faq-id="${faq.id}">• List</button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="formatBlock-h3" data-faq-id="${faq.id}">H3</button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="justifyLeft" data-faq-id="${faq.id}">Left</button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="justifyCenter" data-faq-id="${faq.id}">Center</button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="justifyRight" data-faq-id="${faq.id}">Right</button>
           <button type="button" class="rt-btn faq-rt-btn" data-cmd="removeFormat" data-faq-id="${faq.id}">Clear</button>
         </div>
   
@@ -485,6 +568,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindFaqFieldAutosave();
     bindFaqDeleteButtons();
     bindRichTextToolbar();
+    bindRichPasteHandling();
+    bindRichEditorParagraphHandling();
   }
 
   function renderSocialEditor() {
