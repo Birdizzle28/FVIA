@@ -20,6 +20,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     onScroll();
   })();
 
+  function withDefault(value, fallback) {
+    if (!value) return fallback;
+    if (value.trim() === "") return fallback;
+    return value;
+  }
+  
   function formatPhoneUS(s) {
     const d = String(s || "").replace(/\D/g, "");
     const ten = d.length >= 10 ? d.slice(-10) : "";
