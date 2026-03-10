@@ -667,6 +667,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   applyTheme(settings || {});
   applyPhotoShape(settings || {});
   applyFontPreset(settings || {});
+  applyButtonPreset(settings || {});
   renderSocialLinks(
     (socialRows || []).map(x => ({
       ...x,
