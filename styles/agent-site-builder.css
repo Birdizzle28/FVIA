@@ -110,3 +110,11 @@ body {
     height: 700px;
   }
 }
+
+#publish-now-btn,
+#reject-draft-btn,
+#reset-page-btn,
+#reset-section-btn {
+  background: #272727;
+  color: white;
+}
