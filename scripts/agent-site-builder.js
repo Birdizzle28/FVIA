@@ -140,6 +140,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     return true;
   }
 
+  function hydrateSettingsUI() {
+    if (!settings) return;
+
+    themeModeEl.value = settings.theme_mode || "dark";
+    photoShapeEl.value = settings.photo_shape || "circle";
+    fontSelect.value = settings.font_preset || "Bellota Text";
+    buttonStyleEl.value = settings.button_style_preset || "soft-dark";
+
+    toggleHomePage.checked = !!settings.home_enabled;
+    toggleAboutPage.checked = !!settings.about_enabled;
+    toggleCareersPage.checked = !!settings.careers_enabled;
+    toggleFaqsPage.checked = !!settings.faqs_enabled;
+
+    setStatusBadge(settings.status || "draft");
+  }
+  
   async function loadAll() {
     const { data: settingsRow, error: settingsErr } = await supabase
       .from("agent_page_settings")
@@ -198,24 +214,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     hydrateSettingsUI();
     renderPageEditor(pageSelect.value);
     refreshPreview();
-  }
-
-  function hydrateSettingsUI() {
-    if (!settings) return;
-
-    themeModeEl.value = settings.theme_mode || "dark";
-    photoShapeEl.value = settings.photo_shape || "circle";
-    fontSelect.value = settings.font_preset || "Bellota Text";
-    buttonStyleEl.value = settings.button_style_preset || "soft-dark";
-
-    toggleHomePage.checked = !!settings.home_enabled;
-    toggleAboutPage.checked = !!settings.about_enabled;
-    toggleCareersPage.checked = !!settings.careers_enabled;
-    toggleFaqsPage.checked = !!settings.faqs_enabled;
-
-    if (statusText) {
-      statusText.textContent = settings.status || "draft";
-    }
+     styleBuilderButtonsPreview();
   }
 
   function prettyLabel(value) {
@@ -224,6 +223,45 @@ document.addEventListener("DOMContentLoaded", async () => {
       .replace(/\b\w/g, m => m.toUpperCase());
   }
 
+  function getSocialIconClass(platform) {
+    const p = String(platform || "").toLowerCase();
+
+    const map = {
+      facebook: "fab fa-facebook-f",
+      instagram: "fab fa-instagram",
+      linkedin: "fab fa-linkedin-in",
+      youtube: "fab fa-youtube",
+      tiktok: "fab fa-tiktok",
+      x: "fab fa-x-twitter",
+      threads: "fab fa-threads",
+      reddit: "fab fa-reddit-alien",
+      pinterest: "fab fa-pinterest-p",
+      snapchat: "fab fa-snapchat-ghost",
+      whatsapp: "fab fa-whatsapp",
+      telegram: "fab fa-telegram-plane",
+      calendly: "fa fa-calendar",
+      google: "fab fa-google",
+      yelp: "fab fa-yelp",
+      website: "fa fa-globe",
+      email: "fa fa-envelope",
+      phone: "fa fa-phone",
+      messenger: "fab fa-facebook-messenger",
+      linktree: "fa fa-link"
+    };
+
+    return map[p] || "fa fa-link";
+  }
+  
+  function setStatusBadge(status) {
+    if (!statusText) return;
+
+    const normalized = status || "draft";
+    statusText.textContent = normalized;
+
+    statusText.classList.remove("status-draft", "status-pending_review", "status-published");
+    statusText.classList.add(`status-${normalized}`);
+  }
+  
   function escapeHtml(value) {
     return String(value || "")
       .replaceAll("&", "&amp;")
@@ -284,6 +322,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     return wrapper.innerHTML.trim();
+  }
+
+  function styleBuilderButtonsPreview() {
+    const preset = buttonStyleEl.value || "soft-dark";
+    const previewButtons = [
+      saveDraftBtn,
+      submitReviewBtn,
+      previewDraftBtn
+    ].filter(Boolean);
+
+    const allPresetClasses = [
+      "btn-soft-dark",
+      "btn-soft-light",
+      "btn-pill-dark",
+      "btn-pill-light",
+      "btn-outline-dark",
+      "btn-outline-light",
+      "fvg-btn"
+    ];
+
+    previewButtons.forEach(btn => {
+      allPresetClasses.forEach(cls => btn.classList.remove(cls));
+      btn.classList.add("fvg-btn", `btn-${preset}`);
+    });
   }
 
   function execRichCommand(cmd, targetEl) {
@@ -466,7 +528,20 @@ document.addEventListener("DOMContentLoaded", async () => {
         <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="button_link" value="${escapeHtml(content.button_link || "")}" />
 
         <label>Image URL</label>
-        <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="image_url" value="${escapeHtml(content.image_url || "")}" />
+        <input
+          type="text"
+          data-field-type="section-content"
+          data-section-id="${section.id}"
+          data-key="image_url"
+          value="${escapeHtml(content.image_url || "")}"
+        />
+
+        <img
+          class="image-preview ${(content.image_url || "").trim() ? "" : "hidden"}"
+          data-image-preview="${section.id}"
+          src="${escapeHtml(content.image_url || "")}"
+          alt=""
+        />
 
         <label>Text Align</label>
         <select data-field-type="section-style" data-section-id="${section.id}" data-key="text_align">
@@ -504,6 +579,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindRichTextToolbar();
     bindRichPasteHandling();
     bindRichEditorParagraphHandling();
+    bindImagePreviewUpdates();
   }
 
   function renderFaqEditor(pageKey) {
@@ -594,6 +670,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       row.className = "editor-field-group";
       row.dataset.socialId = social.id;
       row.innerHTML = `
+        <div class="social-preview-row">
+          <span class="social-preview-icon ${getSocialIconClass(social.platform)}"></span>
+          <strong>${prettyLabel(social.platform)}</strong>
+        </div>
+
         <label>Platform</label>
         <select class="social-platform" data-social-id="${social.id}">
           ${SOCIAL_PLATFORMS.map(platform => `
@@ -641,6 +722,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  function bindImagePreviewUpdates() {
+    editorFields.querySelectorAll('[data-key="image_url"][data-section-id]').forEach(input => {
+      input.addEventListener("input", () => {
+        const sectionId = input.dataset.sectionId;
+        const preview = editorFields.querySelector(`[data-image-preview="${sectionId}"]`);
+        if (!preview) return;
+
+        const value = String(input.value || "").trim();
+        if (value) {
+          preview.src = value;
+          preview.classList.remove("hidden");
+        } else {
+          preview.src = "";
+          preview.classList.add("hidden");
+        }
+      });
+    });
+  }
+  
   function bindFaqFieldAutosave() {
     editorFields.querySelectorAll('[data-faq-type="question"], .faq-enabled-toggle').forEach(el => {
       el.addEventListener("change", async () => {
@@ -956,7 +1056,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     settings.status = "pending_review";
-    if (statusText) statusText.textContent = "pending_review";
+    setStatusBadge("pending_review");
     alert("Draft submitted for approval.");
   }
 
@@ -988,7 +1088,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     settings.status = "published";
-    if (statusText) statusText.textContent = "published";
+    setStatusBadge("published");
     alert("Page published successfully.");
     refreshPreview();
   }
@@ -1021,7 +1121,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     settings.status = "draft";
-    if (statusText) statusText.textContent = "draft";
+    setStatusBadge("draft");
     alert("Draft rejected and moved back to draft status.");
   }
 
@@ -1109,13 +1209,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     await loadAll();
     alert(`Section "${sectionKey}" reset to defaults.`);
   }
+  
+  function setPreviewMode(mode) {
+    const desktopBtn = document.getElementById("preview-desktop-btn");
+    const mobileBtn = document.getElementById("preview-mobile-btn");
 
+    if (mode === "mobile") {
+      previewFrame.classList.add("preview-mobile");
+      if (desktopBtn) desktopBtn.classList.remove("active");
+      if (mobileBtn) mobileBtn.classList.add("active");
+    } else {
+      previewFrame.classList.remove("preview-mobile");
+      if (desktopBtn) desktopBtn.classList.add("active");
+      if (mobileBtn) mobileBtn.classList.remove("active");
+    }
+  }
+  
   function refreshPreview() {
     const page = pageSelect.value;
+    const cacheBust = `t=${Date.now()}`;
     const url =
       page === "home"
-        ? `/a/${encodeURIComponent(slug)}?preview=draft&agent_id=${encodeURIComponent(targetAgentId)}`
-        : `/a/${page}?slug=${encodeURIComponent(slug)}&preview=draft&agent_id=${encodeURIComponent(targetAgentId)}`;
+        ? `/a/${encodeURIComponent(slug)}?preview=draft&agent_id=${encodeURIComponent(targetAgentId)}&${cacheBust}`
+        : `/a/${page}?slug=${encodeURIComponent(slug)}&preview=draft&agent_id=${encodeURIComponent(targetAgentId)}&${cacheBust}`;
 
     previewFrame.src = url;
   }
@@ -1137,9 +1253,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   ].forEach(el => {
     el.addEventListener("change", async () => {
       await saveSettings();
+      styleBuilderButtonsPreview();
       refreshPreview();
     });
   });
+
+  const previewDesktopBtn = document.getElementById("preview-desktop-btn");
+  const previewMobileBtn = document.getElementById("preview-mobile-btn");
+
+  if (previewDesktopBtn) {
+    previewDesktopBtn.addEventListener("click", () => setPreviewMode("desktop"));
+  }
+
+  if (previewMobileBtn) {
+    previewMobileBtn.addEventListener("click", () => setPreviewMode("mobile"));
+  }
 
   if (saveDraftBtn) {
     saveDraftBtn.addEventListener("click", async () => {
@@ -1191,6 +1319,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const ok = await loadCurrentUserPermissions();
   if (!ok) return;
-
+  setPreviewMode("desktop");
   await loadAll();
 });
