@@ -754,26 +754,81 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function submitForApproval() {
-    const { error } = await supabase
-      .from("agent_page_settings")
-      .update({
-        status: "pending_review",
-        submitted_for_review_at: new Date().toISOString(),
-        draft_updated_at: new Date().toISOString()
+    const res = await fetch("/.netlify/functions/publishAgentPageDraft", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "submit",
+        agent_id: agentId
       })
-      .eq("agent_id", agentId);
+    });
 
-    if (error) {
-      console.error("[builder] submit for review failed", error);
-      alert("Failed to submit for approval.");
+    const json = await res.json();
+    if (!res.ok || !json.ok) {
+      console.error("[builder] submit for review failed", json);
+      alert(json.error || "Failed to submit for approval.");
       return;
     }
 
     settings.status = "pending_review";
-    settings.submitted_for_review_at = new Date().toISOString();
     alert("Draft submitted for approval.");
   }
 
+  async function publishNow() {
+    const reviewerId = new URLSearchParams(window.location.search).get("reviewer_id") || null;
+
+    const res = await fetch("/.netlify/functions/publishAgentPageDraft", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "publish",
+        agent_id: agentId,
+        reviewer_id: reviewerId
+      })
+    });
+
+    const json = await res.json();
+    if (!res.ok || !json.ok) {
+      console.error("[builder] publish failed", json);
+      alert(json.error || "Failed to publish.");
+      return;
+    }
+
+    settings.status = "published";
+    alert("Page published successfully.");
+    refreshPreview();
+  }
+
+  async function rejectDraft() {
+    const reason = window.prompt("Reason for rejection?") || "";
+
+    const res = await fetch("/.netlify/functions/publishAgentPageDraft", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        action: "reject",
+        agent_id: agentId,
+        rejection_reason: reason
+      })
+    });
+
+    const json = await res.json();
+    if (!res.ok || !json.ok) {
+      console.error("[builder] reject failed", json);
+      alert(json.error || "Failed to reject.");
+      return;
+    }
+
+    settings.status = "draft";
+    alert("Draft rejected and moved back to draft status.");
+  }
+  
   function refreshPreview() {
     const page = pageSelect.value;
     const slug = new URLSearchParams(window.location.search).get("slug") || "preview-agent";
@@ -827,6 +882,32 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById("preview-draft-btn").addEventListener("click", () => {
     refreshPreview();
+  });
+
+    document.getElementById("save-draft-btn").addEventListener("click", async () => {
+    const ok = await saveSettings();
+    if (ok) {
+      alert("Draft saved.");
+      refreshPreview();
+    }
+  });
+
+  document.getElementById("submit-review-btn").addEventListener("click", async () => {
+    await saveSettings();
+    await submitForApproval();
+  });
+
+  document.getElementById("preview-draft-btn").addEventListener("click", () => {
+    refreshPreview();
+  });
+
+  document.getElementById("publish-now-btn").addEventListener("click", async () => {
+    await saveSettings();
+    await publishNow();
+  });
+
+  document.getElementById("reject-draft-btn").addEventListener("click", async () => {
+    await rejectDraft();
   });
 
   await loadAll();
