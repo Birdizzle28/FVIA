@@ -6,109 +6,124 @@
     <title>Agent Site Builder | Family Values Group</title>
     <link rel="stylesheet" href="/styles/agentstyle.css" />
     <link rel="stylesheet" href="/styles/agent-site-builder.css" />
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
     <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
   </head>
   <body>
-    <main class="builder-shell">
-      <aside class="builder-sidebar">
-        <h1>Agent Site Builder</h1>
+    <main class="builder-layout">
+      <!-- LEFT DRAWER -->
+      <aside class="builder-left-pane">
+        <div class="builder-pane-inner">
+          <h1>Agent Site Builder</h1>
 
-        <div class="builder-block">
-          <label for="builder-page-select">Page</label>
-          <select id="builder-page-select">
-            <option value="home">Home</option>
-            <option value="about">About</option>
-            <option value="careers">Careers</option>
-            <option value="faqs">FAQs</option>
-          </select>
-        </div>
+          <div class="builder-block">
+            <label for="builder-page-select">Page</label>
+            <select id="builder-page-select">
+              <option value="home">Home</option>
+              <option value="about">About</option>
+              <option value="careers">Careers</option>
+              <option value="faqs">FAQs</option>
+            </select>
+          </div>
 
-        <div class="builder-block">
-          <label for="builder-theme-mode">Theme</label>
-          <select id="builder-theme-mode">
-            <option value="dark">Dark</option>
-            <option value="light">Light</option>
-          </select>
-        </div>
+          <div class="builder-block">
+            <label for="builder-theme-mode">Theme</label>
+            <select id="builder-theme-mode">
+              <option value="dark">Dark</option>
+              <option value="light">Light</option>
+            </select>
+          </div>
 
-        <div class="builder-block">
-          <label for="builder-photo-shape">Photo Shape</label>
-          <select id="builder-photo-shape">
-            <option value="circle">Circle</option>
-            <option value="square">Square</option>
-            <option value="diamond">Diamond</option>
-          </select>
-        </div>
+          <div class="builder-block">
+            <label for="builder-photo-shape">Photo Shape</label>
+            <select id="builder-photo-shape">
+              <option value="circle">Circle</option>
+              <option value="square">Square</option>
+              <option value="diamond">Diamond</option>
+            </select>
+          </div>
 
-        <div class="builder-block">
-          <label for="builder-font-preset">Font</label>
-          <select id="builder-font-preset"></select>
-        </div>
+          <div class="builder-block">
+            <label for="builder-font-preset">Font</label>
+            <select id="builder-font-preset"></select>
+          </div>
 
-        <div class="builder-block">
-          <label for="builder-button-style">Button Style</label>
-          <select id="builder-button-style">
-            <option value="soft-dark">Soft Dark</option>
-            <option value="soft-light">Soft Light</option>
-            <option value="pill-dark">Pill Dark</option>
-            <option value="pill-light">Pill Light</option>
-            <option value="outline-dark">Outline Dark</option>
-            <option value="outline-light">Outline Light</option>
-          </select>
-        </div>
+          <div class="builder-block">
+            <label for="builder-button-style">Button Style</label>
+            <select id="builder-button-style">
+              <option value="soft-dark">Soft Dark</option>
+              <option value="soft-light">Soft Light</option>
+              <option value="pill-dark">Pill Dark</option>
+              <option value="pill-light">Pill Light</option>
+              <option value="outline-dark">Outline Dark</option>
+              <option value="outline-light">Outline Light</option>
+            </select>
+          </div>
 
-        <div class="builder-block">
-          <h2>Page Toggles</h2>
-          <label><input type="checkbox" id="toggle-home-page" /> Home</label>
-          <label><input type="checkbox" id="toggle-about-page" /> About</label>
-          <label><input type="checkbox" id="toggle-careers-page" /> Careers</label>
-          <label><input type="checkbox" id="toggle-faqs-page" /> FAQs</label>
-        </div>
+          <div class="builder-block">
+            <h2>Page Toggles</h2>
+            <div id="page-toggle-pills" class="builder-pill-grid">
+              <button type="button" class="builder-pill-toggle" id="pill-home-page" data-target-checkbox="toggle-home-page">Home</button>
+              <button type="button" class="builder-pill-toggle" id="pill-about-page" data-target-checkbox="toggle-about-page">About</button>
+              <button type="button" class="builder-pill-toggle" id="pill-careers-page" data-target-checkbox="toggle-careers-page">Careers</button>
+              <button type="button" class="builder-pill-toggle" id="pill-faqs-page" data-target-checkbox="toggle-faqs-page">FAQs</button>
+            </div>
 
-        <div class="builder-block">
-          <h2>Status</h2>
-          <p id="builder-status-text" class="status-badge status-draft">Draft</p>
-        </div>
-        
-        <div class="builder-block">
-          <h2>Current Page Sections</h2>
-          <div id="section-toggle-list"></div>
-        </div>
+            <input type="checkbox" id="toggle-home-page" hidden />
+            <input type="checkbox" id="toggle-about-page" hidden />
+            <input type="checkbox" id="toggle-careers-page" hidden />
+            <input type="checkbox" id="toggle-faqs-page" hidden />
+          </div>
 
-        <div class="builder-block">
-          <button id="save-draft-btn" type="button">Save Draft</button>
-          <button id="submit-review-btn" type="button">Submit for Approval</button>
-          <button id="preview-draft-btn" type="button">Preview</button>
-          <button id="publish-now-btn" type="button">Publish Now</button>
-          <button id="reject-draft-btn" type="button">Reject Draft</button>
-          <button id="reset-page-btn" type="button">Reset Current Page</button>
-          <button id="reset-section-btn" type="button">Reset Current Section</button>
+          <div class="builder-block">
+            <h2>Status</h2>
+            <p id="builder-status-text" class="status-badge status-draft">Draft</p>
+          </div>
+
+          <div class="builder-block">
+            <h2>Current Page Sections</h2>
+            <div id="section-toggle-list" class="builder-pill-grid"></div>
+          </div>
+
+          <div class="builder-block builder-actions">
+            <button id="save-draft-btn" type="button">Save Draft</button>
+            <button id="submit-review-btn" type="button">Submit for Approval</button>
+            <button id="preview-draft-btn" type="button">Preview</button>
+            <button id="publish-now-btn" type="button">Publish Now</button>
+            <button id="reject-draft-btn" type="button">Reject Draft</button>
+            <button id="reset-page-btn" type="button">Reset Current Page</button>
+            <button id="reset-section-btn" type="button">Reset Current Section</button>
+          </div>
         </div>
       </aside>
 
-      <section class="builder-editor">
-        <div id="builder-editor-fields"></div>
-      </section>
-      
-      <div id="builder-save-status" class="save-status idle">Idle</div>
-      
-      <section class="builder-preview">
-        <div class="preview-toolbar">
-          <button type="button" id="preview-desktop-btn">Desktop</button>
-          <button type="button" id="preview-mobile-btn">Mobile</button>
+      <!-- CENTER DRAWER -->
+      <section class="builder-center-pane">
+        <div class="builder-pane-inner">
+          <div id="builder-save-status" class="save-status idle">Idle</div>
+          <div id="builder-editor-fields"></div>
         </div>
-        <iframe id="builder-preview-frame" title="Page Preview"></iframe>
+      </section>
+
+      <!-- PREVIEW -->
+      <section class="builder-preview-pane">
+        <div class="preview-pane-inner">
+          <div class="preview-toolbar">
+            <button type="button" id="preview-desktop-btn">Desktop</button>
+            <button type="button" id="preview-mobile-btn">Mobile</button>
+          </div>
+          <iframe id="builder-preview-frame" title="Page Preview"></iframe>
+        </div>
       </section>
     </main>
-    
+
     <div id="builder-toast-wrap"></div>
-    
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script>
       window.FVG_SUPABASE_URL  = "https://ddlbgkolnayqrxslzsxn.supabase.co";
-      window.FVG_SUPABASE_ANON = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRkbGJna29sbmF5cXJ4c2x6c3huIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDg4Mjg0OTQsImV4cCI6MjA2NDQwNDQ5NH0.-L0N2cuh0g-6ymDyClQbM8aAuldMQzOb3SXV5TDT5Ho";
-    
+      window.FVG_SUPABASE_ANON = "PASTE_YOUR_REAL_ANON_KEY_HERE";
+
       const { createClient } = supabase;
       window.supabase = createClient(window.FVG_SUPABASE_URL, window.FVG_SUPABASE_ANON, {
         auth: {
