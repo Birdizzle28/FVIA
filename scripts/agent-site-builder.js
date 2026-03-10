@@ -951,7 +951,6 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     bindFaqFieldAutosave();
     bindFaqDeleteButtons();
-    bindFaqOrderButtons();
     bindRichTextToolbar();
     bindRichPasteHandling();
     bindRichEditorParagraphHandling();
@@ -1023,7 +1022,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     bindSocialAutosave();
-    bindSocialOrderButtons();
     bindDragList(
       list,
       ".drag-item[data-social-id]",
