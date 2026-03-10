@@ -537,7 +537,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       a.rel = "noopener noreferrer";
 
       const platform = (link.platform || "").toLowerCase();
-      const classMap = {
+      const iconMap = {
         facebook: "fab fa-facebook-f",
         instagram: "fab fa-instagram",
         linkedin: "fab fa-linkedin-in",
@@ -559,8 +559,34 @@ document.addEventListener("DOMContentLoaded", async () => {
         phone: "fa fa-phone",
         calendly: "fa fa-calendar"
       };
+      
+      const colorMap = {
+        facebook: "social-color-facebook",
+        instagram: "social-color-instagram",
+        linkedin: "social-color-linkedin",
+        youtube: "social-color-youtube",
+        tiktok: "social-color-tiktok",
+        x: "social-color-x",
+        threads: "social-color-threads",
+        reddit: "social-color-reddit",
+        pinterest: "social-color-pinterest",
+        snapchat: "social-color-snapchat",
+        whatsapp: "social-color-whatsapp",
+        telegram: "social-color-telegram",
+        messenger: "social-color-messenger",
+        website: "social-color-website",
+        google: "social-color-google",
+        yelp: "social-color-yelp",
+        linktree: "social-color-linktree",
+        email: "social-color-email",
+        phone: "social-color-phone",
+        calendly: "social-color-calendly"
+      };
 
-      a.className = classMap[platform] || "fa fa-link";
+      const iconClass = iconMap[platform] || "fa fa-link";
+      const colorClass = colorMap[platform] || "social-color-default";
+      
+      a.className = `${iconClass} ${colorClass}`;
       container.appendChild(a);
     });
   }
@@ -685,6 +711,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   hideNavIfDisabled(settings || {});
+  
+  document.body.classList.remove("agent-theme-dark", "agent-theme-light");
+  document.body.classList.add(
+    (settings?.theme_mode === "light") ? "agent-theme-light" : "agent-theme-dark"
+  );
+  
   applyTheme(settings || {});
   applyPhotoShape(settings || {});
   applyFontPreset(settings || {});
