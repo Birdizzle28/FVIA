@@ -53,13 +53,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     "linktree"
   ];
 
-  const SECTION_MAP = {
-    home: ["hero", "contact", "licenses", "quote"],
-    about: ["hero", "summary", "story", "approach", "who_i_help", "licenses", "cta"],
-    careers: ["intro", "notice", "roles", "cta", "faq"],
-    faqs: ["intro", "list", "cta"]
-  };
-
   const pageSelect = document.getElementById("builder-page-select");
   const fontSelect = document.getElementById("builder-font-preset");
   const sectionToggleList = document.getElementById("section-toggle-list");
@@ -75,11 +68,27 @@ document.addEventListener("DOMContentLoaded", async () => {
   const toggleCareersPage = document.getElementById("toggle-careers-page");
   const toggleFaqsPage = document.getElementById("toggle-faqs-page");
 
-  const agentId = new URLSearchParams(window.location.search).get("agent_id");
-  if (!agentId) {
+  const saveDraftBtn = document.getElementById("save-draft-btn");
+  const submitReviewBtn = document.getElementById("submit-review-btn");
+  const previewDraftBtn = document.getElementById("preview-draft-btn");
+  const publishNowBtn = document.getElementById("publish-now-btn");
+  const rejectDraftBtn = document.getElementById("reject-draft-btn");
+  const resetPageBtn = document.getElementById("reset-page-btn");
+  const resetSectionBtn = document.getElementById("reset-section-btn");
+  const statusText = document.getElementById("builder-status-text");
+
+  const query = new URLSearchParams(window.location.search);
+  const targetAgentId = query.get("agent_id");
+  const slug = query.get("slug") || "preview-agent";
+
+  if (!targetAgentId) {
     editorFields.innerHTML = "<p>Missing agent_id in URL.</p>";
     return;
   }
+
+  let currentUser = null;
+  let currentAgentRow = null;
+  let isAdmin = false;
 
   let settings = null;
   let sections = [];
@@ -93,11 +102,49 @@ document.addEventListener("DOMContentLoaded", async () => {
     fontSelect.appendChild(opt);
   });
 
+  async function loadCurrentUserPermissions() {
+    const { data: userRes, error: userErr } = await supabase.auth.getUser();
+    if (userErr || !userRes?.user) {
+      alert("You must be logged in.");
+      window.location.href = "/login.html";
+      return false;
+    }
+
+    currentUser = userRes.user;
+
+    const { data: me, error: meErr } = await supabase
+      .from("agents")
+      .select("id, user_id, is_admin, is_active")
+      .eq("user_id", currentUser.id)
+      .maybeSingle();
+
+    if (meErr || !me?.id) {
+      alert("Your agent account could not be found.");
+      return false;
+    }
+
+    currentAgentRow = me;
+    isAdmin = !!me.is_admin;
+
+    if (!isAdmin && me.id !== targetAgentId) {
+      alert("You can only edit your own page.");
+      window.location.href = "/dashboard.html";
+      return false;
+    }
+
+    if (publishNowBtn) publishNowBtn.style.display = isAdmin ? "" : "none";
+    if (rejectDraftBtn) rejectDraftBtn.style.display = isAdmin ? "" : "none";
+    if (resetPageBtn) resetPageBtn.style.display = isAdmin ? "" : "none";
+    if (resetSectionBtn) resetSectionBtn.style.display = isAdmin ? "" : "none";
+
+    return true;
+  }
+
   async function loadAll() {
     const { data: settingsRow, error: settingsErr } = await supabase
       .from("agent_page_settings")
       .select("*")
-      .eq("agent_id", agentId)
+      .eq("agent_id", targetAgentId)
       .single();
 
     if (settingsErr) {
@@ -110,7 +157,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const { data: sectionRows, error: sectionErr } = await supabase
       .from("agent_page_sections")
       .select("*")
-      .eq("agent_id", agentId)
+      .eq("agent_id", targetAgentId)
       .order("page_key", { ascending: true })
       .order("sort_order", { ascending: true });
 
@@ -124,7 +171,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const { data: faqRows, error: faqErr } = await supabase
       .from("agent_page_faqs")
       .select("*")
-      .eq("agent_id", agentId)
+      .eq("agent_id", targetAgentId)
       .order("page_key", { ascending: true })
       .order("sort_order", { ascending: true });
 
@@ -138,7 +185,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const { data: socialRows, error: socialErr } = await supabase
       .from("agent_social_links")
       .select("*")
-      .eq("agent_id", agentId)
+      .eq("agent_id", targetAgentId)
       .order("sort_order", { ascending: true });
 
     if (socialErr) {
@@ -155,11 +202,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function hydrateSettingsUI() {
     if (!settings) return;
-    
-    const statusText = document.getElementById("builder-status-text");
-    if (statusText) {
-      statusText.textContent = settings.status || "draft";
-    }
+
     themeModeEl.value = settings.theme_mode || "dark";
     photoShapeEl.value = settings.photo_shape || "circle";
     fontSelect.value = settings.font_preset || "Bellota Text";
@@ -169,14 +212,24 @@ document.addEventListener("DOMContentLoaded", async () => {
     toggleAboutPage.checked = !!settings.about_enabled;
     toggleCareersPage.checked = !!settings.careers_enabled;
     toggleFaqsPage.checked = !!settings.faqs_enabled;
+
+    if (statusText) {
+      statusText.textContent = settings.status || "draft";
+    }
   }
 
-  function getPageEnabledField(pageKey) {
-    if (pageKey === "home") return "home_enabled";
-    if (pageKey === "about") return "about_enabled";
-    if (pageKey === "careers") return "careers_enabled";
-    if (pageKey === "faqs") return "faqs_enabled";
-    return null;
+  function prettyLabel(value) {
+    return String(value || "")
+      .replaceAll("_", " ")
+      .replace(/\b\w/g, m => m.toUpperCase());
+  }
+
+  function escapeHtml(value) {
+    return String(value || "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;");
   }
 
   function getCurrentPageSections(pageKey) {
@@ -235,86 +288,39 @@ document.addEventListener("DOMContentLoaded", async () => {
         <h3>${prettyLabel(pageKey)} / ${prettyLabel(section.section_key)}</h3>
 
         <label>Heading</label>
-        <input
-          type="text"
-          data-field-type="section-content"
-          data-section-id="${section.id}"
-          data-key="heading"
-          value="${escapeHtml(content.heading || "")}"
-        />
+        <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="heading" value="${escapeHtml(content.heading || "")}" />
 
         <label>Subheading</label>
-        <input
-          type="text"
-          data-field-type="section-content"
-          data-section-id="${section.id}"
-          data-key="subheading"
-          value="${escapeHtml(content.subheading || "")}"
-        />
+        <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="subheading" value="${escapeHtml(content.subheading || "")}" />
 
         <label>Body</label>
-        <textarea
-          rows="5"
-          data-field-type="section-content"
-          data-section-id="${section.id}"
-          data-key="body"
-        >${escapeHtml(content.body || "")}</textarea>
+        <textarea rows="5" data-field-type="section-content" data-section-id="${section.id}" data-key="body">${escapeHtml(content.body || "")}</textarea>
 
         <label>Button Text</label>
-        <input
-          type="text"
-          data-field-type="section-content"
-          data-section-id="${section.id}"
-          data-key="button_text"
-          value="${escapeHtml(content.button_text || "")}"
-        />
+        <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="button_text" value="${escapeHtml(content.button_text || "")}" />
 
         <label>Button Link</label>
-        <input
-          type="text"
-          data-field-type="section-content"
-          data-section-id="${section.id}"
-          data-key="button_link"
-          value="${escapeHtml(content.button_link || "")}"
-        />
+        <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="button_link" value="${escapeHtml(content.button_link || "")}" />
 
         <label>Image URL</label>
-        <input
-          type="text"
-          data-field-type="section-content"
-          data-section-id="${section.id}"
-          data-key="image_url"
-          value="${escapeHtml(content.image_url || "")}"
-        />
+        <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="image_url" value="${escapeHtml(content.image_url || "")}" />
 
         <label>Text Align</label>
-        <select
-          data-field-type="section-style"
-          data-section-id="${section.id}"
-          data-key="text_align"
-        >
+        <select data-field-type="section-style" data-section-id="${section.id}" data-key="text_align">
           <option value="left" ${style.text_align === "left" ? "selected" : ""}>Left</option>
           <option value="center" ${style.text_align === "center" ? "selected" : ""}>Center</option>
           <option value="right" ${style.text_align === "right" ? "selected" : ""}>Right</option>
         </select>
 
         <label>Heading Size</label>
-        <select
-          data-field-type="section-style"
-          data-section-id="${section.id}"
-          data-key="heading_size"
-        >
+        <select data-field-type="section-style" data-section-id="${section.id}" data-key="heading_size">
           <option value="sm" ${style.heading_size === "sm" ? "selected" : ""}>Small</option>
           <option value="md" ${!style.heading_size || style.heading_size === "md" ? "selected" : ""}>Medium</option>
           <option value="lg" ${style.heading_size === "lg" ? "selected" : ""}>Large</option>
         </select>
 
         <label>Color Preset</label>
-        <select
-          data-field-type="section-style"
-          data-section-id="${section.id}"
-          data-key="color_preset"
-        >
+        <select data-field-type="section-style" data-section-id="${section.id}" data-key="color_preset">
           <option value="default" ${!style.color_preset || style.color_preset === "default" ? "selected" : ""}>Default</option>
           <option value="pink" ${style.color_preset === "pink" ? "selected" : ""}>Pink</option>
           <option value="blue" ${style.color_preset === "blue" ? "selected" : ""}>Blue</option>
@@ -331,14 +337,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     renderSocialEditor();
-
     bindSectionFieldAutosave();
   }
 
   function renderFaqEditor(pageKey) {
     const faqWrap = document.createElement("div");
     faqWrap.className = "editor-field-group";
-
     faqWrap.innerHTML = `
       <h3>${prettyLabel(pageKey)} FAQs</h3>
       <div id="faq-editor-list"></div>
@@ -351,7 +355,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     const pageFaqs = getCurrentPageFaqs(pageKey);
 
     pageFaqs.forEach(faq => {
-      faqList.appendChild(buildFaqEditorRow(faq));
+      const row = document.createElement("div");
+      row.className = "editor-field-group";
+      row.dataset.faqId = faq.id;
+      row.innerHTML = `
+        <label>Question</label>
+        <input type="text" data-faq-type="question" data-faq-id="${faq.id}" value="${escapeHtml(faq.draft_question || "")}" />
+
+        <label>Answer</label>
+        <textarea rows="4" data-faq-type="answer" data-faq-id="${faq.id}">${escapeHtml(faq.draft_answer || "")}</textarea>
+
+        <label>
+          <input type="checkbox" class="faq-enabled-toggle" data-faq-id="${faq.id}" ${faq.is_enabled ? "checked" : ""} />
+          Enabled
+        </label>
+
+        <button type="button" class="delete-faq-btn" data-faq-id="${faq.id}">
+          Delete FAQ
+        </button>
+      `;
+      faqList.appendChild(row);
     });
 
     faqWrap.querySelector("#add-faq-btn").addEventListener("click", async () => {
@@ -362,45 +385,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindFaqDeleteButtons();
   }
 
-  function buildFaqEditorRow(faq) {
-    const row = document.createElement("div");
-    row.className = "editor-field-group";
-    row.dataset.faqId = faq.id;
-
-    row.innerHTML = `
-      <label>Question</label>
-      <input
-        type="text"
-        data-faq-type="question"
-        data-faq-id="${faq.id}"
-        value="${escapeHtml(faq.draft_question || "")}"
-      />
-
-      <label>Answer</label>
-      <textarea
-        rows="4"
-        data-faq-type="answer"
-        data-faq-id="${faq.id}"
-      >${escapeHtml(faq.draft_answer || "")}</textarea>
-
-      <label>
-        <input
-          type="checkbox"
-          class="faq-enabled-toggle"
-          data-faq-id="${faq.id}"
-          ${faq.is_enabled ? "checked" : ""}
-        />
-        Enabled
-      </label>
-
-      <button type="button" class="delete-faq-btn" data-faq-id="${faq.id}">
-        Delete FAQ
-      </button>
-    `;
-
-    return row;
-  }
-
   function renderSocialEditor() {
     let socialWrap = document.getElementById("social-editor-wrap");
     if (socialWrap) socialWrap.remove();
@@ -408,7 +392,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     socialWrap = document.createElement("div");
     socialWrap.className = "editor-field-group";
     socialWrap.id = "social-editor-wrap";
-
     socialWrap.innerHTML = `
       <h3>Social Links</h3>
       <div id="social-editor-list"></div>
@@ -434,20 +417,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         </select>
 
         <label>URL</label>
-        <input
-          type="text"
-          class="social-url"
-          data-social-id="${social.id}"
-          value="${escapeHtml(social.draft_url || "")}"
-        />
+        <input type="text" class="social-url" data-social-id="${social.id}" value="${escapeHtml(social.draft_url || "")}" />
 
         <label>
-          <input
-            type="checkbox"
-            class="social-enabled"
-            data-social-id="${social.id}"
-            ${social.is_enabled ? "checked" : ""}
-          />
+          <input type="checkbox" class="social-enabled" data-social-id="${social.id}" ${social.is_enabled ? "checked" : ""} />
           Enabled
         </label>
 
@@ -524,7 +497,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const { error } = await supabase
       .from("agent_page_settings")
       .update(payload)
-      .eq("agent_id", agentId);
+      .eq("agent_id", targetAgentId);
 
     if (error) {
       console.error("[builder] save settings failed", error);
@@ -605,7 +578,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const { data, error } = await supabase
       .from("agent_page_faqs")
       .insert({
-        agent_id: agentId,
+        agent_id: targetAgentId,
         page_key: pageKey,
         is_enabled: true,
         sort_order: nextSort,
@@ -624,7 +597,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     faqs.push(data);
-    renderPageEditor(pageKey);
+    renderPageEditor(pageSelect.value);
     refreshPreview();
   }
 
@@ -685,7 +658,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const { data, error } = await supabase
       .from("agent_social_links")
       .insert({
-        agent_id: agentId,
+        agent_id: targetAgentId,
         platform: "website",
         is_enabled: true,
         sort_order: nextSort,
@@ -765,13 +738,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       },
       body: JSON.stringify({
         action: "submit",
-        agent_id: agentId
+        agent_id: targetAgentId
       })
     });
-    
-    const statusText = document.getElementById("builder-status-text");
-    if (statusText) statusText.textContent = "pending_review";
-    
+
     const json = await res.json();
     if (!res.ok || !json.ok) {
       console.error("[builder] submit for review failed", json);
@@ -780,11 +750,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     settings.status = "pending_review";
+    if (statusText) statusText.textContent = "pending_review";
     alert("Draft submitted for approval.");
   }
 
   async function publishNow() {
-    const reviewerId = new URLSearchParams(window.location.search).get("reviewer_id") || null;
+    if (!isAdmin) {
+      alert("Only admins can publish.");
+      return;
+    }
+
+    const reviewerId = currentAgentRow?.id || null;
 
     const res = await fetch("/.netlify/functions/publishAgentPageDraft", {
       method: "POST",
@@ -793,13 +769,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       },
       body: JSON.stringify({
         action: "publish",
-        agent_id: agentId,
+        agent_id: targetAgentId,
         reviewer_id: reviewerId
       })
     });
-    const statusText = document.getElementById("builder-status-text");
-    if (statusText) statusText.textContent = "published";
-    
+
     const json = await res.json();
     if (!res.ok || !json.ok) {
       console.error("[builder] publish failed", json);
@@ -808,11 +782,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     settings.status = "published";
+    if (statusText) statusText.textContent = "published";
     alert("Page published successfully.");
     refreshPreview();
   }
 
   async function rejectDraft() {
+    if (!isAdmin) {
+      alert("Only admins can reject.");
+      return;
+    }
+
     const reason = window.prompt("Reason for rejection?") || "";
 
     const res = await fetch("/.netlify/functions/publishAgentPageDraft", {
@@ -822,14 +802,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       },
       body: JSON.stringify({
         action: "reject",
-        agent_id: agentId,
+        agent_id: targetAgentId,
         rejection_reason: reason
       })
     });
-    
-    const statusText = document.getElementById("builder-status-text");
-    if (statusText) statusText.textContent = "draft";
-    
+
     const json = await res.json();
     if (!res.ok || !json.ok) {
       console.error("[builder] reject failed", json);
@@ -838,32 +815,103 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     settings.status = "draft";
+    if (statusText) statusText.textContent = "draft";
     alert("Draft rejected and moved back to draft status.");
   }
-  
+
+  async function resetCurrentPage() {
+    if (!isAdmin) {
+      alert("Only admins can reset pages.");
+      return;
+    }
+
+    const pageKey = pageSelect.value;
+    const ok = window.confirm(`Reset the entire ${prettyLabel(pageKey)} page to defaults?`);
+    if (!ok) return;
+
+    const res = await fetch("/.netlify/functions/resetAgentPageDraft", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        agent_id: targetAgentId,
+        page_key: pageKey,
+        mode: "page"
+      })
+    });
+
+    const json = await res.json();
+    if (!res.ok || !json.ok) {
+      console.error("[builder] reset page failed", json);
+      alert(json.error || "Failed to reset page.");
+      return;
+    }
+
+    await loadAll();
+    alert(`${prettyLabel(pageKey)} reset to defaults.`);
+  }
+
+  async function resetCurrentSection() {
+    if (!isAdmin) {
+      alert("Only admins can reset sections.");
+      return;
+    }
+
+    const pageKey = pageSelect.value;
+    const firstSection = getCurrentPageSections(pageKey)[0];
+    if (!firstSection) {
+      alert("No section found.");
+      return;
+    }
+
+    const sectionKey = window.prompt(
+      `Type the section key to reset.\nAvailable: ${getCurrentPageSections(pageKey).map(s => s.section_key).join(", ")}`
+    );
+
+    if (!sectionKey) return;
+
+    const sectionExists = getCurrentPageSections(pageKey).some(s => s.section_key === sectionKey);
+    if (!sectionExists) {
+      alert("That section key does not exist on this page.");
+      return;
+    }
+
+    const ok = window.confirm(`Reset section "${sectionKey}" on ${prettyLabel(pageKey)}?`);
+    if (!ok) return;
+
+    const res = await fetch("/.netlify/functions/resetAgentPageDraft", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        agent_id: targetAgentId,
+        page_key: pageKey,
+        section_key: sectionKey,
+        mode: "section"
+      })
+    });
+
+    const json = await res.json();
+    if (!res.ok || !json.ok) {
+      console.error("[builder] reset section failed", json);
+      alert(json.error || "Failed to reset section.");
+      return;
+    }
+
+    await loadAll();
+    alert(`Section "${sectionKey}" reset to defaults.`);
+  }
+
   function refreshPreview() {
     const page = pageSelect.value;
-    const slug = new URLSearchParams(window.location.search).get("slug") || "preview-agent";
     const url =
       page === "home"
-        ? `/a/${encodeURIComponent(slug)}?preview=draft&agent_id=${encodeURIComponent(agentId)}`
-        : `/a/${page}?slug=${encodeURIComponent(slug)}&preview=draft&agent_id=${encodeURIComponent(agentId)}`;
+        ? `/a/${encodeURIComponent(slug)}?preview=draft&agent_id=${encodeURIComponent(targetAgentId)}`
+        : `/a/${page}?slug=${encodeURIComponent(slug)}&preview=draft&agent_id=${encodeURIComponent(targetAgentId)}`;
 
     previewFrame.src = url;
-  }
-
-  function prettyLabel(value) {
-    return String(value || "")
-      .replaceAll("_", " ")
-      .replace(/\b\w/g, m => m.toUpperCase());
-  }
-
-  function escapeHtml(value) {
-    return String(value || "")
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;");
   }
 
   pageSelect.addEventListener("change", () => {
@@ -871,56 +919,72 @@ document.addEventListener("DOMContentLoaded", async () => {
     refreshPreview();
   });
 
-  [themeModeEl, photoShapeEl, fontSelect, buttonStyleEl, toggleHomePage, toggleAboutPage, toggleCareersPage, toggleFaqsPage]
-    .forEach(el => {
-      el.addEventListener("change", async () => {
-        await saveSettings();
-        refreshPreview();
-      });
+  [
+    themeModeEl,
+    photoShapeEl,
+    fontSelect,
+    buttonStyleEl,
+    toggleHomePage,
+    toggleAboutPage,
+    toggleCareersPage,
+    toggleFaqsPage
+  ].forEach(el => {
+    el.addEventListener("change", async () => {
+      await saveSettings();
+      refreshPreview();
     });
+  });
 
-  document.getElementById("save-draft-btn").addEventListener("click", async () => {
-    const ok = await saveSettings();
-    if (ok) {
-      alert("Draft saved.");
+  if (saveDraftBtn) {
+    saveDraftBtn.addEventListener("click", async () => {
+      const ok = await saveSettings();
+      if (ok) {
+        alert("Draft saved.");
+        refreshPreview();
+      }
+    });
+  }
+
+  if (submitReviewBtn) {
+    submitReviewBtn.addEventListener("click", async () => {
+      await saveSettings();
+      await submitForApproval();
+    });
+  }
+
+  if (previewDraftBtn) {
+    previewDraftBtn.addEventListener("click", () => {
       refreshPreview();
-    }
-  });
+    });
+  }
 
-  document.getElementById("submit-review-btn").addEventListener("click", async () => {
-    await saveSettings();
-    await submitForApproval();
-  });
+  if (publishNowBtn) {
+    publishNowBtn.addEventListener("click", async () => {
+      await saveSettings();
+      await publishNow();
+    });
+  }
 
-  document.getElementById("preview-draft-btn").addEventListener("click", () => {
-    refreshPreview();
-  });
+  if (rejectDraftBtn) {
+    rejectDraftBtn.addEventListener("click", async () => {
+      await rejectDraft();
+    });
+  }
 
-    document.getElementById("save-draft-btn").addEventListener("click", async () => {
-    const ok = await saveSettings();
-    if (ok) {
-      alert("Draft saved.");
-      refreshPreview();
-    }
-  });
+  if (resetPageBtn) {
+    resetPageBtn.addEventListener("click", async () => {
+      await resetCurrentPage();
+    });
+  }
 
-  document.getElementById("submit-review-btn").addEventListener("click", async () => {
-    await saveSettings();
-    await submitForApproval();
-  });
+  if (resetSectionBtn) {
+    resetSectionBtn.addEventListener("click", async () => {
+      await resetCurrentSection();
+    });
+  }
 
-  document.getElementById("preview-draft-btn").addEventListener("click", () => {
-    refreshPreview();
-  });
-
-  document.getElementById("publish-now-btn").addEventListener("click", async () => {
-    await saveSettings();
-    await publishNow();
-  });
-
-  document.getElementById("reject-draft-btn").addEventListener("click", async () => {
-    await rejectDraft();
-  });
+  const ok = await loadCurrentUserPermissions();
+  if (!ok) return;
 
   await loadAll();
 });
