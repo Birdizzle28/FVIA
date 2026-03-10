@@ -154,6 +154,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     toggleFaqsPage.checked = !!settings.faqs_enabled;
 
     setStatusBadge(settings.status || "draft");
+    syncPageTogglePills();
   }
   
   async function loadAll() {
@@ -307,6 +308,75 @@ document.addEventListener("DOMContentLoaded", async () => {
       .replace(/\b\w/g, m => m.toUpperCase());
   }
 
+  function syncPageTogglePills() {
+    const pairs = [
+      ["pill-home-page", toggleHomePage],
+      ["pill-about-page", toggleAboutPage],
+      ["pill-careers-page", toggleCareersPage],
+      ["pill-faqs-page", toggleFaqsPage]
+    ];
+
+    pairs.forEach(([pillId, checkbox]) => {
+      const pill = document.getElementById(pillId);
+      if (!pill || !checkbox) return;
+
+      pill.classList.toggle("active", !!checkbox.checked);
+      pill.classList.toggle("inactive", !checkbox.checked);
+    });
+  }
+
+  function bindPageTogglePills() {
+    document.querySelectorAll(".builder-pill-toggle[data-target-checkbox]").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const targetId = btn.dataset.targetCheckbox;
+        const checkbox = document.getElementById(targetId);
+        if (!checkbox) return;
+
+        checkbox.checked = !checkbox.checked;
+        syncPageTogglePills();
+        await saveSettings();
+        refreshPreview();
+      });
+    });
+  }
+
+  function renderSectionTogglePills(pageKey) {
+    sectionToggleList.innerHTML = "";
+
+    const pageSections = getCurrentPageSections(pageKey);
+    if (!pageSections.length) {
+      sectionToggleList.innerHTML = "<p>No sections found.</p>";
+      return;
+    }
+
+    pageSections.forEach(section => {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = `builder-pill-toggle ${section.is_enabled ? "active" : "inactive"}`;
+      btn.textContent = prettyLabel(section.section_key);
+
+      btn.addEventListener("click", async () => {
+        await saveSectionToggle(section.id, !section.is_enabled);
+      });
+
+      sectionToggleList.appendChild(btn);
+    });
+  }
+
+  function toggleCollapsibleCard(card) {
+    if (!card) return;
+    card.classList.toggle("collapsed");
+  }
+
+  function bindCollapsibleCards() {
+    editorFields.querySelectorAll(".builder-collapsible-head").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const card = btn.closest(".editor-field-group");
+        toggleCollapsibleCard(card);
+      });
+    });
+  }
+  
   function validateBeforePublish() {
     const errors = [];
 
@@ -508,13 +578,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  function execRichCommand(cmd, targetEl) {
+  function execRichCommand(cmd, targetEl, value = null) {
     if (!targetEl) return;
 
     targetEl.focus();
 
-    if (cmd === "highlight") {
-      document.execCommand("insertHTML", false, "<mark>Highlighted text</mark>");
+    if (cmd === "highlightColor") {
+      document.execCommand("insertHTML", false, `<mark style="background:${value};">Highlighted text</mark>`);
       return;
     }
 
@@ -552,6 +622,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         const cmd = btn.dataset.cmd;
         const editor = editorFields.querySelector(`.faq-rich-editor[data-faq-id="${faqId}"]`);
         execRichCommand(cmd, editor);
+      });
+    });
+
+    editorFields.querySelectorAll(".highlight-color-btn[data-section-id]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const sectionId = btn.dataset.sectionId;
+        const color = btn.dataset.color;
+        const editor = editorFields.querySelector(`.rich-editor[data-section-id="${sectionId}"]`);
+        execRichCommand("highlightColor", editor, color);
+      });
+    });
+
+    editorFields.querySelectorAll(".faq-highlight-color-btn[data-faq-id]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const faqId = btn.dataset.faqId;
+        const color = btn.dataset.color;
+        const editor = editorFields.querySelector(`.faq-rich-editor[data-faq-id="${faqId}"]`);
+        execRichCommand("highlightColor", editor, color);
       });
     });
   }
@@ -727,35 +815,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function renderSectionToggles(pageKey) {
-    sectionToggleList.innerHTML = "";
-
-    const pageSections = getCurrentPageSections(pageKey);
-    if (!pageSections.length) {
-      sectionToggleList.innerHTML = "<p>No sections found.</p>";
-      return;
-    }
-
-    pageSections.forEach(section => {
-      const label = document.createElement("label");
-      label.innerHTML = `
-        <input
-          type="checkbox"
-          class="section-toggle"
-          data-section-id="${section.id}"
-          ${section.is_enabled ? "checked" : ""}
-        />
-        ${prettyLabel(section.section_key)}
-      `;
-      sectionToggleList.appendChild(label);
-    });
-
-    sectionToggleList.querySelectorAll(".section-toggle").forEach(input => {
-      input.addEventListener("change", async (e) => {
-        const sectionId = e.target.dataset.sectionId;
-        const isEnabled = !!e.target.checked;
-        await saveSectionToggle(sectionId, isEnabled);
-      });
-    });
+    renderSectionTogglePills(pageKey);
   }
 
   function renderPageEditor(pageKey) {
@@ -792,18 +852,25 @@ document.addEventListener("DOMContentLoaded", async () => {
           <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="subheading" value="${escapeHtml(content.subheading || "")}" />
 
           <label>Body</label>
+          <div class="highlight-color-row">
+            <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" style="background:#fff3a3;" title="Yellow"></button>
+            <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" style="background:#ffd6e7;" title="Pink"></button>
+            <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" style="background:#d8ecff;" title="Blue"></button>
+            <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" style="background:#dff5df;" title="Green"></button>
+            <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" style="background:#eadcff;" title="Purple"></button>
+          </div>
+
           <div class="rt-toolbar" data-toolbar-for="${section.id}">
-            <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}"><b>B</b></button>
-            <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}"><i>I</i></button>
-            <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}"><u>U</u></button>
-            <button type="button" class="rt-btn" data-cmd="highlight" data-section-id="${section.id}">Highlight</button>
-            <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}">• List</button>
-            <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}">H2</button>
-            <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}">H3</button>
-            <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}">Left</button>
-            <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}">Center</button>
-            <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}">Right</button>
-            <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}">Clear</button>
+            <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}" title="Bold"><i class="fa-solid fa-bold"></i></button>
+            <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}" title="Italic"><i class="fa-solid fa-italic"></i></button>
+            <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}" title="Underline"><i class="fa-solid fa-underline"></i></button>
+            <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+            <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}" title="Heading 2">H2</button>
+            <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}" title="Heading 3">H3</button>
+            <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
+            <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
+            <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
+            <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
           </div>
 
           <div
@@ -913,17 +980,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         <input type="text" data-faq-type="question" data-faq-id="${faq.id}" value="${escapeHtml(faq.draft_question || "")}" />
 
         <label>Answer</label>
+        <div class="highlight-color-row">
+          <button type="button" class="highlight-color-btn faq-highlight-color-btn" data-color="#fff3a3" data-faq-id="${faq.id}" style="background:#fff3a3;" title="Yellow"></button>
+          <button type="button" class="highlight-color-btn faq-highlight-color-btn" data-color="#ffd6e7" data-faq-id="${faq.id}" style="background:#ffd6e7;" title="Pink"></button>
+          <button type="button" class="highlight-color-btn faq-highlight-color-btn" data-color="#d8ecff" data-faq-id="${faq.id}" style="background:#d8ecff;" title="Blue"></button>
+          <button type="button" class="highlight-color-btn faq-highlight-color-btn" data-color="#dff5df" data-faq-id="${faq.id}" style="background:#dff5df;" title="Green"></button>
+          <button type="button" class="highlight-color-btn faq-highlight-color-btn" data-color="#eadcff" data-faq-id="${faq.id}" style="background:#eadcff;" title="Purple"></button>
+        </div>
+
         <div class="rt-toolbar" data-toolbar-for="faq-${faq.id}">
-          <button type="button" class="rt-btn faq-rt-btn" data-cmd="bold" data-faq-id="${faq.id}"><b>B</b></button>
-          <button type="button" class="rt-btn faq-rt-btn" data-cmd="italic" data-faq-id="${faq.id}"><i>I</i></button>
-          <button type="button" class="rt-btn faq-rt-btn" data-cmd="underline" data-faq-id="${faq.id}"><u>U</u></button>
-          <button type="button" class="rt-btn faq-rt-btn" data-cmd="highlight" data-faq-id="${faq.id}">Highlight</button>
-          <button type="button" class="rt-btn faq-rt-btn" data-cmd="insertUnorderedList" data-faq-id="${faq.id}">• List</button>
-          <button type="button" class="rt-btn faq-rt-btn" data-cmd="formatBlock-h3" data-faq-id="${faq.id}">H3</button>
-          <button type="button" class="rt-btn faq-rt-btn" data-cmd="justifyLeft" data-faq-id="${faq.id}">Left</button>
-          <button type="button" class="rt-btn faq-rt-btn" data-cmd="justifyCenter" data-faq-id="${faq.id}">Center</button>
-          <button type="button" class="rt-btn faq-rt-btn" data-cmd="justifyRight" data-faq-id="${faq.id}">Right</button>
-          <button type="button" class="rt-btn faq-rt-btn" data-cmd="removeFormat" data-faq-id="${faq.id}">Clear</button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="bold" data-faq-id="${faq.id}" title="Bold"><i class="fa-solid fa-bold"></i></button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="italic" data-faq-id="${faq.id}" title="Italic"><i class="fa-solid fa-italic"></i></button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="underline" data-faq-id="${faq.id}" title="Underline"><i class="fa-solid fa-underline"></i></button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="insertUnorderedList" data-faq-id="${faq.id}" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="formatBlock-h3" data-faq-id="${faq.id}" title="Heading 3">H3</button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="justifyLeft" data-faq-id="${faq.id}" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="justifyCenter" data-faq-id="${faq.id}" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="justifyRight" data-faq-id="${faq.id}" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="removeFormat" data-faq-id="${faq.id}" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
         </div>
 
         <div
@@ -968,11 +1042,18 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     socialWrap = document.createElement("div");
     socialWrap.className = "editor-field-group";
-    socialWrap.id = "social-editor-wrap";    
+    socialWrap.id = "social-editor-wrap";
     socialWrap.innerHTML = `
-      <h3>Social Links</h3>
-      <div id="social-editor-list" class="drag-list"></div>
-      <button type="button" id="add-social-btn">Add Social Link</button>
+      <div class="builder-collapsible-head">
+        <div class="builder-section-head-left">
+          <span class="builder-section-title">Social Links</span>
+        </div>
+        <span class="builder-section-caret">▾</span>
+      </div>
+      <div class="builder-collapsible-body">
+        <div id="social-editor-list" class="drag-list"></div>
+        <button type="button" id="add-social-btn">Add Social Link</button>
+      </div>
     `;
 
     editorFields.appendChild(socialWrap);
@@ -981,38 +1062,46 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     socials.forEach(social => {
       const row = document.createElement("div");
-      row.className = "editor-field-group drag-item";
+      row.className = "editor-field-group drag-item collapsed";
       row.dataset.socialId = social.id;
       row.draggable = true;
 
       row.innerHTML = `
-        <button type="button" class="drag-handle" title="Drag to reorder">☰ Drag Social</button>
-
-        <div class="social-preview-row">
-          <span class="social-preview-icon ${getSocialIconClass(social.platform)}"></span>
-          <strong>${prettyLabel(social.platform)}</strong>
+        <div class="builder-collapsible-head">
+          <div class="builder-section-head-left">
+            <button type="button" class="drag-handle" title="Drag to reorder">
+              <i class="fa-solid fa-grip-lines"></i>
+            </button>
+            <div class="social-preview-row">
+              <span class="social-preview-icon ${getSocialIconClass(social.platform)}"></span>
+              <strong>${prettyLabel(social.platform)}</strong>
+            </div>
+          </div>
+          <span class="builder-section-caret">▾</span>
         </div>
 
-        <label>Platform</label>
-        <select class="social-platform" data-social-id="${social.id}">
-          ${SOCIAL_PLATFORMS.map(platform => `
-            <option value="${platform}" ${social.platform === platform ? "selected" : ""}>
-              ${prettyLabel(platform)}
-            </option>
-          `).join("")}
-        </select>
+        <div class="builder-collapsible-body">
+          <label>Platform</label>
+          <select class="social-platform" data-social-id="${social.id}">
+            ${SOCIAL_PLATFORMS.map(platform => `
+              <option value="${platform}" ${social.platform === platform ? "selected" : ""}>
+                ${prettyLabel(platform)}
+              </option>
+            `).join("")}
+          </select>
 
-        <label>URL</label>
-        <input type="text" class="social-url" data-social-id="${social.id}" value="${escapeHtml(social.draft_url || "")}" />
+          <label>URL</label>
+          <input type="text" class="social-url" data-social-id="${social.id}" value="${escapeHtml(social.draft_url || "")}" />
 
-        <label>
-          <input type="checkbox" class="social-enabled" data-social-id="${social.id}" ${social.is_enabled ? "checked" : ""} />
-          Enabled
-        </label>
+          <label>
+            <input type="checkbox" class="social-enabled" data-social-id="${social.id}" ${social.is_enabled ? "checked" : ""} />
+            Enabled
+          </label>
 
-        <button type="button" class="delete-social-btn" data-social-id="${social.id}">
-          Delete Social Link
-        </button>
+          <button type="button" class="delete-social-btn" data-social-id="${social.id}">
+            Delete Social Link
+          </button>
+        </div>
       `;
       list.appendChild(row);
     });
@@ -1022,12 +1111,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     bindSocialAutosave();
+    bindSocialDeleteButtons();
     bindDragList(
       list,
       ".drag-item[data-social-id]",
       "socialId",
       saveSocialOrderFromList
     );
+    bindCollapsibleCards();
   }
 
   function bindSectionFieldAutosave() {
@@ -1097,7 +1188,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         await saveSocialDraft(socialId);
       });
     });
+  }
 
+  function bindSocialDeleteButtons() {
     editorFields.querySelectorAll(".delete-social-btn").forEach(btn => {
       btn.addEventListener("click", async () => {
         const socialId = btn.dataset.socialId;
@@ -1664,6 +1757,8 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   const ok = await loadCurrentUserPermissions();
   if (!ok) return;
+  
+  bindPageTogglePills();
   setPreviewMode("desktop");
   setSaveStatus("idle", "Idle");
   await loadAll();
