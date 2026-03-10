@@ -81,7 +81,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   const targetAgentId = query.get("agent_id");
   const slug = query.get("slug") || "preview-agent";
 
-    const builderLayout = document.querySelector(".builder-layout");
+  const builderLayout = document.querySelector(".builder-layout");
   const leftPane = document.getElementById("builder-left-pane");
   const centerPane = document.getElementById("builder-center-pane");
   const leftToggleBtn = document.getElementById("builder-left-toggle");
@@ -348,23 +348,29 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderSectionTogglePills(pageKey) {
     sectionToggleList.innerHTML = "";
-
+  
     const pageSections = getCurrentPageSections(pageKey);
     if (!pageSections.length) {
       sectionToggleList.innerHTML = "<p>No sections found.</p>";
       return;
     }
-
+  
     pageSections.forEach(section => {
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = `builder-pill-toggle ${section.is_enabled ? "active" : "inactive"}`;
-      btn.textContent = prettyLabel(section.section_key);
-
+  
+      btn.innerHTML = `
+        <span class="pill-text">${prettyLabel(section.section_key)}</span>
+        <span class="pill-badge ${section.is_enabled ? "enabled" : "disabled"}">
+          <i class="fa-solid ${section.is_enabled ? "fa-check" : "fa-xmark"}"></i>
+        </span>
+      `;
+  
       btn.addEventListener("click", async () => {
         await saveSectionToggle(section.id, !section.is_enabled);
       });
-
+  
       sectionToggleList.appendChild(btn);
     });
   }
@@ -1271,16 +1277,16 @@ document.addEventListener("DOMContentLoaded", async () => {
         updated_at: new Date().toISOString()
       })
       .eq("id", sectionId);
-
+  
     if (error) {
       console.error("[builder] save section toggle failed", error);
       alert("Failed to save section toggle.");
       return;
     }
-
+  
     const row = sections.find(s => s.id === sectionId);
     if (row) row.is_enabled = isEnabled;
-
+  
     renderSectionToggles(pageSelect.value);
     await saveSettings();
     refreshPreview();
