@@ -168,6 +168,40 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  function applyButtonPreset(settings) {
+    const preset = settings?.button_style_preset || "soft-dark";
+
+    const buttonIds = [
+      "agent-call",
+      "agent-text",
+      "agent-email",
+      "agent-vcard",
+      "agent-call-cta",
+      "agent-text-cta",
+      "agent-email-cta",
+      "careers-contact-email",
+      "faq-contact-link"
+    ];
+
+    const classMap = {
+      "soft-dark": "btn-soft-dark",
+      "soft-light": "btn-soft-light",
+      "pill-dark": "btn-pill-dark",
+      "pill-light": "btn-pill-light",
+      "outline-dark": "btn-outline-dark",
+      "outline-light": "btn-outline-light"
+    };
+
+    buttonIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+
+      el.classList.add("fvg-btn");
+      Object.values(classMap).forEach(cls => el.classList.remove(cls));
+      el.classList.add(classMap[preset] || "btn-soft-dark");
+    });
+  }
+  
   function hideNavIfDisabled(settings) {
     const navMap = [
       ["home_enabled", "nav-home", "m-nav-home"],
