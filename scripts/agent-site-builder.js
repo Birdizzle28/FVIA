@@ -721,6 +721,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     bindFaqFieldAutosave();
     bindFaqDeleteButtons();
+    bindFaqOrderButtons();
     bindRichTextToolbar();
     bindRichPasteHandling();
     bindRichEditorParagraphHandling();
@@ -748,6 +749,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       row.className = "editor-field-group";
       row.dataset.socialId = social.id;
       row.innerHTML = `
+        <div class="order-btn-row">
+          <button type="button" class="move-social-up-btn" data-social-id="${social.id}">↑ Move Up</button>
+          <button type="button" class="move-social-down-btn" data-social-id="${social.id}">↓ Move Down</button>
+        </div>
+
         <div class="social-preview-row">
           <span class="social-preview-icon ${getSocialIconClass(social.platform)}"></span>
           <strong>${prettyLabel(social.platform)}</strong>
@@ -782,6 +788,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
 
     bindSocialAutosave();
+    bindSocialOrderButtons();
   }
 
   function bindSectionFieldAutosave() {
@@ -835,6 +842,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  function bindFaqOrderButtons() {
+    editorFields.querySelectorAll(".move-faq-up-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const faqId = btn.dataset.faqId;
+        await swapFaqSortOrder(faqId, "up");
+      });
+    });
+
+    editorFields.querySelectorAll(".move-faq-down-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const faqId = btn.dataset.faqId;
+        await swapFaqSortOrder(faqId, "down");
+      });
+    });
+  }
+
   function bindFaqDeleteButtons() {
     editorFields.querySelectorAll(".delete-faq-btn").forEach(btn => {
       btn.addEventListener("click", async () => {
@@ -844,6 +867,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  function bindSocialOrderButtons() {
+    editorFields.querySelectorAll(".move-social-up-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const socialId = btn.dataset.socialId;
+        await swapSocialSortOrder(socialId, "up");
+      });
+    });
+
+    editorFields.querySelectorAll(".move-social-down-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const socialId = btn.dataset.socialId;
+        await swapSocialSortOrder(socialId, "down");
+      });
+    });
+  }
+  
   function bindSocialAutosave() {
     editorFields.querySelectorAll(".social-platform, .social-url, .social-enabled").forEach(el => {
       el.addEventListener("change", async () => {
@@ -1032,6 +1071,118 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
 
     faqs = faqs.filter(f => f.id !== faqId);
+    renderPageEditor(pageSelect.value);
+    refreshPreview();
+  }
+
+  async function swapFaqSortOrder(faqId, direction) {
+    const pageKey = pageSelect.value;
+    const pageFaqs = getCurrentPageFaqs(pageKey)
+      .slice()
+      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+    const index = pageFaqs.findIndex(f => f.id === faqId);
+    if (index === -1) return;
+
+    const swapWithIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapWithIndex < 0 || swapWithIndex >= pageFaqs.length) return;
+
+    const current = pageFaqs[index];
+    const other = pageFaqs[swapWithIndex];
+
+    const currentSort = current.sort_order || 0;
+    const otherSort = other.sort_order || 0;
+
+    const { error: err1 } = await supabase
+      .from("agent_page_faqs")
+      .update({ sort_order: otherSort, updated_at: new Date().toISOString() })
+      .eq("id", current.id);
+
+    if (err1) {
+      console.error("[builder] faq reorder failed", err1);
+      alert("Failed to reorder FAQ.");
+      return;
+    }
+
+    const { error: err2 } = await supabase
+      .from("agent_page_faqs")
+      .update({ sort_order: currentSort, updated_at: new Date().toISOString() })
+      .eq("id", other.id);
+
+    if (err2) {
+      console.error("[builder] faq reorder failed", err2);
+      alert("Failed to reorder FAQ.");
+      return;
+    }
+
+    current.sort_order = otherSort;
+    other.sort_order = currentSort;
+
+    faqs = faqs
+      .map(f => {
+        if (f.id === current.id) return current;
+        if (f.id === other.id) return other;
+        return f;
+      })
+      .sort((a, b) => {
+        if (a.page_key !== b.page_key) return a.page_key.localeCompare(b.page_key);
+        return (a.sort_order || 0) - (b.sort_order || 0);
+      });
+
+    renderPageEditor(pageKey);
+    refreshPreview();
+  }
+
+  async function swapSocialSortOrder(socialId, direction) {
+    const orderedSocials = socials
+      .slice()
+      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
+    const index = orderedSocials.findIndex(s => s.id === socialId);
+    if (index === -1) return;
+
+    const swapWithIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapWithIndex < 0 || swapWithIndex >= orderedSocials.length) return;
+
+    const current = orderedSocials[index];
+    const other = orderedSocials[swapWithIndex];
+
+    const currentSort = current.sort_order || 0;
+    const otherSort = other.sort_order || 0;
+
+    const { error: err1 } = await supabase
+      .from("agent_social_links")
+      .update({ sort_order: otherSort, updated_at: new Date().toISOString() })
+      .eq("id", current.id);
+
+    if (err1) {
+      console.error("[builder] social reorder failed", err1);
+      alert("Failed to reorder social link.");
+      return;
+    }
+
+    const { error: err2 } = await supabase
+      .from("agent_social_links")
+      .update({ sort_order: currentSort, updated_at: new Date().toISOString() })
+      .eq("id", other.id);
+
+    if (err2) {
+      console.error("[builder] social reorder failed", err2);
+      alert("Failed to reorder social link.");
+      return;
+    }
+
+    current.sort_order = otherSort;
+    other.sort_order = currentSort;
+
+    socials = socials
+      .map(s => {
+        if (s.id === current.id) return current;
+        if (s.id === other.id) return other;
+        return s;
+      })
+      .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
+
     renderPageEditor(pageSelect.value);
     refreshPreview();
   }
