@@ -232,6 +232,77 @@ document.addEventListener("DOMContentLoaded", async () => {
       .replaceAll('"', "&quot;");
   }
 
+  function sanitizeRichHtml(html) {
+    const wrapper = document.createElement("div");
+    wrapper.innerHTML = html || "";
+
+    const allowedTags = new Set([
+      "B", "STRONG",
+      "I", "EM",
+      "U",
+      "MARK",
+      "UL", "OL", "LI",
+      "BR",
+      "P",
+      "DIV"
+    ]);
+
+    const nodes = wrapper.querySelectorAll("*");
+
+    nodes.forEach(node => {
+      if (!allowedTags.has(node.tagName)) {
+        const parent = node.parentNode;
+        while (node.firstChild) parent.insertBefore(node.firstChild, node);
+        parent.removeChild(node);
+        return;
+      }
+
+      [...node.attributes].forEach(attr => {
+        node.removeAttribute(attr.name);
+      });
+    });
+
+    return wrapper.innerHTML.trim();
+  }
+
+  function execRichCommand(cmd, targetEl) {
+    if (!targetEl) return;
+
+    targetEl.focus();
+
+    if (cmd === "highlight") {
+      document.execCommand("insertHTML", false, "<mark>Highlighted text</mark>");
+      return;
+    }
+
+    if (cmd === "removeFormat") {
+      document.execCommand("removeFormat", false, null);
+      return;
+    }
+
+    document.execCommand(cmd, false, null);
+  }
+
+  function bindRichTextToolbar() {
+    editorFields.querySelectorAll(".rt-btn[data-section-id]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const sectionId = btn.dataset.sectionId;
+        const cmd = btn.dataset.cmd;
+        const editor = editorFields.querySelector(`.rich-editor[data-section-id="${sectionId}"]`);
+        execRichCommand(cmd, editor);
+      });
+    });
+
+    editorFields.querySelectorAll(".faq-rt-btn[data-faq-id]").forEach(btn => {
+      btn.addEventListener("click", () => {
+        const faqId = btn.dataset.faqId;
+        const cmd = btn.dataset.cmd;
+        const editor = editorFields.querySelector(`.faq-rich-editor[data-faq-id="${faqId}"]`);
+        execRichCommand(cmd, editor);
+      });
+    });
+  }
+
   function getCurrentPageSections(pageKey) {
     return sections.filter(s => s.page_key === pageKey);
   }
@@ -353,6 +424,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     renderSocialEditor();
     bindSectionFieldAutosave();
+    bindRichTextToolbar();
   }
 
   function renderFaqEditor(pageKey) {
@@ -378,7 +450,21 @@ document.addEventListener("DOMContentLoaded", async () => {
         <input type="text" data-faq-type="question" data-faq-id="${faq.id}" value="${escapeHtml(faq.draft_question || "")}" />
 
         <label>Answer</label>
-        <textarea rows="4" data-faq-type="answer" data-faq-id="${faq.id}">${escapeHtml(faq.draft_answer || "")}</textarea>
+        <div class="rt-toolbar" data-toolbar-for="faq-${faq.id}">
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="bold" data-faq-id="${faq.id}"><b>B</b></button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="italic" data-faq-id="${faq.id}"><i>I</i></button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="underline" data-faq-id="${faq.id}"><u>U</u></button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="insertUnorderedList" data-faq-id="${faq.id}">• List</button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="highlight" data-faq-id="${faq.id}">Highlight</button>
+          <button type="button" class="rt-btn faq-rt-btn" data-cmd="removeFormat" data-faq-id="${faq.id}">Clear</button>
+        </div>
+  
+        <div
+          class="rich-editor faq-rich-editor"
+          contenteditable="true"
+          data-faq-type="answer-html"
+          data-faq-id="${faq.id}"
+        >${faq.draft_answer || ""}</div>
 
         <label>
           <input type="checkbox" class="faq-enabled-toggle" data-faq-id="${faq.id}" ${faq.is_enabled ? "checked" : ""} />
@@ -398,6 +484,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     bindFaqFieldAutosave();
     bindFaqDeleteButtons();
+    bindRichTextToolbar();
   }
 
   function renderSocialEditor() {
@@ -460,11 +547,25 @@ document.addEventListener("DOMContentLoaded", async () => {
         await saveSectionDraft(sectionId);
       });
     });
+
+    editorFields.querySelectorAll('[data-field-type="section-content-html"]').forEach(el => {
+      el.addEventListener("blur", async () => {
+        const sectionId = el.dataset.sectionId;
+        await saveSectionDraft(sectionId);
+      });
+    });
   }
 
   function bindFaqFieldAutosave() {
-    editorFields.querySelectorAll("[data-faq-type], .faq-enabled-toggle").forEach(el => {
+    editorFields.querySelectorAll('[data-faq-type="question"], .faq-enabled-toggle').forEach(el => {
       el.addEventListener("change", async () => {
+        const faqId = el.dataset.faqId;
+        await saveFaqDraft(faqId);
+      });
+    });
+
+    editorFields.querySelectorAll('[data-faq-type="answer-html"]').forEach(el => {
+      el.addEventListener("blur", async () => {
         const faqId = el.dataset.faqId;
         await saveFaqDraft(faqId);
       });
@@ -560,6 +661,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       draftContent[input.dataset.key] = input.value;
     });
 
+    const richBody = editorFields.querySelector(`.rich-editor[data-section-id="${sectionId}"][data-key="body"]`);
+    if (richBody) {
+      draftContent.body = sanitizeRichHtml(richBody.innerHTML);
+    }
+
     styleInputs.forEach(input => {
       draftStyle[input.dataset.key] = input.value;
     });
@@ -621,12 +727,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!faq) return;
 
     const questionEl = editorFields.querySelector(`[data-faq-type="question"][data-faq-id="${faqId}"]`);
-    const answerEl = editorFields.querySelector(`[data-faq-type="answer"][data-faq-id="${faqId}"]`);
+    const answerEl = editorFields.querySelector(`.faq-rich-editor[data-faq-id="${faqId}"]`);
     const enabledEl = editorFields.querySelector(`.faq-enabled-toggle[data-faq-id="${faqId}"]`);
 
     const payload = {
       draft_question: questionEl ? questionEl.value : "",
-      draft_answer: answerEl ? answerEl.value : "",
+      draft_answer: answerEl ? sanitizeRichHtml(answerEl.innerHTML) : "",
       is_enabled: enabledEl ? !!enabledEl.checked : true,
       updated_at: new Date().toISOString()
     };
