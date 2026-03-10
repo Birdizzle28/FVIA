@@ -155,7 +155,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function hydrateSettingsUI() {
     if (!settings) return;
-
+    
+    const statusText = document.getElementById("builder-status-text");
+    if (statusText) {
+      statusText.textContent = settings.status || "draft";
+    }
     themeModeEl.value = settings.theme_mode || "dark";
     photoShapeEl.value = settings.photo_shape || "circle";
     fontSelect.value = settings.font_preset || "Bellota Text";
@@ -764,7 +768,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         agent_id: agentId
       })
     });
-
+    
+    const statusText = document.getElementById("builder-status-text");
+    if (statusText) statusText.textContent = "pending_review";
+    
     const json = await res.json();
     if (!res.ok || !json.ok) {
       console.error("[builder] submit for review failed", json);
@@ -790,7 +797,9 @@ document.addEventListener("DOMContentLoaded", async () => {
         reviewer_id: reviewerId
       })
     });
-
+    const statusText = document.getElementById("builder-status-text");
+    if (statusText) statusText.textContent = "published";
+    
     const json = await res.json();
     if (!res.ok || !json.ok) {
       console.error("[builder] publish failed", json);
@@ -817,7 +826,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         rejection_reason: reason
       })
     });
-
+    
+    const statusText = document.getElementById("builder-status-text");
+    if (statusText) statusText.textContent = "draft";
+    
     const json = await res.json();
     if (!res.ok || !json.ok) {
       console.error("[builder] reject failed", json);
