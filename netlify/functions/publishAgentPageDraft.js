@@ -50,6 +50,31 @@ export const handler = async (event) => {
     const reviewerId = body.reviewer_id ? String(body.reviewer_id).trim() : null;
     const rejectionReason = String(body.rejection_reason || "").trim();
 
+    const { data: settings } = await supabase
+      .from("agent_page_settings")
+      .select("*")
+      .eq("agent_id", agent_id)
+      .single();
+    
+    const enabledPages = [
+      settings.home_enabled,
+      settings.about_enabled,
+      settings.careers_enabled,
+      settings.faqs_enabled
+    ].filter(Boolean);
+    
+    if (enabledPages.length === 0) {
+    
+      return {
+        statusCode: 400,
+        body: JSON.stringify({
+          ok:false,
+          error:"At least one page must be enabled."
+        })
+      };
+    
+    }
+
     if (!agentId) {
       return {
         statusCode: 400,
