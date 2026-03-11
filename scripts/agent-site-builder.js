@@ -463,36 +463,56 @@ document.addEventListener("DOMContentLoaded", async () => {
       input.addEventListener("change", async () => {
         const file = input.files?.[0];
         const sectionId = input.dataset.sectionId;
-        if (!file || !sectionId) return;
-        
+        const row = sections.find(s => s.id === sectionId);
+  
+        if (!file || !sectionId || !row) return;
+  
         if (!file.type.startsWith("image/")) {
           alert("Please upload an image file.");
           return;
         }
-
+  
         if (file.size > 5 * 1024 * 1024) {
           alert("Please keep images under 5MB.");
           return;
         }
-
+  
         const imageUrl = await uploadSectionImage(file, sectionId);
         if (!imageUrl) return;
-
+  
         const urlInput = editorFields.querySelector(
           `[data-field-type="section-content"][data-section-id="${sectionId}"][data-key="image_url"]`
         );
         const preview = editorFields.querySelector(`[data-image-preview="${sectionId}"]`);
-
+  
         if (urlInput) {
           urlInput.value = imageUrl;
         }
-
+  
         if (preview) {
           preview.src = imageUrl;
           preview.classList.remove("hidden");
         }
-
-        await saveSectionDraft(sectionId);
+  
+        row.draft_content = {
+          ...(row.draft_content || {}),
+          image_url: imageUrl
+        };
+  
+        const { error } = await supabase
+          .from("agent_page_sections")
+          .update({
+            draft_content: row.draft_content,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", sectionId);
+  
+        if (error) {
+          console.error("[builder] image save failed", error);
+          showToast("Failed to save image.", "error");
+          return;
+        }
+  
         showToast("Image uploaded.", "success");
         refreshPreview();
       });
@@ -1199,6 +1219,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     editorFields.querySelectorAll(".remove-image-btn").forEach(btn => {
       btn.addEventListener("click", async () => {
         const sectionId = btn.dataset.sectionId;
+        const row = sections.find(s => s.id === sectionId);
+        if (!row) return;
+  
         const preview = editorFields.querySelector(`[data-image-preview="${sectionId}"]`);
         const urlInput = editorFields.querySelector(
           `[data-field-type="section-content"][data-section-id="${sectionId}"][data-key="image_url"]`
@@ -1213,7 +1236,25 @@ document.addEventListener("DOMContentLoaded", async () => {
           preview.classList.add("hidden");
         }
   
-        await saveSectionDraft(sectionId);
+        row.draft_content = {
+          ...(row.draft_content || {}),
+          image_url: ""
+        };
+  
+        const { error } = await supabase
+          .from("agent_page_sections")
+          .update({
+            draft_content: row.draft_content,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", sectionId);
+  
+        if (error) {
+          console.error("[builder] remove image failed", error);
+          showToast("Failed to remove image.", "error");
+          return;
+        }
+  
         refreshPreview();
         showToast("Image removed.", "info");
       });
