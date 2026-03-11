@@ -183,12 +183,38 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  function loadGoogleFont(fontName) {
+    if (!fontName) return;
+  
+    const id = "dynamic-agent-font";
+    const old = document.getElementById(id);
+    if (old) old.remove();
+  
+    const cleaned = String(fontName).trim().replace(/\s+/g, "+");
+    const link = document.createElement("link");
+    link.id = id;
+    link.rel = "stylesheet";
+    link.href = `https://fonts.googleapis.com/css2?family=${cleaned}:wght@400;700&display=swap`;
+    document.head.appendChild(link);
+  }
+    
   function applyFontPreset(settings) {
-    const main = document.querySelector("main");
-    if (!main) return;
-    if (settings?.font_preset) {
-      main.style.fontFamily = `"${settings.font_preset}", sans-serif`;
-    }
+    const fontName = settings?.font_preset || "Bellota Text";
+  
+    loadGoogleFont(fontName);
+  
+    const targets = [
+      document.body,
+      document.querySelector("main"),
+      document.querySelector(".index-grid-header"),
+      document.querySelector(".index-grid-footer")
+    ];
+  
+    targets.forEach(el => {
+      if (el) {
+        el.style.fontFamily = `"${fontName}", sans-serif`;
+      }
+    });
   }
 
   function applyButtonPreset(settings) {
@@ -403,61 +429,48 @@ document.addEventListener("DOMContentLoaded", async () => {
       const el = document.getElementById(id);
       if (!el) return;
   
-      if (style.color_preset === "pink") {
-        el.style.color = "#ed9ea5";
-      } else if (style.color_preset === "blue") {
-        el.style.color = "#7fabbf";
-      } else if (style.color_preset === "dark") {
-        el.style.color = "#272727";
-      } else if (style.color_preset === "light") {
-        el.style.color = "#ffffff";
+      const textColor =
+        style.color_preset === "custom"
+          ? style.color_custom
+          : style.color_preset === "pink"
+            ? "#ed9ea5"
+            : style.color_preset === "blue"
+              ? "#7fabbf"
+              : style.color_preset === "dark"
+                ? "#272727"
+                : style.color_preset === "light"
+                  ? "#ffffff"
+                  : "";
+  
+      if (style.text_align) {
+        el.style.textAlign = style.text_align;
+      }
+  
+      el.style.color = textColor || "";
+  
+      const bgColor =
+        style.background_color_mode === "custom"
+          ? (style.background_color_custom || "")
+          : (style.background_color || "");
+  
+      if (bgColor) {
+        el.style.backgroundColor = bgColor;
       } else {
-        el.style.color = "";
+        el.style.backgroundColor = "";
+      }
+  
+      if (style.border_width && style.border_style && style.border_color) {
+        el.style.border = `${style.border_width} ${style.border_style} ${style.border_color}`;
+      } else {
+        el.style.border = "";
+      }
+  
+      if (style.border_radius) {
+        el.style.borderRadius = style.border_radius;
+      } else {
+        el.style.borderRadius = "";
       }
     });
-  
-    if (pageKey === "home" && sectionKey === "hero") {
-      const headingEl = document.getElementById("agent-name");
-      const inlineHeadingEl = document.getElementById("agent-name-inline");
-      const subheadingEl = document.getElementById("agent-hero-subheading");
-      const bodyEl = document.getElementById("agent-bio");
-    
-      const headingSize = style.heading_size || "md";
-    
-      const sizeMap = {
-        sm: "clamp(1.6rem, 3vw, 2.2rem)",
-        md: "clamp(2rem, 4vw, 3rem)",
-        lg: "clamp(2.4rem, 5vw, 3.8rem)"
-      };
-    
-      const chosenSize = sizeMap[headingSize] || sizeMap.md;
-    
-      let chosenColor = "";
-      if (style.color_preset === "pink") chosenColor = "#ed9ea5";
-      else if (style.color_preset === "blue") chosenColor = "#7fabbf";
-      else if (style.color_preset === "dark") chosenColor = "#272727";
-      else if (style.color_preset === "light") chosenColor = "#ffffff";
-    
-      if (headingEl) {
-        headingEl.style.fontSize = chosenSize;
-        headingEl.style.color = chosenColor || "";
-      }
-    
-      if (inlineHeadingEl) {
-        inlineHeadingEl.style.fontSize = chosenSize;
-        inlineHeadingEl.style.color = chosenColor || "";
-      }
-    
-      if (subheadingEl) {
-        subheadingEl.style.textAlign = style.text_align || "";
-        subheadingEl.style.color = chosenColor || "";
-      }
-    
-      if (bodyEl) {
-        bodyEl.style.textAlign = style.text_align || "";
-        bodyEl.style.color = chosenColor || "";
-      }
-    }
   }
 
   async function setFooterToAgentContact(agentUuid) {
