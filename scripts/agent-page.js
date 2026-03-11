@@ -115,18 +115,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
-  function applySectionImage(pageKey, sectionKey, content = {}) {
-    const imageUrl = String(content.image_url || "").trim();
-    if (!imageUrl) return;
-
+  function applySectionImage(pageKey, sectionKey, content = {}, style = {}) {
+    let photoEl = null;
+  
     if (pageKey === "home" && sectionKey === "hero") {
-      const photoEl = document.getElementById("agent-photo");
-      if (photoEl) photoEl.src = imageUrl;
+      photoEl = document.getElementById("agent-photo");
     }
-
+  
     if (pageKey === "about" && sectionKey === "hero") {
-      const photoEl = document.getElementById("agent-photo");
-      if (photoEl) photoEl.src = imageUrl;
+      photoEl = document.getElementById("agent-photo");
+    }
+  
+    if (!photoEl) return;
+  
+    const imageUrl = String(content.image_url || "").trim();
+    if (imageUrl) {
+      photoEl.src = imageUrl;
+      photoEl.style.display = "";
+    }
+  
+    if (style.image_border_width && style.image_border_style && style.image_border_color) {
+      photoEl.style.border = `${style.image_border_width} ${style.image_border_style} ${style.image_border_color}`;
+    } else {
+      photoEl.style.border = "";
     }
   }
   
