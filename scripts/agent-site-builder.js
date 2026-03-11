@@ -2235,29 +2235,33 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function saveSectionDraft(sectionId) {
     const row = sections.find(s => s.id === sectionId);
     if (!row) return;
-
+  
     setSaveStatus("saving", "Saving...");
-
-    const contentInputs = editorFields.querySelectorAll(`[data-field-type="section-content"][data-section-id="${sectionId}"]`);
-    const styleInputs = editorFields.querySelectorAll(`[data-field-type="section-style"][data-section-id="${sectionId}"]`);
-
+  
+    const contentInputs = editorFields.querySelectorAll(
+      `[data-field-type="section-content"][data-section-id="${sectionId}"]`
+    );
+    const styleInputs = editorFields.querySelectorAll(
+      `[data-field-type="section-style"][data-section-id="${sectionId}"]`
+    );
+  
     const draftContent = { ...(row.draft_content || {}) };
     const draftStyle = { ...(row.draft_style || {}) };
-
+  
     contentInputs.forEach(input => {
       draftContent[input.dataset.key] = input.value;
     });
-
+  
     editorFields
       .querySelectorAll(`.rich-editor[data-section-id="${sectionId}"][data-key]`)
       .forEach(editor => {
         draftContent[editor.dataset.key] = sanitizeRichHtml(editor.innerHTML);
       });
-
+  
     styleInputs.forEach(input => {
       const key = input.dataset.key;
       let value = input.value;
-    
+  
       if (
         key === "image_border_width" ||
         key === "image_border_radius" ||
@@ -2266,10 +2270,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       ) {
         value = `${input.value}px`;
       }
-    
+  
       draftStyle[key] = value;
     });
-
+  
     const { error } = await supabase
       .from("agent_page_sections")
       .update({
@@ -2278,19 +2282,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         updated_at: new Date().toISOString()
       })
       .eq("id", sectionId);
-
+  
     if (error) {
       console.error("[builder] save section draft failed", error);
       setSaveStatus("error", "Save failed");
       showToast("Failed to save section.", "error");
       return;
     }
-
+  
     row.draft_content = draftContent;
     row.draft_style = draftStyle;
-
+  
     await saveSettings();
-    renderPageEditor(pageSelect.value);
+    setSaveStatus("saved", "Saved just now");
     refreshPreview();
   }
 
@@ -2328,35 +2332,41 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function saveFaqDraft(faqId) {
     const faq = faqs.find(f => f.id === faqId);
     if (!faq) return;
-
+  
     setSaveStatus("saving", "Saving...");
-
-    const questionEl = editorFields.querySelector(`[data-faq-type="question"][data-faq-id="${faqId}"]`);
-    const answerEl = editorFields.querySelector(`.faq-rich-editor[data-faq-id="${faqId}"]`);
-    const enabledEl = editorFields.querySelector(`.faq-enabled-toggle[data-faq-id="${faqId}"]`);
-
+  
+    const questionEl = editorFields.querySelector(
+      `[data-faq-type="question"][data-faq-id="${faqId}"]`
+    );
+    const answerEl = editorFields.querySelector(
+      `.faq-rich-editor[data-faq-id="${faqId}"]`
+    );
+    const enabledEl = editorFields.querySelector(
+      `.faq-enabled-toggle[data-faq-id="${faqId}"]`
+    );
+  
     const payload = {
       draft_question: questionEl ? questionEl.value : "",
       draft_answer: answerEl ? sanitizeRichHtml(answerEl.innerHTML) : "",
       is_enabled: enabledEl ? !!enabledEl.checked : true,
       updated_at: new Date().toISOString()
     };
-
+  
     const { error } = await supabase
       .from("agent_page_faqs")
       .update(payload)
       .eq("id", faqId);
-
+  
     if (error) {
       console.error("[builder] save faq failed", error);
       setSaveStatus("error", "Save failed");
       showToast("Failed to save FAQ.", "error");
       return;
     }
-
+  
     Object.assign(faq, payload);
     await saveSettings();
-    renderPageEditor(pageSelect.value);
+    setSaveStatus("saved", "Saved just now");
     refreshPreview();
   }
 
@@ -2412,35 +2422,41 @@ document.addEventListener("DOMContentLoaded", async () => {
   async function saveSocialDraft(socialId) {
     const social = socials.find(s => s.id === socialId);
     if (!social) return;
-
+  
     setSaveStatus("saving", "Saving...");
-
-    const platformEl = editorFields.querySelector(`.social-platform[data-social-id="${socialId}"]`);
-    const urlEl = editorFields.querySelector(`.social-url[data-social-id="${socialId}"]`);
-    const enabledEl = editorFields.querySelector(`.social-enabled[data-social-id="${socialId}"]`);
-
+  
+    const platformEl = editorFields.querySelector(
+      `.social-platform[data-social-id="${socialId}"]`
+    );
+    const urlEl = editorFields.querySelector(
+      `.social-url[data-social-id="${socialId}"]`
+    );
+    const enabledEl = editorFields.querySelector(
+      `.social-enabled[data-social-id="${socialId}"]`
+    );
+  
     const payload = {
       platform: platformEl ? platformEl.value : "website",
       draft_url: urlEl ? urlEl.value : "",
       is_enabled: enabledEl ? !!enabledEl.checked : true,
       updated_at: new Date().toISOString()
     };
-
+  
     const { error } = await supabase
       .from("agent_social_links")
       .update(payload)
       .eq("id", socialId);
-
+  
     if (error) {
       console.error("[builder] save social failed", error);
       setSaveStatus("error", "Save failed");
       showToast("Failed to save social link.", "error");
       return;
     }
-
+  
     Object.assign(social, payload);
     await saveSettings();
-    renderPageEditor(pageSelect.value);
+    setSaveStatus("saved", "Saved just now");
     refreshPreview();
   }
 
