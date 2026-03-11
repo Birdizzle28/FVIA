@@ -775,6 +775,21 @@ document.addEventListener("DOMContentLoaded", async () => {
           if (value.includes("text-align:center")) safeStyles.push("text-align:center");
           if (value.includes("text-align:right")) safeStyles.push("text-align:right");
   
+          if (value.includes("font-weight:bold") || value.includes("font-weight:700")) {
+            safeStyles.push("font-weight:bold");
+          }
+  
+          if (value.includes("font-style:italic")) {
+            safeStyles.push("font-style:italic");
+          }
+  
+          if (
+            value.includes("text-decoration:underline") ||
+            value.includes("text-decoration-line:underline")
+          ) {
+            safeStyles.push("text-decoration:underline");
+          }
+  
           const bgMatch = rawValue.match(/background(?:-color)?\s*:\s*([^;]+)/i);
           if (bgMatch) {
             const bg = bgMatch[1].replace(/\s+/g, "").toLowerCase();
@@ -794,6 +809,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   
         node.removeAttribute(attr.name);
       });
+  
+      if (node.tagName === "SPAN") {
+        const style = node.getAttribute("style");
+        if (!style) {
+          const parent = node.parentNode;
+          while (node.firstChild) parent.insertBefore(node.firstChild, node);
+          parent.removeChild(node);
+        }
+      }
     });
   
     return wrapper.innerHTML.trim();
@@ -831,8 +855,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (cmd === "highlightColor") {
       document.execCommand("styleWithCSS", false, true);
       document.execCommand("hiliteColor", false, value || "#fff3a3");
+      document.execCommand("styleWithCSS", false, false);
       return;
     }
+  
+    document.execCommand("styleWithCSS", false, false);
   
     if (cmd === "formatBlock-h2") {
       document.execCommand("formatBlock", false, "H2");
