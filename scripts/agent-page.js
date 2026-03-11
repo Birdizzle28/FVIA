@@ -164,7 +164,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     const footer = document.querySelector(".index-grid-footer");
     const headerLogo = document.getElementById("headerlogo");
     const footerLogo = document.getElementById("footerlogo");
-    const mobileMenu = document.getElementById("dropdownmenu");
+    const mobileMenu = document.getElementById("mobile-menu");
   
     if (!body || !header || !footer) return;
   
