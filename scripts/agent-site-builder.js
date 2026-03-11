@@ -447,6 +447,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     return data?.publicUrl || null;
   }
 
+  function bindPageBackgroundControls() {
+    const modeEl = document.getElementById("builder-page-bg-mode");
+    const customWrap = document.getElementById("builder-page-bg-custom-wrap");
+  
+    if (!modeEl || !customWrap) return;
+  
+    const sync = () => {
+      customWrap.style.display = modeEl.value === "custom" ? "" : "none";
+    };
+  
+    modeEl.addEventListener("change", sync);
+    sync();
+  }
+  
   function bindTextColorModeToggles() {
     editorFields.querySelectorAll(".text-color-mode-select").forEach(select => {
       select.addEventListener("change", async () => {
@@ -2636,4 +2650,5 @@ document.addEventListener("DOMContentLoaded", async () => {
   setPreviewMode("desktop");
   setSaveStatus("idle", "Idle");
   await loadAll();
+  bindPageBackgroundControls();
 });
