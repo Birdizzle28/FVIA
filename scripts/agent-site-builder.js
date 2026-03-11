@@ -196,6 +196,91 @@ document.addEventListener("DOMContentLoaded", async () => {
     return true;
   }
 
+  function getCommandStateSafe(command) {
+    try {
+      return document.queryCommandState(command);
+    } catch {
+      return false;
+    }
+  }
+  
+  function getCurrentBlockTag(editor) {
+    const sel = window.getSelection();
+    if (!sel || !sel.anchorNode || !editor.contains(sel.anchorNode)) return "";
+  
+    let node = sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement;
+  
+    while (node && node !== editor) {
+      const tag = node.tagName?.toUpperCase();
+      if (tag === "H2" || tag === "H3" || tag === "P" || tag === "DIV" || tag === "LI") {
+        return tag;
+      }
+      node = node.parentElement;
+    }
+  
+    return "";
+  }
+  
+  function getCurrentTextAlign(editor) {
+    const sel = window.getSelection();
+    if (!sel || !sel.anchorNode || !editor.contains(sel.anchorNode)) return "";
+  
+    let node = sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement;
+  
+    while (node && node !== editor) {
+      const style = window.getComputedStyle(node);
+      if (style.textAlign && style.textAlign !== "start") return style.textAlign;
+      node = node.parentElement;
+    }
+  
+    return window.getComputedStyle(editor).textAlign || "";
+  }
+  
+  function updateToolbarStateForEditor(editor) {
+    if (!editor) return;
+  
+    const sectionId = editor.dataset.sectionId;
+    const faqId = editor.dataset.faqId;
+  
+    const scope = faqId
+      ? `.faq-rt-btn[data-faq-id="${faqId}"]`
+      : `.rt-btn[data-section-id="${sectionId}"]`;
+  
+    const buttons = editorFields.querySelectorAll(scope);
+  
+    buttons.forEach(btn => btn.classList.remove("active"));
+  
+    const boldBtn = [...buttons].find(b => b.dataset.cmd === "bold");
+    const italicBtn = [...buttons].find(b => b.dataset.cmd === "italic");
+    const underlineBtn = [...buttons].find(b => b.dataset.cmd === "underline");
+    const leftBtn = [...buttons].find(b => b.dataset.cmd === "justifyLeft");
+    const centerBtn = [...buttons].find(b => b.dataset.cmd === "justifyCenter");
+    const rightBtn = [...buttons].find(b => b.dataset.cmd === "justifyRight");
+    const h2Btn = [...buttons].find(b => b.dataset.cmd === "formatBlock-h2");
+    const h3Btn = [...buttons].find(b => b.dataset.cmd === "formatBlock-h3");
+  
+    if (boldBtn && getCommandStateSafe("bold")) boldBtn.classList.add("active");
+    if (italicBtn && getCommandStateSafe("italic")) italicBtn.classList.add("active");
+    if (underlineBtn && getCommandStateSafe("underline")) underlineBtn.classList.add("active");
+  
+    const tag = getCurrentBlockTag(editor);
+    if (h2Btn && tag === "H2") h2Btn.classList.add("active");
+    if (h3Btn && tag === "H3") h3Btn.classList.add("active");
+  
+    const align = getCurrentTextAlign(editor);
+    if (leftBtn && align === "left") leftBtn.classList.add("active");
+    if (centerBtn && align === "center") centerBtn.classList.add("active");
+    if (rightBtn && align === "right") rightBtn.classList.add("active");
+  }
+  
+  function bindToolbarStateTracking() {
+    editorFields.querySelectorAll(".rich-editor").forEach(editor => {
+      ["keyup", "mouseup", "focus"].forEach(evt => {
+        editor.addEventListener(evt, () => updateToolbarStateForEditor(editor));
+      });
+    });
+  }
+  
   function hydrateSettingsUI() {
     if (!settings) return;
 
@@ -636,17 +721,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     ]);
   
     const allowedHighlightColors = [
-      "rgb(255, 243, 163)",
-      "rgb(255, 214, 231)",
-      "rgb(216, 236, 255)",
-      "rgb(223, 245, 223)",
-      "rgb(234, 220, 255)",
       "#fff3a3",
       "#ffd6e7",
       "#d8ecff",
       "#dff5df",
-      "#eadcff"
-    ];
+      "#eadcff",
+      "rgb(255,243,163)",
+      "rgb(255,214,231)",
+      "rgb(216,236,255)",
+      "rgb(223,245,223)",
+      "rgb(234,220,255)"
+    ].map(x => x.replace(/\s+/g, "").toLowerCase());
   
     const nodes = wrapper.querySelectorAll("*");
   
@@ -660,7 +745,8 @@ document.addEventListener("DOMContentLoaded", async () => {
   
       [...node.attributes].forEach(attr => {
         const name = attr.name.toLowerCase();
-        const value = String(attr.value || "").toLowerCase().replace(/\s+/g, "");
+        const rawValue = String(attr.value || "");
+        const value = rawValue.replace(/\s+/g, "").toLowerCase();
   
         if (name === "style") {
           const safeStyles = [];
@@ -669,12 +755,11 @@ document.addEventListener("DOMContentLoaded", async () => {
           if (value.includes("text-align:center")) safeStyles.push("text-align:center");
           if (value.includes("text-align:right")) safeStyles.push("text-align:right");
   
-          const backgroundMatch = value.match(/background(?:-color)?:([^;]+)/);
-          if (backgroundMatch) {
-            const bg = backgroundMatch[1].replace(/\s+/g, "");
-            const normalizedAllowed = allowedHighlightColors.map(x => x.toLowerCase().replace(/\s+/g, ""));
-            if (normalizedAllowed.includes(bg)) {
-              safeStyles.push(`background:${backgroundMatch[1]}`);
+          const bgMatch = rawValue.match(/background(?:-color)?\s*:\s*([^;]+)/i);
+          if (bgMatch) {
+            const bg = bgMatch[1].replace(/\s+/g, "").toLowerCase();
+            if (allowedHighlightColors.includes(bg)) {
+              safeStyles.push(`background:${bgMatch[1].trim()}`);
             }
           }
   
@@ -693,7 +778,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   
     return wrapper.innerHTML.trim();
   }
-
+  
   function styleBuilderButtonsPreview() {
     const preset = buttonStyleEl.value || "soft-dark";
     const previewButtons = [
@@ -730,12 +815,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   
     if (cmd === "formatBlock-h2") {
-      document.execCommand("formatBlock", false, "h2");
+      document.execCommand("formatBlock", false, "H2");
       return;
     }
   
     if (cmd === "formatBlock-h3") {
-      document.execCommand("formatBlock", false, "h3");
+      document.execCommand("formatBlock", false, "H3");
       return;
     }
   
@@ -754,6 +839,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const cmd = btn.dataset.cmd;
         const editor = editorFields.querySelector(`.rich-editor[data-section-id="${sectionId}"]`);
         execRichCommand(cmd, editor);
+        updateToolbarStateForEditor(editor);
       });
     });
 
@@ -763,6 +849,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const cmd = btn.dataset.cmd;
         const editor = editorFields.querySelector(`.faq-rich-editor[data-faq-id="${faqId}"]`);
         execRichCommand(cmd, editor);
+        updateToolbarStateForEditor(editor);
       });
     });
 
@@ -1159,6 +1246,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindRichTextToolbar();
     bindRichPasteHandling();
     bindRichEditorParagraphHandling();
+    bindToolbarStateTracking();
     bindImagePreviewUpdates();
     bindSectionImageUploads();
     bindSectionCardCollapse();
