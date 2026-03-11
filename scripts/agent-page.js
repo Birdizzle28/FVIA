@@ -129,15 +129,25 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (!photoEl) return;
   
     const imageUrl = String(content.image_url || "").trim();
+  
     if (imageUrl) {
       photoEl.src = imageUrl;
       photoEl.style.display = "";
+    } else {
+      photoEl.removeAttribute("src");
+      photoEl.style.display = "none";
     }
   
     if (style.image_border_width && style.image_border_style && style.image_border_color) {
       photoEl.style.border = `${style.image_border_width} ${style.image_border_style} ${style.image_border_color}`;
     } else {
       photoEl.style.border = "";
+    }
+  
+    if (style.image_border_radius) {
+      photoEl.style.borderRadius = style.image_border_radius;
+    } else {
+      photoEl.style.borderRadius = "";
     }
   }
   
@@ -852,7 +862,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     setSectionVisibility(pageKey, section.section_key, !!section.is_enabled);
     fillSectionContent(pageKey, section.section_key, content || {});
     applySectionStyle(pageKey, section.section_key, style || {});
-    applySectionImage(pageKey, section.section_key, content || {});
+    applySectionImage(pageKey, section.section_key, content || {}, style || {});
   });
 
   if (pageKey === "home" || pageKey === "about") {
