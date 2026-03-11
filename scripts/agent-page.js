@@ -151,6 +151,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
   
+  function isMeaningfulHtml(value) {
+    const html = String(value || "").replace(/<br\s*\/?>/gi, "").replace(/&nbsp;/gi, "").trim();
+    const text = html.replace(/<[^>]*>/g, "").trim();
+    return text.length > 0;
+  }
+  
   function applyTheme(settings) {
     const body = document.getElementById("indexbody");
     const main = document.querySelector("main");
@@ -452,18 +458,35 @@ document.addEventListener("DOMContentLoaded", async () => {
   function fillSectionContent(pageKey, sectionKey, content = {}) {
     if (pageKey === "home") {
       if (sectionKey === "hero") {
-        setHtmlIfExists(
-          "agent-name",
-          content.heading || `${window.FVG_AGENT_PAGE_AGENT?.first_name || ""} ${window.FVG_AGENT_PAGE_AGENT?.last_name || ""}`.trim()
-        );
+        const headingEl = document.getElementById("agent-name");
+        const headingInlineEl = document.getElementById("agent-name-inline");
+        const subheadingEl = document.getElementById("agent-hero-subheading");
+        const bodyEl = document.getElementById("agent-bio");
     
-        setHtmlIfExists(
-          "agent-name-inline",
-          content.heading || `${window.FVG_AGENT_PAGE_AGENT?.first_name || ""} ${window.FVG_AGENT_PAGE_AGENT?.last_name || ""}`.trim()
-        );
+        const fallbackName = `${window.FVG_AGENT_PAGE_AGENT?.first_name || ""} ${window.FVG_AGENT_PAGE_AGENT?.last_name || ""}`.trim();
+        const headingHtml = content.heading || fallbackName;
+        const subheadingHtml = content.subheading || "";
+        const bodyHtml = content.body || "";
     
-        setHtmlIfExists("agent-hero-subheading", content.subheading || "");
-        setHtmlIfExists("agent-bio", content.body || "");
+        if (headingEl) {
+          headingEl.innerHTML = headingHtml;
+          headingEl.style.display = isMeaningfulHtml(headingHtml) ? "" : "none";
+        }
+    
+        if (headingInlineEl) {
+          headingInlineEl.innerHTML = headingHtml;
+          headingInlineEl.style.display = isMeaningfulHtml(headingHtml) ? "" : "none";
+        }
+    
+        if (subheadingEl) {
+          subheadingEl.innerHTML = subheadingHtml;
+          subheadingEl.style.display = isMeaningfulHtml(subheadingHtml) ? "" : "none";
+        }
+    
+        if (bodyEl) {
+          bodyEl.innerHTML = bodyHtml;
+          bodyEl.style.display = isMeaningfulHtml(bodyHtml) ? "" : "none";
+        }
       }
     }
     if (pageKey === "about") {
