@@ -1325,3 +1325,61 @@ body {
   box-shadow: 0 6px 20px rgba(0,0,0,0.05);
   color: #222;
 }
+
+.toolbar-color-wrap {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.rt-color-btn {
+  border: 1px solid #d7d7d7;
+  background: white;
+  border-radius: 8px;
+  min-width: 38px;
+  height: 38px;
+  padding: 0 10px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.toolbar-a-icon {
+  position: relative;
+  font-weight: 700;
+  font-size: 1rem;
+  line-height: 1;
+  color: #222;
+}
+
+.toolbar-a-icon::after {
+  content: "";
+  display: block;
+  width: 100%;
+  height: 3px;
+  border-radius: 999px;
+  background: var(--toolbar-color, #000000);
+  margin-top: 2px;
+}
+
+.text-color-picker {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+  width: 100%;
+  height: 100%;
+}
+
+.toolbar-font-size {
+  width: auto !important;
+  min-width: 62px;
+  height: 38px;
+  border: 1px solid #d7d7d7;
+  border-radius: 8px;
+  background: white;
+  padding: 0 8px;
+  cursor: pointer;
+  font-weight: 700;
+}
