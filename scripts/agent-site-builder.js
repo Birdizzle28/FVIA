@@ -328,6 +328,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     const buttonBorderStyleEl = document.getElementById("builder-button-border-style");
     const pageBgModeEl = document.getElementById("builder-page-bg-mode");
     const pageBgCustomEl = document.getElementById("builder-page-bg-custom");
+
+    if (buttonRadiusEl) buttonRadiusEl.value = px(settings.button_radius, 14);
+    if (buttonBorderWidthEl) buttonBorderWidthEl.value = px(settings.button_border_width, 1);
+    
+    const buttonRadiusValueEl = document.getElementById("builder-button-radius-value");
+    const buttonBorderWidthValueEl = document.getElementById("builder-button-border-width-value");
+    
+    if (buttonRadiusValueEl && buttonRadiusEl) {
+      buttonRadiusValueEl.textContent = `${buttonRadiusEl.value}px`;
+    }
+    if (buttonBorderWidthValueEl && buttonBorderWidthEl) {
+      buttonBorderWidthValueEl.textContent = `${buttonBorderWidthEl.value}px`;
+    }
     
     if (pageBgModeEl) pageBgModeEl.value = settings.page_bg_mode || "default";
     if (pageBgCustomEl) pageBgCustomEl.value = settings.page_bg_custom || "#ffffff";
@@ -464,6 +477,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   
     modeEl.addEventListener("change", sync);
     sync();
+  }
+
+  function bindPxSliders() {
+    const pairs = [
+      ["builder-button-radius", "builder-button-radius-value"],
+      ["builder-button-border-width", "builder-button-border-width-value"]
+    ];
+  
+    pairs.forEach(([inputId, valueId]) => {
+      const input = document.getElementById(inputId);
+      const value = document.getElementById(valueId);
+      if (!input || !value) return;
+  
+      const sync = () => {
+        value.textContent = `${input.value}px`;
+      };
+  
+      input.addEventListener("input", sync);
+      sync();
+    });
   }
   
   function bindTextColorModeToggles() {
@@ -808,6 +841,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (values.length === 0) return "empty";
     if (values.length < 2) return "partial";
     return "ready";
+  }
+
+  function bindSectionRangeOutputs() {
+    editorFields.querySelectorAll('input[type="range"][data-field-type="section-style"]').forEach(input => {
+      const output = input.nextElementSibling;
+      if (!output || !output.classList.contains("range-output")) return;
+  
+      const sync = () => {
+        output.textContent = `${input.value}px`;
+      };
+  
+      input.addEventListener("input", sync);
+      sync();
+    });
   }
 
   function bindSectionCardCollapse() {
@@ -1602,21 +1649,29 @@ document.addEventListener("DOMContentLoaded", async () => {
   
                           <label>Image Border Width</label>
                           <input
-                            type="text"
+                            type="range"
+                            min="0"
+                            max="20"
+                            step="1"
                             data-field-type="section-style"
                             data-section-id="${section.id}"
                             data-key="image_border_width"
-                            value="${escapeHtml(style.image_border_width || "0px")}"
+                            value="${px(style.image_border_width, 0)}"
                           />
+                          <span class="range-output">${px(style.image_border_width, 0)}px</span>
   
                           <label>Image Border Radius</label>
                           <input
-                            type="text"
+                            type="range"
+                            min="0"
+                            max="20"
+                            step="1"
                             data-field-type="section-style"
                             data-section-id="${section.id}"
                             data-key="image_border_radius"
-                            value="${escapeHtml(style.image_border_radius || "")}"
+                            value="${px(style.image_border_radius, 0)}"
                           />
+                          <span class="range-output">${px(style.image_border_radius, 0)}px</span>
                         `
                         : ""
                     }
@@ -1740,23 +1795,32 @@ document.addEventListener("DOMContentLoaded", async () => {
   
               <label>Section Border Width</label>
               <input
-                type="text"
+                type="range"
+                min="0"
+                max="20"
+                step="1"
                 data-field-type="section-style"
                 data-section-id="${section.id}"
                 data-key="border_width"
-                value="${escapeHtml(style.border_width || "0px")}"
-                placeholder="Section border width"
+                value="${px(style.border_width, 0)}"
               />
+              <span class="range-output">${px(style.border_width, 0)}px</span>
   
               <label>Section Border Radius</label>
+                placeholder="Section border radius"
+              />
+
               <input
-                type="text"
+                type="range"
+                min="0"
+                max="20"
+                step="1"
                 data-field-type="section-style"
                 data-section-id="${section.id}"
                 data-key="border_radius"
-                value="${escapeHtml(style.border_radius || "")}"
-                placeholder="Section border radius"
+                value="${px(style.border_radius, 0)}"
               />
+              <span class="range-output">${px(style.border_radius, 0)}px</span>
             </div>
           </div>
   
@@ -1790,6 +1854,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindCollapsibleCards();
     bindBackgroundModeToggles();
     bindTextColorModeToggles();
+    bindSectionRangeOutputs();
     
     editorFields.querySelectorAll(".builder-section-card").forEach(card => {
       setCollapsibleState(card, card.classList.contains("collapsed"));
@@ -2080,11 +2145,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       photo_shape: photoShapeEl.value,
       font_preset: fontSelect.value,
   
-      button_radius: document.getElementById("builder-button-radius")?.value || "14px",
+      button_radius: `${document.getElementById("builder-button-radius")?.value || 14}px`,
       button_bg_color: document.getElementById("builder-button-bg")?.value || "#545454",
       button_text_color: document.getElementById("builder-button-text")?.value || "#ffffff",
       button_border_color: document.getElementById("builder-button-border-color")?.value || "#272727",
-      button_border_width: document.getElementById("builder-button-border-width")?.value || "1px",
+      button_border_width: `${document.getElementById("builder-button-border-width")?.value || 1}px`,
       button_border_style: document.getElementById("builder-button-border-style")?.value || "solid",
   
       home_enabled: !!toggleHomePage.checked,
@@ -2159,7 +2224,19 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
 
     styleInputs.forEach(input => {
-      draftStyle[input.dataset.key] = input.value;
+      const key = input.dataset.key;
+      let value = input.value;
+    
+      if (
+        key === "image_border_width" ||
+        key === "image_border_radius" ||
+        key === "border_width" ||
+        key === "border_radius"
+      ) {
+        value = `${input.value}px`;
+      }
+    
+      draftStyle[key] = value;
     });
 
     const { error } = await supabase
@@ -2655,5 +2732,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   setPreviewMode("desktop");
   setSaveStatus("idle", "Idle");
   await loadAll();
+  bindPxSliders();
   bindPageBackgroundControls();
 });
