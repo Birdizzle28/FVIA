@@ -529,9 +529,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         const bodyEl = document.getElementById("agent-bio");
     
         const fallbackName = `${window.FVG_AGENT_PAGE_AGENT?.first_name || ""} ${window.FVG_AGENT_PAGE_AGENT?.last_name || ""}`.trim();
+        const fallbackBio = window.FVG_AGENT_PAGE_AGENT?.bio || "";
+        
         const headingHtml = content.heading || fallbackName;
         const subheadingHtml = content.subheading || "";
-        const bodyHtml = content.body || "";
+        const bodyHtml = content.body || fallbackBio;
     
         if (headingEl) {
           headingEl.innerHTML = headingHtml;
@@ -1004,13 +1006,24 @@ document.addEventListener("DOMContentLoaded", async () => {
   const bioEl = document.getElementById("agent-bio");
   const photoEl = document.getElementById("agent-photo");
   const nameInlineEl = document.getElementById("agent-name-inline");
-
-  if (nameEl) nameEl.textContent = `${agent.first_name} ${agent.last_name}`;
-  if (nameInlineEl) nameInlineEl.textContent = `${agent.first_name} ${agent.last_name}`;
-  if (bioEl) bioEl.textContent = agent.bio || "";
-  if (photoEl && agent.profile_picture_url) {
+  
+  const fallbackName = `${agent.first_name || ""} ${agent.last_name || ""}`.trim();
+  
+  if (nameEl && !nameEl.innerHTML.trim()) {
+    nameEl.textContent = fallbackName;
+  }
+  
+  if (nameInlineEl && !nameInlineEl.innerHTML.trim()) {
+    nameInlineEl.textContent = fallbackName;
+  }
+  
+  if (bioEl && !bioEl.innerHTML.trim()) {
+    bioEl.textContent = agent.bio || "";
+  }
+  
+  if (photoEl && agent.profile_picture_url && !photoEl.getAttribute("src")) {
     photoEl.src = agent.profile_picture_url;
-    photoEl.alt = `${agent.first_name} ${agent.last_name}`;
+    photoEl.alt = fallbackName;
   }
 
   const callEl = document.getElementById("agent-call");
