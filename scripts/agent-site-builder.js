@@ -606,9 +606,13 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function bindCollapsibleCards() {
     editorFields.querySelectorAll(".builder-collapsible-head").forEach(btn => {
-      btn.addEventListener("click", () => {
-        const card = btn.closest(".editor-subcard, .editor-field-group");
+      btn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+  
+        const card = e.currentTarget.closest(".editor-subcard, .editor-field-group");
         if (!card) return;
+  
         card.classList.toggle("collapsed");
       });
     });
@@ -784,9 +788,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   function bindSectionCardCollapse() {
     editorFields.querySelectorAll(".builder-section-head").forEach(btn => {
       btn.addEventListener("click", (e) => {
-        if (e.target.closest('input, select, textarea, button:not(.builder-section-head)')) return;
-        const card = btn.closest(".builder-section-card");
+        e.preventDefault();
+        e.stopPropagation();
+  
+        const card = e.currentTarget.closest(".builder-section-card");
         if (!card) return;
+  
         card.classList.toggle("collapsed");
       });
     });
