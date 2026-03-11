@@ -898,6 +898,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   );
   
   applyTheme(settings || {});
+  applyPageBackground(settings || {});
   applyPhotoShape(settings || {});
   applyFontPreset(settings || {});
   applyButtonPreset(settings || {});
