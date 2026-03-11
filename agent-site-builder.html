@@ -52,15 +52,33 @@
           </div>
 
           <div class="builder-block">
-            <label for="builder-button-style">Button Style</label>
-            <select id="builder-button-style">
-              <option value="soft-dark">Soft Dark</option>
-              <option value="soft-light">Soft Light</option>
-              <option value="pill-dark">Pill Dark</option>
-              <option value="pill-light">Pill Light</option>
-              <option value="outline-dark">Outline Dark</option>
-              <option value="outline-light">Outline Light</option>
+            <label>Buttons</label>
+          
+            <label for="builder-button-radius">Border Radius</label>
+            <input id="builder-button-radius" type="text" value="14px" />
+          
+            <label for="builder-button-bg">Background Color</label>
+            <input id="builder-button-bg" type="color" value="#545454" />
+          
+            <label for="builder-button-text">Text Color</label>
+            <input id="builder-button-text" type="color" value="#ffffff" />
+          
+            <label for="builder-button-border-color">Border Color</label>
+            <input id="builder-button-border-color" type="color" value="#272727" />
+          
+            <label for="builder-button-border-width">Border Width</label>
+            <input id="builder-button-border-width" type="text" value="1px" />
+          
+            <label for="builder-button-border-style">Border Style</label>
+            <select id="builder-button-border-style">
+              <option value="solid">Solid</option>
+              <option value="dashed">Dashed</option>
+              <option value="dotted">Dotted</option>
+              <option value="double">Double</option>
+              <option value="none">None</option>
             </select>
+          
+            <input id="builder-button-style" type="hidden" value="custom" />
           </div>
 
           <div class="builder-block">
