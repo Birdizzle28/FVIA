@@ -447,6 +447,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     return data?.publicUrl || null;
   }
 
+  function px(value, fallback = 0) {
+    const n = parseInt(String(value || "").replace("px", ""), 10);
+    return Number.isFinite(n) ? n : fallback;
+  }
+  
   function bindPageBackgroundControls() {
     const modeEl = document.getElementById("builder-page-bg-mode");
     const customWrap = document.getElementById("builder-page-bg-custom-wrap");
