@@ -1252,3 +1252,23 @@ body {
   color: #222 !important;
   border-color: #ed9ea5 !important;
 }
+
+.editor-subcard .builder-collapsible-body,
+.editor-field-group .builder-collapsible-body {
+  display: block;
+}
+
+.editor-subcard.collapsed .builder-collapsible-body,
+.editor-field-group.collapsed .builder-collapsible-body {
+  display: none;
+}
+
+.editor-subcard .builder-section-caret,
+.editor-field-group .builder-section-caret {
+  transition: transform 0.2s ease;
+}
+
+.editor-subcard.collapsed .builder-section-caret,
+.editor-field-group.collapsed .builder-section-caret {
+  transform: rotate(-90deg);
+}
