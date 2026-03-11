@@ -442,6 +442,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     return data?.publicUrl || null;
   }
 
+  function bindTextColorModeToggles() {
+    editorFields.querySelectorAll(".text-color-mode-select").forEach(select => {
+      select.addEventListener("change", async () => {
+        const sectionId = select.dataset.sectionId;
+        const wrap = editorFields.querySelector(`.text-color-custom-wrap[data-section-id="${sectionId}"]`);
+  
+        if (wrap) {
+          wrap.style.display = select.value === "custom" ? "" : "none";
+        }
+  
+        await saveSectionDraft(sectionId);
+        refreshPreview();
+      });
+    });
+  }
+  
   function bindSectionImageUploads() {
     editorFields.querySelectorAll(".section-image-upload").forEach(input => {
       input.addEventListener("change", async () => {
