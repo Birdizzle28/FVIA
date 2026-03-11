@@ -571,8 +571,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   function bindCollapsibleCards() {
     editorFields.querySelectorAll(".builder-collapsible-head").forEach(btn => {
       btn.addEventListener("click", () => {
-        const card = btn.closest(".editor-field-group");
-        toggleCollapsibleCard(card);
+        const card = btn.closest(".editor-subcard, .editor-field-group");
+        if (!card) return;
+        card.classList.toggle("collapsed");
       });
     });
   }
@@ -1278,11 +1279,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                   </button>
                   <div class="builder-collapsible-body">
                     <div class="highlight-color-row">
-                      <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" data-target-key="heading" style="background:#fff3a3;" title="Yellow"></button>
-                      <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" data-target-key="heading" style="background:#ffd6e7;" title="Pink"></button>
-                      <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" data-target-key="heading" style="background:#d8ecff;" title="Blue"></button>
-                      <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" data-target-key="heading" style="background:#dff5df;" title="Green"></button>
-                      <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" data-target-key="heading" style="background:#eadcff;" title="Purple"></button>
                       <input
                         type="color"
                         class="custom-highlight-picker"
@@ -1329,11 +1325,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                   </button>
                   <div class="builder-collapsible-body">
                     <div class="highlight-color-row">
-                      <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" data-target-key="subheading" style="background:#fff3a3;" title="Yellow"></button>
-                      <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" data-target-key="subheading" style="background:#ffd6e7;" title="Pink"></button>
-                      <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" data-target-key="subheading" style="background:#d8ecff;" title="Blue"></button>
-                      <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" data-target-key="subheading" style="background:#dff5df;" title="Green"></button>
-                      <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" data-target-key="subheading" style="background:#eadcff;" title="Purple"></button>
                       <input
                         type="color"
                         class="custom-highlight-picker"
@@ -1380,11 +1371,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                   </button>
                   <div class="builder-collapsible-body">
                     <div class="highlight-color-row">
-                      <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" data-target-key="body" style="background:#fff3a3;" title="Yellow"></button>
-                      <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" data-target-key="body" style="background:#ffd6e7;" title="Pink"></button>
-                      <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" data-target-key="body" style="background:#d8ecff;" title="Blue"></button>
-                      <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" data-target-key="body" style="background:#dff5df;" title="Green"></button>
-                      <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" data-target-key="body" style="background:#eadcff;" title="Purple"></button>
                       <input
                         type="color"
                         class="custom-highlight-picker"
