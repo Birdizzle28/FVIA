@@ -312,6 +312,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function fillSectionContent(pageKey, sectionKey, content = {}) {
+    if (pageKey === "home") {
+      if (sectionKey === "hero") {
+        setTextIfExists("agent-name", content.heading || `${window.FVG_AGENT_PAGE_AGENT?.first_name || ""} ${window.FVG_AGENT_PAGE_AGENT?.last_name || ""}`.trim());
+        setTextIfExists("agent-name-inline", content.heading || `${window.FVG_AGENT_PAGE_AGENT?.first_name || ""} ${window.FVG_AGENT_PAGE_AGENT?.last_name || ""}`.trim());
+        setTextIfExists("agent-hero-subheading", content.subheading || "");
+        setHtmlIfExists("agent-bio", content.body || "");
+      }
+    }
     if (pageKey === "about") {
       if (sectionKey === "summary") {
         setHtmlIfExists("agent-about-summary", content.body || "");
