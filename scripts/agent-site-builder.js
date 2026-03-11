@@ -326,6 +326,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     const buttonBorderColorEl = document.getElementById("builder-button-border-color");
     const buttonBorderWidthEl = document.getElementById("builder-button-border-width");
     const buttonBorderStyleEl = document.getElementById("builder-button-border-style");
+    const pageBgModeEl = document.getElementById("builder-page-bg-mode");
+    const pageBgCustomEl = document.getElementById("builder-page-bg-custom");
+    
+    if (pageBgModeEl) pageBgModeEl.value = settings.page_bg_mode || "default";
+    if (pageBgCustomEl) pageBgCustomEl.value = settings.page_bg_custom || "#ffffff";
     
     if (buttonRadiusEl) buttonRadiusEl.value = settings.button_radius || "14px";
     if (buttonBgEl) buttonBgEl.value = settings.button_bg_color || "#545454";
@@ -2067,7 +2072,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       about_enabled: !!toggleAboutPage.checked,
       careers_enabled: !!toggleCareersPage.checked,
       faqs_enabled: !!toggleFaqsPage.checked,
-      draft_updated_at: new Date().toISOString()
+      draft_updated_at: new Date().toISOString(),
+      page_bg_mode: document.getElementById("builder-page-bg-mode")?.value || "default",
+      page_bg_custom: document.getElementById("builder-page-bg-custom")?.value || "#ffffff",
     };
   
     const { error } = await supabase
