@@ -1097,7 +1097,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     
       return;
     }
+
+    if (cmd === "foreColor") {
+      document.execCommand("styleWithCSS", false, true);
+      document.execCommand("foreColor", false, value || "#000000");
+      document.execCommand("styleWithCSS", false, false);
+      return;
+    }
   
+    if (cmd === "fontSizeCustom") {
+      document.execCommand("styleWithCSS", false, true);
+      document.execCommand("fontSize", false, "7");
+  
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        const editor = targetEl;
+        editor.querySelectorAll('font[size="7"]').forEach(node => {
+          node.removeAttribute("size");
+          node.style.fontSize = value || "16px";
+        });
+      }
+  
+      document.execCommand("styleWithCSS", false, false);
+      return;
+    }
+    
     document.execCommand(cmd, false, null);
   }
 
@@ -1181,12 +1205,32 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function bindCustomHighlightPickers() {
     editorFields.querySelectorAll(".custom-highlight-picker").forEach(input => {
+      input.addEventListener("mousedown", (e) => {
+        const sectionId = input.dataset.sectionId;
+        const targetKey = input.dataset.targetKey || "body";
+        const editor = editorFields.querySelector(
+          `.rich-editor[data-section-id="${sectionId}"][data-key="${targetKey}"]`
+        );
+  
+        if (editor) {
+          saveEditorSelection(editor);
+        }
+  
+        e.stopPropagation();
+      });
+  
+      input.addEventListener("click", (e) => {
+        e.stopPropagation();
+      });
+  
       input.addEventListener("input", () => {
         const sectionId = input.dataset.sectionId;
         const targetKey = input.dataset.targetKey || "body";
         const editor = editorFields.querySelector(
           `.rich-editor[data-section-id="${sectionId}"][data-key="${targetKey}"]`
         );
+  
+        if (!editor) return;
   
         restoreEditorSelection(editor);
         execRichCommand("highlightColor", editor, input.value);
@@ -1195,6 +1239,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     });
   }
+  
   function bindEditorSelectionTracking() {
     editorFields.querySelectorAll(".rich-editor, .faq-rich-editor").forEach(editor => {
       ["keyup", "mouseup", "focus", "input"].forEach(evt => {
@@ -1729,41 +1774,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                       <option value="md" ${!style.heading_size || style.heading_size === "md" ? "selected" : ""}>Medium</option>
                       <option value="lg" ${style.heading_size === "lg" ? "selected" : ""}>Large</option>
                     </select>
-                  `
-                  : ""
-              }
-  
-              ${
-                !homeRules || homeRules.showColorPreset
-                  ? `
-                    <label>Text Color</label>
-                    <select
-                      class="text-color-mode-select"
-                      data-section-id="${section.id}"
-                      data-field-type="section-style"
-                      data-key="color_preset"
-                    >
-                      <option value="default" ${!style.color_preset || style.color_preset === "default" ? "selected" : ""}>Default</option>
-                      <option value="pink" ${style.color_preset === "pink" ? "selected" : ""}>Pink</option>
-                      <option value="blue" ${style.color_preset === "blue" ? "selected" : ""}>Blue</option>
-                      <option value="dark" ${style.color_preset === "dark" ? "selected" : ""}>Dark</option>
-                      <option value="light" ${style.color_preset === "light" ? "selected" : ""}>Light</option>
-                      <option value="custom" ${style.color_preset === "custom" ? "selected" : ""}>Custom</option>
-                    </select>
-  
-                    <div
-                      class="text-color-custom-wrap"
-                      data-section-id="${section.id}"
-                      style="${style.color_preset === "custom" ? "" : "display:none;"}"
-                    >
-                      <input
-                        type="color"
-                        data-field-type="section-style"
-                        data-section-id="${section.id}"
-                        data-key="color_custom"
-                        value="${escapeHtml(style.color_custom || "#ed9ea5")}"
-                      />
-                    </div>
                   `
                   : ""
               }
