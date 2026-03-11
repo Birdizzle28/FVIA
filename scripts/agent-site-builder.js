@@ -1893,7 +1893,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       setCollapsibleState(card, card.classList.contains("collapsed"));
     });
     
-    editorFields.querySelectorAll(".editor-subcard, .editor-field-group").forEach(card => {
+    document.querySelectorAll(".editor-subcard, .editor-field-group").forEach(card => {
       if (card.querySelector(":scope > .builder-collapsible-head")) {
         setCollapsibleState(card, card.classList.contains("collapsed"));
       }
@@ -2767,4 +2767,14 @@ document.addEventListener("DOMContentLoaded", async () => {
   await loadAll();
   bindPxSliders();
   bindPageBackgroundControls();
+  bindCollapsibleCards();
+
+  document.querySelectorAll(".editor-subcard, .editor-field-group, .builder-section-card").forEach(card => {
+    if (
+      card.querySelector(":scope > .builder-collapsible-head") ||
+      card.querySelector(":scope > .builder-section-head")
+    ) {
+      setCollapsibleState(card, card.classList.contains("collapsed"));
+    }
+  });
 });
