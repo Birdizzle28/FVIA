@@ -161,23 +161,25 @@ document.addEventListener("DOMContentLoaded", async () => {
   function applyPhotoShape(settings) {
     const photoEl = document.getElementById("agent-photo");
     if (!photoEl) return;
-
+  
     photoEl.classList.remove("photo-circle", "photo-square", "photo-diamond");
-
+  
+    photoEl.style.borderRadius = "";
+    photoEl.style.transform = "";
+    photoEl.style.clipPath = "";
+  
     const shape = settings?.photo_shape || "circle";
-
+  
     if (shape === "square") {
       photoEl.classList.add("photo-square");
       photoEl.style.borderRadius = "0";
-      photoEl.style.transform = "none";
     } else if (shape === "diamond") {
       photoEl.classList.add("photo-diamond");
       photoEl.style.borderRadius = "0";
-      photoEl.style.transform = "rotate(45deg)";
+      photoEl.style.clipPath = "polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%)";
     } else {
       photoEl.classList.add("photo-circle");
       photoEl.style.borderRadius = "50%";
-      photoEl.style.transform = "none";
     }
   }
 
@@ -415,27 +417,41 @@ document.addEventListener("DOMContentLoaded", async () => {
       const inlineHeadingEl = document.getElementById("agent-name-inline");
       const subheadingEl = document.getElementById("agent-hero-subheading");
       const bodyEl = document.getElementById("agent-bio");
-  
+    
       const headingSize = style.heading_size || "md";
-  
+    
       const sizeMap = {
         sm: "clamp(1.6rem, 3vw, 2.2rem)",
         md: "clamp(2rem, 4vw, 3rem)",
         lg: "clamp(2.4rem, 5vw, 3.8rem)"
       };
-  
+    
       const chosenSize = sizeMap[headingSize] || sizeMap.md;
-  
-      if (headingEl) headingEl.style.fontSize = chosenSize;
-      if (inlineHeadingEl) inlineHeadingEl.style.fontSize = chosenSize;
-  
+    
+      let chosenColor = "";
+      if (style.color_preset === "pink") chosenColor = "#ed9ea5";
+      else if (style.color_preset === "blue") chosenColor = "#7fabbf";
+      else if (style.color_preset === "dark") chosenColor = "#272727";
+      else if (style.color_preset === "light") chosenColor = "#ffffff";
+    
+      if (headingEl) {
+        headingEl.style.fontSize = chosenSize;
+        headingEl.style.color = chosenColor || "";
+      }
+    
+      if (inlineHeadingEl) {
+        inlineHeadingEl.style.fontSize = chosenSize;
+        inlineHeadingEl.style.color = chosenColor || "";
+      }
+    
       if (subheadingEl) {
         subheadingEl.style.textAlign = style.text_align || "";
-        subheadingEl.style.color = bodyEl?.style.color || "";
+        subheadingEl.style.color = chosenColor || "";
       }
-  
+    
       if (bodyEl) {
         bodyEl.style.textAlign = style.text_align || "";
+        bodyEl.style.color = chosenColor || "";
       }
     }
   }
