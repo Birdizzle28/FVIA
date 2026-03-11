@@ -893,10 +893,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   
         const sectionId = btn.dataset.sectionId;
         const faqId = btn.dataset.faqId;
+        const targetKey = btn.dataset.targetKey || "body";
   
-        const editor = sectionId
-          ? editorFields.querySelector(`.rich-editor[data-section-id="${sectionId}"]`)
-          : editorFields.querySelector(`.faq-rich-editor[data-faq-id="${faqId}"]`);
+        const editor = faqId
+          ? editorFields.querySelector(`.faq-rich-editor[data-faq-id="${faqId}"]`)
+          : editorFields.querySelector(`.rich-editor[data-section-id="${sectionId}"][data-key="${targetKey}"]`);
   
         if (editor) {
           restoreEditorSelection(editor);
@@ -908,7 +909,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       btn.addEventListener("click", () => {
         const sectionId = btn.dataset.sectionId;
         const cmd = btn.dataset.cmd;
-        const editor = editorFields.querySelector(`.rich-editor[data-section-id="${sectionId}"]`);
+        const targetKey = btn.dataset.targetKey || "body";
+        const editor = editorFields.querySelector(`.rich-editor[data-section-id="${sectionId}"][data-key="${targetKey}"]`);
   
         restoreEditorSelection(editor);
         execRichCommand(cmd, editor);
@@ -934,7 +936,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       btn.addEventListener("click", () => {
         const sectionId = btn.dataset.sectionId;
         const color = btn.dataset.color;
-        const editor = editorFields.querySelector(`.rich-editor[data-section-id="${sectionId}"]`);
+        const targetKey = btn.dataset.targetKey || "body";
+        const editor = editorFields.querySelector(`.rich-editor[data-section-id="${sectionId}"][data-key="${targetKey}"]`);
   
         restoreEditorSelection(editor);
         execRichCommand("highlightColor", editor, color);
@@ -1171,59 +1174,113 @@ document.addEventListener("DOMContentLoaded", async () => {
         </button>
       
         <div class="builder-section-body">
-          ${
-            !homeRules || homeRules.showHeading
-              ? `
-                <label>Heading</label>
-                <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="heading" value="${escapeHtml(content.heading || "")}" />
-              `
-              : ""
-          }
-      
-          ${
-            !homeRules || homeRules.showSubheading
-              ? `
-                <label>Subheading</label>
-                <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="subheading" value="${escapeHtml(content.subheading || "")}" />
-              `
-              : ""
-          }
-      
-          ${
-            !homeRules || homeRules.showBody
-              ? `
-                <label>Body</label>
-                <div class="highlight-color-row">
-                  <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" style="background:#fff3a3;" title="Yellow"></button>
-                  <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" style="background:#ffd6e7;" title="Pink"></button>
-                  <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" style="background:#d8ecff;" title="Blue"></button>
-                  <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" style="background:#dff5df;" title="Green"></button>
-                  <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" style="background:#eadcff;" title="Purple"></button>
-                </div>
-      
-                <div class="rt-toolbar" data-toolbar-for="${section.id}">
-                  <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}" title="Bold"><i class="fa-solid fa-bold"></i></button>
-                  <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}" title="Italic"><i class="fa-solid fa-italic"></i></button>
-                  <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}" title="Underline"><i class="fa-solid fa-underline"></i></button>
-                  <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
-                  <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}" title="Heading 2">H2</button>
-                  <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}" title="Heading 3">H3</button>
-                  <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
-                  <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
-                  <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
-                  <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
-                </div>
-      
-                <div
-                  class="rich-editor"
-                  contenteditable="true"
-                  data-field-type="section-content-html"
-                  data-section-id="${section.id}"
-                  data-key="body"
-                >${content.body || ""}</div>
-              `
-              : ""
-          }
+        ${
+          !homeRules || homeRules.showHeading
+            ? `
+              <label>Heading</label>
+              <div class="highlight-color-row">
+                <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" data-target-key="heading" style="background:#fff3a3;" title="Yellow"></button>
+                <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" data-target-key="heading" style="background:#ffd6e7;" title="Pink"></button>
+                <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" data-target-key="heading" style="background:#d8ecff;" title="Blue"></button>
+                <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" data-target-key="heading" style="background:#dff5df;" title="Green"></button>
+                <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" data-target-key="heading" style="background:#eadcff;" title="Purple"></button>
+              </div>
+        
+              <div class="rt-toolbar" data-toolbar-for="${section.id}-heading">
+                <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}" data-target-key="heading" title="Bold"><i class="fa-solid fa-bold"></i></button>
+                <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}" data-target-key="heading" title="Italic"><i class="fa-solid fa-italic"></i></button>
+                <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}" data-target-key="heading" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}" data-target-key="heading" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+                <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}" data-target-key="heading" title="Heading 2">H2</button>
+                <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}" data-target-key="heading" title="Heading 3">H3</button>
+                <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" data-target-key="heading" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
+                <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" data-target-key="heading" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
+                <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" data-target-key="heading" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
+                <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="heading" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
+              </div>
+        
+              <div
+                class="rich-editor"
+                contenteditable="true"
+                data-field-type="section-content-html"
+                data-section-id="${section.id}"
+                data-key="heading"
+              >${content.heading || ""}</div>
+            `
+            : ""
+        }
+        
+        ${
+          !homeRules || homeRules.showSubheading
+            ? `
+              <label>Subheading</label>
+              <div class="highlight-color-row">
+                <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" data-target-key="subheading" style="background:#fff3a3;" title="Yellow"></button>
+                <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" data-target-key="subheading" style="background:#ffd6e7;" title="Pink"></button>
+                <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" data-target-key="subheading" style="background:#d8ecff;" title="Blue"></button>
+                <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" data-target-key="subheading" style="background:#dff5df;" title="Green"></button>
+                <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" data-target-key="subheading" style="background:#eadcff;" title="Purple"></button>
+              </div>
+        
+              <div class="rt-toolbar" data-toolbar-for="${section.id}-subheading">
+                <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}" data-target-key="subheading" title="Bold"><i class="fa-solid fa-bold"></i></button>
+                <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}" data-target-key="subheading" title="Italic"><i class="fa-solid fa-italic"></i></button>
+                <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}" data-target-key="subheading" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}" data-target-key="subheading" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+                <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}" data-target-key="subheading" title="Heading 2">H2</button>
+                <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}" data-target-key="subheading" title="Heading 3">H3</button>
+                <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" data-target-key="subheading" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
+                <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" data-target-key="subheading" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
+                <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" data-target-key="subheading" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
+                <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="subheading" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
+              </div>
+        
+              <div
+                class="rich-editor"
+                contenteditable="true"
+                data-field-type="section-content-html"
+                data-section-id="${section.id}"
+                data-key="subheading"
+              >${content.subheading || ""}</div>
+            `
+            : ""
+        }
+        
+        ${
+          !homeRules || homeRules.showBody
+            ? `
+              <label>Body</label>
+              <div class="highlight-color-row">
+                <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" data-target-key="body" style="background:#fff3a3;" title="Yellow"></button>
+                <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" data-target-key="body" style="background:#ffd6e7;" title="Pink"></button>
+                <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" data-target-key="body" style="background:#d8ecff;" title="Blue"></button>
+                <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" data-target-key="body" style="background:#dff5df;" title="Green"></button>
+                <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" data-target-key="body" style="background:#eadcff;" title="Purple"></button>
+              </div>
+        
+              <div class="rt-toolbar" data-toolbar-for="${section.id}-body">
+                <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}" data-target-key="body" title="Bold"><i class="fa-solid fa-bold"></i></button>
+                <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}" data-target-key="body" title="Italic"><i class="fa-solid fa-italic"></i></button>
+                <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}" data-target-key="body" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}" data-target-key="body" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+                <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}" data-target-key="body" title="Heading 2">H2</button>
+                <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}" data-target-key="body" title="Heading 3">H3</button>
+                <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" data-target-key="body" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
+                <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" data-target-key="body" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
+                <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" data-target-key="body" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
+                <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="body" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
+              </div>
+        
+              <div
+                class="rich-editor"
+                contenteditable="true"
+                data-field-type="section-content-html"
+                data-section-id="${section.id}"
+                data-key="body"
+              >${content.body || ""}</div>
+            `
+            : ""
+        }
       
           ${
             !homeRules || homeRules.showButtonText
@@ -1675,10 +1732,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       draftContent[input.dataset.key] = input.value;
     });
 
-    const richBody = editorFields.querySelector(`.rich-editor[data-section-id="${sectionId}"][data-key="body"]`);
-    if (richBody) {
-      draftContent.body = sanitizeRichHtml(richBody.innerHTML);
-    }
+    editorFields
+      .querySelectorAll(`.rich-editor[data-section-id="${sectionId}"][data-key]`)
+      .forEach(editor => {
+        draftContent[editor.dataset.key] = sanitizeRichHtml(editor.innerHTML);
+      });
 
     styleInputs.forEach(input => {
       draftStyle[input.dataset.key] = input.value;
