@@ -1840,8 +1840,6 @@ document.addEventListener("DOMContentLoaded", async () => {
               <span class="range-output">${px(style.border_width, 0)}px</span>
   
               <label>Section Border Radius</label>
-                placeholder="Section border radius"
-              />
 
               <input
                 type="range"
