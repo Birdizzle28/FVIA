@@ -61,7 +61,8 @@
             <div class="builder-collapsible-body">
           
             <label for="builder-button-radius">Border Radius</label>
-            <input id="builder-button-radius" type="text" value="14px" />
+            <input type="range" id="builder-button-radius" min="0" max="60" step="1" />
+            <span id="builder-button-radius-value"></span>
           
             <label for="builder-button-bg">Background Color</label>
             <input id="builder-button-bg" type="color" value="#545454" />
@@ -73,7 +74,8 @@
             <input id="builder-button-border-color" type="color" value="#272727" />
           
             <label for="builder-button-border-width">Border Width</label>
-            <input id="builder-button-border-width" type="text" value="1px" />
+            <input type="range" id="builder-button-border-width" min="0" max="20" step="1" />
+            <span id="builder-button-border-width-value"></span>
           
             <label for="builder-button-border-style">Border Style</label>
             <select id="builder-button-border-style">
