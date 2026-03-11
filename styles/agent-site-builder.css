@@ -1246,3 +1246,9 @@ body {
   box-sizing: border-box !important;
   aspect-ratio: 1 / 1 !important;
 }
+
+.rt-btn.active {
+  background: #ed9ea5 !important;
+  color: #222 !important;
+  border-color: #ed9ea5 !important;
+}
