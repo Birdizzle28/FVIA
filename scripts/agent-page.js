@@ -388,15 +388,15 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function applySectionStyle(pageKey, sectionKey, style = {}) {
     const ids = sectionKeyToElementIds(pageKey, sectionKey);
-
+  
     ids.forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
-
+  
       if (style.text_align) {
         el.style.textAlign = style.text_align;
       }
-
+  
       if (style.color_preset === "pink") {
         el.style.color = "#ed9ea5";
       } else if (style.color_preset === "blue") {
@@ -409,6 +409,35 @@ document.addEventListener("DOMContentLoaded", async () => {
         el.style.color = "";
       }
     });
+  
+    if (pageKey === "home" && sectionKey === "hero") {
+      const headingEl = document.getElementById("agent-name");
+      const inlineHeadingEl = document.getElementById("agent-name-inline");
+      const subheadingEl = document.getElementById("agent-hero-subheading");
+      const bodyEl = document.getElementById("agent-bio");
+  
+      const headingSize = style.heading_size || "md";
+  
+      const sizeMap = {
+        sm: "clamp(1.6rem, 3vw, 2.2rem)",
+        md: "clamp(2rem, 4vw, 3rem)",
+        lg: "clamp(2.4rem, 5vw, 3.8rem)"
+      };
+  
+      const chosenSize = sizeMap[headingSize] || sizeMap.md;
+  
+      if (headingEl) headingEl.style.fontSize = chosenSize;
+      if (inlineHeadingEl) inlineHeadingEl.style.fontSize = chosenSize;
+  
+      if (subheadingEl) {
+        subheadingEl.style.textAlign = style.text_align || "";
+        subheadingEl.style.color = bodyEl?.style.color || "";
+      }
+  
+      if (bodyEl) {
+        bodyEl.style.textAlign = style.text_align || "";
+      }
+    }
   }
 
   async function setFooterToAgentContact(agentUuid) {
