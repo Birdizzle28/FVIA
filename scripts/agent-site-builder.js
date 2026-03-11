@@ -95,7 +95,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       showButtonLink: false,
       showImageUrl: false,
       showImageUpload: true,
-      showTextAlign: true,
       showHeadingSize: true,
       showColorPreset: true
     },
@@ -107,7 +106,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       showButtonLink: false,
       showImageUrl: false,
       showImageUpload: false,
-      showTextAlign: false,
       showHeadingSize: false,
       showColorPreset: false
     },
@@ -119,7 +117,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       showButtonLink: false,
       showImageUrl: false,
       showImageUpload: false,
-      showTextAlign: false,
       showHeadingSize: false,
       showColorPreset: false
     },
@@ -131,7 +128,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       showButtonLink: false,
       showImageUrl: false,
       showImageUpload: false,
-      showTextAlign: false,
       showHeadingSize: false,
       showColorPreset: false
     }
@@ -871,6 +867,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
   
+    if (cmd === "justifyLeft" || cmd === "justifyCenter" || cmd === "justifyRight") {
+      document.execCommand("styleWithCSS", false, true);
+      document.execCommand(cmd, false, null);
+      document.execCommand("styleWithCSS", false, false);
+      return;
+    }
+  
     if (cmd === "removeFormat") {
       document.execCommand("removeFormat", false, null);
       return;
@@ -1272,19 +1275,6 @@ document.addEventListener("DOMContentLoaded", async () => {
                   src="${escapeHtml(content.image_url || "")}"
                   alt=""
                 />
-              `
-              : ""
-          }
-      
-          ${
-            !homeRules || homeRules.showTextAlign
-              ? `
-                <label>Text Align</label>
-                <select data-field-type="section-style" data-section-id="${section.id}" data-key="text_align">
-                  <option value="left" ${style.text_align === "left" ? "selected" : ""}>Left</option>
-                  <option value="center" ${style.text_align === "center" ? "selected" : ""}>Center</option>
-                  <option value="right" ${style.text_align === "right" ? "selected" : ""}>Right</option>
-                </select>
               `
               : ""
           }
