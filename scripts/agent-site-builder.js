@@ -86,6 +86,56 @@ document.addEventListener("DOMContentLoaded", async () => {
   const centerPane = document.getElementById("builder-center-pane");
   const leftToggleBtn = document.getElementById("builder-left-toggle");
   const centerToggleBtn = document.getElementById("builder-center-toggle");
+  const HOME_SECTION_RULES = {
+    hero: {
+      showHeading: true,
+      showSubheading: true,
+      showBody: true,
+      showButtonText: false,
+      showButtonLink: false,
+      showImageUrl: false,
+      showImageUpload: true,
+      showTextAlign: true,
+      showHeadingSize: true,
+      showColorPreset: true
+    },
+    contact: {
+      showHeading: false,
+      showSubheading: false,
+      showBody: false,
+      showButtonText: false,
+      showButtonLink: false,
+      showImageUrl: false,
+      showImageUpload: false,
+      showTextAlign: false,
+      showHeadingSize: false,
+      showColorPreset: false
+    },
+    licenses: {
+      showHeading: false,
+      showSubheading: false,
+      showBody: false,
+      showButtonText: false,
+      showButtonLink: false,
+      showImageUrl: false,
+      showImageUpload: false,
+      showTextAlign: false,
+      showHeadingSize: false,
+      showColorPreset: false
+    },
+    quote: {
+      showHeading: false,
+      showSubheading: false,
+      showBody: false,
+      showButtonText: false,
+      showButtonLink: false,
+      showImageUrl: false,
+      showImageUpload: false,
+      showTextAlign: false,
+      showHeadingSize: false,
+      showColorPreset: false
+    }
+  };
 
   if (!targetAgentId) {
     editorFields.innerHTML = "<p>Missing agent_id in URL.</p>";
@@ -923,6 +973,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       const wrap = document.createElement("div");
       wrap.className = "builder-section-card collapsed";
 
+      const homeRules = pageKey === "home"
+        ? (HOME_SECTION_RULES[section.section_key] || null)
+        : null;
+      
       wrap.innerHTML = `
         <button type="button" class="builder-section-head">
           <div class="builder-section-head-left">
@@ -934,96 +988,162 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
           <span class="builder-section-caret">▾</span>
         </button>
-
+      
         <div class="builder-section-body">
-          <label>Heading</label>
-          <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="heading" value="${escapeHtml(content.heading || "")}" />
-
-          <label>Subheading</label>
-          <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="subheading" value="${escapeHtml(content.subheading || "")}" />
-
-          <label>Body</label>
-          <div class="highlight-color-row">
-            <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" style="background:#fff3a3;" title="Yellow"></button>
-            <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" style="background:#ffd6e7;" title="Pink"></button>
-            <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" style="background:#d8ecff;" title="Blue"></button>
-            <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" style="background:#dff5df;" title="Green"></button>
-            <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" style="background:#eadcff;" title="Purple"></button>
-          </div>
-
-          <div class="rt-toolbar" data-toolbar-for="${section.id}">
-            <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}" title="Bold"><i class="fa-solid fa-bold"></i></button>
-            <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}" title="Italic"><i class="fa-solid fa-italic"></i></button>
-            <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}" title="Underline"><i class="fa-solid fa-underline"></i></button>
-            <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
-            <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}" title="Heading 2">H2</button>
-            <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}" title="Heading 3">H3</button>
-            <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
-            <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
-            <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
-            <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
-          </div>
-
-          <div
-            class="rich-editor"
-            contenteditable="true"
-            data-field-type="section-content-html"
-            data-section-id="${section.id}"
-            data-key="body"
-          >${content.body || ""}</div>
-
-          <label>Button Text</label>
-          <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="button_text" value="${escapeHtml(content.button_text || "")}" />
-
-          <label>Button Link</label>
-          <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="button_link" value="${escapeHtml(content.button_link || "")}" />
-
-          <label>Image URL</label>
-          <input
-            type="text"
-            data-field-type="section-content"
-            data-section-id="${section.id}"
-            data-key="image_url"
-            value="${escapeHtml(content.image_url || "")}"
-          />
-
-          <label>Upload Image</label>
-          <input
-            type="file"
-            accept="image/*"
-            class="section-image-upload"
-            data-section-id="${section.id}"
-          />
-
-          <img
-            class="image-preview ${(content.image_url || "").trim() ? "" : "hidden"}"
-            data-image-preview="${section.id}"
-            src="${escapeHtml(content.image_url || "")}"
-            alt=""
-          />
-
-          <label>Text Align</label>
-          <select data-field-type="section-style" data-section-id="${section.id}" data-key="text_align">
-            <option value="left" ${style.text_align === "left" ? "selected" : ""}>Left</option>
-            <option value="center" ${style.text_align === "center" ? "selected" : ""}>Center</option>
-            <option value="right" ${style.text_align === "right" ? "selected" : ""}>Right</option>
-          </select>
-
-          <label>Heading Size</label>
-          <select data-field-type="section-style" data-section-id="${section.id}" data-key="heading_size">
-            <option value="sm" ${style.heading_size === "sm" ? "selected" : ""}>Small</option>
-            <option value="md" ${!style.heading_size || style.heading_size === "md" ? "selected" : ""}>Medium</option>
-            <option value="lg" ${style.heading_size === "lg" ? "selected" : ""}>Large</option>
-          </select>
-
-          <label>Color Preset</label>
-          <select data-field-type="section-style" data-section-id="${section.id}" data-key="color_preset">
-            <option value="default" ${!style.color_preset || style.color_preset === "default" ? "selected" : ""}>Default</option>
-            <option value="pink" ${style.color_preset === "pink" ? "selected" : ""}>Pink</option>
-            <option value="blue" ${style.color_preset === "blue" ? "selected" : ""}>Blue</option>
-            <option value="dark" ${style.color_preset === "dark" ? "selected" : ""}>Dark</option>
-            <option value="light" ${style.color_preset === "light" ? "selected" : ""}>Light</option>
-          </select>
+          ${
+            !homeRules || homeRules.showHeading
+              ? `
+                <label>Heading</label>
+                <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="heading" value="${escapeHtml(content.heading || "")}" />
+              `
+              : ""
+          }
+      
+          ${
+            !homeRules || homeRules.showSubheading
+              ? `
+                <label>Subheading</label>
+                <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="subheading" value="${escapeHtml(content.subheading || "")}" />
+              `
+              : ""
+          }
+      
+          ${
+            !homeRules || homeRules.showBody
+              ? `
+                <label>Body</label>
+                <div class="highlight-color-row">
+                  <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" style="background:#fff3a3;" title="Yellow"></button>
+                  <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" style="background:#ffd6e7;" title="Pink"></button>
+                  <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" style="background:#d8ecff;" title="Blue"></button>
+                  <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" style="background:#dff5df;" title="Green"></button>
+                  <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" style="background:#eadcff;" title="Purple"></button>
+                </div>
+      
+                <div class="rt-toolbar" data-toolbar-for="${section.id}">
+                  <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}" title="Bold"><i class="fa-solid fa-bold"></i></button>
+                  <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}" title="Italic"><i class="fa-solid fa-italic"></i></button>
+                  <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                  <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+                  <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}" title="Heading 2">H2</button>
+                  <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}" title="Heading 3">H3</button>
+                  <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
+                  <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
+                  <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
+                  <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
+                </div>
+      
+                <div
+                  class="rich-editor"
+                  contenteditable="true"
+                  data-field-type="section-content-html"
+                  data-section-id="${section.id}"
+                  data-key="body"
+                >${content.body || ""}</div>
+              `
+              : ""
+          }
+      
+          ${
+            !homeRules || homeRules.showButtonText
+              ? `
+                <label>Button Text</label>
+                <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="button_text" value="${escapeHtml(content.button_text || "")}" />
+              `
+              : ""
+          }
+      
+          ${
+            !homeRules || homeRules.showButtonLink
+              ? `
+                <label>Button Link</label>
+                <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="button_link" value="${escapeHtml(content.button_link || "")}" />
+              `
+              : ""
+          }
+      
+          ${
+            !homeRules || homeRules.showImageUrl
+              ? `
+                <label>Image URL</label>
+                <input
+                  type="text"
+                  data-field-type="section-content"
+                  data-section-id="${section.id}"
+                  data-key="image_url"
+                  value="${escapeHtml(content.image_url || "")}"
+                />
+              `
+              : ""
+          }
+      
+          ${
+            !homeRules || homeRules.showImageUpload
+              ? `
+                <label>Upload Image</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  class="section-image-upload"
+                  data-section-id="${section.id}"
+                />
+      
+                <img
+                  class="image-preview ${(content.image_url || "").trim() ? "" : "hidden"}"
+                  data-image-preview="${section.id}"
+                  src="${escapeHtml(content.image_url || "")}"
+                  alt=""
+                />
+              `
+              : ""
+          }
+      
+          ${
+            !homeRules || homeRules.showTextAlign
+              ? `
+                <label>Text Align</label>
+                <select data-field-type="section-style" data-section-id="${section.id}" data-key="text_align">
+                  <option value="left" ${style.text_align === "left" ? "selected" : ""}>Left</option>
+                  <option value="center" ${style.text_align === "center" ? "selected" : ""}>Center</option>
+                  <option value="right" ${style.text_align === "right" ? "selected" : ""}>Right</option>
+                </select>
+              `
+              : ""
+          }
+      
+          ${
+            !homeRules || homeRules.showHeadingSize
+              ? `
+                <label>Heading Size</label>
+                <select data-field-type="section-style" data-section-id="${section.id}" data-key="heading_size">
+                  <option value="sm" ${style.heading_size === "sm" ? "selected" : ""}>Small</option>
+                  <option value="md" ${!style.heading_size || style.heading_size === "md" ? "selected" : ""}>Medium</option>
+                  <option value="lg" ${style.heading_size === "lg" ? "selected" : ""}>Large</option>
+                </select>
+              `
+              : ""
+          }
+      
+          ${
+            !homeRules || homeRules.showColorPreset
+              ? `
+                <label>Color Preset</label>
+                <select data-field-type="section-style" data-section-id="${section.id}" data-key="color_preset">
+                  <option value="default" ${!style.color_preset || style.color_preset === "default" ? "selected" : ""}>Default</option>
+                  <option value="pink" ${style.color_preset === "pink" ? "selected" : ""}>Pink</option>
+                  <option value="blue" ${style.color_preset === "blue" ? "selected" : ""}>Blue</option>
+                  <option value="dark" ${style.color_preset === "dark" ? "selected" : ""}>Dark</option>
+                  <option value="light" ${style.color_preset === "light" ? "selected" : ""}>Light</option>
+                </select>
+              `
+              : ""
+          }
+      
+          ${
+            pageKey === "home" && ["contact", "licenses", "quote"].includes(section.section_key)
+              ? `<p class="builder-note">This section currently uses site defaults. You can toggle it on or off, but it does not have editable content yet.</p>`
+              : ""
+          }
         </div>
       `;
 
