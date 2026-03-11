@@ -431,6 +431,39 @@ document.addEventListener("DOMContentLoaded", async () => {
     styleBuilderButtonsPreview();
   }
 
+  const setDefaultBtn = document.getElementById("set-default-btn");
+  async function setCurrentPageToDefault() {
+    const pageKey = pageSelect.value;
+  
+    const res = await fetch("/.netlify/functions/resetAgentPageDraft", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        agent_id: targetAgentId,
+        page_key: pageKey,
+        mode: "page"
+      })
+    });
+  
+    const json = await res.json();
+    if (!res.ok || !json.ok) {
+      console.error("[builder] set default failed", json);
+      alert(json.error || "Failed to reset page.");
+      return;
+    }
+  
+    await loadAll();
+    showToast("Page reset to default.", "success");
+  }
+
+  if (setDefaultBtn) {
+    setDefaultBtn.addEventListener("click", async () => {
+      await setCurrentPageToDefault();
+    });
+  }
+  
   async function uploadSectionImage(file, sectionId) {
     if (!file || !sectionId) return null;
 
