@@ -153,29 +153,105 @@ document.addEventListener("DOMContentLoaded", async () => {
   
   function applyTheme(settings) {
     const body = document.getElementById("indexbody");
+    const main = document.querySelector("main");
     const header = document.querySelector(".index-grid-header");
     const footer = document.querySelector(".index-grid-footer");
     const headerLogo = document.getElementById("headerlogo");
     const footerLogo = document.getElementById("footerlogo");
-
+  
     if (!body || !header || !footer) return;
-
+  
     const theme = settings?.theme_mode || "dark";
-
+  
+    const desktopHeaderLinks = header.querySelectorAll("a, i, span, p, h1, h2, h3, h4, h5, h6");
+    const desktopFooterLinks = footer.querySelectorAll("a, i, span, p, h1, h2, h3, h4, h5, h6");
+    const mobileMenu = document.getElementById("dropdownmenu");
+    const mobileMenuItems = mobileMenu?.querySelectorAll("a, i, span, p, h1, h2, h3, h4, h5, h6, hr");
+  
+    const setColorOnGroup = (nodes, color) => {
+      nodes?.forEach(el => {
+        el.style.color = color;
+        if (el.tagName === "HR") {
+          el.style.borderColor = color;
+          el.style.backgroundColor = color;
+        }
+      });
+    };
+  
+    header.style.backgroundImage = "";
+    footer.style.backgroundImage = "";
+    if (main) {
+      main.style.background = "";
+      main.style.backgroundColor = "";
+      main.style.color = "";
+    }
+  
     if (theme === "light") {
       body.style.background = "white";
       body.style.backgroundImage = "none";
       header.style.backgroundColor = "#ed9ea5";
       footer.style.backgroundColor = "#ed9ea5";
+  
       if (headerLogo) headerLogo.src = "/Pics/img17.png";
       if (footerLogo) footerLogo.src = "/Pics/img17.png";
-    } else {
+  
+      setColorOnGroup(desktopHeaderLinks, "#272727");
+      setColorOnGroup(desktopFooterLinks, "#272727");
+      setColorOnGroup(mobileMenuItems, "#272727");
+    }
+  
+    else if (theme === "bw") {
+      body.style.background = "#ffffff";
+      body.style.backgroundImage = "none";
+      header.style.backgroundColor = "#000000";
+      footer.style.backgroundColor = "#000000";
+  
+      if (main) {
+        main.style.background = "#ffffff";
+        main.style.backgroundColor = "#ffffff";
+        main.style.color = "#000000";
+      }
+  
+      if (headerLogo) headerLogo.src = "/Pics/whitelogo.png";
+      if (footerLogo) footerLogo.src = "/Pics/whitelogo.png";
+  
+      setColorOnGroup(desktopHeaderLinks, "#ffffff");
+      setColorOnGroup(desktopFooterLinks, "#ffffff");
+      setColorOnGroup(mobileMenuItems, "#ffffff");
+    }
+  
+    else if (theme === "bw-inverse") {
+      body.style.background = "#000000";
+      body.style.backgroundImage = "none";
+      header.style.backgroundColor = "#ffffff";
+      footer.style.backgroundColor = "#ffffff";
+  
+      if (main) {
+        main.style.background = "#000000";
+        main.style.backgroundColor = "#000000";
+        main.style.color = "#ffffff";
+      }
+  
+      if (headerLogo) headerLogo.src = "/Pics/blacklogo.png";
+      if (footerLogo) footerLogo.src = "/Pics/blacklogo.png";
+  
+      setColorOnGroup(desktopHeaderLinks, "#000000");
+      setColorOnGroup(desktopFooterLinks, "#000000");
+      setColorOnGroup(mobileMenuItems, "#000000");
+    }
+  
+    else {
       body.style.backgroundImage = "radial-gradient(#ed9ea5, #7fabbf)";
       body.style.backgroundColor = "";
       header.style.backgroundColor = "#545454";
       footer.style.backgroundColor = "#545454";
+  
       if (headerLogo) headerLogo.src = "/Pics/img6.png";
       if (footerLogo) footerLogo.src = "/Pics/img6.png";
+  
+      setColorOnGroup(desktopHeaderLinks, "#ffffff");
+      setColorOnGroup(desktopFooterLinks, "#ffffff");
+      setColorOnGroup(mobileMenuItems, "#ffffff");
     }
   }
 
