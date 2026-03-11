@@ -1032,6 +1032,7 @@ body {
   display: grid;
   grid-template-columns: 280px 420px 1fr;
   min-height: 100vh;
+  height: 100vh;
   transition: grid-template-columns 0.25s ease;
   overflow: hidden;
 }
@@ -1049,24 +1050,38 @@ body {
 }
 
 .builder-left-pane,
+.builder-center-pane,
+.builder-preview-pane {
+  min-height: 100vh;
+  height: 100vh;
+}
+
+.builder-left-pane,
 .builder-center-pane {
   position: relative;
   min-width: 0;
-  overflow: hidden;
+  overflow: visible;
 }
 
 .builder-left-pane {
-  z-index: 20;
+  z-index: 30;
 }
 
 .builder-center-pane {
-  z-index: 19;
+  z-index: 29;
+}
+
+.builder-preview-pane {
+  position: relative;
+  z-index: 1;
+  min-width: 0;
 }
 
 .builder-pane-inner {
   padding: 56px 16px 16px;
   box-sizing: border-box;
   height: 100%;
+  overflow-y: auto;
   transition: opacity 0.2s ease;
 }
 
@@ -1090,7 +1105,7 @@ body {
 .builder-pane-toggle {
   position: absolute;
   left: 100%;
-  z-index: 60;
+  z-index: 999;
   width: 42px;
   height: 44px;
   padding: 0 12px;
@@ -1104,10 +1119,7 @@ body {
   white-space: nowrap;
   overflow: hidden;
   box-shadow: 0 6px 18px rgba(0,0,0,0.18);
-  transition:
-    width 0.22s ease,
-    background 0.22s ease,
-    color 0.22s ease;
+  transition: width 0.22s ease, background 0.22s ease, color 0.22s ease;
 }
 
 .builder-pane-toggle i {
