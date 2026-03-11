@@ -1295,3 +1295,23 @@ body {
 .editor-subcard.collapsed .builder-section-caret {
   transform: rotate(-90deg);
 }
+
+.editor-subcard {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 14px;
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+
+.editor-subcard > .builder-collapsible-body,
+.editor-field-group > .builder-collapsible-body,
+.builder-section-card > .builder-section-body {
+  display: block;
+}
+
+.editor-subcard.collapsed > .builder-collapsible-body,
+.editor-field-group.collapsed > .builder-collapsible-body,
+.builder-section-card.collapsed > .builder-section-body {
+  display: none;
+}
