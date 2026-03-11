@@ -158,6 +158,26 @@ document.addEventListener("DOMContentLoaded", async () => {
     fontSelect.appendChild(opt);
   });
 
+  let savedSelection = null;
+
+  function saveEditorSelection(editor) {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0) return;
+  
+    const range = sel.getRangeAt(0);
+    if (!editor || !editor.contains(range.commonAncestorContainer)) return;
+  
+    savedSelection = range.cloneRange();
+  }
+  
+  function restoreEditorSelection(editor) {
+    if (!savedSelection || !editor) return;
+  
+    const sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(savedSelection);
+  }
+
   async function loadCurrentUserPermissions() {
     const { data: userRes, error: userErr } = await supabase.auth.getUser();
     if (userErr || !userRes?.user) {
@@ -833,45 +853,89 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function bindRichTextToolbar() {
+    const allToolbarButtons = editorFields.querySelectorAll(
+      ".rt-btn, .faq-rt-btn, .highlight-color-btn, .faq-highlight-color-btn"
+    );
+  
+    allToolbarButtons.forEach(btn => {
+      btn.addEventListener("mousedown", (e) => {
+        e.preventDefault();
+  
+        const sectionId = btn.dataset.sectionId;
+        const faqId = btn.dataset.faqId;
+  
+        const editor = sectionId
+          ? editorFields.querySelector(`.rich-editor[data-section-id="${sectionId}"]`)
+          : editorFields.querySelector(`.faq-rich-editor[data-faq-id="${faqId}"]`);
+  
+        if (editor) {
+          restoreEditorSelection(editor);
+        }
+      });
+    });
+  
     editorFields.querySelectorAll(".rt-btn[data-section-id]").forEach(btn => {
       btn.addEventListener("click", () => {
         const sectionId = btn.dataset.sectionId;
         const cmd = btn.dataset.cmd;
         const editor = editorFields.querySelector(`.rich-editor[data-section-id="${sectionId}"]`);
+  
+        restoreEditorSelection(editor);
         execRichCommand(cmd, editor);
+        saveEditorSelection(editor);
         updateToolbarStateForEditor(editor);
       });
     });
-
+  
     editorFields.querySelectorAll(".faq-rt-btn[data-faq-id]").forEach(btn => {
       btn.addEventListener("click", () => {
         const faqId = btn.dataset.faqId;
         const cmd = btn.dataset.cmd;
         const editor = editorFields.querySelector(`.faq-rich-editor[data-faq-id="${faqId}"]`);
+  
+        restoreEditorSelection(editor);
         execRichCommand(cmd, editor);
+        saveEditorSelection(editor);
         updateToolbarStateForEditor(editor);
       });
     });
-
+  
     editorFields.querySelectorAll(".highlight-color-btn[data-section-id]").forEach(btn => {
       btn.addEventListener("click", () => {
         const sectionId = btn.dataset.sectionId;
         const color = btn.dataset.color;
         const editor = editorFields.querySelector(`.rich-editor[data-section-id="${sectionId}"]`);
+  
+        restoreEditorSelection(editor);
         execRichCommand("highlightColor", editor, color);
+        saveEditorSelection(editor);
+        updateToolbarStateForEditor(editor);
       });
     });
-
+  
     editorFields.querySelectorAll(".faq-highlight-color-btn[data-faq-id]").forEach(btn => {
       btn.addEventListener("click", () => {
         const faqId = btn.dataset.faqId;
         const color = btn.dataset.color;
         const editor = editorFields.querySelector(`.faq-rich-editor[data-faq-id="${faqId}"]`);
+  
+        restoreEditorSelection(editor);
         execRichCommand("highlightColor", editor, color);
+        saveEditorSelection(editor);
+        updateToolbarStateForEditor(editor);
       });
     });
   }
 
+  function bindEditorSelectionTracking() {
+    editorFields.querySelectorAll(".rich-editor, .faq-rich-editor").forEach(editor => {
+      ["keyup", "mouseup", "focus", "input"].forEach(evt => {
+        editor.addEventListener(evt, () => {
+          saveEditorSelection(editor);
+        });
+      });
+    });
+  }
   function bindDragList(listEl, itemSelector, idAttr, onDropSave) {
     if (!listEl) return;
 
@@ -1246,6 +1310,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindRichTextToolbar();
     bindRichPasteHandling();
     bindRichEditorParagraphHandling();
+    bindEditorSelectionTracking();
     bindToolbarStateTracking();
     bindImagePreviewUpdates();
     bindSectionImageUploads();
@@ -1430,8 +1495,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     editorFields.querySelectorAll('[data-field-type="section-content-html"]').forEach(el => {
       el.addEventListener("blur", async () => {
-        const sectionId = el.dataset.sectionId;
-        await saveSectionDraft(sectionId);
+        setTimeout(async () => {
+          const active = document.activeElement;
+          if (active && (
+            active.classList.contains("rt-btn") ||
+            active.classList.contains("highlight-color-btn") ||
+            active.classList.contains("faq-rt-btn") ||
+            active.classList.contains("faq-highlight-color-btn")
+          )) {
+            return;
+          }
+    
+          const sectionId = el.dataset.sectionId;
+          await saveSectionDraft(sectionId);
+        }, 10);
       });
     });
   }
@@ -1465,8 +1542,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     editorFields.querySelectorAll('[data-faq-type="answer-html"]').forEach(el => {
       el.addEventListener("blur", async () => {
-        const faqId = el.dataset.faqId;
-        await saveFaqDraft(faqId);
+        setTimeout(async () => {
+          const active = document.activeElement;
+          if (active && (
+            active.classList.contains("rt-btn") ||
+            active.classList.contains("highlight-color-btn") ||
+            active.classList.contains("faq-rt-btn") ||
+            active.classList.contains("faq-highlight-color-btn")
+          )) {
+            return;
+          }
+    
+          const faqId = el.dataset.faqId;
+          await saveFaqDraft(faqId);
+        }, 10);
       });
     });
   }
