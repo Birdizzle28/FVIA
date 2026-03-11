@@ -255,6 +255,18 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  function applyPageBackground(settings) {
+    const main = document.querySelector("main");
+    if (!main) return;
+  
+    const mode = settings?.page_bg_mode || "default";
+  
+    if (mode === "custom" && settings?.page_bg_custom) {
+      main.style.background = settings.page_bg_custom;
+      main.style.backgroundColor = settings.page_bg_custom;
+    }
+  }
+  
   function applyPhotoShape(settings) {
     const photoEl = document.getElementById("agent-photo");
     if (!photoEl) return;
