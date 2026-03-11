@@ -570,7 +570,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   function sanitizeRichHtml(html) {
     const wrapper = document.createElement("div");
     wrapper.innerHTML = html || "";
-
+  
     const allowedTags = new Set([
       "B", "STRONG",
       "I", "EM",
@@ -581,11 +581,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       "P",
       "DIV",
       "H2",
-      "H3"
+      "H3",
+      "SPAN"
     ]);
-
+  
+    const allowedHighlightColors = [
+      "rgb(255, 243, 163)",
+      "rgb(255, 214, 231)",
+      "rgb(216, 236, 255)",
+      "rgb(223, 245, 223)",
+      "rgb(234, 220, 255)",
+      "#fff3a3",
+      "#ffd6e7",
+      "#d8ecff",
+      "#dff5df",
+      "#eadcff"
+    ];
+  
     const nodes = wrapper.querySelectorAll("*");
-
+  
     nodes.forEach(node => {
       if (!allowedTags.has(node.tagName)) {
         const parent = node.parentNode;
@@ -593,31 +607,40 @@ document.addEventListener("DOMContentLoaded", async () => {
         parent.removeChild(node);
         return;
       }
-
+  
       [...node.attributes].forEach(attr => {
         const name = attr.name.toLowerCase();
-        const value = String(attr.value || "").toLowerCase();
-
+        const value = String(attr.value || "").toLowerCase().replace(/\s+/g, "");
+  
         if (name === "style") {
           const safeStyles = [];
-
+  
+          if (value.includes("text-align:left")) safeStyles.push("text-align:left");
           if (value.includes("text-align:center")) safeStyles.push("text-align:center");
           if (value.includes("text-align:right")) safeStyles.push("text-align:right");
-          if (value.includes("text-align:left")) safeStyles.push("text-align:left");
-
+  
+          const backgroundMatch = value.match(/background(?:-color)?:([^;]+)/);
+          if (backgroundMatch) {
+            const bg = backgroundMatch[1].replace(/\s+/g, "");
+            const normalizedAllowed = allowedHighlightColors.map(x => x.toLowerCase().replace(/\s+/g, ""));
+            if (normalizedAllowed.includes(bg)) {
+              safeStyles.push(`background:${backgroundMatch[1]}`);
+            }
+          }
+  
           if (safeStyles.length) {
             node.setAttribute("style", safeStyles.join(";"));
           } else {
             node.removeAttribute("style");
           }
-
+  
           return;
         }
-
+  
         node.removeAttribute(attr.name);
       });
     });
-
+  
     return wrapper.innerHTML.trim();
   }
 
@@ -647,29 +670,30 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function execRichCommand(cmd, targetEl, value = null) {
     if (!targetEl) return;
-
+  
     targetEl.focus();
-
+  
     if (cmd === "highlightColor") {
-      document.execCommand("insertHTML", false, `<mark style="background:${value};">Highlighted text</mark>`);
+      document.execCommand("styleWithCSS", false, true);
+      document.execCommand("hiliteColor", false, value || "#fff3a3");
       return;
     }
-
+  
     if (cmd === "formatBlock-h2") {
       document.execCommand("formatBlock", false, "h2");
       return;
     }
-
+  
     if (cmd === "formatBlock-h3") {
       document.execCommand("formatBlock", false, "h3");
       return;
     }
-
+  
     if (cmd === "removeFormat") {
       document.execCommand("removeFormat", false, null);
       return;
     }
-
+  
     document.execCommand(cmd, false, null);
   }
 
@@ -897,7 +921,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const completeness = getSectionCompleteness(section);
 
       const wrap = document.createElement("div");
-      wrap.className = "builder-section-card";
+      wrap.className = "builder-section-card collapsed";
 
       wrap.innerHTML = `
         <button type="button" class="builder-section-head">
@@ -1036,7 +1060,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     pageFaqs.forEach(faq => {
       const row = document.createElement("div");
-      row.className = "editor-field-group drag-item";
+      row.className = "editor-field-group drag-item collapsed";
       row.dataset.faqId = faq.id;
       row.draggable = true;
 
