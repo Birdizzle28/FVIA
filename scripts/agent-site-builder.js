@@ -310,6 +310,20 @@ document.addEventListener("DOMContentLoaded", async () => {
     toggleCareersPage.checked = !!settings.careers_enabled;
     toggleFaqsPage.checked = !!settings.faqs_enabled;
 
+    const buttonRadiusEl = document.getElementById("builder-button-radius");
+    const buttonBgEl = document.getElementById("builder-button-bg");
+    const buttonTextEl = document.getElementById("builder-button-text");
+    const buttonBorderColorEl = document.getElementById("builder-button-border-color");
+    const buttonBorderWidthEl = document.getElementById("builder-button-border-width");
+    const buttonBorderStyleEl = document.getElementById("builder-button-border-style");
+    
+    if (buttonRadiusEl) buttonRadiusEl.value = settings.button_radius || "14px";
+    if (buttonBgEl) buttonBgEl.value = settings.button_bg_color || "#545454";
+    if (buttonTextEl) buttonTextEl.value = settings.button_text_color || "#ffffff";
+    if (buttonBorderColorEl) buttonBorderColorEl.value = settings.button_border_color || "#272727";
+    if (buttonBorderWidthEl) buttonBorderWidthEl.value = settings.button_border_width || "1px";
+    if (buttonBorderStyleEl) buttonBorderStyleEl.value = settings.button_border_style || "solid";
+
     setStatusBadge(settings.status || "draft");
     syncPageTogglePills();
   }
@@ -472,13 +486,26 @@ document.addEventListener("DOMContentLoaded", async () => {
       ["pill-careers-page", toggleCareersPage],
       ["pill-faqs-page", toggleFaqsPage]
     ];
-
+  
     pairs.forEach(([pillId, checkbox]) => {
       const pill = document.getElementById(pillId);
       if (!pill || !checkbox) return;
-
-      pill.classList.toggle("active", !!checkbox.checked);
-      pill.classList.toggle("inactive", !checkbox.checked);
+  
+      pill.classList.remove("active", "inactive");
+  
+      if (checkbox.checked) {
+        pill.classList.add("active");
+        pill.innerHTML = `
+          <span class="pill-text">${pill.textContent.trim()}</span>
+          <span class="pill-badge enabled"><i class="fa-solid fa-check"></i></span>
+        `;
+      } else {
+        pill.classList.add("inactive");
+        pill.innerHTML = `
+          <span class="pill-text">${pill.textContent.trim()}</span>
+          <span class="pill-badge disabled"><i class="fa-solid fa-xmark"></i></span>
+        `;
+      }
     });
   }
 
@@ -1203,21 +1230,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   function renderPageEditor(pageKey) {
     renderSectionToggles(pageKey);
     editorFields.innerHTML = "";
-
+  
     const pageSections = getCurrentPageSections(pageKey);
-
+  
     pageSections.forEach(section => {
       const content = section.draft_content || {};
       const style = section.draft_style || {};
       const completeness = getSectionCompleteness(section);
-
+  
       const wrap = document.createElement("div");
       wrap.className = "builder-section-card collapsed";
-
+  
       const homeRules = pageKey === "home"
         ? (HOME_SECTION_RULES[section.section_key] || null)
         : null;
-      
+  
       wrap.innerHTML = `
         <button type="button" class="builder-section-head">
           <div class="builder-section-head-left">
@@ -1229,124 +1256,161 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
           <span class="builder-section-caret">▾</span>
         </button>
-      
+  
         <div class="builder-section-body">
-        ${
-          !homeRules || homeRules.showHeading
-            ? `
-              <label>Heading</label>
-              <div class="highlight-color-row">
-                <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" data-target-key="body" style="background:#fff3a3;" title="Yellow"></button>
-                <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" data-target-key="body" style="background:#ffd6e7;" title="Pink"></button>
-                <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" data-target-key="body" style="background:#d8ecff;" title="Blue"></button>
-                <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" data-target-key="body" style="background:#dff5df;" title="Green"></button>
-                <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" data-target-key="body" style="background:#eadcff;" title="Purple"></button>
-                <input
-                  type="color"
-                  class="custom-highlight-picker"
-                  data-section-id="${section.id}"
-                  data-target-key="body"
-                  value="#fff3a3"
-                  title="Custom highlight"
-                />
-              </div>
-        
-              <div class="rt-toolbar" data-toolbar-for="${section.id}-heading">
-                <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}" data-target-key="heading" title="Bold"><i class="fa-solid fa-bold"></i></button>
-                <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}" data-target-key="heading" title="Italic"><i class="fa-solid fa-italic"></i></button>
-                <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}" data-target-key="heading" title="Underline"><i class="fa-solid fa-underline"></i></button>
-                <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}" data-target-key="heading" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
-                <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}" data-target-key="heading" title="Heading 2">H2</button>
-                <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}" data-target-key="heading" title="Heading 3">H3</button>
-                <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" data-target-key="heading" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
-                <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" data-target-key="heading" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
-                <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" data-target-key="heading" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
-                <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="heading" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
-              </div>
-        
-              <div
-                class="rich-editor"
-                contenteditable="true"
-                data-field-type="section-content-html"
-                data-section-id="${section.id}"
-                data-key="heading"
-              >${content.heading || ""}</div>
-            `
-            : ""
-        }
-        
-        ${
-          !homeRules || homeRules.showSubheading
-            ? `
-              <label>Subheading</label>
-              <div class="highlight-color-row">
-                <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" data-target-key="subheading" style="background:#fff3a3;" title="Yellow"></button>
-                <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" data-target-key="subheading" style="background:#ffd6e7;" title="Pink"></button>
-                <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" data-target-key="subheading" style="background:#d8ecff;" title="Blue"></button>
-                <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" data-target-key="subheading" style="background:#dff5df;" title="Green"></button>
-                <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" data-target-key="subheading" style="background:#eadcff;" title="Purple"></button>
-              </div>
-        
-              <div class="rt-toolbar" data-toolbar-for="${section.id}-subheading">
-                <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}" data-target-key="subheading" title="Bold"><i class="fa-solid fa-bold"></i></button>
-                <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}" data-target-key="subheading" title="Italic"><i class="fa-solid fa-italic"></i></button>
-                <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}" data-target-key="subheading" title="Underline"><i class="fa-solid fa-underline"></i></button>
-                <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}" data-target-key="subheading" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
-                <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}" data-target-key="subheading" title="Heading 2">H2</button>
-                <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}" data-target-key="subheading" title="Heading 3">H3</button>
-                <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" data-target-key="subheading" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
-                <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" data-target-key="subheading" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
-                <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" data-target-key="subheading" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
-                <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="subheading" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
-              </div>
-        
-              <div
-                class="rich-editor"
-                contenteditable="true"
-                data-field-type="section-content-html"
-                data-section-id="${section.id}"
-                data-key="subheading"
-              >${content.subheading || ""}</div>
-            `
-            : ""
-        }
-        
-        ${
-          !homeRules || homeRules.showBody
-            ? `
-              <label>Body</label>
-              <div class="highlight-color-row">
-                <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" data-target-key="body" style="background:#fff3a3;" title="Yellow"></button>
-                <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" data-target-key="body" style="background:#ffd6e7;" title="Pink"></button>
-                <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" data-target-key="body" style="background:#d8ecff;" title="Blue"></button>
-                <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" data-target-key="body" style="background:#dff5df;" title="Green"></button>
-                <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" data-target-key="body" style="background:#eadcff;" title="Purple"></button>
-              </div>
-        
-              <div class="rt-toolbar" data-toolbar-for="${section.id}-body">
-                <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}" data-target-key="body" title="Bold"><i class="fa-solid fa-bold"></i></button>
-                <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}" data-target-key="body" title="Italic"><i class="fa-solid fa-italic"></i></button>
-                <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}" data-target-key="body" title="Underline"><i class="fa-solid fa-underline"></i></button>
-                <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}" data-target-key="body" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
-                <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}" data-target-key="body" title="Heading 2">H2</button>
-                <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}" data-target-key="body" title="Heading 3">H3</button>
-                <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" data-target-key="body" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
-                <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" data-target-key="body" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
-                <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" data-target-key="body" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
-                <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="body" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
-              </div>
-        
-              <div
-                class="rich-editor"
-                contenteditable="true"
-                data-field-type="section-content-html"
-                data-section-id="${section.id}"
-                data-key="body"
-              >${content.body || ""}</div>
-            `
-            : ""
-        }
-      
+          ${
+            !homeRules || homeRules.showHeading
+              ? `
+                <div class="editor-subcard collapsed">
+                  <button type="button" class="builder-collapsible-head">
+                    <span class="builder-section-title">Heading</span>
+                    <span class="builder-section-caret">▾</span>
+                  </button>
+                  <div class="builder-collapsible-body">
+                    <div class="highlight-color-row">
+                      <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" data-target-key="heading" style="background:#fff3a3;" title="Yellow"></button>
+                      <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" data-target-key="heading" style="background:#ffd6e7;" title="Pink"></button>
+                      <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" data-target-key="heading" style="background:#d8ecff;" title="Blue"></button>
+                      <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" data-target-key="heading" style="background:#dff5df;" title="Green"></button>
+                      <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" data-target-key="heading" style="background:#eadcff;" title="Purple"></button>
+                      <input
+                        type="color"
+                        class="custom-highlight-picker"
+                        data-section-id="${section.id}"
+                        data-target-key="heading"
+                        value="#fff3a3"
+                        title="Custom highlight"
+                      />
+                    </div>
+  
+                    <div class="rt-toolbar" data-toolbar-for="${section.id}-heading">
+                      <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}" data-target-key="heading" title="Bold"><i class="fa-solid fa-bold"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}" data-target-key="heading" title="Italic"><i class="fa-solid fa-italic"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}" data-target-key="heading" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}" data-target-key="heading" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}" data-target-key="heading" title="Heading 2">H2</button>
+                      <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}" data-target-key="heading" title="Heading 3">H3</button>
+                      <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" data-target-key="heading" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" data-target-key="heading" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" data-target-key="heading" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="heading" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
+                    </div>
+  
+                    <div
+                      class="rich-editor"
+                      contenteditable="true"
+                      data-field-type="section-content-html"
+                      data-section-id="${section.id}"
+                      data-key="heading"
+                    >${content.heading || ""}</div>
+                  </div>
+                </div>
+              `
+              : ""
+          }
+  
+          ${
+            !homeRules || homeRules.showSubheading
+              ? `
+                <div class="editor-subcard collapsed">
+                  <button type="button" class="builder-collapsible-head">
+                    <span class="builder-section-title">Subheading</span>
+                    <span class="builder-section-caret">▾</span>
+                  </button>
+                  <div class="builder-collapsible-body">
+                    <div class="highlight-color-row">
+                      <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" data-target-key="subheading" style="background:#fff3a3;" title="Yellow"></button>
+                      <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" data-target-key="subheading" style="background:#ffd6e7;" title="Pink"></button>
+                      <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" data-target-key="subheading" style="background:#d8ecff;" title="Blue"></button>
+                      <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" data-target-key="subheading" style="background:#dff5df;" title="Green"></button>
+                      <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" data-target-key="subheading" style="background:#eadcff;" title="Purple"></button>
+                      <input
+                        type="color"
+                        class="custom-highlight-picker"
+                        data-section-id="${section.id}"
+                        data-target-key="subheading"
+                        value="#fff3a3"
+                        title="Custom highlight"
+                      />
+                    </div>
+  
+                    <div class="rt-toolbar" data-toolbar-for="${section.id}-subheading">
+                      <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}" data-target-key="subheading" title="Bold"><i class="fa-solid fa-bold"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}" data-target-key="subheading" title="Italic"><i class="fa-solid fa-italic"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}" data-target-key="subheading" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}" data-target-key="subheading" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}" data-target-key="subheading" title="Heading 2">H2</button>
+                      <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}" data-target-key="subheading" title="Heading 3">H3</button>
+                      <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" data-target-key="subheading" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" data-target-key="subheading" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" data-target-key="subheading" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="subheading" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
+                    </div>
+  
+                    <div
+                      class="rich-editor"
+                      contenteditable="true"
+                      data-field-type="section-content-html"
+                      data-section-id="${section.id}"
+                      data-key="subheading"
+                    >${content.subheading || ""}</div>
+                  </div>
+                </div>
+              `
+              : ""
+          }
+  
+          ${
+            !homeRules || homeRules.showBody
+              ? `
+                <div class="editor-subcard collapsed">
+                  <button type="button" class="builder-collapsible-head">
+                    <span class="builder-section-title">Body</span>
+                    <span class="builder-section-caret">▾</span>
+                  </button>
+                  <div class="builder-collapsible-body">
+                    <div class="highlight-color-row">
+                      <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" data-target-key="body" style="background:#fff3a3;" title="Yellow"></button>
+                      <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" data-target-key="body" style="background:#ffd6e7;" title="Pink"></button>
+                      <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" data-target-key="body" style="background:#d8ecff;" title="Blue"></button>
+                      <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" data-target-key="body" style="background:#dff5df;" title="Green"></button>
+                      <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" data-target-key="body" style="background:#eadcff;" title="Purple"></button>
+                      <input
+                        type="color"
+                        class="custom-highlight-picker"
+                        data-section-id="${section.id}"
+                        data-target-key="body"
+                        value="#fff3a3"
+                        title="Custom highlight"
+                      />
+                    </div>
+  
+                    <div class="rt-toolbar" data-toolbar-for="${section.id}-body">
+                      <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}" data-target-key="body" title="Bold"><i class="fa-solid fa-bold"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}" data-target-key="body" title="Italic"><i class="fa-solid fa-italic"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}" data-target-key="body" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}" data-target-key="body" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}" data-target-key="body" title="Heading 2">H2</button>
+                      <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}" data-target-key="body" title="Heading 3">H3</button>
+                      <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" data-target-key="body" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" data-target-key="body" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" data-target-key="body" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
+                      <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="body" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
+                    </div>
+  
+                    <div
+                      class="rich-editor"
+                      contenteditable="true"
+                      data-field-type="section-content-html"
+                      data-section-id="${section.id}"
+                      data-key="body"
+                    >${content.body || ""}</div>
+                  </div>
+                </div>
+              `
+              : ""
+          }
+  
           ${
             !homeRules || homeRules.showButtonText
               ? `
@@ -1355,7 +1419,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               `
               : ""
           }
-      
+  
           ${
             !homeRules || homeRules.showButtonLink
               ? `
@@ -1364,7 +1428,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               `
               : ""
           }
-      
+  
           ${
             !homeRules || homeRules.showImageUrl
               ? `
@@ -1379,7 +1443,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               `
               : ""
           }
-      
+  
           ${
             !homeRules || homeRules.showImageUpload
               ? `
@@ -1390,14 +1454,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                   class="section-image-upload"
                   data-section-id="${section.id}"
                 />
-          
+  
                 <img
                   class="image-preview ${(content.image_url || "").trim() ? "" : "hidden"}"
                   data-image-preview="${section.id}"
                   src="${escapeHtml(content.image_url || "")}"
                   alt=""
                 />
-          
+  
                 <button
                   type="button"
                   class="remove-image-btn"
@@ -1405,10 +1469,48 @@ document.addEventListener("DOMContentLoaded", async () => {
                 >
                   Remove Image
                 </button>
+  
+                <label>Image Border Color</label>
+                <input
+                  type="color"
+                  data-field-type="section-style"
+                  data-section-id="${section.id}"
+                  data-key="image_border_color"
+                  value="${escapeHtml(style.image_border_color || "#272727")}"
+                />
+  
+                <label>Image Border Style</label>
+                <select data-field-type="section-style" data-section-id="${section.id}" data-key="image_border_style">
+                  <option value="" ${!style.image_border_style ? "selected" : ""}>None</option>
+                  <option value="solid" ${style.image_border_style === "solid" ? "selected" : ""}>Solid</option>
+                  <option value="dashed" ${style.image_border_style === "dashed" ? "selected" : ""}>Dashed</option>
+                  <option value="dotted" ${style.image_border_style === "dotted" ? "selected" : ""}>Dotted</option>
+                  <option value="double" ${style.image_border_style === "double" ? "selected" : ""}>Double</option>
+                </select>
+  
+                <label>Image Border Width</label>
+                <input
+                  type="text"
+                  data-field-type="section-style"
+                  data-section-id="${section.id}"
+                  data-key="image_border_width"
+                  value="${escapeHtml(style.image_border_width || "0px")}"
+                  placeholder="Image border width"
+                />
+  
+                <label>Image Border Radius</label>
+                <input
+                  type="text"
+                  data-field-type="section-style"
+                  data-section-id="${section.id}"
+                  data-key="image_border_radius"
+                  value="${escapeHtml(style.image_border_radius || "")}"
+                  placeholder="Image border radius"
+                />
               `
               : ""
           }
-      
+  
           ${
             !homeRules || homeRules.showHeadingSize
               ? `
@@ -1421,7 +1523,7 @@ document.addEventListener("DOMContentLoaded", async () => {
               `
               : ""
           }
-          
+  
           ${
             !homeRules || homeRules.showColorPreset
               ? `
@@ -1434,7 +1536,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                   <option value="light" ${style.color_preset === "light" ? "selected" : ""}>Light</option>
                   <option value="custom" ${style.color_preset === "custom" ? "selected" : ""}>Custom</option>
                 </select>
-          
+  
                 <input
                   type="color"
                   data-field-type="section-style"
@@ -1442,14 +1544,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                   data-key="color_custom"
                   value="${escapeHtml(style.color_custom || "#ed9ea5")}"
                 />
-                
+  
                 <label>Section Background</label>
                 <select data-field-type="section-style" data-section-id="${section.id}" data-key="background_color_mode">
                   <option value="" ${!style.background_color_mode ? "selected" : ""}>None</option>
                   <option value="preset" ${style.background_color_mode === "preset" ? "selected" : ""}>Preset</option>
                   <option value="custom" ${style.background_color_mode === "custom" ? "selected" : ""}>Custom</option>
                 </select>
-                
+  
                 <select data-field-type="section-style" data-section-id="${section.id}" data-key="background_color">
                   <option value="" ${!style.background_color ? "selected" : ""}>None</option>
                   <option value="#ffffff" ${style.background_color === "#ffffff" ? "selected" : ""}>White</option>
@@ -1458,7 +1560,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                   <option value="#545454" ${style.background_color === "#545454" ? "selected" : ""}>Gray</option>
                   <option value="#272727" ${style.background_color === "#272727" ? "selected" : ""}>Dark</option>
                 </select>
-                
+  
                 <input
                   type="color"
                   data-field-type="section-style"
@@ -1469,7 +1571,45 @@ document.addEventListener("DOMContentLoaded", async () => {
               `
               : ""
           }
-      
+  
+          <label>Section Border Color</label>
+          <input
+            type="color"
+            data-field-type="section-style"
+            data-section-id="${section.id}"
+            data-key="border_color"
+            value="${escapeHtml(style.border_color || "#272727")}"
+          />
+  
+          <label>Section Border Style</label>
+          <select data-field-type="section-style" data-section-id="${section.id}" data-key="border_style">
+            <option value="" ${!style.border_style ? "selected" : ""}>None</option>
+            <option value="solid" ${style.border_style === "solid" ? "selected" : ""}>Solid</option>
+            <option value="dashed" ${style.border_style === "dashed" ? "selected" : ""}>Dashed</option>
+            <option value="dotted" ${style.border_style === "dotted" ? "selected" : ""}>Dotted</option>
+            <option value="double" ${style.border_style === "double" ? "selected" : ""}>Double</option>
+          </select>
+  
+          <label>Section Border Width</label>
+          <input
+            type="text"
+            data-field-type="section-style"
+            data-section-id="${section.id}"
+            data-key="border_width"
+            value="${escapeHtml(style.border_width || "0px")}"
+            placeholder="Section border width"
+          />
+  
+          <label>Section Border Radius</label>
+          <input
+            type="text"
+            data-field-type="section-style"
+            data-section-id="${section.id}"
+            data-key="border_radius"
+            value="${escapeHtml(style.border_radius || "")}"
+            placeholder="Section border radius"
+          />
+  
           ${
             pageKey === "home" && ["contact", "licenses", "quote"].includes(section.section_key)
               ? `<p class="builder-note">This section currently uses site defaults. You can toggle it on or off, but it does not have editable content yet.</p>`
@@ -1477,14 +1617,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           }
         </div>
       `;
-
+  
       editorFields.appendChild(wrap);
     });
-
+  
     if (pageKey === "careers" || pageKey === "faqs") {
       renderFaqEditor(pageKey);
     }
-
+  
     renderSocialEditor();
     bindSectionFieldAutosave();
     bindRichTextToolbar();
@@ -1497,6 +1637,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindSectionImageUploads();
     bindRemoveImageButtons();
     bindSectionCardCollapse();
+    bindCollapsibleCards();
   }
   
   function renderFaqEditor(pageKey) {
@@ -1771,31 +1912,38 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   async function saveSettings() {
     setSaveStatus("saving", "Saving...");
-
+  
     const payload = {
       theme_mode: themeModeEl.value,
       photo_shape: photoShapeEl.value,
       font_preset: fontSelect.value,
-      button_style_preset: buttonStyleEl.value,
+  
+      button_radius: document.getElementById("builder-button-radius")?.value || "14px",
+      button_bg_color: document.getElementById("builder-button-bg")?.value || "#545454",
+      button_text_color: document.getElementById("builder-button-text")?.value || "#ffffff",
+      button_border_color: document.getElementById("builder-button-border-color")?.value || "#272727",
+      button_border_width: document.getElementById("builder-button-border-width")?.value || "1px",
+      button_border_style: document.getElementById("builder-button-border-style")?.value || "solid",
+  
       home_enabled: !!toggleHomePage.checked,
       about_enabled: !!toggleAboutPage.checked,
       careers_enabled: !!toggleCareersPage.checked,
       faqs_enabled: !!toggleFaqsPage.checked,
       draft_updated_at: new Date().toISOString()
     };
-
+  
     const { error } = await supabase
       .from("agent_page_settings")
       .update(payload)
       .eq("agent_id", targetAgentId);
-
+  
     if (error) {
       console.error("[builder] save settings failed", error);
       setSaveStatus("error", "Save failed");
       showToast("Failed to save settings.", "error");
       return false;
     }
-
+  
     Object.assign(settings, payload);
     setSaveStatus("saved", "Saved just now");
     return true;
@@ -2255,11 +2403,17 @@ document.addEventListener("DOMContentLoaded", async () => {
     photoShapeEl,
     fontSelect,
     buttonStyleEl,
+    document.getElementById("builder-button-radius"),
+    document.getElementById("builder-button-bg"),
+    document.getElementById("builder-button-text"),
+    document.getElementById("builder-button-border-color"),
+    document.getElementById("builder-button-border-width"),
+    document.getElementById("builder-button-border-style"),
     toggleHomePage,
     toggleAboutPage,
     toggleCareersPage,
     toggleFaqsPage
-  ].forEach(el => {
+  ].filter(Boolean).forEach(el => {
     el.addEventListener("change", async () => {
       await saveSettings();
       styleBuilderButtonsPreview();
