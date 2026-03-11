@@ -200,6 +200,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   
       if (headerLogo) headerLogo.src = "/Pics/img17.png";
       if (footerLogo) footerLogo.src = "/Pics/img17.png";
+      if (mobileMenu) {
+        mobileMenu.style.backgroundColor = "#ed9ea5";
+      }
   
       setColorOnGroup(desktopHeaderLinks, "#272727");
       setColorOnGroup(desktopFooterLinks, "#272727");
@@ -220,6 +223,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   
       if (headerLogo) headerLogo.src = "/Pics/whitelogo.png";
       if (footerLogo) footerLogo.src = "/Pics/whitelogo.png";
+      if (mobileMenu) {
+        mobileMenu.style.backgroundColor = "#000000";
+      }
   
       setColorOnGroup(desktopHeaderLinks, "#ffffff");
       setColorOnGroup(desktopFooterLinks, "#ffffff");
@@ -240,6 +246,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   
       if (headerLogo) headerLogo.src = "/Pics/blacklogo.png";
       if (footerLogo) footerLogo.src = "/Pics/blacklogo.png";
+      if (mobileMenu) {
+        mobileMenu.style.backgroundColor = "#ffffff";
+      }
   
       setColorOnGroup(desktopHeaderLinks, "#000000");
       setColorOnGroup(desktopFooterLinks, "#000000");
@@ -254,6 +263,9 @@ document.addEventListener("DOMContentLoaded", async () => {
   
       if (headerLogo) headerLogo.src = "/Pics/img6.png";
       if (footerLogo) footerLogo.src = "/Pics/img6.png";
+      if (mobileMenu) {
+        mobileMenu.style.backgroundColor = "#545454";
+      }
   
       setColorOnGroup(desktopHeaderLinks, "#ffffff");
       setColorOnGroup(desktopFooterLinks, "#ffffff");
