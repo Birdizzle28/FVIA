@@ -695,7 +695,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function bindCollapsibleCards() {
-    editorFields.querySelectorAll(".editor-subcard, .editor-field-group").forEach(card => {
+    document.querySelectorAll(".editor-subcard, .editor-field-group").forEach(card => {
       const head = card.querySelector(":scope > .builder-collapsible-head");
       if (!head) return;
   
