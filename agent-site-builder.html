@@ -83,6 +83,25 @@
             <input id="builder-button-style" type="hidden" value="custom" />
           </div>
 
+          <div class="editor-subcard collapsed">
+            <button type="button" class="builder-collapsible-head">
+              <span class="builder-section-title">Page Background</span>
+              <span class="builder-section-caret">▾</span>
+            </button>
+            <div class="builder-collapsible-body">
+              <label>Mode</label>
+              <select id="builder-page-bg-mode">
+                <option value="default">Default (theme)</option>
+                <option value="custom">Custom</option>
+              </select>
+          
+              <div id="builder-page-bg-custom-wrap" style="display:none;">
+                <label>Custom Color</label>
+                <input type="color" id="builder-page-bg-custom" value="#ffffff" />
+              </div>
+            </div>
+          </div>
+
           <div class="builder-block">
             <h2>Page Toggles</h2>
             <div id="page-toggle-pills" class="builder-pill-grid">
