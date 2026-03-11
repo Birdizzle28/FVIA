@@ -938,7 +938,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function bindRichTextToolbar() {
     const allToolbarButtons = editorFields.querySelectorAll(
-      ".rt-btn, .faq-rt-btn, .highlight-color-btn, .faq-highlight-color-btn"
+      ".rt-btn, .faq-rt-btn, .faq-highlight-color-btn"
     );
   
     allToolbarButtons.forEach(btn => {
@@ -1039,6 +1039,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     });
   }
+
+  function bindBackgroundModeToggles() {
+    editorFields.querySelectorAll(".background-mode-select").forEach(select => {
+      select.addEventListener("change", () => {
+        const sectionId = select.dataset.sectionId;
+        const presetWrap = editorFields.querySelector(`.background-preset-wrap[data-section-id="${sectionId}"]`);
+        const customWrap = editorFields.querySelector(`.background-custom-wrap[data-section-id="${sectionId}"]`);
+  
+        if (presetWrap) {
+          presetWrap.style.display = select.value === "preset" ? "" : "none";
+        }
+  
+        if (customWrap) {
+          customWrap.style.display = select.value === "custom" ? "" : "none";
+        }
+      });
+    });
+  }
+  
   function bindDragList(listEl, itemSelector, idAttr, onDropSave) {
     if (!listEl) return;
 
@@ -1408,155 +1427,184 @@ document.addEventListener("DOMContentLoaded", async () => {
           }
   
           ${
-            !homeRules || homeRules.showButtonText
+            (!homeRules || homeRules.showImageUpload || homeRules.showImageUrl)
               ? `
-                <label>Button Text</label>
-                <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="button_text" value="${escapeHtml(content.button_text || "")}" />
+                <div class="editor-subcard collapsed">
+                  <button type="button" class="builder-collapsible-head">
+                    <span class="builder-section-title">Image</span>
+                    <span class="builder-section-caret">▾</span>
+                  </button>
+                  <div class="builder-collapsible-body">
+                    ${
+                      !homeRules || homeRules.showImageUrl
+                        ? `
+                          <label>Image URL</label>
+                          <input
+                            type="text"
+                            data-field-type="section-content"
+                            data-section-id="${section.id}"
+                            data-key="image_url"
+                            value="${escapeHtml(content.image_url || "")}"
+                          />
+                        `
+                        : ""
+                    }
+  
+                    ${
+                      !homeRules || homeRules.showImageUpload
+                        ? `
+                          <label>Upload Image</label>
+                          <input
+                            type="file"
+                            accept="image/*"
+                            class="section-image-upload"
+                            data-section-id="${section.id}"
+                          />
+  
+                          <img
+                            class="image-preview ${(content.image_url || "").trim() ? "" : "hidden"}"
+                            data-image-preview="${section.id}"
+                            src="${escapeHtml(content.image_url || "")}"
+                            alt=""
+                          />
+  
+                          <button
+                            type="button"
+                            class="remove-image-btn"
+                            data-section-id="${section.id}"
+                          >
+                            Remove Image
+                          </button>
+  
+                          <label>Image Border Color</label>
+                          <input
+                            type="color"
+                            data-field-type="section-style"
+                            data-section-id="${section.id}"
+                            data-key="image_border_color"
+                            value="${escapeHtml(style.image_border_color || "#272727")}"
+                          />
+  
+                          <label>Image Border Style</label>
+                          <select data-field-type="section-style" data-section-id="${section.id}" data-key="image_border_style">
+                            <option value="" ${!style.image_border_style ? "selected" : ""}>None</option>
+                            <option value="solid" ${style.image_border_style === "solid" ? "selected" : ""}>Solid</option>
+                            <option value="dashed" ${style.image_border_style === "dashed" ? "selected" : ""}>Dashed</option>
+                            <option value="dotted" ${style.image_border_style === "dotted" ? "selected" : ""}>Dotted</option>
+                            <option value="double" ${style.image_border_style === "double" ? "selected" : ""}>Double</option>
+                          </select>
+  
+                          <label>Image Border Width</label>
+                          <input
+                            type="text"
+                            data-field-type="section-style"
+                            data-section-id="${section.id}"
+                            data-key="image_border_width"
+                            value="${escapeHtml(style.image_border_width || "0px")}"
+                          />
+  
+                          <label>Image Border Radius</label>
+                          <input
+                            type="text"
+                            data-field-type="section-style"
+                            data-section-id="${section.id}"
+                            data-key="image_border_radius"
+                            value="${escapeHtml(style.image_border_radius || "")}"
+                          />
+                        `
+                        : ""
+                    }
+                  </div>
+                </div>
               `
               : ""
           }
   
-          ${
-            !homeRules || homeRules.showButtonLink
-              ? `
-                <label>Button Link</label>
-                <input type="text" data-field-type="section-content" data-section-id="${section.id}" data-key="button_link" value="${escapeHtml(content.button_link || "")}" />
-              `
-              : ""
-          }
+          <div class="editor-subcard collapsed">
+            <button type="button" class="builder-collapsible-head">
+              <span class="builder-section-title">Section Controls</span>
+              <span class="builder-section-caret">▾</span>
+            </button>
+            <div class="builder-collapsible-body">
+              ${
+                !homeRules || homeRules.showHeadingSize
+                  ? `
+                    <label>Heading Size</label>
+                    <select data-field-type="section-style" data-section-id="${section.id}" data-key="heading_size">
+                      <option value="sm" ${style.heading_size === "sm" ? "selected" : ""}>Small</option>
+                      <option value="md" ${!style.heading_size || style.heading_size === "md" ? "selected" : ""}>Medium</option>
+                      <option value="lg" ${style.heading_size === "lg" ? "selected" : ""}>Large</option>
+                    </select>
+                  `
+                  : ""
+              }
   
-          ${
-            !homeRules || homeRules.showImageUrl
-              ? `
-                <label>Image URL</label>
-                <input
-                  type="text"
-                  data-field-type="section-content"
-                  data-section-id="${section.id}"
-                  data-key="image_url"
-                  value="${escapeHtml(content.image_url || "")}"
-                />
-              `
-              : ""
-          }
+              ${
+                !homeRules || homeRules.showColorPreset
+                  ? `
+                    <label>Text Color</label>
+                    <select
+                      class="text-color-mode-select"
+                      data-section-id="${section.id}"
+                      data-field-type="section-style"
+                      data-key="color_preset"
+                    >
+                      <option value="default" ${!style.color_preset || style.color_preset === "default" ? "selected" : ""}>Default</option>
+                      <option value="pink" ${style.color_preset === "pink" ? "selected" : ""}>Pink</option>
+                      <option value="blue" ${style.color_preset === "blue" ? "selected" : ""}>Blue</option>
+                      <option value="dark" ${style.color_preset === "dark" ? "selected" : ""}>Dark</option>
+                      <option value="light" ${style.color_preset === "light" ? "selected" : ""}>Light</option>
+                      <option value="custom" ${style.color_preset === "custom" ? "selected" : ""}>Custom</option>
+                    </select>
   
-          ${
-            !homeRules || homeRules.showImageUpload
-              ? `
-                <label>Upload Image</label>
-                <input
-                  type="file"
-                  accept="image/*"
-                  class="section-image-upload"
-                  data-section-id="${section.id}"
-                />
+                    <div
+                      class="text-color-custom-wrap"
+                      data-section-id="${section.id}"
+                      style="${style.color_preset === "custom" ? "" : "display:none;"}"
+                    >
+                      <input
+                        type="color"
+                        data-field-type="section-style"
+                        data-section-id="${section.id}"
+                        data-key="color_custom"
+                        value="${escapeHtml(style.color_custom || "#ed9ea5")}"
+                      />
+                    </div>
+                  `
+                  : ""
+              }
   
-                <img
-                  class="image-preview ${(content.image_url || "").trim() ? "" : "hidden"}"
-                  data-image-preview="${section.id}"
-                  src="${escapeHtml(content.image_url || "")}"
-                  alt=""
-                />
+              <label>Section Background</label>
+              <select
+                class="background-mode-select"
+                data-section-id="${section.id}"
+                data-field-type="section-style"
+                data-key="background_color_mode"
+              >
+                <option value="" ${!style.background_color_mode ? "selected" : ""}>None</option>
+                <option value="preset" ${style.background_color_mode === "preset" ? "selected" : ""}>Preset</option>
+                <option value="custom" ${style.background_color_mode === "custom" ? "selected" : ""}>Custom</option>
+              </select>
   
-                <button
-                  type="button"
-                  class="remove-image-btn"
-                  data-section-id="${section.id}"
-                >
-                  Remove Image
-                </button>
-  
-                <label>Image Border Color</label>
-                <input
-                  type="color"
-                  data-field-type="section-style"
-                  data-section-id="${section.id}"
-                  data-key="image_border_color"
-                  value="${escapeHtml(style.image_border_color || "#272727")}"
-                />
-  
-                <label>Image Border Style</label>
-                <select data-field-type="section-style" data-section-id="${section.id}" data-key="image_border_style">
-                  <option value="" ${!style.image_border_style ? "selected" : ""}>None</option>
-                  <option value="solid" ${style.image_border_style === "solid" ? "selected" : ""}>Solid</option>
-                  <option value="dashed" ${style.image_border_style === "dashed" ? "selected" : ""}>Dashed</option>
-                  <option value="dotted" ${style.image_border_style === "dotted" ? "selected" : ""}>Dotted</option>
-                  <option value="double" ${style.image_border_style === "double" ? "selected" : ""}>Double</option>
-                </select>
-  
-                <label>Image Border Width</label>
-                <input
-                  type="text"
-                  data-field-type="section-style"
-                  data-section-id="${section.id}"
-                  data-key="image_border_width"
-                  value="${escapeHtml(style.image_border_width || "0px")}"
-                  placeholder="Image border width"
-                />
-  
-                <label>Image Border Radius</label>
-                <input
-                  type="text"
-                  data-field-type="section-style"
-                  data-section-id="${section.id}"
-                  data-key="image_border_radius"
-                  value="${escapeHtml(style.image_border_radius || "")}"
-                  placeholder="Image border radius"
-                />
-              `
-              : ""
-          }
-  
-          ${
-            !homeRules || homeRules.showHeadingSize
-              ? `
-                <label>Heading Size</label>
-                <select data-field-type="section-style" data-section-id="${section.id}" data-key="heading_size">
-                  <option value="sm" ${style.heading_size === "sm" ? "selected" : ""}>Small</option>
-                  <option value="md" ${!style.heading_size || style.heading_size === "md" ? "selected" : ""}>Medium</option>
-                  <option value="lg" ${style.heading_size === "lg" ? "selected" : ""}>Large</option>
-                </select>
-              `
-              : ""
-          }
-  
-          ${
-            !homeRules || homeRules.showColorPreset
-              ? `
-                <label>Text Color</label>
-                <select data-field-type="section-style" data-section-id="${section.id}" data-key="color_preset">
-                  <option value="default" ${!style.color_preset || style.color_preset === "default" ? "selected" : ""}>Default</option>
-                  <option value="pink" ${style.color_preset === "pink" ? "selected" : ""}>Pink</option>
-                  <option value="blue" ${style.color_preset === "blue" ? "selected" : ""}>Blue</option>
-                  <option value="dark" ${style.color_preset === "dark" ? "selected" : ""}>Dark</option>
-                  <option value="light" ${style.color_preset === "light" ? "selected" : ""}>Light</option>
-                  <option value="custom" ${style.color_preset === "custom" ? "selected" : ""}>Custom</option>
-                </select>
-  
-                <input
-                  type="color"
-                  data-field-type="section-style"
-                  data-section-id="${section.id}"
-                  data-key="color_custom"
-                  value="${escapeHtml(style.color_custom || "#ed9ea5")}"
-                />
-  
-                <label>Section Background</label>
-                <select data-field-type="section-style" data-section-id="${section.id}" data-key="background_color_mode">
-                  <option value="" ${!style.background_color_mode ? "selected" : ""}>None</option>
-                  <option value="preset" ${style.background_color_mode === "preset" ? "selected" : ""}>Preset</option>
-                  <option value="custom" ${style.background_color_mode === "custom" ? "selected" : ""}>Custom</option>
-                </select>
-  
+              <div
+                class="background-preset-wrap"
+                data-section-id="${section.id}"
+                style="${style.background_color_mode === "preset" ? "" : "display:none;"}"
+              >
                 <select data-field-type="section-style" data-section-id="${section.id}" data-key="background_color">
-                  <option value="" ${!style.background_color ? "selected" : ""}>None</option>
                   <option value="#ffffff" ${style.background_color === "#ffffff" ? "selected" : ""}>White</option>
                   <option value="#ed9ea5" ${style.background_color === "#ed9ea5" ? "selected" : ""}>Pink</option>
                   <option value="#7fabbf" ${style.background_color === "#7fabbf" ? "selected" : ""}>Blue</option>
                   <option value="#545454" ${style.background_color === "#545454" ? "selected" : ""}>Gray</option>
                   <option value="#272727" ${style.background_color === "#272727" ? "selected" : ""}>Dark</option>
                 </select>
+              </div>
   
+              <div
+                class="background-custom-wrap"
+                data-section-id="${section.id}"
+                style="${style.background_color_mode === "custom" ? "" : "display:none;"}"
+              >
                 <input
                   type="color"
                   data-field-type="section-style"
@@ -1564,47 +1612,47 @@ document.addEventListener("DOMContentLoaded", async () => {
                   data-key="background_color_custom"
                   value="${escapeHtml(style.background_color_custom || "#ffffff")}"
                 />
-              `
-              : ""
-          }
+              </div>
   
-          <label>Section Border Color</label>
-          <input
-            type="color"
-            data-field-type="section-style"
-            data-section-id="${section.id}"
-            data-key="border_color"
-            value="${escapeHtml(style.border_color || "#272727")}"
-          />
+              <label>Section Border Color</label>
+              <input
+                type="color"
+                data-field-type="section-style"
+                data-section-id="${section.id}"
+                data-key="border_color"
+                value="${escapeHtml(style.border_color || "#272727")}"
+              />
   
-          <label>Section Border Style</label>
-          <select data-field-type="section-style" data-section-id="${section.id}" data-key="border_style">
-            <option value="" ${!style.border_style ? "selected" : ""}>None</option>
-            <option value="solid" ${style.border_style === "solid" ? "selected" : ""}>Solid</option>
-            <option value="dashed" ${style.border_style === "dashed" ? "selected" : ""}>Dashed</option>
-            <option value="dotted" ${style.border_style === "dotted" ? "selected" : ""}>Dotted</option>
-            <option value="double" ${style.border_style === "double" ? "selected" : ""}>Double</option>
-          </select>
+              <label>Section Border Style</label>
+              <select data-field-type="section-style" data-section-id="${section.id}" data-key="border_style">
+                <option value="" ${!style.border_style ? "selected" : ""}>None</option>
+                <option value="solid" ${style.border_style === "solid" ? "selected" : ""}>Solid</option>
+                <option value="dashed" ${style.border_style === "dashed" ? "selected" : ""}>Dashed</option>
+                <option value="dotted" ${style.border_style === "dotted" ? "selected" : ""}>Dotted</option>
+                <option value="double" ${style.border_style === "double" ? "selected" : ""}>Double</option>
+              </select>
   
-          <label>Section Border Width</label>
-          <input
-            type="text"
-            data-field-type="section-style"
-            data-section-id="${section.id}"
-            data-key="border_width"
-            value="${escapeHtml(style.border_width || "0px")}"
-            placeholder="Section border width"
-          />
+              <label>Section Border Width</label>
+              <input
+                type="text"
+                data-field-type="section-style"
+                data-section-id="${section.id}"
+                data-key="border_width"
+                value="${escapeHtml(style.border_width || "0px")}"
+                placeholder="Section border width"
+              />
   
-          <label>Section Border Radius</label>
-          <input
-            type="text"
-            data-field-type="section-style"
-            data-section-id="${section.id}"
-            data-key="border_radius"
-            value="${escapeHtml(style.border_radius || "")}"
-            placeholder="Section border radius"
-          />
+              <label>Section Border Radius</label>
+              <input
+                type="text"
+                data-field-type="section-style"
+                data-section-id="${section.id}"
+                data-key="border_radius"
+                value="${escapeHtml(style.border_radius || "")}"
+                placeholder="Section border radius"
+              />
+            </div>
+          </div>
   
           ${
             pageKey === "home" && ["contact", "licenses", "quote"].includes(section.section_key)
@@ -1634,6 +1682,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindRemoveImageButtons();
     bindSectionCardCollapse();
     bindCollapsibleCards();
+    bindBackgroundModeToggles();
+    bindTextColorModeToggles();
   }
   
   function renderFaqEditor(pageKey) {
