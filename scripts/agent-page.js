@@ -216,10 +216,8 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   }
-
+  
   function applyButtonPreset(settings) {
-    const preset = settings?.button_style_preset || "soft-dark";
-
     const buttonIds = [
       "agent-call",
       "agent-text",
@@ -231,23 +229,26 @@ document.addEventListener("DOMContentLoaded", async () => {
       "careers-contact-email",
       "faq-contact-link"
     ];
-
-    const classMap = {
-      "soft-dark": "btn-soft-dark",
-      "soft-light": "btn-soft-light",
-      "pill-dark": "btn-pill-dark",
-      "pill-light": "btn-pill-light",
-      "outline-dark": "btn-outline-dark",
-      "outline-light": "btn-outline-light"
-    };
-
+  
+    const radius = settings?.button_radius || "14px";
+    const bg = settings?.button_bg_color || "#545454";
+    const text = settings?.button_text_color || "#ffffff";
+    const borderColor = settings?.button_border_color || "#272727";
+    const borderWidth = settings?.button_border_width || "1px";
+    const borderStyle = settings?.button_border_style || "solid";
+  
     buttonIds.forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
-
+  
       el.classList.add("fvg-btn");
-      Object.values(classMap).forEach(cls => el.classList.remove(cls));
-      el.classList.add(classMap[preset] || "btn-soft-dark");
+  
+      el.style.borderRadius = radius;
+      el.style.backgroundColor = bg;
+      el.style.color = text;
+      el.style.borderColor = borderColor;
+      el.style.borderWidth = borderWidth;
+      el.style.borderStyle = borderStyle;
     });
   }
   
