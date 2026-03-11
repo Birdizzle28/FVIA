@@ -876,6 +876,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   
     if (cmd === "removeFormat") {
       document.execCommand("removeFormat", false, null);
+      document.execCommand("unlink", false, null);
+    
+      const sel = window.getSelection();
+      if (sel && sel.rangeCount > 0) {
+        let node = sel.getRangeAt(0).commonAncestorContainer;
+        if (node.nodeType !== 1) node = node.parentElement;
+    
+        while (node && node !== targetEl) {
+          if (["H2", "H3"].includes(node.tagName)) {
+            document.execCommand("formatBlock", false, "P");
+            break;
+          }
+          node = node.parentElement;
+        }
+      }
+    
       return;
     }
   
@@ -960,6 +976,22 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  function bindCustomHighlightPickers() {
+    editorFields.querySelectorAll(".custom-highlight-picker").forEach(input => {
+      input.addEventListener("input", () => {
+        const sectionId = input.dataset.sectionId;
+        const targetKey = input.dataset.targetKey || "body";
+        const editor = editorFields.querySelector(
+          `.rich-editor[data-section-id="${sectionId}"][data-key="${targetKey}"]`
+        );
+  
+        restoreEditorSelection(editor);
+        execRichCommand("highlightColor", editor, input.value);
+        saveEditorSelection(editor);
+        updateToolbarStateForEditor(editor);
+      });
+    });
+  }
   function bindEditorSelectionTracking() {
     editorFields.querySelectorAll(".rich-editor, .faq-rich-editor").forEach(editor => {
       ["keyup", "mouseup", "focus", "input"].forEach(evt => {
@@ -1089,6 +1121,31 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderPageEditor(pageSelect.value);
     refreshPreview();
   }
+
+  function bindRemoveImageButtons() {
+    editorFields.querySelectorAll(".remove-image-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const sectionId = btn.dataset.sectionId;
+        const preview = editorFields.querySelector(`[data-image-preview="${sectionId}"]`);
+        const urlInput = editorFields.querySelector(
+          `[data-field-type="section-content"][data-section-id="${sectionId}"][data-key="image_url"]`
+        );
+  
+        if (urlInput) {
+          urlInput.value = "";
+        }
+  
+        if (preview) {
+          preview.src = "";
+          preview.classList.add("hidden");
+        }
+  
+        await saveSectionDraft(sectionId);
+        refreshPreview();
+        showToast("Image removed.", "info");
+      });
+    });
+  }
   
   function bindRichPasteHandling() {
     editorFields.querySelectorAll(".rich-editor").forEach(editor => {
@@ -1179,11 +1236,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             ? `
               <label>Heading</label>
               <div class="highlight-color-row">
-                <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" data-target-key="heading" style="background:#fff3a3;" title="Yellow"></button>
-                <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" data-target-key="heading" style="background:#ffd6e7;" title="Pink"></button>
-                <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" data-target-key="heading" style="background:#d8ecff;" title="Blue"></button>
-                <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" data-target-key="heading" style="background:#dff5df;" title="Green"></button>
-                <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" data-target-key="heading" style="background:#eadcff;" title="Purple"></button>
+                <button type="button" class="highlight-color-btn" data-color="#fff3a3" data-section-id="${section.id}" data-target-key="body" style="background:#fff3a3;" title="Yellow"></button>
+                <button type="button" class="highlight-color-btn" data-color="#ffd6e7" data-section-id="${section.id}" data-target-key="body" style="background:#ffd6e7;" title="Pink"></button>
+                <button type="button" class="highlight-color-btn" data-color="#d8ecff" data-section-id="${section.id}" data-target-key="body" style="background:#d8ecff;" title="Blue"></button>
+                <button type="button" class="highlight-color-btn" data-color="#dff5df" data-section-id="${section.id}" data-target-key="body" style="background:#dff5df;" title="Green"></button>
+                <button type="button" class="highlight-color-btn" data-color="#eadcff" data-section-id="${section.id}" data-target-key="body" style="background:#eadcff;" title="Purple"></button>
+                <input
+                  type="color"
+                  class="custom-highlight-picker"
+                  data-section-id="${section.id}"
+                  data-target-key="body"
+                  value="#fff3a3"
+                  title="Custom highlight"
+                />
               </div>
         
               <div class="rt-toolbar" data-toolbar-for="${section.id}-heading">
@@ -1325,13 +1390,21 @@ document.addEventListener("DOMContentLoaded", async () => {
                   class="section-image-upload"
                   data-section-id="${section.id}"
                 />
-      
+          
                 <img
                   class="image-preview ${(content.image_url || "").trim() ? "" : "hidden"}"
                   data-image-preview="${section.id}"
                   src="${escapeHtml(content.image_url || "")}"
                   alt=""
                 />
+          
+                <button
+                  type="button"
+                  class="remove-image-btn"
+                  data-section-id="${section.id}"
+                >
+                  Remove Image
+                </button>
               `
               : ""
           }
@@ -1348,18 +1421,51 @@ document.addEventListener("DOMContentLoaded", async () => {
               `
               : ""
           }
-      
+          
           ${
             !homeRules || homeRules.showColorPreset
               ? `
-                <label>Color Preset</label>
+                <label>Text Color</label>
                 <select data-field-type="section-style" data-section-id="${section.id}" data-key="color_preset">
                   <option value="default" ${!style.color_preset || style.color_preset === "default" ? "selected" : ""}>Default</option>
                   <option value="pink" ${style.color_preset === "pink" ? "selected" : ""}>Pink</option>
                   <option value="blue" ${style.color_preset === "blue" ? "selected" : ""}>Blue</option>
                   <option value="dark" ${style.color_preset === "dark" ? "selected" : ""}>Dark</option>
                   <option value="light" ${style.color_preset === "light" ? "selected" : ""}>Light</option>
+                  <option value="custom" ${style.color_preset === "custom" ? "selected" : ""}>Custom</option>
                 </select>
+          
+                <input
+                  type="color"
+                  data-field-type="section-style"
+                  data-section-id="${section.id}"
+                  data-key="color_custom"
+                  value="${escapeHtml(style.color_custom || "#ed9ea5")}"
+                />
+                
+                <label>Section Background</label>
+                <select data-field-type="section-style" data-section-id="${section.id}" data-key="background_color_mode">
+                  <option value="" ${!style.background_color_mode ? "selected" : ""}>None</option>
+                  <option value="preset" ${style.background_color_mode === "preset" ? "selected" : ""}>Preset</option>
+                  <option value="custom" ${style.background_color_mode === "custom" ? "selected" : ""}>Custom</option>
+                </select>
+                
+                <select data-field-type="section-style" data-section-id="${section.id}" data-key="background_color">
+                  <option value="" ${!style.background_color ? "selected" : ""}>None</option>
+                  <option value="#ffffff" ${style.background_color === "#ffffff" ? "selected" : ""}>White</option>
+                  <option value="#ed9ea5" ${style.background_color === "#ed9ea5" ? "selected" : ""}>Pink</option>
+                  <option value="#7fabbf" ${style.background_color === "#7fabbf" ? "selected" : ""}>Blue</option>
+                  <option value="#545454" ${style.background_color === "#545454" ? "selected" : ""}>Gray</option>
+                  <option value="#272727" ${style.background_color === "#272727" ? "selected" : ""}>Dark</option>
+                </select>
+                
+                <input
+                  type="color"
+                  data-field-type="section-style"
+                  data-section-id="${section.id}"
+                  data-key="background_color_custom"
+                  value="${escapeHtml(style.background_color_custom || "#ffffff")}"
+                />
               `
               : ""
           }
@@ -1382,12 +1488,14 @@ document.addEventListener("DOMContentLoaded", async () => {
     renderSocialEditor();
     bindSectionFieldAutosave();
     bindRichTextToolbar();
+    bindCustomHighlightPickers();
     bindRichPasteHandling();
     bindRichEditorParagraphHandling();
     bindEditorSelectionTracking();
     bindToolbarStateTracking();
     bindImagePreviewUpdates();
     bindSectionImageUploads();
+    bindRemoveImageButtons();
     bindSectionCardCollapse();
   }
   
