@@ -1272,3 +1272,26 @@ body {
 .editor-field-group.collapsed .builder-section-caret {
   transform: rotate(-90deg);
 }
+.editor-subcard {
+  background: #fff;
+  border: 1px solid #e5e5e5;
+  border-radius: 14px;
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+
+.editor-subcard .builder-collapsible-body {
+  display: block;
+}
+
+.editor-subcard.collapsed .builder-collapsible-body {
+  display: none;
+}
+
+.editor-subcard .builder-section-caret {
+  transition: transform 0.2s ease;
+}
+
+.editor-subcard.collapsed .builder-section-caret {
+  transform: rotate(-90deg);
+}
