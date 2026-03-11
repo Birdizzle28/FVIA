@@ -605,16 +605,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function bindCollapsibleCards() {
-    editorFields.querySelectorAll(".builder-collapsible-head").forEach(btn => {
-      btn.addEventListener("click", (e) => {
+    editorFields.querySelectorAll(".editor-subcard, .editor-field-group").forEach(card => {
+      const head = card.querySelector(":scope > .builder-collapsible-head");
+      if (!head) return;
+  
+      head.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
   
-        const card = e.currentTarget.closest(".editor-subcard, .editor-field-group");
-        if (!card) return;
-  
-        card.classList.toggle("collapsed");
-      });
+        const isCollapsed = card.classList.contains("collapsed");
+        setCollapsibleState(card, !isCollapsed);
+      };
     });
   }
   
@@ -786,19 +787,36 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function bindSectionCardCollapse() {
-    editorFields.querySelectorAll(".builder-section-head").forEach(btn => {
-      btn.addEventListener("click", (e) => {
+    editorFields.querySelectorAll(".builder-section-card").forEach(card => {
+      const head = card.querySelector(":scope > .builder-section-head");
+      if (!head) return;
+  
+      head.onclick = (e) => {
         e.preventDefault();
         e.stopPropagation();
   
-        const card = e.currentTarget.closest(".builder-section-card");
-        if (!card) return;
-  
-        card.classList.toggle("collapsed");
-      });
+        const isCollapsed = card.classList.contains("collapsed");
+        setCollapsibleState(card, !isCollapsed);
+      };
     });
   }
+
+  function setCollapsibleState(card, collapsed) {
+    if (!card) return;
   
+    const body = card.querySelector(":scope > .builder-section-body, :scope > .builder-collapsible-body");
+    const caret = card.querySelector(":scope > .builder-section-head .builder-section-caret, :scope > .builder-collapsible-head .builder-section-caret");
+  
+    card.classList.toggle("collapsed", collapsed);
+  
+    if (body) {
+      body.style.display = collapsed ? "none" : "block";
+    }
+  
+    if (caret) {
+      caret.style.transform = collapsed ? "rotate(-90deg)" : "rotate(0deg)";
+    }
+  }
   function sanitizeRichHtml(html) {
     const wrapper = document.createElement("div");
     wrapper.innerHTML = html || "";
@@ -1748,6 +1766,16 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindCollapsibleCards();
     bindBackgroundModeToggles();
     bindTextColorModeToggles();
+    
+    editorFields.querySelectorAll(".builder-section-card").forEach(card => {
+      setCollapsibleState(card, card.classList.contains("collapsed"));
+    });
+    
+    editorFields.querySelectorAll(".editor-subcard, .editor-field-group").forEach(card => {
+      if (card.querySelector(":scope > .builder-collapsible-head")) {
+        setCollapsibleState(card, card.classList.contains("collapsed"));
+      }
+    });
   }
   
   function renderFaqEditor(pageKey) {
