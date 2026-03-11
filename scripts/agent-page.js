@@ -164,56 +164,108 @@ document.addEventListener("DOMContentLoaded", async () => {
     const footer = document.querySelector(".index-grid-footer");
     const headerLogo = document.getElementById("headerlogo");
     const footerLogo = document.getElementById("footerlogo");
+    const mobileMenu = document.getElementById("dropdownmenu");
   
     if (!body || !header || !footer) return;
   
     const theme = settings?.theme_mode || "dark";
   
-    const desktopHeaderLinks = header.querySelectorAll("a, i, span, p, h1, h2, h3, h4, h5, h6");
-    const desktopFooterLinks = footer.querySelectorAll("a, i, span, p, h1, h2, h3, h4, h5, h6");
-    const mobileMenu = document.getElementById("dropdownmenu");
-    const mobileMenuItems = mobileMenu?.querySelectorAll("a, i, span, p, h1, h2, h3, h4, h5, h6, hr");
+    const headerItems = header.querySelectorAll("*");
+    const footerItems = footer.querySelectorAll("*");
+    const mobileItems = mobileMenu ? mobileMenu.querySelectorAll("*") : [];
   
-    const setColorOnGroup = (nodes, color) => {
-      nodes?.forEach(el => {
-        el.style.color = color;
+    const brandEls = document.querySelectorAll(
+      "#fvgname, .fvgname, .logo-text, .brand-text, .header-brand, .site-title"
+    );
+  
+    const clearGroupStyles = (nodes) => {
+      nodes.forEach(el => {
+        el.style.color = "";
+        el.style.backgroundColor = "";
+        el.style.borderColor = "";
+        el.style.fill = "";
+        el.style.stroke = "";
+        el.style.webkitTextFillColor = "";
+        el.style.textShadow = "";
         if (el.tagName === "HR") {
-          el.style.borderColor = color;
-          el.style.backgroundColor = color;
+          el.style.backgroundColor = "";
+          el.style.borderColor = "";
         }
       });
     };
   
-    header.style.backgroundImage = "";
-    footer.style.backgroundImage = "";
+    const setGroupColor = (nodes, color) => {
+      nodes.forEach(el => {
+        el.style.color = color;
+        el.style.fill = color;
+        el.style.stroke = color;
+        el.style.webkitTextFillColor = color;
+  
+        if (el.tagName === "HR") {
+          el.style.borderColor = color;
+          el.style.backgroundColor = color;
+        }
+  
+        if (el.tagName === "SVG") {
+          el.style.color = color;
+        }
+      });
+    };
+  
+    const forceHeaderFooterBg = (headerBg, footerBg) => {
+      header.style.background = headerBg;
+      header.style.backgroundColor = headerBg;
+      footer.style.background = footerBg;
+      footer.style.backgroundColor = footerBg;
+  
+      if (mobileMenu) {
+        mobileMenu.style.background = headerBg;
+        mobileMenu.style.backgroundColor = headerBg;
+      }
+    };
+  
+    body.style.background = "";
+    body.style.backgroundImage = "";
+    body.style.backgroundColor = "";
+  
     if (main) {
       main.style.background = "";
       main.style.backgroundColor = "";
       main.style.color = "";
     }
   
+    header.style.backgroundImage = "";
+    footer.style.backgroundImage = "";
+  
+    clearGroupStyles(headerItems);
+    clearGroupStyles(footerItems);
+    clearGroupStyles(mobileItems);
+    clearGroupStyles(brandEls);
+  
     if (theme === "light") {
       body.style.background = "white";
       body.style.backgroundImage = "none";
-      header.style.backgroundColor = "#ed9ea5";
-      footer.style.backgroundColor = "#ed9ea5";
+      forceHeaderFooterBg("#ed9ea5", "#ed9ea5");
+  
+      if (main) {
+        main.style.background = "#ffffff";
+        main.style.backgroundColor = "#ffffff";
+        main.style.color = "#272727";
+      }
   
       if (headerLogo) headerLogo.src = "/Pics/img17.png";
       if (footerLogo) footerLogo.src = "/Pics/img17.png";
-      if (mobileMenu) {
-        mobileMenu.style.backgroundColor = "#ed9ea5";
-      }
   
-      setColorOnGroup(desktopHeaderLinks, "#272727");
-      setColorOnGroup(desktopFooterLinks, "#272727");
-      setColorOnGroup(mobileMenuItems, "#272727");
+      setGroupColor(headerItems, "#272727");
+      setGroupColor(footerItems, "#272727");
+      setGroupColor(mobileItems, "#272727");
+      setGroupColor(brandEls, "#272727");
     }
   
     else if (theme === "bw") {
       body.style.background = "#ffffff";
       body.style.backgroundImage = "none";
-      header.style.backgroundColor = "#000000";
-      footer.style.backgroundColor = "#000000";
+      forceHeaderFooterBg("#000000", "#000000");
   
       if (main) {
         main.style.background = "#ffffff";
@@ -223,20 +275,17 @@ document.addEventListener("DOMContentLoaded", async () => {
   
       if (headerLogo) headerLogo.src = "/Pics/whitelogo.png";
       if (footerLogo) footerLogo.src = "/Pics/whitelogo.png";
-      if (mobileMenu) {
-        mobileMenu.style.backgroundColor = "#000000";
-      }
   
-      setColorOnGroup(desktopHeaderLinks, "#ffffff");
-      setColorOnGroup(desktopFooterLinks, "#ffffff");
-      setColorOnGroup(mobileMenuItems, "#ffffff");
+      setGroupColor(headerItems, "#ffffff");
+      setGroupColor(footerItems, "#ffffff");
+      setGroupColor(mobileItems, "#ffffff");
+      setGroupColor(brandEls, "#ffffff");
     }
   
     else if (theme === "bw-inverse") {
       body.style.background = "#000000";
       body.style.backgroundImage = "none";
-      header.style.backgroundColor = "#ffffff";
-      footer.style.backgroundColor = "#ffffff";
+      forceHeaderFooterBg("#ffffff", "#ffffff");
   
       if (main) {
         main.style.background = "#000000";
@@ -246,31 +295,35 @@ document.addEventListener("DOMContentLoaded", async () => {
   
       if (headerLogo) headerLogo.src = "/Pics/blacklogo.png";
       if (footerLogo) footerLogo.src = "/Pics/blacklogo.png";
-      if (mobileMenu) {
-        mobileMenu.style.backgroundColor = "#ffffff";
-      }
   
-      setColorOnGroup(desktopHeaderLinks, "#000000");
-      setColorOnGroup(desktopFooterLinks, "#000000");
-      setColorOnGroup(mobileMenuItems, "#000000");
+      setGroupColor(headerItems, "#000000");
+      setGroupColor(footerItems, "#000000");
+      setGroupColor(mobileItems, "#000000");
+      setGroupColor(brandEls, "#000000");
     }
   
     else {
       body.style.backgroundImage = "radial-gradient(#ed9ea5, #7fabbf)";
       body.style.backgroundColor = "";
-      header.style.backgroundColor = "#545454";
-      footer.style.backgroundColor = "#545454";
+      forceHeaderFooterBg("#545454", "#545454");
+  
+      if (main) {
+        main.style.background = "";
+        main.style.backgroundColor = "";
+        main.style.color = "";
+      }
   
       if (headerLogo) headerLogo.src = "/Pics/img6.png";
       if (footerLogo) footerLogo.src = "/Pics/img6.png";
-      if (mobileMenu) {
-        mobileMenu.style.backgroundColor = "#545454";
-      }
   
-      setColorOnGroup(desktopHeaderLinks, "#ffffff");
-      setColorOnGroup(desktopFooterLinks, "#ffffff");
-      setColorOnGroup(mobileMenuItems, "#ffffff");
+      setGroupColor(headerItems, "#ffffff");
+      setGroupColor(footerItems, "#ffffff");
+      setGroupColor(mobileItems, "#ffffff");
+      setGroupColor(brandEls, "#ffffff");
     }
+  
+    header.classList.remove("scrolled-theme-light", "scrolled-theme-bw", "scrolled-theme-bw-inverse", "scrolled-theme-dark");
+    header.classList.add(`scrolled-theme-${theme}`);
   }
 
   function applyPageBackground(settings) {
