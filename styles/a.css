@@ -191,9 +191,40 @@ main{
 }
 
 /* Keep your scrolled effect compatible */
-.index-grid-header.scrolled{
-  background-color: rgba(0, 0, 0, 0.7) !important;
-  transition: background-color 0.3s ease;
+.index-grid-header.scrolled-theme-bw,
+.index-grid-header.scrolled-theme-bw.scrolled {
+  background: #000 !important;
+  background-color: #000 !important;
+}
+
+.index-grid-header.scrolled-theme-bw-inverse,
+.index-grid-header.scrolled-theme-bw-inverse.scrolled {
+  background: #fff !important;
+  background-color: #fff !important;
+}
+
+.index-grid-header.scrolled-theme-light,
+.index-grid-header.scrolled-theme-light.scrolled {
+  background: #ed9ea5 !important;
+  background-color: #ed9ea5 !important;
+}
+
+.index-grid-header.scrolled-theme-dark,
+.index-grid-header.scrolled-theme-dark.scrolled {
+  background: #545454 !important;
+  background-color: #545454 !important;
+}
+
+.index-grid-header.scrolled-theme-bw #dropdownmenu,
+.index-grid-header.scrolled-theme-bw.scrolled #dropdownmenu {
+  background: #000 !important;
+  color: #fff !important;
+}
+
+.index-grid-header.scrolled-theme-bw-inverse #dropdownmenu,
+.index-grid-header.scrolled-theme-bw-inverse.scrolled #dropdownmenu {
+  background: #fff !important;
+  color: #000 !important;
 }
 
 /* Hide desktop nav + hr always */
