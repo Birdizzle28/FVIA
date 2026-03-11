@@ -395,10 +395,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       const el = document.getElementById(id);
       if (!el) return;
   
-      if (style.text_align) {
-        el.style.textAlign = style.text_align;
-      }
-  
       if (style.color_preset === "pink") {
         el.style.color = "#ed9ea5";
       } else if (style.color_preset === "blue") {
