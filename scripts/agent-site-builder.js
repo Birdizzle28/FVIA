@@ -532,22 +532,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
   
-  function bindTextColorModeToggles() {
-    editorFields.querySelectorAll(".text-color-mode-select").forEach(select => {
-      select.addEventListener("change", async () => {
-        const sectionId = select.dataset.sectionId;
-        const wrap = editorFields.querySelector(`.text-color-custom-wrap[data-section-id="${sectionId}"]`);
-  
-        if (wrap) {
-          wrap.style.display = select.value === "custom" ? "" : "none";
-        }
-  
-        await saveSectionDraft(sectionId);
-        refreshPreview();
-      });
-    });
-  }
-  
   function bindSectionImageUploads() {
     editorFields.querySelectorAll(".section-image-upload").forEach(input => {
       input.addEventListener("change", async () => {
@@ -1267,6 +1251,89 @@ document.addEventListener("DOMContentLoaded", async () => {
       });
     });
   }
+
+  function bindTextColorPickers() {
+    editorFields.querySelectorAll(".text-color-picker").forEach(input => {
+      input.addEventListener("mousedown", () => {
+        const sectionId = input.dataset.sectionId;
+        const targetKey = input.dataset.targetKey || "body";
+        const editor = editorFields.querySelector(
+          `.rich-editor[data-section-id="${sectionId}"][data-key="${targetKey}"]`
+        );
+  
+        if (editor) {
+          saveEditorSelection(editor);
+        }
+      });
+  
+      input.addEventListener("input", async () => {
+        const sectionId = input.dataset.sectionId;
+        const targetKey = input.dataset.targetKey || "body";
+        const editor = editorFields.querySelector(
+          `.rich-editor[data-section-id="${sectionId}"][data-key="${targetKey}"]`
+        );
+  
+        if (!editor) return;
+  
+        restoreEditorSelection(editor);
+        execRichCommand("foreColor", editor, input.value);
+        saveEditorSelection(editor);
+        updateToolbarStateForEditor(editor);
+  
+        const icon = input.parentElement?.querySelector(".toolbar-a-icon");
+        if (icon) {
+          icon.style.setProperty("--toolbar-color", input.value);
+        }
+  
+        const row = sections.find(s => s.id === sectionId);
+        if (row) {
+          row.draft_style = {
+            ...(row.draft_style || {}),
+            color_custom: input.value
+          };
+  
+          await supabase
+            .from("agent_page_sections")
+            .update({
+              draft_style: row.draft_style,
+              updated_at: new Date().toISOString()
+            })
+            .eq("id", sectionId);
+        }
+      });
+    });
+  }
+
+  function bindToolbarFontSizes() {
+    editorFields.querySelectorAll(".toolbar-font-size").forEach(select => {
+      select.addEventListener("mousedown", () => {
+        const sectionId = select.dataset.sectionId;
+        const targetKey = select.dataset.targetKey || "body";
+        const editor = editorFields.querySelector(
+          `.rich-editor[data-section-id="${sectionId}"][data-key="${targetKey}"]`
+        );
+  
+        if (editor) {
+          saveEditorSelection(editor);
+        }
+      });
+  
+      select.addEventListener("change", () => {
+        const sectionId = select.dataset.sectionId;
+        const targetKey = select.dataset.targetKey || "body";
+        const editor = editorFields.querySelector(
+          `.rich-editor[data-section-id="${sectionId}"][data-key="${targetKey}"]`
+        );
+  
+        if (!editor) return;
+  
+        restoreEditorSelection(editor);
+        execRichCommand("fontSizeCustom", editor, select.value);
+        saveEditorSelection(editor);
+        updateToolbarStateForEditor(editor);
+      });
+    });
+  }
   
   function bindDragList(listEl, itemSelector, idAttr, onDropSave) {
     if (!listEl) return;
@@ -1549,6 +1616,30 @@ document.addEventListener("DOMContentLoaded", async () => {
                       <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" data-target-key="heading" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
                       <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" data-target-key="heading" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
                       <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" data-target-key="heading" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
+                      <div class="toolbar-color-wrap">
+                        <button type="button" class="rt-color-btn" title="Text Color">
+                          <span class="toolbar-a-icon" style="--toolbar-color:${escapeHtml(style.color_custom || "#000000")}">A</span>
+                        </button>
+                        <input
+                          type="color"
+                          class="text-color-picker"
+                          data-section-id="${section.id}"
+                          data-target-key="heading"
+                          value="${escapeHtml(style.color_custom || "#000000")}"
+                          title="Text Color"
+                        />
+                      </div>
+
+                      <select class="toolbar-font-size" data-section-id="${section.id}" data-target-key="heading" title="Text Size">
+                        <option value="12px">Aᵃ</option>
+                        <option value="14px">14</option>
+                        <option value="16px" selected>16</option>
+                        <option value="18px">18</option>
+                        <option value="20px">20</option>
+                        <option value="24px">24</option>
+                        <option value="28px">28</option>
+                        <option value="32px">32</option>
+                      </select>
                       <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="heading" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
                     </div>
   
@@ -1595,6 +1686,30 @@ document.addEventListener("DOMContentLoaded", async () => {
                       <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" data-target-key="subheading" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
                       <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" data-target-key="subheading" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
                       <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" data-target-key="subheading" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
+                      <div class="toolbar-color-wrap">
+                        <button type="button" class="rt-color-btn" title="Text Color">
+                          <span class="toolbar-a-icon" style="--toolbar-color:${escapeHtml(style.color_custom || "#000000")}">A</span>
+                        </button>
+                        <input
+                          type="color"
+                          class="text-color-picker"
+                          data-section-id="${section.id}"
+                          data-target-key="heading"
+                          value="${escapeHtml(style.color_custom || "#000000")}"
+                          title="Text Color"
+                        />
+                      </div>
+                      
+                      <select class="toolbar-font-size" data-section-id="${section.id}" data-target-key="heading" title="Text Size">
+                        <option value="12px">Aᵃ</option>
+                        <option value="14px">14</option>
+                        <option value="16px" selected>16</option>
+                        <option value="18px">18</option>
+                        <option value="20px">20</option>
+                        <option value="24px">24</option>
+                        <option value="28px">28</option>
+                        <option value="32px">32</option>
+                      </select>
                       <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="subheading" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
                     </div>
   
@@ -1641,6 +1756,30 @@ document.addEventListener("DOMContentLoaded", async () => {
                       <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" data-target-key="body" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
                       <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" data-target-key="body" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
                       <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" data-target-key="body" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
+                      <div class="toolbar-color-wrap">
+                        <button type="button" class="rt-color-btn" title="Text Color">
+                          <span class="toolbar-a-icon" style="--toolbar-color:${escapeHtml(style.color_custom || "#000000")}">A</span>
+                        </button>
+                        <input
+                          type="color"
+                          class="text-color-picker"
+                          data-section-id="${section.id}"
+                          data-target-key="heading"
+                          value="${escapeHtml(style.color_custom || "#000000")}"
+                          title="Text Color"
+                        />
+                      </div>
+                      
+                      <select class="toolbar-font-size" data-section-id="${section.id}" data-target-key="heading" title="Text Size">
+                        <option value="12px">Aᵃ</option>
+                        <option value="14px">14</option>
+                        <option value="16px" selected>16</option>
+                        <option value="18px">18</option>
+                        <option value="20px">20</option>
+                        <option value="24px">24</option>
+                        <option value="28px">28</option>
+                        <option value="32px">32</option>
+                      </select>
                       <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="body" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
                     </div>
   
@@ -1894,8 +2033,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindSectionCardCollapse();
     bindCollapsibleCards();
     bindBackgroundModeToggles();
-    bindTextColorModeToggles();
     bindSectionRangeOutputs();
+    bindTextColorPickers();
+    bindToolbarFontSizes();
     
     editorFields.querySelectorAll(".builder-section-card").forEach(card => {
       setCollapsibleState(card, card.classList.contains("collapsed"));
