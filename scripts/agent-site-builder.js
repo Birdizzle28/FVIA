@@ -967,11 +967,28 @@ document.addEventListener("DOMContentLoaded", async () => {
             safeStyles.push(`background:${bgMatch[1].trim()}`);
           }
   
-          const colorMatch = rawValue.match(/color\s*:\s*([^;]+)/i);
-          if (colorMatch) {
-            safeStyles.push(`color:${colorMatch[1].trim()}`);
+          const bgMatch = rawValue.match(/background(?:-color)?\s*:\s*([^;]+)/i);
+          if (bgMatch) {
+            safeStyles.push(`background:${bgMatch[1].trim()}`);
           }
-  
+          
+          const colorMatch = rawValue.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
+          if (colorMatch) {
+            const colorValue = colorMatch[1].trim().toLowerCase();
+            const bgValue = bgMatch ? bgMatch[1].trim().toLowerCase() : "";
+          
+            const looksWhite =
+              colorValue === "#fff" ||
+              colorValue === "#ffffff" ||
+              colorValue === "white" ||
+              colorValue === "rgb(255, 255, 255)" ||
+              colorValue === "rgb(255,255,255)";
+          
+            if (!(bgValue && looksWhite)) {
+              safeStyles.push(`color:${colorMatch[1].trim()}`);
+            }
+          }
+            
           const fontSizeMatch = rawValue.match(/font-size\s*:\s*([0-9.]+px)/i);
           if (fontSizeMatch) {
             safeStyles.push(`font-size:${fontSizeMatch[1].trim()}`);
@@ -1296,10 +1313,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function bindToolbarFontSizes() {
-    editorFields.querySelectorAll(".toolbar-font-size").forEach(select => {
-      select.addEventListener("mousedown", () => {
-        const sectionId = select.dataset.sectionId;
-        const targetKey = select.dataset.targetKey || "body";
+    editorFields.querySelectorAll(".toolbar-font-size").forEach(input => {
+      input.addEventListener("mousedown", () => {
+        const sectionId = input.dataset.sectionId;
+        const targetKey = input.dataset.targetKey || "body";
         const editor = editorFields.querySelector(
           `.rich-editor[data-section-id="${sectionId}"][data-key="${targetKey}"]`
         );
@@ -1307,9 +1324,12 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (editor) saveEditorSelection(editor);
       });
   
-      select.addEventListener("change", async () => {
-        const sectionId = select.dataset.sectionId;
-        const targetKey = select.dataset.targetKey || "body";
+      input.addEventListener("input", async () => {
+        const pxValue = parseInt(input.value, 10);
+        if (!Number.isFinite(pxValue) || pxValue < 1) return;
+  
+        const sectionId = input.dataset.sectionId;
+        const targetKey = input.dataset.targetKey || "body";
         const editor = editorFields.querySelector(
           `.rich-editor[data-section-id="${sectionId}"][data-key="${targetKey}"]`
         );
@@ -1317,7 +1337,30 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (!editor) return;
   
         restoreEditorSelection(editor);
-        execRichCommand("fontSizeCustom", editor, select.value);
+        execRichCommand("fontSizeCustom", editor, `${pxValue}px`);
+        saveEditorSelection(editor);
+        updateToolbarStateForEditor(editor);
+  
+        await saveSectionDraft(sectionId);
+      });
+  
+      input.addEventListener("change", async () => {
+        const pxValue = parseInt(input.value, 10);
+        if (!Number.isFinite(pxValue) || pxValue < 1) {
+          input.value = 16;
+          return;
+        }
+  
+        const sectionId = input.dataset.sectionId;
+        const targetKey = input.dataset.targetKey || "body";
+        const editor = editorFields.querySelector(
+          `.rich-editor[data-section-id="${sectionId}"][data-key="${targetKey}"]`
+        );
+  
+        if (!editor) return;
+  
+        restoreEditorSelection(editor);
+        execRichCommand("fontSizeCustom", editor, `${pxValue}px`);
         saveEditorSelection(editor);
         updateToolbarStateForEditor(editor);
   
@@ -1621,16 +1664,17 @@ document.addEventListener("DOMContentLoaded", async () => {
                         />
                       </div>
 
-                      <select class="toolbar-font-size" data-section-id="${section.id}" data-target-key="heading" title="Text Size">
-                        <option value="12px">12</option>
-                        <option value="14px">14</option>
-                        <option value="16px" selected>16</option>
-                        <option value="18px">18</option>
-                        <option value="20px">20</option>
-                        <option value="24px">24</option>
-                        <option value="28px">28</option>
-                        <option value="32px">32</option>
-                      </select>
+                      <input
+                        type="number"
+                        class="toolbar-font-size"
+                        data-section-id="${section.id}"
+                        data-target-key="heading"
+                        min="8"
+                        max="300"
+                        step="1"
+                        value="16"
+                        title="Text Size"
+                      />
                       <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="heading" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
                     </div>
   
@@ -1691,16 +1735,17 @@ document.addEventListener("DOMContentLoaded", async () => {
                         />
                       </div>
                       
-                      <select class="toolbar-font-size" data-section-id="${section.id}" data-target-key="subheading" title="Text Size">
-                        <option value="12px">12</option>
-                        <option value="14px">14</option>
-                        <option value="16px" selected>16</option>
-                        <option value="18px">18</option>
-                        <option value="20px">20</option>
-                        <option value="24px">24</option>
-                        <option value="28px">28</option>
-                        <option value="32px">32</option>
-                      </select>
+                      <input
+                        type="number"
+                        class="toolbar-font-size"
+                        data-section-id="${section.id}"
+                        data-target-key="subheading"
+                        min="8"
+                        max="300"
+                        step="1"
+                        value="16"
+                        title="Text Size"
+                      />
                       <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="subheading" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
                     </div>
   
@@ -1761,16 +1806,17 @@ document.addEventListener("DOMContentLoaded", async () => {
                         />
                       </div>
                       
-                      <select class="toolbar-font-size" data-section-id="${section.id}" data-target-key="body" title="Text Size">
-                        <option value="12px">12</option>
-                        <option value="14px">14</option>
-                        <option value="16px" selected>16</option>
-                        <option value="18px">18</option>
-                        <option value="20px">20</option>
-                        <option value="24px">24</option>
-                        <option value="28px">28</option>
-                        <option value="32px">32</option>
-                      </select>
+                      <input
+                        type="number"
+                        class="toolbar-font-size"
+                        data-section-id="${section.id}"
+                        data-target-key="body"
+                        min="8"
+                        max="300"
+                        step="1"
+                        value="16"
+                        title="Text Size"
+                      />
                       <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="body" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
                     </div>
   
