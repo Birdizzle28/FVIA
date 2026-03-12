@@ -2267,7 +2267,11 @@ document.addEventListener("DOMContentLoaded", async () => {
             active.classList.contains("rt-btn") ||
             active.classList.contains("highlight-color-btn") ||
             active.classList.contains("faq-rt-btn") ||
-            active.classList.contains("faq-highlight-color-btn")
+            active.classList.contains("faq-highlight-color-btn") ||
+            active.classList.contains("custom-highlight-picker") ||
+            active.classList.contains("text-color-picker") ||
+            active.classList.contains("toolbar-font-size") ||
+            active.classList.contains("rt-color-btn")
           )) {
             return;
           }
