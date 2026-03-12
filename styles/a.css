@@ -127,6 +127,59 @@ main{
     color:#444;
 }
 
+#agent-details {
+  padding: 24px 16px;
+}
+
+#agent-licenses-section {
+  max-width: 900px;
+  margin: 0 auto;
+  box-shadow: none !important;
+}
+
+#agent-licenses-heading {
+  margin: 0 0 8px;
+}
+
+#agent-licenses-subheading {
+  margin: 0 0 18px;
+}
+
+.license-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  box-shadow: none !important;
+}
+
+.license-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 12px 14px;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 12px;
+  box-shadow: none !important;
+}
+
+.license-state {
+  font-weight: 700;
+  min-width: 48px;
+}
+
+.license-divider {
+  opacity: 0.6;
+}
+
+.license-loas {
+  flex: 1;
+}
+
+.license-empty {
+  padding: 12px 0;
+  opacity: 0.8;
+}
+
 /* -------------------- */
 /* QUOTE SECTION */
 /* -------------------- */
