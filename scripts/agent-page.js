@@ -801,8 +801,6 @@ document.addEventListener("DOMContentLoaded", async () => {
     const subheadingHtml = sectionContent.subheading || "";
   
     const bodyTextStyle = [
-      "color:inherit",
-      "background:transparent",
       sectionStyle.licenses_body_highlight ? `background:${sectionStyle.licenses_body_highlight}` : "",
       sectionStyle.licenses_body_color ? `color:${sectionStyle.licenses_body_color}` : "",
       sectionStyle.licenses_body_font_size ? `font-size:${sectionStyle.licenses_body_font_size}` : "",
@@ -830,11 +828,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
   
       const json = await res.json();
+      console.log("[licenses json]", json);
+  
       const licenses = Array.isArray(json?.licenses) ? json.licenses : [];
       const listEl = document.getElementById("agent-licenses-list");
       if (!listEl) return;
   
       if (!licenses.length) {
+        listEl.classList.remove("loading");
         listEl.innerHTML = `<div class="license-empty">No active licenses found.</div>`;
         applySectionStyle(pageKey, "licenses", sectionStyle || {});
         return;
@@ -845,7 +846,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         const loas = Array.isArray(x?.loas) && x.loas.length ? x.loas.join(", ") : "—";
   
         return `
-          <div class="license-row" style="display:flex; gap:8px; align-items:flex-start;">
+          <div class="license-row">
             <span class="license-state" style="${bodyTextStyle}">${escapeHtml(state)}</span>
             <span class="license-divider" style="${bodyTextStyle}">—</span>
             <span class="license-loas" style="${bodyTextStyle}">${escapeHtml(loas)}</span>
@@ -863,10 +864,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         listEl.classList.remove("loading");
         listEl.innerHTML = `<div class="license-empty">Couldn’t load licenses.</div>`;
       }
+  
       applySectionStyle(pageKey, "licenses", sectionStyle || {});
       console.error("[agent-page] licenses load failed:", e);
     }
-    console.log("[licenses json]", json);
   }
 
   function renderFaqList(faqRows) {
@@ -1174,7 +1175,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       ? (licensesSectionRow?.draft_style || {})
       : (licensesSectionRow?.published_style || {});
   
-    loadAndRenderLicenses(agent.agent_id, licensesContent, licensesStyle, pageKey);
+    await loadAndRenderLicenses(agent.agent_id, licensesContent, licensesStyle, pageKey);
   }
 
   if (pageKey === "careers" || pageKey === "faqs") {
