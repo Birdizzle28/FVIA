@@ -740,11 +740,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
   
       detailsEl.style.border = "";
-      detailsEl.style.borderRadius = "";
+      detailsEl.style.borderRadius = "0";
   
       if (sectionEl) {
         sectionEl.style.border = "";
-        sectionEl.style.borderRadius = "";
+        sectionEl.style.borderRadius = "0";
         sectionEl.style.boxShadow = "";
       }
   
@@ -756,7 +756,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   
       if (headingWrapEl) {
         headingWrapEl.style.border = "";
-        headingWrapEl.style.borderRadius = "";
+        headingWrapEl.style.borderRadius = "0";
         headingWrapEl.style.boxShadow = "";
       }
   
@@ -1224,11 +1224,12 @@ document.addEventListener("DOMContentLoaded", async () => {
   (sectionRows || []).forEach(section => {
     const content = previewMode ? section.draft_content : section.published_content;
     const style = previewMode ? section.draft_style : section.published_style;
-
+  
     setSectionVisibility(pageKey, section.section_key, !!section.is_enabled);
     fillSectionContent(pageKey, section.section_key, content || {});
     applySectionStyle(pageKey, section.section_key, style || {});
     applySectionImage(pageKey, section.section_key, content || {}, style || {});
+    applyHeadingSize(pageKey, section.section_key, style || {});
   });
 
   if (pageKey === "home" || pageKey === "about") {
