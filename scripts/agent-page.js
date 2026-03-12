@@ -670,8 +670,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           ? (style.background_color_custom || "")
           : (style.background_color || "");
   
-      // text alignment
-      const alignTargets = [
+      const backgroundTargets = [
         detailsEl,
         sectionEl,
         shellEl,
@@ -682,25 +681,39 @@ document.addEventListener("DOMContentLoaded", async () => {
         ...rowEls
       ].filter(Boolean);
   
-      alignTargets.forEach(el => {
-        el.style.textAlign = style.text_align || "";
-      });
+      const borderTargets = [
+        ...rowEls
+      ].filter(Boolean);
   
-      // background color
-      // Apply to nested div containers / rows, but not the actual heading/subheading text nodes if you don't want odd text block fills
-      const bgTargets = [
+      const textTargets = [
+        detailsEl,
         sectionEl,
         shellEl,
         headingWrapEl,
+        headingEl,
+        subheadingEl,
         listEl,
         ...rowEls
       ].filter(Boolean);
   
-      bgTargets.forEach(el => {
+      textTargets.forEach(el => {
+        el.style.textAlign = style.text_align || "";
+      });
+  
+      backgroundTargets.forEach(el => {
         el.style.backgroundColor = bgColor || "";
       });
   
-      // shadow: ONLY #agent-details
+      borderTargets.forEach(el => {
+        if (style.border_width && style.border_style && style.border_color) {
+          el.style.border = `${style.border_width} ${style.border_style} ${style.border_color}`;
+        } else {
+          el.style.border = "";
+        }
+  
+        el.style.borderRadius = style.border_radius || "";
+      });
+  
       if (
         style.shadow_color &&
         (style.shadow_blur || style.shadow_x || style.shadow_y)
@@ -710,34 +723,14 @@ document.addEventListener("DOMContentLoaded", async () => {
         detailsEl.style.boxShadow = "";
       }
   
-      // border + radius: rows only
-      const borderTargets = rowEls;
-  
-      borderTargets.forEach(el => {
-        if (style.border_width && style.border_style && style.border_color) {
-          el.style.border = `${style.border_width} ${style.border_style} ${style.border_color}`;
-        } else {
-          el.style.border = "";
-        }
-  
-        if (style.border_radius) {
-          el.style.borderRadius = style.border_radius;
-        } else {
-          el.style.borderRadius = "";
-        }
-      });
-  
-      // explicitly clear borders/radius from stuff you said should never get them
-      [
-        sectionEl,
-        shellEl,
-        headingWrapEl,
-        headingEl,
-        subheadingEl,
-        listEl
-      ].filter(Boolean).forEach(el => {
-        el.style.border = "";
-        el.style.borderRadius = "";
+      if (sectionEl) sectionEl.style.boxShadow = "";
+      if (shellEl) shellEl.style.boxShadow = "";
+      if (headingWrapEl) headingWrapEl.style.boxShadow = "";
+      if (headingEl) headingEl.style.boxShadow = "";
+      if (subheadingEl) subheadingEl.style.boxShadow = "";
+      if (listEl) listEl.style.boxShadow = "";
+      rowEls.forEach(el => {
+        el.style.boxShadow = "";
       });
   
       return;
@@ -764,11 +757,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         el.style.border = "";
       }
   
-      if (style.border_radius) {
-        el.style.borderRadius = style.border_radius;
-      } else {
-        el.style.borderRadius = "";
-      }
+      el.style.borderRadius = style.border_radius || "";
   
       if (
         style.shadow_color &&
