@@ -2221,7 +2221,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (socialWrap) socialWrap.remove();
 
     socialWrap = document.createElement("div");
-    socialWrap.className = "editor-field-group";
+    socialWrap.className = "editor-field-group collapsed";
     socialWrap.id = "social-editor-wrap";
     socialWrap.innerHTML = `
       <div class="builder-collapsible-head">
