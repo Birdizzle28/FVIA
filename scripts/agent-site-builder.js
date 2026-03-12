@@ -703,13 +703,19 @@ document.addEventListener("DOMContentLoaded", async () => {
             row.draft_style[styleKey] === value ? "" : value;
         }
   
-        await supabase
+        const { error } = await supabase
           .from("agent_page_sections")
           .update({
             draft_style: row.draft_style,
             updated_at: new Date().toISOString()
           })
           .eq("id", sectionId);
+  
+        if (error) {
+          console.error("[builder] license body style save failed", error);
+          showToast("Failed to save license styles.", "error");
+          return;
+        }
   
         refreshPreview();
         renderPageEditor(pageSelect.value);
@@ -725,7 +731,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         row.draft_style = row.draft_style || {};
         row.draft_style.licenses_body_color = input.value;
   
-        await supabase
+        const { error } = await supabase
           .from("agent_page_sections")
           .update({
             draft_style: row.draft_style,
@@ -733,7 +739,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           })
           .eq("id", sectionId);
   
+        if (error) {
+          console.error("[builder] license color save failed", error);
+          return;
+        }
+  
         refreshPreview();
+        renderPageEditor(pageSelect.value);
       });
     });
   
@@ -746,7 +758,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         row.draft_style = row.draft_style || {};
         row.draft_style.licenses_body_highlight = input.value;
   
-        await supabase
+        const { error } = await supabase
           .from("agent_page_sections")
           .update({
             draft_style: row.draft_style,
@@ -754,12 +766,18 @@ document.addEventListener("DOMContentLoaded", async () => {
           })
           .eq("id", sectionId);
   
+        if (error) {
+          console.error("[builder] license highlight save failed", error);
+          return;
+        }
+  
         refreshPreview();
+        renderPageEditor(pageSelect.value);
       });
     });
   
     editorFields.querySelectorAll(".license-body-font-size").forEach(input => {
-      input.addEventListener("input", async () => {
+      input.addEventListener("change", async () => {
         const sectionId = input.dataset.sectionId;
         const row = sections.find(s => s.id === sectionId);
         if (!row) return;
@@ -770,7 +788,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         row.draft_style = row.draft_style || {};
         row.draft_style.licenses_body_font_size = `${pxValue}px`;
   
-        await supabase
+        const { error } = await supabase
           .from("agent_page_sections")
           .update({
             draft_style: row.draft_style,
@@ -778,7 +796,13 @@ document.addEventListener("DOMContentLoaded", async () => {
           })
           .eq("id", sectionId);
   
+        if (error) {
+          console.error("[builder] license font size save failed", error);
+          return;
+        }
+  
         refreshPreview();
+        renderPageEditor(pageSelect.value);
       });
     });
   }
@@ -1895,7 +1919,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                           <p class="builder-note">
                             These controls style the generated license rows only. They do not edit the actual license text.
                           </p>
-  
+                    
                           <div class="rt-toolbar license-style-toolbar" data-toolbar-for="${section.id}-licenses-body">
                             <input
                               type="color"
@@ -1904,10 +1928,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                               value="${escapeHtml(style.licenses_body_highlight || "#fff3a3")}"
                               title="Highlight Color"
                             />
-  
+                    
                             <button
                               type="button"
-                              class="license-style-btn"
+                              class="license-style-btn ${style.licenses_body_font_weight === "bold" ? "active" : ""}"
                               data-section-id="${section.id}"
                               data-style-key="font_weight"
                               data-style-value="bold"
@@ -1915,10 +1939,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                             >
                               <i class="fa-solid fa-bold"></i>
                             </button>
-  
+                    
                             <button
                               type="button"
-                              class="license-style-btn"
+                              class="license-style-btn ${style.licenses_body_font_style === "italic" ? "active" : ""}"
                               data-section-id="${section.id}"
                               data-style-key="font_style"
                               data-style-value="italic"
@@ -1926,10 +1950,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                             >
                               <i class="fa-solid fa-italic"></i>
                             </button>
-  
+                    
                             <button
                               type="button"
-                              class="license-style-btn"
+                              class="license-style-btn ${style.licenses_body_text_decoration === "underline" ? "active" : ""}"
                               data-section-id="${section.id}"
                               data-style-key="text_decoration"
                               data-style-value="underline"
@@ -1937,7 +1961,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                             >
                               <i class="fa-solid fa-underline"></i>
                             </button>
-  
+                    
                             <div class="toolbar-color-wrap">
                               <button type="button" class="rt-color-btn" title="Text Color">
                                 <span class="toolbar-a-icon" style="--toolbar-color:${escapeHtml(style.licenses_body_color || "#000000")}">A</span>
@@ -1950,7 +1974,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                                 title="Text Color"
                               />
                             </div>
-  
+                    
                             <input
                               type="number"
                               class="license-body-font-size"
@@ -1961,7 +1985,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                               value="${parseInt(style.licenses_body_font_size || "16px", 10) || 16}"
                               title="Text Size"
                             />
-  
+                    
                             <button
                               type="button"
                               class="license-style-btn license-style-clear-btn"
