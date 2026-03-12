@@ -1098,15 +1098,19 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     
     if (cmd === "fontSizeCustom") {
-      document.execCommand("styleWithCSS", false, true);
-      document.execCommand("fontSize", false, "7");
-  
-      targetEl.querySelectorAll('font[size="7"]').forEach(node => {
-        node.removeAttribute("size");
-        node.style.fontSize = value || "16px";
-      });
-  
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+    
       document.execCommand("styleWithCSS", false, false);
+      document.execCommand("fontSize", false, "7");
+    
+      targetEl.querySelectorAll('font[size="7"]').forEach(node => {
+        const span = document.createElement("span");
+        span.style.fontSize = value || "16px";
+        span.innerHTML = node.innerHTML;
+        node.replaceWith(span);
+      });
+    
       return;
     }
     
