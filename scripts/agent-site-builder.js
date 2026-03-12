@@ -1618,7 +1618,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                       </div>
 
                       <select class="toolbar-font-size" data-section-id="${section.id}" data-target-key="heading" title="Text Size">
-                        <option value="12px">Aᵃ</option>
+                        <option value="12px">12</option>
                         <option value="14px">14</option>
                         <option value="16px" selected>16</option>
                         <option value="18px">18</option>
@@ -1681,14 +1681,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                           type="color"
                           class="text-color-picker"
                           data-section-id="${section.id}"
-                          data-target-key="heading"
+                          data-target-key="subheading"
                           value="${escapeHtml(style.color_custom || "#000000")}"
                           title="Text Color"
                         />
                       </div>
                       
-                      <select class="toolbar-font-size" data-section-id="${section.id}" data-target-key="heading" title="Text Size">
-                        <option value="12px">Aᵃ</option>
+                      <select class="toolbar-font-size" data-section-id="${section.id}" data-target-key="subheading" title="Text Size">
+                        <option value="12px">12</option>
                         <option value="14px">14</option>
                         <option value="16px" selected>16</option>
                         <option value="18px">18</option>
@@ -1751,14 +1751,14 @@ document.addEventListener("DOMContentLoaded", async () => {
                           type="color"
                           class="text-color-picker"
                           data-section-id="${section.id}"
-                          data-target-key="heading"
+                          data-target-key="body"
                           value="${escapeHtml(style.color_custom || "#000000")}"
                           title="Text Color"
                         />
                       </div>
                       
-                      <select class="toolbar-font-size" data-section-id="${section.id}" data-target-key="heading" title="Text Size">
-                        <option value="12px">Aᵃ</option>
+                      <select class="toolbar-font-size" data-section-id="${section.id}" data-target-key="body" title="Text Size">
+                        <option value="12px">12</option>
                         <option value="14px">14</option>
                         <option value="16px" selected>16</option>
                         <option value="18px">18</option>
@@ -1989,54 +1989,54 @@ document.addEventListener("DOMContentLoaded", async () => {
               />
               <span class="range-output">${px(style.border_radius, 0)}px</span>
               
+              <label>Shadow Color</label>
+              <input
+                type="color"
+                data-field-type="section-style"
+                data-section-id="${section.id}"
+                data-key="shadow_color"
+                value="${escapeHtml(style.shadow_color || "#000000")}"
+              />
+              
+              <label>Shadow Blur</label>
+              <input
+                type="range"
+                min="0"
+                max="60"
+                step="1"
+                data-field-type="section-style"
+                data-section-id="${section.id}"
+                data-key="shadow_blur"
+                value="${px(style.shadow_blur, 0)}"
+              />
+              <span class="range-output">${px(style.shadow_blur, 0)}px</span>
+              
+              <label>Shadow X Offset</label>
+              <input
+                type="range"
+                min="-40"
+                max="40"
+                step="1"
+                data-field-type="section-style"
+                data-section-id="${section.id}"
+                data-key="shadow_x"
+                value="${px(style.shadow_x, 0)}"
+              />
+              <span class="range-output">${px(style.shadow_x, 0)}px</span>
+              
+              <label>Shadow Y Offset</label>
+              <input
+                type="range"
+                min="-40"
+                max="40"
+                step="1"
+                data-field-type="section-style"
+                data-section-id="${section.id}"
+                data-key="shadow_y"
+                value="${px(style.shadow_y, 0)}"
+              />
+              <span class="range-output">${px(style.shadow_y, 0)}px</span>
             </div>
-            <label>Shadow Color</label>
-            <input
-              type="color"
-              data-field-type="section-style"
-              data-section-id="${section.id}"
-              data-key="shadow_color"
-              value="${escapeHtml(style.shadow_color || "#000000")}"
-            />
-            
-            <label>Shadow Blur</label>
-            <input
-              type="range"
-              min="0"
-              max="60"
-              step="1"
-              data-field-type="section-style"
-              data-section-id="${section.id}"
-              data-key="shadow_blur"
-              value="${px(style.shadow_blur, 0)}"
-            />
-            <span class="range-output">${px(style.shadow_blur, 0)}px</span>
-            
-            <label>Shadow X Offset</label>
-            <input
-              type="range"
-              min="-40"
-              max="40"
-              step="1"
-              data-field-type="section-style"
-              data-section-id="${section.id}"
-              data-key="shadow_x"
-              value="${px(style.shadow_x, 0)}"
-            />
-            <span class="range-output">${px(style.shadow_x, 0)}px</span>
-            
-            <label>Shadow Y Offset</label>
-            <input
-              type="range"
-              min="-40"
-              max="40"
-              step="1"
-              data-field-type="section-style"
-              data-section-id="${section.id}"
-              data-key="shadow_y"
-              value="${px(style.shadow_y, 0)}"
-            />
-            <span class="range-output">${px(style.shadow_y, 0)}px</span>
           </div>
   
           ${
