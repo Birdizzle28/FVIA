@@ -670,9 +670,19 @@ document.addEventListener("DOMContentLoaded", async () => {
           ? (style.background_color_custom || "")
           : (style.background_color || "");
   
-      const backgroundTargets = [
+      const textTargets = [
         detailsEl,
         sectionEl,
+        shellEl,
+        headingWrapEl,
+        headingEl,
+        subheadingEl,
+        listEl,
+        ...rowEls
+      ].filter(Boolean);
+  
+      const backgroundTargets = [
+        detailsEl,
         shellEl,
         headingWrapEl,
         headingEl,
@@ -682,17 +692,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       ].filter(Boolean);
   
       const borderTargets = [
-        ...rowEls
-      ].filter(Boolean);
-  
-      const textTargets = [
-        detailsEl,
-        sectionEl,
-        shellEl,
-        headingWrapEl,
-        headingEl,
-        subheadingEl,
-        listEl,
         ...rowEls
       ].filter(Boolean);
   
@@ -723,12 +722,45 @@ document.addEventListener("DOMContentLoaded", async () => {
         detailsEl.style.boxShadow = "";
       }
   
-      if (sectionEl) sectionEl.style.boxShadow = "";
-      if (shellEl) shellEl.style.boxShadow = "";
-      if (headingWrapEl) headingWrapEl.style.boxShadow = "";
-      if (headingEl) headingEl.style.boxShadow = "";
-      if (subheadingEl) subheadingEl.style.boxShadow = "";
-      if (listEl) listEl.style.boxShadow = "";
+      detailsEl.style.border = "";
+      detailsEl.style.borderRadius = "";
+  
+      if (sectionEl) {
+        sectionEl.style.border = "";
+        sectionEl.style.borderRadius = "";
+        sectionEl.style.boxShadow = "";
+      }
+  
+      if (shellEl) {
+        shellEl.style.border = "";
+        shellEl.style.borderRadius = "";
+        shellEl.style.boxShadow = "";
+      }
+  
+      if (headingWrapEl) {
+        headingWrapEl.style.border = "";
+        headingWrapEl.style.borderRadius = "";
+        headingWrapEl.style.boxShadow = "";
+      }
+  
+      if (headingEl) {
+        headingEl.style.border = "";
+        headingEl.style.borderRadius = "";
+        headingEl.style.boxShadow = "";
+      }
+  
+      if (subheadingEl) {
+        subheadingEl.style.border = "";
+        subheadingEl.style.borderRadius = "";
+        subheadingEl.style.boxShadow = "";
+      }
+  
+      if (listEl) {
+        listEl.style.border = "";
+        listEl.style.borderRadius = "";
+        listEl.style.boxShadow = "";
+      }
+  
       rowEls.forEach(el => {
         el.style.boxShadow = "";
       });
