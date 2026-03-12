@@ -602,7 +602,26 @@ document.addEventListener("DOMContentLoaded", async () => {
           subheadingEl.style.display = isMeaningfulHtml(subheadingHtml) ? "" : "none";
         }
       }
+
+      if (sectionKey === "quote") {
+        const headingHtml = content.heading || "Let’s get you covered";
+        const subheadingHtml = content.subheading || "";
+
+        const headingEl = document.getElementById("quote-heading");
+        const subheadingEl = document.getElementById("quote-subheading");
+
+        if (headingEl) {
+          headingEl.innerHTML = headingHtml;
+          headingEl.style.display = isMeaningfulHtml(headingHtml) ? "" : "none";
+        }
+
+        if (subheadingEl) {
+          subheadingEl.innerHTML = subheadingHtml;
+          subheadingEl.style.display = isMeaningfulHtml(subheadingHtml) ? "" : "none";
+        }
+      }
     }
+    
     if (pageKey === "about") {
       if (sectionKey === "summary") {
         setHtmlIfExists("agent-about-summary", content.body || "");
@@ -783,6 +802,74 @@ document.addEventListener("DOMContentLoaded", async () => {
   
       return;
     }
+
+    if (sectionKey === "quote") {
+      const shellEl = document.getElementById("quote-shell");
+      const formEl = document.getElementById("free-quote-form");
+      const headingWrapEl = document.getElementById("quote-heading-wrap");
+      const headingEl = document.getElementById("quote-heading");
+      const subheadingEl = document.getElementById("quote-subheading");
+
+      const bgColor =
+        style.background_color_mode === "custom"
+          ? (style.background_color_custom || "")
+          : (style.background_color || "");
+
+      if (shellEl) {
+        shellEl.style.width = "100%";
+        shellEl.style.height = "100%";
+        shellEl.style.textAlign = style.text_align || "";
+        shellEl.style.backgroundColor = bgColor || "";
+
+        if (style.border_width && style.border_style && style.border_color) {
+          shellEl.style.border = `${style.border_width} ${style.border_style} ${style.border_color}`;
+        } else {
+          shellEl.style.border = "";
+        }
+
+        shellEl.style.borderRadius = style.border_radius || "";
+
+        if (
+          style.shadow_color &&
+          (style.shadow_blur || style.shadow_x || style.shadow_y)
+        ) {
+          shellEl.style.boxShadow = `${style.shadow_x || "0px"} ${style.shadow_y || "0px"} ${style.shadow_blur || "0px"} ${style.shadow_color}`;
+        } else {
+          shellEl.style.boxShadow = "";
+        }
+      }
+
+      if (formEl) {
+        formEl.style.width = "100%";
+        formEl.style.height = "100%";
+        formEl.style.maxWidth = "none";
+        formEl.style.margin = "0";
+        formEl.style.background = "transparent";
+        formEl.style.border = "0";
+        formEl.style.borderRadius = "0";
+        formEl.style.boxShadow = "none";
+      }
+
+      if (headingWrapEl) {
+        headingWrapEl.style.border = "";
+        headingWrapEl.style.borderRadius = "";
+        headingWrapEl.style.boxShadow = "";
+      }
+
+      if (headingEl) {
+        headingEl.style.border = "";
+        headingEl.style.borderRadius = "";
+        headingEl.style.boxShadow = "";
+      }
+
+      if (subheadingEl) {
+        subheadingEl.style.border = "";
+        subheadingEl.style.borderRadius = "";
+        subheadingEl.style.boxShadow = "";
+      }
+
+      return;
+    }
   
     const ids = sectionKeyToElementIds(pageKey, sectionKey);
   
@@ -932,6 +1019,33 @@ document.addEventListener("DOMContentLoaded", async () => {
       applySectionStyle(pageKey, "licenses", sectionStyle || {});
       console.error("[agent-page] licenses load failed:", e);
     }
+  }
+
+  function applyQuoteBodyStyle(style = {}) {
+    const shellEl = document.getElementById("quote-shell");
+    if (!shellEl) return;
+  
+    const bodyTargets = shellEl.querySelectorAll(`
+      h3,
+      .step-num,
+      .fl-field label,
+      .ms-option,
+      .ms-value,
+      .tcpa,
+      .tcpa strong,
+      .like-back,
+      .cta,
+      #result-title,
+      #result-body
+    `);
+  
+    bodyTargets.forEach(el => {
+      el.style.background = style.quote_body_highlight || "";
+      el.style.color = style.quote_body_color || "";
+      el.style.fontSize = style.quote_body_font_size || "";
+      el.style.fontStyle = style.quote_body_font_style || "";
+      el.style.textDecoration = style.quote_body_text_decoration || "";
+    });
   }
 
   function renderFaqList(faqRows) {
@@ -1275,6 +1389,20 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       await loadScriptOnce("/scripts/agent-quote-override.js");
       await loadScriptOnce("/scripts/freequote.js");
+
+      if (quoteSectionRow) {
+        const quoteContent = previewMode
+          ? (quoteSectionRow.draft_content || {})
+          : (quoteSectionRow.published_content || {});
+
+        const quoteStyle = previewMode
+          ? (quoteSectionRow.draft_style || {})
+          : (quoteSectionRow.published_style || {});
+
+        fillSectionContent("home", "quote", quoteContent);
+        applySectionStyle("home", "quote", quoteStyle);
+        applyQuoteBodyStyle(quoteStyle);
+      }
     }
   }
 });
