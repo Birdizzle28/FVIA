@@ -94,85 +94,91 @@ main{
 /* DETAILS SECTION */
 /* -------------------- */
 
-#agent-details{
-    display:grid;
-    grid-template-columns:repeat(3,1fr);
-    gap:20px;
-}
-
-#agent-details div{
-    background:white;
-    padding:20px;
-    border-radius:10px;
-}
-
-/* headings inside dynamic sections */
-
-#agent-details h3{
-    margin-top:0;
-    margin-bottom:12px;
-    font-size:1rem;
-    font-weight:600;
-}
-
-/* list styling */
-
-#agent-details ul{
-    padding-left:18px;
-    margin:0;
-}
-
-#agent-details li{
-    margin-bottom:6px;
-    color:#444;
-}
-
+/* LICENSES */
 #agent-details {
+  display: block;
   padding: 24px 16px;
+  background: white;
+  border-radius: 12px;
+  box-shadow: none;
 }
 
 #agent-licenses-section {
   max-width: 900px;
   margin: 0 auto;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none !important;
+}
+
+#agent-licenses-shell {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none !important;
+}
+
+#agent-licenses-heading-wrap {
+  margin: 0 0 18px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   box-shadow: none !important;
 }
 
 #agent-licenses-heading {
   margin: 0 0 8px;
+  background: transparent;
+  border: none;
+  box-shadow: none !important;
 }
 
 #agent-licenses-subheading {
-  margin: 0 0 18px;
+  margin: 0;
+  background: transparent;
+  border: none;
+  box-shadow: none !important;
 }
 
-.license-list {
+#agent-licenses-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
   box-shadow: none !important;
 }
 
 .license-row {
   display: flex;
-  gap: 10px;
   align-items: center;
+  gap: 10px;
   padding: 12px 14px;
   border: 1px solid rgba(0,0,0,0.12);
   border-radius: 12px;
   box-shadow: none !important;
+  min-width: 0;
 }
 
 .license-state {
   font-weight: 700;
-  min-width: 48px;
+  min-width: unset;
+  flex: 0 0 auto;
+  white-space: nowrap;
 }
 
 .license-divider {
   opacity: 0.6;
+  flex: 0 0 auto;
 }
 
 .license-loas {
-  flex: 1;
+  flex: 1 1 auto;
+  min-width: 0;
 }
 
 .license-empty {
