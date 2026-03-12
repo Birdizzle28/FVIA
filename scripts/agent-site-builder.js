@@ -966,11 +966,6 @@ document.addEventListener("DOMContentLoaded", async () => {
           if (bgMatch) {
             safeStyles.push(`background:${bgMatch[1].trim()}`);
           }
-  
-          const bgMatch = rawValue.match(/background(?:-color)?\s*:\s*([^;]+)/i);
-          if (bgMatch) {
-            safeStyles.push(`background:${bgMatch[1].trim()}`);
-          }
           
           const colorMatch = rawValue.match(/(?:^|;)\s*color\s*:\s*([^;]+)/i);
           if (colorMatch) {
