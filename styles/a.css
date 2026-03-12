@@ -422,6 +422,43 @@ main{
   color: #666;
 }
 
+.license-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(0,0,0,0.12);
+  border-radius: 12px;
+  box-shadow: none !important;
+  min-width: 0;
+}
+
+.license-state {
+  min-width: 0;
+  width: auto;
+  flex: 0 0 auto;
+  white-space: nowrap;
+  font-weight: inherit;
+  font-style: inherit;
+  text-decoration: inherit;
+}
+
+.license-divider {
+  flex: 0 0 auto;
+  opacity: 0.6;
+  font-weight: inherit;
+  font-style: inherit;
+  text-decoration: inherit;
+}
+
+.license-loas {
+  flex: 1 1 auto;
+  min-width: 0;
+  font-weight: inherit;
+  font-style: inherit;
+  text-decoration: inherit;
+}
+
 /* Make hero support right-side content */
 #agent-hero{
   display:flex;
