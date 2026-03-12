@@ -801,6 +801,8 @@ document.addEventListener("DOMContentLoaded", async () => {
     const subheadingHtml = sectionContent.subheading || "";
   
     const bodyTextStyle = [
+      "color:inherit",
+      "background:transparent",
       sectionStyle.licenses_body_highlight ? `background:${sectionStyle.licenses_body_highlight}` : "",
       sectionStyle.licenses_body_color ? `color:${sectionStyle.licenses_body_color}` : "",
       sectionStyle.licenses_body_font_size ? `font-size:${sectionStyle.licenses_body_font_size}` : "",
@@ -824,6 +826,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         `/.netlify/functions/getAgentActiveLicenses?agent_id=${encodeURIComponent(agentNpn)}`,
         { cache: "no-store" }
       );
+  
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
   
       const json = await res.json();
@@ -832,39 +835,38 @@ document.addEventListener("DOMContentLoaded", async () => {
       if (!listEl) return;
   
       if (!licenses.length) {
-        listEl.innerHTML = `
-          <div class="license-empty">No active licenses found.</div>
-        `;
+        listEl.innerHTML = `<div class="license-empty">No active licenses found.</div>`;
         applySectionStyle(pageKey, "licenses", sectionStyle || {});
         return;
       }
   
       const html = licenses.map((x) => {
-        const loas = Array.isArray(x.loas) ? x.loas.join(", ") : "—";
-        const state = x.state || "—";
+        const state = String(x?.state || "").trim() || "—";
+        const loas = Array.isArray(x?.loas) && x.loas.length ? x.loas.join(", ") : "—";
   
         return `
-          <div class="license-row">
+          <div class="license-row" style="display:flex; gap:8px; align-items:flex-start;">
             <span class="license-state" style="${bodyTextStyle}">${escapeHtml(state)}</span>
             <span class="license-divider" style="${bodyTextStyle}">—</span>
-            <span class="license-loas" style="${bodyTextStyle}">${escapeHtml(loas || "—")}</span>
+            <span class="license-loas" style="${bodyTextStyle}">${escapeHtml(loas)}</span>
           </div>
         `;
       }).join("");
   
+      listEl.classList.remove("loading");
       listEl.innerHTML = html;
   
       applySectionStyle(pageKey, "licenses", sectionStyle || {});
     } catch (e) {
       const listEl = document.getElementById("agent-licenses-list");
       if (listEl) {
-        listEl.innerHTML = `
-          <div class="license-empty">Couldn’t load licenses.</div>
-        `;
+        listEl.classList.remove("loading");
+        listEl.innerHTML = `<div class="license-empty">Couldn’t load licenses.</div>`;
       }
       applySectionStyle(pageKey, "licenses", sectionStyle || {});
       console.error("[agent-page] licenses load failed:", e);
     }
+    console.log("[licenses json]", json);
   }
 
   function renderFaqList(faqRows) {
