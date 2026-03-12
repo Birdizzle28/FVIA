@@ -150,6 +150,23 @@ document.addEventListener("DOMContentLoaded", async () => {
       photoEl.style.borderRadius = "";
     }
   }
+
+  function applyHeadingSize(pageKey, sectionKey, style = {}) {
+    const size = style?.heading_size || "md";
+  
+    let fontSize = "";
+    if (size === "sm") fontSize = "1.4rem";
+    else if (size === "lg") fontSize = "2.4rem";
+    else fontSize = "2rem";
+  
+    if (pageKey === "home" && sectionKey === "hero") {
+      const headingEl = document.getElementById("agent-name");
+      const inlineHeadingEl = document.getElementById("agent-name-inline");
+  
+      if (headingEl) headingEl.style.fontSize = fontSize;
+      if (inlineHeadingEl) inlineHeadingEl.style.fontSize = fontSize;
+    }
+  }
   
   function isMeaningfulHtml(value) {
     const html = String(value || "").replace(/<br\s*\/?>/gi, "").replace(/&nbsp;/gi, "").trim();
