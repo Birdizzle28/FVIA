@@ -655,44 +655,63 @@ document.addEventListener("DOMContentLoaded", async () => {
   function applySectionStyle(pageKey, sectionKey, style = {}) {
     if (sectionKey === "licenses") {
       const detailsEl = document.getElementById("agent-details");
-      if (!detailsEl) return;
+      const sectionEl = document.getElementById("agent-licenses-section");
+      const shellEl = document.getElementById("agent-licenses-shell");
+      const headingWrapEl = document.getElementById("agent-licenses-heading-wrap");
+      const headingEl = document.getElementById("agent-licenses-heading");
+      const subheadingEl = document.getElementById("agent-licenses-subheading");
+      const listEl = document.getElementById("agent-licenses-list");
+      const rowEls = Array.from(document.querySelectorAll("#agent-licenses-list .license-row"));
   
-      const nestedDivs = Array.from(detailsEl.querySelectorAll("div"));
-      const borderTargets = nestedDivs.filter(el => el.id !== "agent-licenses-list");
+      if (!detailsEl) return;
   
       const bgColor =
         style.background_color_mode === "custom"
           ? (style.background_color_custom || "")
           : (style.background_color || "");
   
-      if (style.text_align) {
-        detailsEl.style.textAlign = style.text_align;
-        nestedDivs.forEach(el => {
-          el.style.textAlign = style.text_align;
-        });
+      // text alignment
+      const alignTargets = [
+        detailsEl,
+        sectionEl,
+        shellEl,
+        headingWrapEl,
+        headingEl,
+        subheadingEl,
+        listEl,
+        ...rowEls
+      ].filter(Boolean);
+  
+      alignTargets.forEach(el => {
+        el.style.textAlign = style.text_align || "";
+      });
+  
+      // background color
+      // Apply to nested div containers / rows, but not the actual heading/subheading text nodes if you don't want odd text block fills
+      const bgTargets = [
+        sectionEl,
+        shellEl,
+        headingWrapEl,
+        listEl,
+        ...rowEls
+      ].filter(Boolean);
+  
+      bgTargets.forEach(el => {
+        el.style.backgroundColor = bgColor || "";
+      });
+  
+      // shadow: ONLY #agent-details
+      if (
+        style.shadow_color &&
+        (style.shadow_blur || style.shadow_x || style.shadow_y)
+      ) {
+        detailsEl.style.boxShadow = `${style.shadow_x || "0px"} ${style.shadow_y || "0px"} ${style.shadow_blur || "0px"} ${style.shadow_color}`;
       } else {
-        detailsEl.style.textAlign = "";
-        nestedDivs.forEach(el => {
-          el.style.textAlign = "";
-        });
+        detailsEl.style.boxShadow = "";
       }
   
-      nestedDivs.forEach(el => {
-        if (bgColor) {
-          el.style.backgroundColor = bgColor;
-        } else {
-          el.style.backgroundColor = "";
-        }
-  
-        if (
-          style.shadow_color &&
-          (style.shadow_blur || style.shadow_x || style.shadow_y)
-        ) {
-          el.style.boxShadow = `${style.shadow_x || "0px"} ${style.shadow_y || "0px"} ${style.shadow_blur || "0px"} ${style.shadow_color}`;
-        } else {
-          el.style.boxShadow = "";
-        }
-      });
+      // border + radius: rows only
+      const borderTargets = rowEls;
   
       borderTargets.forEach(el => {
         if (style.border_width && style.border_style && style.border_color) {
@@ -708,6 +727,19 @@ document.addEventListener("DOMContentLoaded", async () => {
         }
       });
   
+      // explicitly clear borders/radius from stuff you said should never get them
+      [
+        sectionEl,
+        shellEl,
+        headingWrapEl,
+        headingEl,
+        subheadingEl,
+        listEl
+      ].filter(Boolean).forEach(el => {
+        el.style.border = "";
+        el.style.borderRadius = "";
+      });
+  
       return;
     }
   
@@ -717,22 +749,14 @@ document.addEventListener("DOMContentLoaded", async () => {
       const el = document.getElementById(id);
       if (!el) return;
   
-      if (style.text_align) {
-        el.style.textAlign = style.text_align;
-      } else {
-        el.style.textAlign = "";
-      }
+      el.style.textAlign = style.text_align || "";
   
       const bgColor =
         style.background_color_mode === "custom"
           ? (style.background_color_custom || "")
           : (style.background_color || "");
   
-      if (bgColor) {
-        el.style.backgroundColor = bgColor;
-      } else {
-        el.style.backgroundColor = "";
-      }
+      el.style.backgroundColor = bgColor || "";
   
       if (style.border_width && style.border_style && style.border_color) {
         el.style.border = `${style.border_width} ${style.border_style} ${style.border_color}`;
@@ -756,7 +780,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   }
-
+  
   async function setFooterToAgentContact(agentUuid) {
     const footer = document.getElementById("footercontact");
     if (!footer) return;
@@ -812,8 +836,11 @@ document.addEventListener("DOMContentLoaded", async () => {
     wrap.innerHTML = `
       <div id="agent-licenses-shell">
         <div id="agent-licenses-heading-wrap">
-          <h3 id="agent-licenses-heading">${headingHtml}</h3>
-          <p id="agent-licenses-subheading" style="${isMeaningfulHtml(subheadingHtml) ? "" : "display:none;"}">${subheadingHtml}</p>
+          <div id="agent-licenses-heading">${headingHtml}</div>
+          <div
+            id="agent-licenses-subheading"
+            style="${isMeaningfulHtml(subheadingHtml) ? "" : "display:none;"}"
+          >${subheadingHtml}</div>
         </div>
         <div id="agent-licenses-list" class="license-list loading">Loading licenses…</div>
       </div>
