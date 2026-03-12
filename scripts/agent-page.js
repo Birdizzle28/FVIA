@@ -455,7 +455,13 @@ document.addEventListener("DOMContentLoaded", async () => {
       home: {
         hero: ["agent-hero"],
         contact: ["agent-contact"],
-        licenses: ["agent-details", "agent-licenses"],
+        licenses: [
+          "agent-details",
+          "agent-licenses-section",
+          "agent-licenses-heading",
+          "agent-licenses-subheading",
+          "agent-licenses-list"
+        ],
         quote: ["agent-quote", "quote-container"]
       },
       about: {
@@ -464,7 +470,13 @@ document.addEventListener("DOMContentLoaded", async () => {
         story: ["agent-story-section", "agent-story"],
         approach: ["agent-approach-section", "agent-approach"],
         who_i_help: ["agent-who-i-help-section", "agent-who-i-help"],
-        licenses: ["agent-details", "agent-licenses"],
+        licenses: [
+          "agent-details",
+          "agent-licenses-section",
+          "agent-licenses-heading",
+          "agent-licenses-subheading",
+          "agent-licenses-list"
+        ],
         cta: ["agent-about-cta", "agent-about-cta-text"]
       },
       careers: {
@@ -553,6 +565,24 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (bodyEl) {
           bodyEl.innerHTML = bodyHtml;
           bodyEl.style.display = isMeaningfulHtml(bodyHtml) ? "" : "none";
+        }
+      }
+      
+      if (sectionKey === "licenses") {
+        const headingHtml = content.heading || "Active Licenses";
+        const subheadingHtml = content.subheading || "";
+    
+        const headingEl = document.getElementById("agent-licenses-heading");
+        const subheadingEl = document.getElementById("agent-licenses-subheading");
+    
+        if (headingEl) {
+          headingEl.innerHTML = headingHtml;
+          headingEl.style.display = isMeaningfulHtml(headingHtml) ? "" : "none";
+        }
+    
+        if (subheadingEl) {
+          subheadingEl.innerHTML = subheadingHtml;
+          subheadingEl.style.display = isMeaningfulHtml(subheadingHtml) ? "" : "none";
         }
       }
     }
@@ -703,50 +733,56 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  async function loadAndRenderLicenses(agentNpn) {
-    const wrap = document.getElementById("agent-licenses");
+ async function loadAndRenderLicenses(agentNpn) {
+    const wrap = document.getElementById("agent-licenses-list");
     if (!wrap) return;
-
+  
     wrap.innerHTML = `
-      <h3>Active Licenses</h3>
       <div class="license-list loading">Loading licenses…</div>
     `;
-
+  
     try {
       const res = await fetch(
         `/.netlify/functions/getAgentActiveLicenses?agent_id=${encodeURIComponent(agentNpn)}`,
         { cache: "no-store" }
       );
       if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  
       const json = await res.json();
-
       const licenses = Array.isArray(json?.licenses) ? json.licenses : [];
+  
       if (!licenses.length) {
         wrap.innerHTML = `
-          <h3>Active Licenses</h3>
           <div class="license-empty">No active licenses found.</div>
         `;
         return;
       }
-
+  
       const html = licenses.map((x) => {
-        const loas = (x.loas || []).join(", ");
+        const state =
+          x.state ||
+          x.state_code ||
+          x.resident_state ||
+          x.jurisdiction ||
+          x.issue_state ||
+          "—";
+  
+        const loas = Array.isArray(x.loas) ? x.loas.join(", ") : "";
+  
         return `
           <div class="license-row">
-            <span class="license-state">${x.state}</span>
+            <span class="license-state">${state}</span>
             <span class="license-divider">—</span>
             <span class="license-loas">${loas || "—"}</span>
           </div>
         `;
       }).join("");
-
+  
       wrap.innerHTML = `
-        <h3>Active Licenses</h3>
         <div class="license-list">${html}</div>
       `;
     } catch (e) {
       wrap.innerHTML = `
-        <h3>Active Licenses</h3>
         <div class="license-empty">Couldn’t load licenses.</div>
       `;
       console.error("[agent-page] licenses load failed:", e);
