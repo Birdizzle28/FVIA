@@ -905,6 +905,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       caret.style.transform = collapsed ? "rotate(-90deg)" : "rotate(0deg)";
     }
   }
+  
   function sanitizeRichHtml(html) {
     const wrapper = document.createElement("div");
     wrapper.innerHTML = html || "";
@@ -920,21 +921,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       "DIV",
       "H2",
       "H3",
-      "SPAN"
+      "SPAN",
+      "FONT"
     ]);
-  
-    const allowedHighlightColors = [
-      "#fff3a3",
-      "#ffd6e7",
-      "#d8ecff",
-      "#dff5df",
-      "#eadcff",
-      "rgb(255,243,163)",
-      "rgb(255,214,231)",
-      "rgb(216,236,255)",
-      "rgb(223,245,223)",
-      "rgb(234,220,255)"
-    ].map(x => x.replace(/\s+/g, "").toLowerCase());
   
     const nodes = wrapper.querySelectorAll("*");
   
@@ -949,36 +938,43 @@ document.addEventListener("DOMContentLoaded", async () => {
       [...node.attributes].forEach(attr => {
         const name = attr.name.toLowerCase();
         const rawValue = String(attr.value || "");
-        const value = rawValue.replace(/\s+/g, "").toLowerCase();
   
         if (name === "style") {
           const safeStyles = [];
   
-          if (value.includes("text-align:left")) safeStyles.push("text-align:left");
-          if (value.includes("text-align:center")) safeStyles.push("text-align:center");
-          if (value.includes("text-align:right")) safeStyles.push("text-align:right");
+          const textAlignMatch = rawValue.match(/text-align\s*:\s*(left|center|right)/i);
+          if (textAlignMatch) {
+            safeStyles.push(`text-align:${textAlignMatch[1].toLowerCase()}`);
+          }
   
-          if (value.includes("font-weight:bold") || value.includes("font-weight:700")) {
+          const fontWeightMatch = rawValue.match(/font-weight\s*:\s*(bold|700|600|500)/i);
+          if (fontWeightMatch) {
             safeStyles.push("font-weight:bold");
           }
   
-          if (value.includes("font-style:italic")) {
+          const fontStyleMatch = rawValue.match(/font-style\s*:\s*italic/i);
+          if (fontStyleMatch) {
             safeStyles.push("font-style:italic");
           }
   
-          if (
-            value.includes("text-decoration:underline") ||
-            value.includes("text-decoration-line:underline")
-          ) {
+          const underlineMatch = rawValue.match(/text-decoration(?:-line)?\s*:\s*underline/i);
+          if (underlineMatch) {
             safeStyles.push("text-decoration:underline");
           }
   
           const bgMatch = rawValue.match(/background(?:-color)?\s*:\s*([^;]+)/i);
           if (bgMatch) {
-            const bg = bgMatch[1].replace(/\s+/g, "").toLowerCase();
-            if (allowedHighlightColors.includes(bg)) {
-              safeStyles.push(`background:${bgMatch[1].trim()}`);
-            }
+            safeStyles.push(`background:${bgMatch[1].trim()}`);
+          }
+  
+          const colorMatch = rawValue.match(/color\s*:\s*([^;]+)/i);
+          if (colorMatch) {
+            safeStyles.push(`color:${colorMatch[1].trim()}`);
+          }
+  
+          const fontSizeMatch = rawValue.match(/font-size\s*:\s*([0-9.]+px)/i);
+          if (fontSizeMatch) {
+            safeStyles.push(`font-size:${fontSizeMatch[1].trim()}`);
           }
   
           if (safeStyles.length) {
@@ -990,8 +986,20 @@ document.addEventListener("DOMContentLoaded", async () => {
           return;
         }
   
+        if (node.tagName === "FONT" && name === "size") {
+          return;
+        }
+  
         node.removeAttribute(attr.name);
       });
+  
+      if (node.tagName === "FONT") {
+        const size = node.getAttribute("size");
+        if (size === "7" && !node.style.fontSize) {
+          node.style.fontSize = "16px";
+        }
+        node.removeAttribute("size");
+      }
   
       if (node.tagName === "SPAN") {
         const style = node.getAttribute("style");
@@ -1088,19 +1096,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       document.execCommand("styleWithCSS", false, false);
       return;
     }
-  
+    
     if (cmd === "fontSizeCustom") {
       document.execCommand("styleWithCSS", false, true);
       document.execCommand("fontSize", false, "7");
   
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) {
-        const editor = targetEl;
-        editor.querySelectorAll('font[size="7"]').forEach(node => {
-          node.removeAttribute("size");
-          node.style.fontSize = value || "16px";
-        });
-      }
+      targetEl.querySelectorAll('font[size="7"]').forEach(node => {
+        node.removeAttribute("size");
+        node.style.fontSize = value || "16px";
+      });
   
       document.execCommand("styleWithCSS", false, false);
       return;
@@ -1196,10 +1200,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           `.rich-editor[data-section-id="${sectionId}"][data-key="${targetKey}"]`
         );
   
-        if (editor) {
-          saveEditorSelection(editor);
-        }
-  
+        if (editor) saveEditorSelection(editor);
         e.stopPropagation();
       });
   
@@ -1207,7 +1208,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         e.stopPropagation();
       });
   
-      input.addEventListener("input", () => {
+      input.addEventListener("input", async () => {
         const sectionId = input.dataset.sectionId;
         const targetKey = input.dataset.targetKey || "body";
         const editor = editorFields.querySelector(
@@ -1220,6 +1221,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         execRichCommand("highlightColor", editor, input.value);
         saveEditorSelection(editor);
         updateToolbarStateForEditor(editor);
+  
+        await saveSectionDraft(sectionId);
       });
     });
   }
@@ -1261,9 +1264,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           `.rich-editor[data-section-id="${sectionId}"][data-key="${targetKey}"]`
         );
   
-        if (editor) {
-          saveEditorSelection(editor);
-        }
+        if (editor) saveEditorSelection(editor);
       });
   
       input.addEventListener("input", async () => {
@@ -1285,21 +1286,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           icon.style.setProperty("--toolbar-color", input.value);
         }
   
-        const row = sections.find(s => s.id === sectionId);
-        if (row) {
-          row.draft_style = {
-            ...(row.draft_style || {}),
-            color_custom: input.value
-          };
-  
-          await supabase
-            .from("agent_page_sections")
-            .update({
-              draft_style: row.draft_style,
-              updated_at: new Date().toISOString()
-            })
-            .eq("id", sectionId);
-        }
+        await saveSectionDraft(sectionId);
       });
     });
   }
@@ -1313,12 +1300,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           `.rich-editor[data-section-id="${sectionId}"][data-key="${targetKey}"]`
         );
   
-        if (editor) {
-          saveEditorSelection(editor);
-        }
+        if (editor) saveEditorSelection(editor);
       });
   
-      select.addEventListener("change", () => {
+      select.addEventListener("change", async () => {
         const sectionId = select.dataset.sectionId;
         const targetKey = select.dataset.targetKey || "body";
         const editor = editorFields.querySelector(
@@ -1331,6 +1316,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         execRichCommand("fontSizeCustom", editor, select.value);
         saveEditorSelection(editor);
         updateToolbarStateForEditor(editor);
+  
+        await saveSectionDraft(sectionId);
       });
     });
   }
@@ -2001,7 +1988,55 @@ document.addEventListener("DOMContentLoaded", async () => {
                 value="${px(style.border_radius, 0)}"
               />
               <span class="range-output">${px(style.border_radius, 0)}px</span>
+              
             </div>
+            <label>Shadow Color</label>
+            <input
+              type="color"
+              data-field-type="section-style"
+              data-section-id="${section.id}"
+              data-key="shadow_color"
+              value="${escapeHtml(style.shadow_color || "#000000")}"
+            />
+            
+            <label>Shadow Blur</label>
+            <input
+              type="range"
+              min="0"
+              max="60"
+              step="1"
+              data-field-type="section-style"
+              data-section-id="${section.id}"
+              data-key="shadow_blur"
+              value="${px(style.shadow_blur, 0)}"
+            />
+            <span class="range-output">${px(style.shadow_blur, 0)}px</span>
+            
+            <label>Shadow X Offset</label>
+            <input
+              type="range"
+              min="-40"
+              max="40"
+              step="1"
+              data-field-type="section-style"
+              data-section-id="${section.id}"
+              data-key="shadow_x"
+              value="${px(style.shadow_x, 0)}"
+            />
+            <span class="range-output">${px(style.shadow_x, 0)}px</span>
+            
+            <label>Shadow Y Offset</label>
+            <input
+              type="range"
+              min="-40"
+              max="40"
+              step="1"
+              data-field-type="section-style"
+              data-section-id="${section.id}"
+              data-key="shadow_y"
+              value="${px(style.shadow_y, 0)}"
+            />
+            <span class="range-output">${px(style.shadow_y, 0)}px</span>
           </div>
   
           ${
@@ -2416,7 +2451,10 @@ document.addEventListener("DOMContentLoaded", async () => {
         key === "image_border_width" ||
         key === "image_border_radius" ||
         key === "border_width" ||
-        key === "border_radius"
+        key === "border_radius" ||
+        key === "shadow_blur" ||
+        key === "shadow_x" ||
+        key === "shadow_y"
       ) {
         value = `${input.value}px`;
       }
