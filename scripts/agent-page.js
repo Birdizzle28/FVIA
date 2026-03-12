@@ -710,9 +710,6 @@ document.addEventListener("DOMContentLoaded", async () => {
   
       const borderTargets = [
         detailsEl,
-        sectionEl,
-        shellEl,
-        headingWrapEl,
         ...rowEls
       ].filter(Boolean);
   
@@ -742,6 +739,25 @@ document.addEventListener("DOMContentLoaded", async () => {
       } else {
         detailsEl.style.boxShadow = "";
       }
+
+      if (sectionEl) {
+        sectionEl.style.border = "";
+        sectionEl.style.borderRadius = "0";
+        sectionEl.style.boxShadow = "";
+      }
+            
+      if (shellEl) {
+        shellEl.style.border = "";
+        shellEl.style.borderRadius = "0";
+        shellEl.style.boxShadow = "";
+      }
+            
+      if (headingWrapEl) {
+        headingWrapEl.style.border = "";
+        headingWrapEl.style.borderRadius = "0";
+        headingWrapEl.style.boxShadow = "";
+      }
+      
   
       if (headingEl) {
         headingEl.style.border = "";
