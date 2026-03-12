@@ -1383,3 +1383,11 @@ body {
   cursor: pointer;
   font-weight: 700;
 }
+.toolbar-font-size {
+  width: 58px;
+  min-width: 58px;
+  max-width: 58px;
+  padding: 4px 6px;
+  font-size: 12px;
+  text-align: center;
+}
