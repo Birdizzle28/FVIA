@@ -120,9 +120,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       showColorPreset: false
     },
     licenses: {
-      showHeading: false,
-      showSubheading: false,
-      showBody: false,
+      showHeading: true,
+      showSubheading: true,
+      showBody: true,
       showButtonText: false,
       showButtonLink: false,
       showImageUrl: false,
