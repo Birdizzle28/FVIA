@@ -653,13 +653,69 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   function applySectionStyle(pageKey, sectionKey, style = {}) {
+    if (sectionKey === "licenses") {
+      const detailsEl = document.getElementById("agent-details");
+      if (!detailsEl) return;
+  
+      const nestedDivs = Array.from(detailsEl.querySelectorAll("div"));
+      const borderTargets = nestedDivs.filter(el => el.id !== "agent-licenses-list");
+  
+      const bgColor =
+        style.background_color_mode === "custom"
+          ? (style.background_color_custom || "")
+          : (style.background_color || "");
+  
+      if (style.text_align) {
+        detailsEl.style.textAlign = style.text_align;
+        nestedDivs.forEach(el => {
+          el.style.textAlign = style.text_align;
+        });
+      } else {
+        detailsEl.style.textAlign = "";
+        nestedDivs.forEach(el => {
+          el.style.textAlign = "";
+        });
+      }
+  
+      nestedDivs.forEach(el => {
+        if (bgColor) {
+          el.style.backgroundColor = bgColor;
+        } else {
+          el.style.backgroundColor = "";
+        }
+  
+        if (
+          style.shadow_color &&
+          (style.shadow_blur || style.shadow_x || style.shadow_y)
+        ) {
+          el.style.boxShadow = `${style.shadow_x || "0px"} ${style.shadow_y || "0px"} ${style.shadow_blur || "0px"} ${style.shadow_color}`;
+        } else {
+          el.style.boxShadow = "";
+        }
+      });
+  
+      borderTargets.forEach(el => {
+        if (style.border_width && style.border_style && style.border_color) {
+          el.style.border = `${style.border_width} ${style.border_style} ${style.border_color}`;
+        } else {
+          el.style.border = "";
+        }
+  
+        if (style.border_radius) {
+          el.style.borderRadius = style.border_radius;
+        } else {
+          el.style.borderRadius = "";
+        }
+      });
+  
+      return;
+    }
+  
     const ids = sectionKeyToElementIds(pageKey, sectionKey);
   
     ids.forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
-  
-      const isLicensesSection = pageKey === "home" && sectionKey === "licenses";
   
       if (style.text_align) {
         el.style.textAlign = style.text_align;
@@ -672,90 +728,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           ? (style.background_color_custom || "")
           : (style.background_color || "");
   
-      const borderValue =
-        style.border_width && style.border_style && style.border_color
-          ? `${style.border_width} ${style.border_style} ${style.border_color}`
-          : "";
-  
-      const boxShadowValue =
-        style.shadow_color && (style.shadow_blur || style.shadow_x || style.shadow_y)
-          ? `${style.shadow_x || "0px"} ${style.shadow_y || "0px"} ${style.shadow_blur || "0px"} ${style.shadow_color}`
-          : "";
-  
-      if (isLicensesSection) {
-        const nestedDivs = el.querySelectorAll("div");
-  
-        if (bgColor) {
-          el.style.backgroundColor = bgColor;
-          nestedDivs.forEach(node => {
-            node.style.backgroundColor = bgColor;
-          });
-        } else {
-          el.style.backgroundColor = "";
-          nestedDivs.forEach(node => {
-            node.style.backgroundColor = "";
-          });
-        }
-  
-        if (style.border_radius) {
-          el.style.borderRadius = style.border_radius;
-          nestedDivs.forEach(node => {
-            if (node.id !== "agent-licenses-list") {
-              node.style.borderRadius = style.border_radius;
-            }
-          });
-        } else {
-          el.style.borderRadius = "";
-          nestedDivs.forEach(node => {
-            if (node.id !== "agent-licenses-list") {
-              node.style.borderRadius = "";
-            }
-          });
-        }
-  
-        if (borderValue) {
-          el.style.border = borderValue;
-          nestedDivs.forEach(node => {
-            if (node.id !== "agent-licenses-list") {
-              node.style.border = borderValue;
-            }
-          });
-        } else {
-          el.style.border = "";
-          nestedDivs.forEach(node => {
-            if (node.id !== "agent-licenses-list") {
-              node.style.border = "";
-            }
-          });
-        }
-  
-        if (boxShadowValue) {
-          el.style.boxShadow = boxShadowValue;
-          nestedDivs.forEach(node => {
-            if (node.id !== "agent-licenses-list") {
-              node.style.boxShadow = boxShadowValue;
-            }
-          });
-        } else {
-          el.style.boxShadow = "";
-          nestedDivs.forEach(node => {
-            if (node.id !== "agent-licenses-list") {
-              node.style.boxShadow = "";
-            }
-          });
-        }
-  
-        return;
-      }
-  
       if (bgColor) {
         el.style.backgroundColor = bgColor;
       } else {
         el.style.backgroundColor = "";
       }
   
-      if (borderValue) {
-        el.style.border = borderValue;
+      if (style.border_width && style.border_style && style.border_color) {
+        el.style.border = `${style.border_width} ${style.border_style} ${style.border_color}`;
       } else {
         el.style.border = "";
       }
@@ -766,8 +746,11 @@ document.addEventListener("DOMContentLoaded", async () => {
         el.style.borderRadius = "";
       }
   
-      if (boxShadowValue) {
-        el.style.boxShadow = boxShadowValue;
+      if (
+        style.shadow_color &&
+        (style.shadow_blur || style.shadow_x || style.shadow_y)
+      ) {
+        el.style.boxShadow = `${style.shadow_x || "0px"} ${style.shadow_y || "0px"} ${style.shadow_blur || "0px"} ${style.shadow_color}`;
       } else {
         el.style.boxShadow = "";
       }
@@ -810,12 +793,30 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
- async function loadAndRenderLicenses(agentNpn) {
-    const wrap = document.getElementById("agent-licenses-list");
+  async function loadAndRenderLicenses(agentNpn, sectionContent = {}, sectionStyle = {}, pageKey = "home") {
+    const wrap = document.getElementById("agent-licenses");
     if (!wrap) return;
   
+    const headingHtml = sectionContent.heading || "Active Licenses";
+    const subheadingHtml = sectionContent.subheading || "";
+  
+    const bodyTextStyle = [
+      sectionStyle.licenses_body_highlight ? `background:${sectionStyle.licenses_body_highlight}` : "",
+      sectionStyle.licenses_body_color ? `color:${sectionStyle.licenses_body_color}` : "",
+      sectionStyle.licenses_body_font_size ? `font-size:${sectionStyle.licenses_body_font_size}` : "",
+      sectionStyle.licenses_body_font_weight ? `font-weight:${sectionStyle.licenses_body_font_weight}` : "",
+      sectionStyle.licenses_body_font_style ? `font-style:${sectionStyle.licenses_body_font_style}` : "",
+      sectionStyle.licenses_body_text_decoration ? `text-decoration:${sectionStyle.licenses_body_text_decoration}` : ""
+    ].filter(Boolean).join(";");
+  
     wrap.innerHTML = `
-      <div class="license-list loading">Loading licenses…</div>
+      <div id="agent-licenses-shell">
+        <div id="agent-licenses-heading-wrap">
+          <h3 id="agent-licenses-heading">${headingHtml}</h3>
+          <p id="agent-licenses-subheading" style="${isMeaningfulHtml(subheadingHtml) ? "" : "display:none;"}">${subheadingHtml}</p>
+        </div>
+        <div id="agent-licenses-list" class="license-list loading">Loading licenses…</div>
+      </div>
     `;
   
     try {
@@ -827,41 +828,41 @@ document.addEventListener("DOMContentLoaded", async () => {
   
       const json = await res.json();
       const licenses = Array.isArray(json?.licenses) ? json.licenses : [];
+      const listEl = document.getElementById("agent-licenses-list");
+      if (!listEl) return;
   
       if (!licenses.length) {
-        wrap.innerHTML = `
+        listEl.innerHTML = `
           <div class="license-empty">No active licenses found.</div>
         `;
+        applySectionStyle(pageKey, "licenses", sectionStyle || {});
         return;
       }
   
       const html = licenses.map((x) => {
-        const state =
-          x.state ||
-          x.state_code ||
-          x.resident_state ||
-          x.jurisdiction ||
-          x.issue_state ||
-          "—";
-  
-        const loas = Array.isArray(x.loas) ? x.loas.join(", ") : "";
+        const loas = Array.isArray(x.loas) ? x.loas.join(", ") : "—";
+        const state = x.state || "—";
   
         return `
           <div class="license-row">
-            <span class="license-state">${state}</span>
-            <span class="license-divider">—</span>
-            <span class="license-loas">${loas || "—"}</span>
+            <span class="license-state" style="${bodyTextStyle}">${escapeHtml(state)}</span>
+            <span class="license-divider" style="${bodyTextStyle}">—</span>
+            <span class="license-loas" style="${bodyTextStyle}">${escapeHtml(loas || "—")}</span>
           </div>
         `;
       }).join("");
   
-      wrap.innerHTML = `
-        <div class="license-list">${html}</div>
-      `;
+      listEl.innerHTML = html;
+  
+      applySectionStyle(pageKey, "licenses", sectionStyle || {});
     } catch (e) {
-      wrap.innerHTML = `
-        <div class="license-empty">Couldn’t load licenses.</div>
-      `;
+      const listEl = document.getElementById("agent-licenses-list");
+      if (listEl) {
+        listEl.innerHTML = `
+          <div class="license-empty">Couldn’t load licenses.</div>
+        `;
+      }
+      applySectionStyle(pageKey, "licenses", sectionStyle || {});
       console.error("[agent-page] licenses load failed:", e);
     }
   }
@@ -1163,7 +1164,15 @@ document.addEventListener("DOMContentLoaded", async () => {
   });
 
   if (pageKey === "home" || pageKey === "about") {
-    loadAndRenderLicenses(agent.agent_id);
+    const licensesSectionRow = (sectionRows || []).find(s => s.section_key === "licenses");
+    const licensesContent = previewMode
+      ? (licensesSectionRow?.draft_content || {})
+      : (licensesSectionRow?.published_content || {});
+    const licensesStyle = previewMode
+      ? (licensesSectionRow?.draft_style || {})
+      : (licensesSectionRow?.published_style || {});
+  
+    loadAndRenderLicenses(agent.agent_id, licensesContent, licensesStyle, pageKey);
   }
 
   if (pageKey === "careers" || pageKey === "faqs") {
