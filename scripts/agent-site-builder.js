@@ -808,6 +808,134 @@ document.addEventListener("DOMContentLoaded", async () => {
     });
   }
 
+  function bindQuoteBodyStyleControls() {
+    editorFields.querySelectorAll(".quote-style-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const sectionId = btn.dataset.sectionId;
+        const row = sections.find(s => s.id === sectionId);
+        if (!row) return;
+  
+        row.draft_style = row.draft_style || {};
+  
+        if (btn.classList.contains("quote-style-clear-btn")) {
+          delete row.draft_style.quote_body_highlight;
+          delete row.draft_style.quote_body_color;
+          delete row.draft_style.quote_body_font_size;
+          delete row.draft_style.quote_body_font_style;
+          delete row.draft_style.quote_body_text_decoration;
+        } else {
+          const key = btn.dataset.styleKey;
+          const value = btn.dataset.styleValue;
+          const styleKey = `quote_body_${key}`;
+  
+          row.draft_style[styleKey] =
+            row.draft_style[styleKey] === value ? "" : value;
+        }
+  
+        const { error } = await supabase
+          .from("agent_page_sections")
+          .update({
+            draft_style: row.draft_style,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", sectionId);
+  
+        if (error) {
+          console.error("[builder] quote body style save failed", error);
+          showToast("Failed to save quote styles.", "error");
+          return;
+        }
+  
+        refreshPreview();
+        renderPageEditor(pageSelect.value);
+      });
+    });
+  
+    editorFields.querySelectorAll(".quote-body-color-picker").forEach(input => {
+      input.addEventListener("input", async () => {
+        const sectionId = input.dataset.sectionId;
+        const row = sections.find(s => s.id === sectionId);
+        if (!row) return;
+  
+        row.draft_style = row.draft_style || {};
+        row.draft_style.quote_body_color = input.value;
+  
+        const { error } = await supabase
+          .from("agent_page_sections")
+          .update({
+            draft_style: row.draft_style,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", sectionId);
+  
+        if (error) {
+          console.error("[builder] quote color save failed", error);
+          return;
+        }
+  
+        refreshPreview();
+        renderPageEditor(pageSelect.value);
+      });
+    });
+  
+    editorFields.querySelectorAll(".quote-body-highlight-picker").forEach(input => {
+      input.addEventListener("input", async () => {
+        const sectionId = input.dataset.sectionId;
+        const row = sections.find(s => s.id === sectionId);
+        if (!row) return;
+  
+        row.draft_style = row.draft_style || {};
+        row.draft_style.quote_body_highlight = input.value;
+  
+        const { error } = await supabase
+          .from("agent_page_sections")
+          .update({
+            draft_style: row.draft_style,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", sectionId);
+  
+        if (error) {
+          console.error("[builder] quote highlight save failed", error);
+          return;
+        }
+  
+        refreshPreview();
+        renderPageEditor(pageSelect.value);
+      });
+    });
+  
+    editorFields.querySelectorAll(".quote-body-font-size").forEach(input => {
+      input.addEventListener("change", async () => {
+        const sectionId = input.dataset.sectionId;
+        const row = sections.find(s => s.id === sectionId);
+        if (!row) return;
+  
+        const pxValue = parseInt(input.value, 10);
+        if (!Number.isFinite(pxValue) || pxValue < 1) return;
+  
+        row.draft_style = row.draft_style || {};
+        row.draft_style.quote_body_font_size = `${pxValue}px`;
+  
+        const { error } = await supabase
+          .from("agent_page_sections")
+          .update({
+            draft_style: row.draft_style,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", sectionId);
+  
+        if (error) {
+          console.error("[builder] quote font size save failed", error);
+          return;
+        }
+  
+        refreshPreview();
+        renderPageEditor(pageSelect.value);
+      });
+    });
+  }
+
   function bindCollapsibleCards() {
     document.querySelectorAll(".editor-subcard, .editor-field-group").forEach(card => {
       const head = card.querySelector(":scope > .builder-collapsible-head");
@@ -1765,6 +1893,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         : null;
   
       const isLicensesSection = pageKey === "home" && section.section_key === "licenses";
+      const isQuoteSection = pageKey === "home" && section.section_key === "quote";
   
       wrap.innerHTML = `
         <button type="button" class="builder-section-head">
@@ -1941,7 +2070,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                           <p class="builder-note">
                             These controls style the generated license rows only. They do not edit the actual license text.
                           </p>
-                    
+          
                           <div class="rt-toolbar license-style-toolbar" data-toolbar-for="${section.id}-licenses-body">
                             <input
                               type="color"
@@ -1950,7 +2079,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                               value="${escapeHtml(style.licenses_body_highlight || "#fff3a3")}"
                               title="Highlight Color"
                             />
-                    
+          
                             <button
                               type="button"
                               class="license-style-btn ${style.licenses_body_font_weight === "bold" ? "active" : ""}"
@@ -1961,7 +2090,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                             >
                               <i class="fa-solid fa-bold"></i>
                             </button>
-                    
+          
                             <button
                               type="button"
                               class="license-style-btn ${style.licenses_body_font_style === "italic" ? "active" : ""}"
@@ -1972,7 +2101,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                             >
                               <i class="fa-solid fa-italic"></i>
                             </button>
-                    
+          
                             <button
                               type="button"
                               class="license-style-btn ${style.licenses_body_text_decoration === "underline" ? "active" : ""}"
@@ -1983,7 +2112,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                             >
                               <i class="fa-solid fa-underline"></i>
                             </button>
-                    
+          
                             <div class="toolbar-color-wrap">
                               <button type="button" class="rt-color-btn" title="Text Color">
                                 <span class="toolbar-a-icon" style="--toolbar-color:${escapeHtml(style.licenses_body_color || "#000000")}">A</span>
@@ -1996,7 +2125,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                                 title="Text Color"
                               />
                             </div>
-                    
+          
                             <input
                               type="number"
                               class="license-body-font-size"
@@ -2007,7 +2136,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                               value="${parseInt(style.licenses_body_font_size || "16px", 10) || 16}"
                               title="Text Size"
                             />
-                    
+          
                             <button
                               type="button"
                               class="license-style-btn license-style-clear-btn"
@@ -2020,75 +2149,154 @@ document.addEventListener("DOMContentLoaded", async () => {
                         </div>
                       </div>
                     `
-                    : `
-                      <div class="editor-subcard collapsed">
-                        <button type="button" class="builder-collapsible-head">
-                          <span class="builder-section-title">Body</span>
-                          <span class="builder-section-caret">▾</span>
-                        </button>
-                        <div class="builder-collapsible-body">
-                          <div class="highlight-color-row">
-                            <input
-                              type="color"
-                              class="custom-highlight-picker"
-                              data-section-id="${section.id}"
-                              data-target-key="body"
-                              value="#fff3a3"
-                              title="Custom highlight"
-                            />
-                          </div>
-  
-                          <div class="rt-toolbar" data-toolbar-for="${section.id}-body">
-                            <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}" data-target-key="body" title="Bold"><i class="fa-solid fa-bold"></i></button>
-                            <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}" data-target-key="body" title="Italic"><i class="fa-solid fa-italic"></i></button>
-                            <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}" data-target-key="body" title="Underline"><i class="fa-solid fa-underline"></i></button>
-                            <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}" data-target-key="body" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
-                            <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}" data-target-key="body" title="Heading 2">H2</button>
-                            <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}" data-target-key="body" title="Heading 3">H3</button>
-                            <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" data-target-key="body" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
-                            <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" data-target-key="body" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
-                            <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" data-target-key="body" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
-                            <div class="toolbar-color-wrap">
-                              <button type="button" class="rt-color-btn" title="Text Color">
-                                <span class="toolbar-a-icon" style="--toolbar-color:${escapeHtml(style.color_custom || "#000000")}">A</span>
-                              </button>
+                    : isQuoteSection
+                      ? `
+                        <div class="editor-subcard collapsed">
+                          <button type="button" class="builder-collapsible-head">
+                            <span class="builder-section-title">Body</span>
+                            <span class="builder-section-caret">▾</span>
+                          </button>
+                          <div class="builder-collapsible-body">
+                            <p class="builder-note">
+                              These controls style the quote form text inside the quote section. They do not edit the actual form fields.
+                            </p>
+          
+                            <div class="rt-toolbar quote-style-toolbar" data-toolbar-for="${section.id}-quote-body">
                               <input
                                 type="color"
-                                class="text-color-picker"
+                                class="quote-body-highlight-picker"
+                                data-section-id="${section.id}"
+                                value="${escapeHtml(style.quote_body_highlight || "#fff3a3")}"
+                                title="Highlight Color"
+                              />
+          
+                              <button
+                                type="button"
+                                class="quote-style-btn ${style.quote_body_font_style === "italic" ? "active" : ""}"
+                                data-section-id="${section.id}"
+                                data-style-key="font_style"
+                                data-style-value="italic"
+                                title="Italic"
+                              >
+                                <i class="fa-solid fa-italic"></i>
+                              </button>
+          
+                              <button
+                                type="button"
+                                class="quote-style-btn ${style.quote_body_text_decoration === "underline" ? "active" : ""}"
+                                data-section-id="${section.id}"
+                                data-style-key="text_decoration"
+                                data-style-value="underline"
+                                title="Underline"
+                              >
+                                <i class="fa-solid fa-underline"></i>
+                              </button>
+          
+                              <div class="toolbar-color-wrap">
+                                <button type="button" class="rt-color-btn" title="Text Color">
+                                  <span class="toolbar-a-icon" style="--toolbar-color:${escapeHtml(style.quote_body_color || "#000000")}">A</span>
+                                </button>
+                                <input
+                                  type="color"
+                                  class="quote-body-color-picker"
+                                  data-section-id="${section.id}"
+                                  value="${escapeHtml(style.quote_body_color || "#000000")}"
+                                  title="Text Color"
+                                />
+                              </div>
+          
+                              <input
+                                type="number"
+                                class="quote-body-font-size"
+                                data-section-id="${section.id}"
+                                min="8"
+                                max="300"
+                                step="1"
+                                value="${parseInt(style.quote_body_font_size || "16px", 10) || 16}"
+                                title="Text Size"
+                              />
+          
+                              <button
+                                type="button"
+                                class="quote-style-btn quote-style-clear-btn"
+                                data-section-id="${section.id}"
+                                title="Clear Formatting"
+                              >
+                                <i class="fa-solid fa-eraser"></i>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      `
+                      : `
+                        <div class="editor-subcard collapsed">
+                          <button type="button" class="builder-collapsible-head">
+                            <span class="builder-section-title">Body</span>
+                            <span class="builder-section-caret">▾</span>
+                          </button>
+                          <div class="builder-collapsible-body">
+                            <div class="highlight-color-row">
+                              <input
+                                type="color"
+                                class="custom-highlight-picker"
                                 data-section-id="${section.id}"
                                 data-target-key="body"
-                                value="${escapeHtml(style.color_custom || "#000000")}"
-                                title="Text Color"
+                                value="#fff3a3"
+                                title="Custom highlight"
                               />
                             </div>
-  
-                            <input
-                              type="number"
-                              class="toolbar-font-size"
+          
+                            <div class="rt-toolbar" data-toolbar-for="${section.id}-body">
+                              <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}" data-target-key="body" title="Bold"><i class="fa-solid fa-bold"></i></button>
+                              <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}" data-target-key="body" title="Italic"><i class="fa-solid fa-italic"></i></button>
+                              <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}" data-target-key="body" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                              <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}" data-target-key="body" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+                              <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}" data-target-key="body" title="Heading 2">H2</button>
+                              <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}" data-target-key="body" title="Heading 3">H3</button>
+                              <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" data-target-key="body" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
+                              <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" data-target-key="body" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
+                              <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" data-target-key="body" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
+                              <div class="toolbar-color-wrap">
+                                <button type="button" class="rt-color-btn" title="Text Color">
+                                  <span class="toolbar-a-icon" style="--toolbar-color:${escapeHtml(style.color_custom || "#000000")}">A</span>
+                                </button>
+                                <input
+                                  type="color"
+                                  class="text-color-picker"
+                                  data-section-id="${section.id}"
+                                  data-target-key="body"
+                                  value="${escapeHtml(style.color_custom || "#000000")}"
+                                  title="Text Color"
+                                />
+                              </div>
+          
+                              <input
+                                type="number"
+                                class="toolbar-font-size"
+                                data-section-id="${section.id}"
+                                data-target-key="body"
+                                min="8"
+                                max="300"
+                                step="1"
+                                value="${parseInt(
+                                  ((content.body || "").match(/font-size:\s*([0-9.]+)px/i)?.[1]) || "16",
+                                  10
+                                ) || 16}"
+                                title="Text Size"
+                              />
+                              <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="body" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
+                            </div>
+          
+                            <div
+                              class="rich-editor"
+                              contenteditable="true"
+                              data-field-type="section-content-html"
                               data-section-id="${section.id}"
-                              data-target-key="body"
-                              min="8"
-                              max="300"
-                              step="1"
-                              value="${parseInt(
-                                ((content.body || "").match(/font-size:\s*([0-9.]+)px/i)?.[1]) || "16",
-                                10
-                              ) || 16}"
-                              title="Text Size"
-                            />
-                            <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="body" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
+                              data-key="body"
+                            >${content.body || ""}</div>
                           </div>
-  
-                          <div
-                            class="rich-editor"
-                            contenteditable="true"
-                            data-field-type="section-content-html"
-                            data-section-id="${section.id}"
-                            data-key="body"
-                          >${content.body || ""}</div>
                         </div>
-                      </div>
-                    `
+                      `
                 )
               : ""
           }
@@ -2347,9 +2555,8 @@ document.addEventListener("DOMContentLoaded", async () => {
               <span class="range-output">${px(style.shadow_y, 0)}px</span>
             </div>
           </div>
-  
           ${
-            pageKey === "home" && ["contact", "quote"].includes(section.section_key)
+            pageKey === "home" && ["contact"].includes(section.section_key)
               ? `<p class="builder-note">This section currently uses site defaults. You can toggle it on or off, but it does not have editable content yet.</p>`
               : ""
           }
@@ -2381,6 +2588,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindTextColorPickers();
     bindToolbarFontSizes();
     bindLicenseBodyStyleControls();
+    bindQuoteBodyStyleControls();
   
     editorFields.querySelectorAll(".builder-section-card").forEach(card => {
       setCollapsibleState(card, card.classList.contains("collapsed"));
