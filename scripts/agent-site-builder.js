@@ -1319,9 +1319,26 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (editor) saveEditorSelection(editor);
       });
   
-      input.addEventListener("input", async () => {
+      input.addEventListener("focus", () => {
+        const sectionId = input.dataset.sectionId;
+        const targetKey = input.dataset.targetKey || "body";
+        const editor = editorFields.querySelector(
+          `.rich-editor[data-section-id="${sectionId}"][data-key="${targetKey}"]`
+        );
+  
+        if (editor) saveEditorSelection(editor);
+      });
+  
+      input.addEventListener("keydown", async (e) => {
+        if (e.key !== "Enter") return;
+  
+        e.preventDefault();
+  
         const pxValue = parseInt(input.value, 10);
-        if (!Number.isFinite(pxValue) || pxValue < 1) return;
+        if (!Number.isFinite(pxValue) || pxValue < 1) {
+          input.value = 16;
+          return;
+        }
   
         const sectionId = input.dataset.sectionId;
         const targetKey = input.dataset.targetKey || "body";
