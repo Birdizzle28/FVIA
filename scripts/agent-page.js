@@ -709,6 +709,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       ].filter(Boolean);
   
       const borderTargets = [
+        detailsEl,
+        sectionEl,
+        shellEl,
+        headingWrapEl,
         ...rowEls
       ].filter(Boolean);
   
@@ -740,11 +744,11 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
   
       detailsEl.style.border = "";
-      detailsEl.style.borderRadius = "0";
+      detailsEl.style.borderRadius = "";
   
       if (sectionEl) {
         sectionEl.style.border = "";
-        sectionEl.style.borderRadius = "0";
+        sectionEl.style.borderRadius = "";
         sectionEl.style.boxShadow = "";
       }
   
@@ -756,7 +760,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   
       if (headingWrapEl) {
         headingWrapEl.style.border = "";
-        headingWrapEl.style.borderRadius = "0";
+        headingWrapEl.style.borderRadius = "";
         headingWrapEl.style.boxShadow = "";
       }
   
