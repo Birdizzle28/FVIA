@@ -743,27 +743,6 @@ document.addEventListener("DOMContentLoaded", async () => {
         detailsEl.style.boxShadow = "";
       }
   
-      detailsEl.style.border = "";
-      detailsEl.style.borderRadius = "";
-  
-      if (sectionEl) {
-        sectionEl.style.border = "";
-        sectionEl.style.borderRadius = "";
-        sectionEl.style.boxShadow = "";
-      }
-  
-      if (shellEl) {
-        shellEl.style.border = "";
-        shellEl.style.borderRadius = "";
-        shellEl.style.boxShadow = "";
-      }
-  
-      if (headingWrapEl) {
-        headingWrapEl.style.border = "";
-        headingWrapEl.style.borderRadius = "";
-        headingWrapEl.style.boxShadow = "";
-      }
-  
       if (headingEl) {
         headingEl.style.border = "";
         headingEl.style.borderRadius = "";
