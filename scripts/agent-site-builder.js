@@ -678,6 +678,111 @@ document.addEventListener("DOMContentLoaded", async () => {
     card.classList.toggle("collapsed");
   }
 
+  function bindLicenseBodyStyleControls() {
+    editorFields.querySelectorAll(".license-style-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        const sectionId = btn.dataset.sectionId;
+        const row = sections.find(s => s.id === sectionId);
+        if (!row) return;
+  
+        row.draft_style = row.draft_style || {};
+  
+        if (btn.classList.contains("license-style-clear-btn")) {
+          delete row.draft_style.licenses_body_highlight;
+          delete row.draft_style.licenses_body_color;
+          delete row.draft_style.licenses_body_font_size;
+          delete row.draft_style.licenses_body_font_weight;
+          delete row.draft_style.licenses_body_font_style;
+          delete row.draft_style.licenses_body_text_decoration;
+        } else {
+          const key = btn.dataset.styleKey;
+          const value = btn.dataset.styleValue;
+          const styleKey = `licenses_body_${key}`;
+  
+          row.draft_style[styleKey] =
+            row.draft_style[styleKey] === value ? "" : value;
+        }
+  
+        await supabase
+          .from("agent_page_sections")
+          .update({
+            draft_style: row.draft_style,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", sectionId);
+  
+        refreshPreview();
+        renderPageEditor(pageSelect.value);
+      });
+    });
+  
+    editorFields.querySelectorAll(".license-body-color-picker").forEach(input => {
+      input.addEventListener("input", async () => {
+        const sectionId = input.dataset.sectionId;
+        const row = sections.find(s => s.id === sectionId);
+        if (!row) return;
+  
+        row.draft_style = row.draft_style || {};
+        row.draft_style.licenses_body_color = input.value;
+  
+        await supabase
+          .from("agent_page_sections")
+          .update({
+            draft_style: row.draft_style,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", sectionId);
+  
+        refreshPreview();
+      });
+    });
+  
+    editorFields.querySelectorAll(".license-body-highlight-picker").forEach(input => {
+      input.addEventListener("input", async () => {
+        const sectionId = input.dataset.sectionId;
+        const row = sections.find(s => s.id === sectionId);
+        if (!row) return;
+  
+        row.draft_style = row.draft_style || {};
+        row.draft_style.licenses_body_highlight = input.value;
+  
+        await supabase
+          .from("agent_page_sections")
+          .update({
+            draft_style: row.draft_style,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", sectionId);
+  
+        refreshPreview();
+      });
+    });
+  
+    editorFields.querySelectorAll(".license-body-font-size").forEach(input => {
+      input.addEventListener("input", async () => {
+        const sectionId = input.dataset.sectionId;
+        const row = sections.find(s => s.id === sectionId);
+        if (!row) return;
+  
+        const pxValue = parseInt(input.value, 10);
+        if (!Number.isFinite(pxValue) || pxValue < 1) return;
+  
+        row.draft_style = row.draft_style || {};
+        row.draft_style.licenses_body_font_size = `${pxValue}px`;
+  
+        await supabase
+          .from("agent_page_sections")
+          .update({
+            draft_style: row.draft_style,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", sectionId);
+  
+        refreshPreview();
+      });
+    });
+  }
+
   function bindCollapsibleCards() {
     document.querySelectorAll(".editor-subcard, .editor-field-group").forEach(card => {
       const head = card.querySelector(":scope > .builder-collapsible-head");
@@ -1619,6 +1724,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         ? (HOME_SECTION_RULES[section.section_key] || null)
         : null;
   
+      const isLicensesSection = pageKey === "home" && section.section_key === "licenses";
+  
       wrap.innerHTML = `
         <button type="button" class="builder-section-head">
           <div class="builder-section-head-left">
@@ -1675,7 +1782,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                           title="Text Color"
                         />
                       </div>
-
+  
                       <input
                         type="number"
                         class="toolbar-font-size"
@@ -1746,7 +1853,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                           title="Text Color"
                         />
                       </div>
-                      
+  
                       <input
                         type="number"
                         class="toolbar-font-size"
@@ -1776,72 +1883,164 @@ document.addEventListener("DOMContentLoaded", async () => {
   
           ${
             !homeRules || homeRules.showBody
-              ? `
-                <div class="editor-subcard collapsed">
-                  <button type="button" class="builder-collapsible-head">
-                    <span class="builder-section-title">Body</span>
-                    <span class="builder-section-caret">▾</span>
-                  </button>
-                  <div class="builder-collapsible-body">
-                    <div class="highlight-color-row">
-                      <input
-                        type="color"
-                        class="custom-highlight-picker"
-                        data-section-id="${section.id}"
-                        data-target-key="body"
-                        value="#fff3a3"
-                        title="Custom highlight"
-                      />
-                    </div>
-  
-                    <div class="rt-toolbar" data-toolbar-for="${section.id}-body">
-                      <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}" data-target-key="body" title="Bold"><i class="fa-solid fa-bold"></i></button>
-                      <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}" data-target-key="body" title="Italic"><i class="fa-solid fa-italic"></i></button>
-                      <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}" data-target-key="body" title="Underline"><i class="fa-solid fa-underline"></i></button>
-                      <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}" data-target-key="body" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
-                      <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}" data-target-key="body" title="Heading 2">H2</button>
-                      <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}" data-target-key="body" title="Heading 3">H3</button>
-                      <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" data-target-key="body" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
-                      <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" data-target-key="body" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
-                      <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" data-target-key="body" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
-                      <div class="toolbar-color-wrap">
-                        <button type="button" class="rt-color-btn" title="Text Color">
-                          <span class="toolbar-a-icon" style="--toolbar-color:${escapeHtml(style.color_custom || "#000000")}">A</span>
+              ? (
+                  isLicensesSection
+                    ? `
+                      <div class="editor-subcard collapsed">
+                        <button type="button" class="builder-collapsible-head">
+                          <span class="builder-section-title">Body</span>
+                          <span class="builder-section-caret">▾</span>
                         </button>
-                        <input
-                          type="color"
-                          class="text-color-picker"
-                          data-section-id="${section.id}"
-                          data-target-key="body"
-                          value="${escapeHtml(style.color_custom || "#000000")}"
-                          title="Text Color"
-                        />
-                      </div>
-                      
-                      <input
-                        type="number"
-                        class="toolbar-font-size"
-                        data-section-id="${section.id}"
-                        data-target-key="body"
-                        min="8"
-                        max="300"
-                        step="1"
-                        value="16"
-                        title="Text Size"
-                      />
-                      <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="body" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
-                    </div>
+                        <div class="builder-collapsible-body">
+                          <p class="builder-note">
+                            These controls style the generated license rows only. They do not edit the actual license text.
+                          </p>
   
-                    <div
-                      class="rich-editor"
-                      contenteditable="true"
-                      data-field-type="section-content-html"
-                      data-section-id="${section.id}"
-                      data-key="body"
-                    >${content.body || ""}</div>
-                  </div>
-                </div>
-              `
+                          <div class="rt-toolbar license-style-toolbar" data-toolbar-for="${section.id}-licenses-body">
+                            <input
+                              type="color"
+                              class="license-body-highlight-picker"
+                              data-section-id="${section.id}"
+                              value="${escapeHtml(style.licenses_body_highlight || "#fff3a3")}"
+                              title="Highlight Color"
+                            />
+  
+                            <button
+                              type="button"
+                              class="license-style-btn"
+                              data-section-id="${section.id}"
+                              data-style-key="font_weight"
+                              data-style-value="bold"
+                              title="Bold"
+                            >
+                              <i class="fa-solid fa-bold"></i>
+                            </button>
+  
+                            <button
+                              type="button"
+                              class="license-style-btn"
+                              data-section-id="${section.id}"
+                              data-style-key="font_style"
+                              data-style-value="italic"
+                              title="Italic"
+                            >
+                              <i class="fa-solid fa-italic"></i>
+                            </button>
+  
+                            <button
+                              type="button"
+                              class="license-style-btn"
+                              data-section-id="${section.id}"
+                              data-style-key="text_decoration"
+                              data-style-value="underline"
+                              title="Underline"
+                            >
+                              <i class="fa-solid fa-underline"></i>
+                            </button>
+  
+                            <div class="toolbar-color-wrap">
+                              <button type="button" class="rt-color-btn" title="Text Color">
+                                <span class="toolbar-a-icon" style="--toolbar-color:${escapeHtml(style.licenses_body_color || "#000000")}">A</span>
+                              </button>
+                              <input
+                                type="color"
+                                class="license-body-color-picker"
+                                data-section-id="${section.id}"
+                                value="${escapeHtml(style.licenses_body_color || "#000000")}"
+                                title="Text Color"
+                              />
+                            </div>
+  
+                            <input
+                              type="number"
+                              class="license-body-font-size"
+                              data-section-id="${section.id}"
+                              min="8"
+                              max="300"
+                              step="1"
+                              value="${parseInt(style.licenses_body_font_size || "16px", 10) || 16}"
+                              title="Text Size"
+                            />
+  
+                            <button
+                              type="button"
+                              class="license-style-btn license-style-clear-btn"
+                              data-section-id="${section.id}"
+                              title="Clear Formatting"
+                            >
+                              <i class="fa-solid fa-eraser"></i>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    `
+                    : `
+                      <div class="editor-subcard collapsed">
+                        <button type="button" class="builder-collapsible-head">
+                          <span class="builder-section-title">Body</span>
+                          <span class="builder-section-caret">▾</span>
+                        </button>
+                        <div class="builder-collapsible-body">
+                          <div class="highlight-color-row">
+                            <input
+                              type="color"
+                              class="custom-highlight-picker"
+                              data-section-id="${section.id}"
+                              data-target-key="body"
+                              value="#fff3a3"
+                              title="Custom highlight"
+                            />
+                          </div>
+  
+                          <div class="rt-toolbar" data-toolbar-for="${section.id}-body">
+                            <button type="button" class="rt-btn" data-cmd="bold" data-section-id="${section.id}" data-target-key="body" title="Bold"><i class="fa-solid fa-bold"></i></button>
+                            <button type="button" class="rt-btn" data-cmd="italic" data-section-id="${section.id}" data-target-key="body" title="Italic"><i class="fa-solid fa-italic"></i></button>
+                            <button type="button" class="rt-btn" data-cmd="underline" data-section-id="${section.id}" data-target-key="body" title="Underline"><i class="fa-solid fa-underline"></i></button>
+                            <button type="button" class="rt-btn" data-cmd="insertUnorderedList" data-section-id="${section.id}" data-target-key="body" title="Bullet List"><i class="fa-solid fa-list-ul"></i></button>
+                            <button type="button" class="rt-btn" data-cmd="formatBlock-h2" data-section-id="${section.id}" data-target-key="body" title="Heading 2">H2</button>
+                            <button type="button" class="rt-btn" data-cmd="formatBlock-h3" data-section-id="${section.id}" data-target-key="body" title="Heading 3">H3</button>
+                            <button type="button" class="rt-btn" data-cmd="justifyLeft" data-section-id="${section.id}" data-target-key="body" title="Align Left"><i class="fa-solid fa-align-left"></i></button>
+                            <button type="button" class="rt-btn" data-cmd="justifyCenter" data-section-id="${section.id}" data-target-key="body" title="Align Center"><i class="fa-solid fa-align-center"></i></button>
+                            <button type="button" class="rt-btn" data-cmd="justifyRight" data-section-id="${section.id}" data-target-key="body" title="Align Right"><i class="fa-solid fa-align-right"></i></button>
+                            <div class="toolbar-color-wrap">
+                              <button type="button" class="rt-color-btn" title="Text Color">
+                                <span class="toolbar-a-icon" style="--toolbar-color:${escapeHtml(style.color_custom || "#000000")}">A</span>
+                              </button>
+                              <input
+                                type="color"
+                                class="text-color-picker"
+                                data-section-id="${section.id}"
+                                data-target-key="body"
+                                value="${escapeHtml(style.color_custom || "#000000")}"
+                                title="Text Color"
+                              />
+                            </div>
+  
+                            <input
+                              type="number"
+                              class="toolbar-font-size"
+                              data-section-id="${section.id}"
+                              data-target-key="body"
+                              min="8"
+                              max="300"
+                              step="1"
+                              value="16"
+                              title="Text Size"
+                            />
+                            <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="body" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
+                          </div>
+  
+                          <div
+                            class="rich-editor"
+                            contenteditable="true"
+                            data-field-type="section-content-html"
+                            data-section-id="${section.id}"
+                            data-key="body"
+                          >${content.body || ""}</div>
+                        </div>
+                      </div>
+                    `
+                )
               : ""
           }
   
@@ -2038,7 +2237,6 @@ document.addEventListener("DOMContentLoaded", async () => {
               <span class="range-output">${px(style.border_width, 0)}px</span>
   
               <label>Section Border Radius</label>
-
               <input
                 type="range"
                 min="0"
@@ -2050,7 +2248,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 value="${px(style.border_radius, 0)}"
               />
               <span class="range-output">${px(style.border_radius, 0)}px</span>
-              
+  
               <label>Shadow Color</label>
               <input
                 type="color"
@@ -2059,7 +2257,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 data-key="shadow_color"
                 value="${escapeHtml(style.shadow_color || "#000000")}"
               />
-              
+  
               <label>Shadow Blur</label>
               <input
                 type="range"
@@ -2072,7 +2270,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 value="${px(style.shadow_blur, 0)}"
               />
               <span class="range-output">${px(style.shadow_blur, 0)}px</span>
-              
+  
               <label>Shadow X Offset</label>
               <input
                 type="range"
@@ -2085,7 +2283,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                 value="${px(style.shadow_x, 0)}"
               />
               <span class="range-output">${px(style.shadow_x, 0)}px</span>
-              
+  
               <label>Shadow Y Offset</label>
               <input
                 type="range"
@@ -2102,7 +2300,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
   
           ${
-            pageKey === "home" && ["contact", "licenses", "quote"].includes(section.section_key)
+            pageKey === "home" && ["contact", "quote"].includes(section.section_key)
               ? `<p class="builder-note">This section currently uses site defaults. You can toggle it on or off, but it does not have editable content yet.</p>`
               : ""
           }
@@ -2133,12 +2331,13 @@ document.addEventListener("DOMContentLoaded", async () => {
     bindSectionRangeOutputs();
     bindTextColorPickers();
     bindToolbarFontSizes();
-    
+    bindLicenseBodyStyleControls();
+  
     editorFields.querySelectorAll(".builder-section-card").forEach(card => {
       setCollapsibleState(card, card.classList.contains("collapsed"));
     });
-    
-    document.querySelectorAll(".editor-subcard, .editor-field-group").forEach(card => {
+  
+    editorFields.querySelectorAll(".editor-subcard, .editor-field-group").forEach(card => {
       if (card.querySelector(":scope > .builder-collapsible-head")) {
         setCollapsibleState(card, card.classList.contains("collapsed"));
       }
