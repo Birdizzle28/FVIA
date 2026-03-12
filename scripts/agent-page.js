@@ -794,7 +794,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function loadAndRenderLicenses(agentNpn, sectionContent = {}, sectionStyle = {}, pageKey = "home") {
-    const wrap = document.getElementById("agent-licenses");
+    const wrap = document.getElementById("agent-licenses-section");
     if (!wrap) return;
   
     const headingHtml = sectionContent.heading || "Active Licenses";
