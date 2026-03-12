@@ -267,10 +267,11 @@ document.addEventListener("DOMContentLoaded", async () => {
   
     const sectionId = editor.dataset.sectionId;
     const faqId = editor.dataset.faqId;
+    const targetKey = editor.dataset.key || "body";
   
     const scope = faqId
       ? `.faq-rt-btn[data-faq-id="${faqId}"]`
-      : `.rt-btn[data-section-id="${sectionId}"]`;
+      : `.rt-btn[data-section-id="${sectionId}"][data-target-key="${targetKey}"]`;
   
     const buttons = editorFields.querySelectorAll(scope);
   
@@ -1210,51 +1211,66 @@ document.addEventListener("DOMContentLoaded", async () => {
       return;
     }
   
-    if (cmd === "removeFormat") {
-      document.execCommand("removeFormat", false, null);
-      document.execCommand("unlink", false, null);
-    
-      const sel = window.getSelection();
-      if (sel && sel.rangeCount > 0) {
-        let node = sel.getRangeAt(0).commonAncestorContainer;
-        if (node.nodeType !== 1) node = node.parentElement;
-    
-        while (node && node !== targetEl) {
-          if (["H2", "H3"].includes(node.tagName)) {
-            document.execCommand("formatBlock", false, "P");
-            break;
-          }
-          node = node.parentElement;
-        }
-      }
-    
-      return;
-    }
-
     if (cmd === "foreColor") {
       document.execCommand("styleWithCSS", false, true);
       document.execCommand("foreColor", false, value || "#000000");
       document.execCommand("styleWithCSS", false, false);
       return;
     }
-    
+  
     if (cmd === "fontSizeCustom") {
       const sel = window.getSelection();
       if (!sel || sel.rangeCount === 0) return;
-    
+  
       document.execCommand("styleWithCSS", false, false);
       document.execCommand("fontSize", false, "7");
-    
+  
       targetEl.querySelectorAll('font[size="7"]').forEach(node => {
         const span = document.createElement("span");
         span.style.fontSize = value || "16px";
         span.innerHTML = node.innerHTML;
         node.replaceWith(span);
       });
-    
+  
       return;
     }
-    
+  
+    if (cmd === "removeFormat") {
+      document.execCommand("removeFormat", false, null);
+      document.execCommand("unlink", false, null);
+  
+      targetEl.querySelectorAll("mark").forEach(node => {
+        const parent = node.parentNode;
+        while (node.firstChild) parent.insertBefore(node.firstChild, node);
+        parent.removeChild(node);
+      });
+  
+      targetEl.querySelectorAll("span, font").forEach(node => {
+        const parent = node.parentNode;
+        while (node.firstChild) parent.insertBefore(node.firstChild, node);
+        parent.removeChild(node);
+      });
+  
+      targetEl.querySelectorAll("[style]").forEach(node => {
+        node.removeAttribute("style");
+      });
+  
+      targetEl.querySelectorAll("h2, h3").forEach(node => {
+        const p = document.createElement("p");
+        p.innerHTML = node.innerHTML;
+        node.replaceWith(p);
+      });
+  
+      targetEl.querySelectorAll("div").forEach(node => {
+        if (node === targetEl) return;
+        const p = document.createElement("p");
+        p.innerHTML = node.innerHTML;
+        node.replaceWith(p);
+      });
+  
+      return;
+    }
+  
     document.execCommand(cmd, false, null);
   }
 
@@ -1815,7 +1831,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                         min="8"
                         max="300"
                         step="1"
-                        value="16"
+                        value="${parseInt(
+                          ((content.heading || "").match(/font-size:\s*([0-9.]+)px/i)?.[1]) || "16",
+                          10
+                        ) || 16}"
                         title="Text Size"
                       />
                       <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="heading" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
@@ -1886,7 +1905,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                         min="8"
                         max="300"
                         step="1"
-                        value="16"
+                        value="${parseInt(
+                          ((content.subheading || "").match(/font-size:\s*([0-9.]+)px/i)?.[1]) || "16",
+                          10
+                        ) || 16}"
                         title="Text Size"
                       />
                       <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="subheading" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
@@ -2048,7 +2070,10 @@ document.addEventListener("DOMContentLoaded", async () => {
                               min="8"
                               max="300"
                               step="1"
-                              value="16"
+                              value="${parseInt(
+                                ((content.body || "").match(/font-size:\s*([0-9.]+)px/i)?.[1]) || "16",
+                                10
+                              ) || 16}"
                               title="Text Size"
                             />
                             <button type="button" class="rt-btn" data-cmd="removeFormat" data-section-id="${section.id}" data-target-key="body" title="Clear Formatting"><i class="fa-solid fa-eraser"></i></button>
