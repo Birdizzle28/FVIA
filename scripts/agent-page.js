@@ -580,29 +580,29 @@ document.addEventListener("DOMContentLoaded", async () => {
     if (pageKey === "careers") {
       if (sectionKey === "intro") {
         setHtmlIfExists("agent-careers-title", content.heading || "");
-        setTextIfExists("agent-careers-intro", content.body || "");
-        setTextIfExists("agent-careers-region", content.subheading || "");
+        setHtmlIfExists("agent-careers-intro", content.body || "");
+        setHtmlIfExists("agent-careers-region", content.subheading || "");
       }
 
       if (sectionKey === "notice") {
-        setTextIfExists("agent-hiring-status", content.heading || "");
+        setHtmlIfExists("agent-hiring-status", content.heading || "");
         setHtmlIfExists("agent-hiring-message", content.body || "");
       }
 
       if (sectionKey === "roles") {
-        setTextIfExists("agent-role-title", content.agent_role_title || "");
-        setTextIfExists("agent-role-location", content.agent_role_location || "");
-        setTextIfExists("agent-role-type", content.agent_role_type || "");
+        setHtmlIfExists("agent-role-title", content.agent_role_title || "");
+        setHtmlIfExists("agent-role-location", content.agent_role_location || "");
+        setHtmlIfExists("agent-role-type", content.agent_role_type || "");
         setHtmlIfExists("agent-role-description", content.agent_role_description || "");
 
-        setTextIfExists("setter-role-title", content.setter_role_title || "");
-        setTextIfExists("setter-role-location", content.setter_role_location || "");
-        setTextIfExists("setter-role-type", content.setter_role_type || "");
+        setHtmlIfExists("setter-role-title", content.setter_role_title || "");
+        setHtmlIfExists("setter-role-location", content.setter_role_location || "");
+        setHtmlIfExists("setter-role-type", content.setter_role_type || "");
         setHtmlIfExists("setter-role-description", content.setter_role_description || "");
       }
 
       if (sectionKey === "cta") {
-        setTextIfExists("careers-contact-title", content.heading || "");
+        setHtmlIfExists("careers-contact-title", content.heading || "");
         setHtmlIfExists("careers-contact-description", content.body || "");
         setHrefIfExists("careers-contact-email", content.button_link || "", content.button_text || "");
       }
@@ -610,12 +610,12 @@ document.addEventListener("DOMContentLoaded", async () => {
 
     if (pageKey === "faqs") {
       if (sectionKey === "intro") {
-        setTextIfExists("agent-faq-title", content.heading || "");
+        setHtmlIfExists("agent-faq-title", content.heading || "");
         setHtmlIfExists("agent-faq-intro", content.body || "");
       }
 
       if (sectionKey === "cta") {
-        setTextIfExists("faq-contact-title", content.heading || "");
+        setHtmlIfExists("faq-contact-title", content.heading || "");
         setHtmlIfExists("faq-contact-text", content.body || "");
         setHrefIfExists("faq-contact-link", content.button_link || "", content.button_text || "");
       }
@@ -629,24 +629,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       const el = document.getElementById(id);
       if (!el) return;
   
-      const textColor =
-        style.color_preset === "custom"
-          ? style.color_custom
-          : style.color_preset === "pink"
-            ? "#ed9ea5"
-            : style.color_preset === "blue"
-              ? "#7fabbf"
-              : style.color_preset === "dark"
-                ? "#272727"
-                : style.color_preset === "light"
-                  ? "#ffffff"
-                  : "";
-  
       if (style.text_align) {
         el.style.textAlign = style.text_align;
       }
-  
-      el.style.color = textColor || "";
   
       const bgColor =
         style.background_color_mode === "custom"
