@@ -823,15 +823,15 @@ document.addEventListener("DOMContentLoaded", async () => {
     ].filter(Boolean).join(";");
   
     wrap.innerHTML = `
-      <div id="agent-licenses-shell">
-        <div id="agent-licenses-heading-wrap">
+      <div id="agent-licenses-shell" style="background:transparent; border:none; box-shadow:none; padding:0;">
+        <div id="agent-licenses-heading-wrap" style="padding:0; margin:0;">
           <div id="agent-licenses-heading">${headingHtml}</div>
           <div
             id="agent-licenses-subheading"
             style="${isMeaningfulHtml(subheadingHtml) ? "" : "display:none;"}"
           >${subheadingHtml}</div>
         </div>
-        <div id="agent-licenses-list" class="license-list loading">Loading licenses…</div>
+        <div id="agent-licenses-list" class="license-list loading"></div>
       </div>
     `;
   
