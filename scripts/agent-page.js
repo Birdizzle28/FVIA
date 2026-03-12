@@ -670,6 +670,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       } else {
         el.style.borderRadius = "";
       }
+      
+      if (
+        style.shadow_color &&
+        (style.shadow_blur || style.shadow_x || style.shadow_y)
+      ) {
+        el.style.boxShadow = `${style.shadow_x || "0px"} ${style.shadow_y || "0px"} ${style.shadow_blur || "0px"} ${style.shadow_color}`;
+      } else {
+        el.style.boxShadow = "";
+      }
     });
   }
 
