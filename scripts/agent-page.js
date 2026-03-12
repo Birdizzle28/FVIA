@@ -659,8 +659,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       const el = document.getElementById(id);
       if (!el) return;
   
+      const isLicensesSection = pageKey === "home" && sectionKey === "licenses";
+  
       if (style.text_align) {
         el.style.textAlign = style.text_align;
+      } else {
+        el.style.textAlign = "";
       }
   
       const bgColor =
@@ -668,14 +672,90 @@ document.addEventListener("DOMContentLoaded", async () => {
           ? (style.background_color_custom || "")
           : (style.background_color || "");
   
+      const borderValue =
+        style.border_width && style.border_style && style.border_color
+          ? `${style.border_width} ${style.border_style} ${style.border_color}`
+          : "";
+  
+      const boxShadowValue =
+        style.shadow_color && (style.shadow_blur || style.shadow_x || style.shadow_y)
+          ? `${style.shadow_x || "0px"} ${style.shadow_y || "0px"} ${style.shadow_blur || "0px"} ${style.shadow_color}`
+          : "";
+  
+      if (isLicensesSection) {
+        const nestedDivs = el.querySelectorAll("div");
+  
+        if (bgColor) {
+          el.style.backgroundColor = bgColor;
+          nestedDivs.forEach(node => {
+            node.style.backgroundColor = bgColor;
+          });
+        } else {
+          el.style.backgroundColor = "";
+          nestedDivs.forEach(node => {
+            node.style.backgroundColor = "";
+          });
+        }
+  
+        if (style.border_radius) {
+          el.style.borderRadius = style.border_radius;
+          nestedDivs.forEach(node => {
+            if (node.id !== "agent-licenses-list") {
+              node.style.borderRadius = style.border_radius;
+            }
+          });
+        } else {
+          el.style.borderRadius = "";
+          nestedDivs.forEach(node => {
+            if (node.id !== "agent-licenses-list") {
+              node.style.borderRadius = "";
+            }
+          });
+        }
+  
+        if (borderValue) {
+          el.style.border = borderValue;
+          nestedDivs.forEach(node => {
+            if (node.id !== "agent-licenses-list") {
+              node.style.border = borderValue;
+            }
+          });
+        } else {
+          el.style.border = "";
+          nestedDivs.forEach(node => {
+            if (node.id !== "agent-licenses-list") {
+              node.style.border = "";
+            }
+          });
+        }
+  
+        if (boxShadowValue) {
+          el.style.boxShadow = boxShadowValue;
+          nestedDivs.forEach(node => {
+            if (node.id !== "agent-licenses-list") {
+              node.style.boxShadow = boxShadowValue;
+            }
+          });
+        } else {
+          el.style.boxShadow = "";
+          nestedDivs.forEach(node => {
+            if (node.id !== "agent-licenses-list") {
+              node.style.boxShadow = "";
+            }
+          });
+        }
+  
+        return;
+      }
+  
       if (bgColor) {
         el.style.backgroundColor = bgColor;
       } else {
         el.style.backgroundColor = "";
       }
   
-      if (style.border_width && style.border_style && style.border_color) {
-        el.style.border = `${style.border_width} ${style.border_style} ${style.border_color}`;
+      if (borderValue) {
+        el.style.border = borderValue;
       } else {
         el.style.border = "";
       }
@@ -685,12 +765,9 @@ document.addEventListener("DOMContentLoaded", async () => {
       } else {
         el.style.borderRadius = "";
       }
-      
-      if (
-        style.shadow_color &&
-        (style.shadow_blur || style.shadow_x || style.shadow_y)
-      ) {
-        el.style.boxShadow = `${style.shadow_x || "0px"} ${style.shadow_y || "0px"} ${style.shadow_blur || "0px"} ${style.shadow_color}`;
+  
+      if (boxShadowValue) {
+        el.style.boxShadow = boxShadowValue;
       } else {
         el.style.boxShadow = "";
       }
