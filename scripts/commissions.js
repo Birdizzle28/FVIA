@@ -57,66 +57,78 @@ async function getAgentNameMap(agentIds = []) {
 }
 
 document.addEventListener('DOMContentLoaded', async () => {
-
-   if (!supabase) {
-    console.error('Supabase client missing on this page');
-    return;
-  }
-  // ----- 1. Require login -----
-  const { data: { session }, error: sessErr } = await supabase.auth.getSession();
-  if (sessErr) {
-    console.error('Error getting session on commissions page:', sessErr);
-  }
-  if (!session) {
-    window.location.href = 'login.html';
-    return;
-  }
-  me = session.user;
-  accessToken = session.access_token;
-  // ----- 2. Load my agent profile (for name + "level" label) -----
   try {
-    const { data: profile, error: profErr } = await supabase
-      .from('agents')
-      .select('id, full_name, agent_id, is_admin, is_active, level, created_at')
-      .eq('id', me.id)
-      .single();
+    highlightCurrentCommissionsNav();
 
-    if (profErr) {
-      console.error('Error loading agent profile for commissions:', profErr);
-    } else {
-      myProfile = profile;
-      hydrateHeaderFromProfile(profile);
+    if (!supabase) {
+      console.error('Supabase client missing on this page');
+      document.body.classList.remove('commissions-preload');
+      return;
     }
-  } catch (e) {
-    console.error('Unexpected error loading agent profile:', e);
+
+    // ----- 1. Require login -----
+    const { data: { session }, error: sessErr } = await supabase.auth.getSession();
+    if (sessErr) {
+      console.error('Error getting session on commissions page:', sessErr);
+    }
+    if (!session) {
+      window.location.href = 'login.html';
+      return;
+    }
+
+    me = session.user;
+    accessToken = session.access_token;
+
+    // ----- 2. Load my agent profile -----
+    try {
+      const { data: profile, error: profErr } = await supabase
+        .from('agents')
+        .select('id, full_name, agent_id, is_admin, is_active, level, created_at')
+        .eq('id', me.id)
+        .single();
+
+      if (profErr) {
+        console.error('Error loading agent profile for commissions:', profErr);
+      } else {
+        myProfile = profile;
+        hydrateHeaderFromProfile(profile);
+      }
+    } catch (e) {
+      console.error('Unexpected error loading agent profile:', e);
+    }
+
+    // ----- 3. Wire up UI before showing it -----
+    initTabs();
+    initPayoutRangeChange();
+    initPoliciesDateRange();
+    await populatePoliciesCarrierDropdown();
+    initPoliciesFilters();
+    initPoliciesScopeToggle();
+    initFilesChips();
+    initCommissionReportsPicker();
+    initBalanceScopeToggle();
+
+    // ----- 4. Load real data -----
+    const overview = await loadAgentCommissionOverview();
+    const previews = await loadNextPayoutsFromPreviews();
+
+    if (!previews?.weekly && !previews?.monthly && !overview) {
+      renderPlaceholderSummary();
+    }
+
+    await loadAndRenderPayouts();
+    await loadAndRenderTeamOverridesPanel();
+
+    // ✅ Default Files tab behavior = Commission Reports UI, not placeholders
+    await loadAndRenderFilesForChip('reports');
+    setActiveFilesChip('reports');
+
+  } catch (err) {
+    console.error('Unexpected commissions page init error:', err);
+  } finally {
+    // ✅ Reveal tabbed UI only after init work is done
+    document.body.classList.remove('commissions-preload');
   }
-
-  // ----- 3. Load aggregate commission overview (view) -----
-  const overview = await loadAgentCommissionOverview();
-
-  // 🔹 NEW: load upcoming payouts (advance + pay-thru)
-  const previews = await loadNextPayoutsFromPreviews();
-   
-   if (!previews?.weekly && !previews?.monthly && !overview) {
-     renderPlaceholderSummary();
-   }
-
-  // ----- 4. Wire up tabs & basic UI -----
-  initTabs();
-  initPayoutRangeChange();
-  initPoliciesDateRange();
-  await populatePoliciesCarrierDropdown();
-  initPoliciesFilters();
-  initPoliciesScopeToggle();
-  initFilesChips();
-  initCommissionReportsPicker();
-  initBalanceScopeToggle();
-  // ----- 5. Load REAL lead debts + chargebacks -----
-
-  // ----- 7. Still use placeholder data for payouts, team, files (for now) -----
-  await loadAndRenderPayouts();
-  await loadAndRenderTeamOverridesPanel();
-  await loadAndRenderFilesForChip('all');
 });
 
 /* ===============================
@@ -358,13 +370,28 @@ function initPayoutRangeChange() {
   });
 }
 
+function highlightCurrentCommissionsNav() {
+  const mobileLinks = document.querySelectorAll('#mobile-menu a[href="commissions.html"]');
+  mobileLinks.forEach(link => link.classList.add('is-current'));
+}
+
+function setActiveFilesChip(type) {
+  const chipsWrap = document.getElementById('files-type-chips');
+  if (!chipsWrap) return;
+
+  chipsWrap.querySelectorAll('.chip').forEach(chip => {
+    const chipType = chip.getAttribute('data-doc-type') || '';
+    chip.classList.toggle('is-active', chipType === type);
+  });
+}
+
 function initTabs() {
   const tabButtons = document.querySelectorAll('.commissions-tabs .tab');
   const panels = document.querySelectorAll('.commissions-tabs .panel');
 
   if (!tabButtons.length || !panels.length) return;
 
-  function activateTab(target) {
+  async function activateTab(target) {
     // tabs
     tabButtons.forEach(t => {
       const isActive = t.getAttribute('data-tab') === target;
@@ -379,21 +406,24 @@ function initTabs() {
       if (idMatch) panel.removeAttribute('hidden');
       else panel.setAttribute('hidden', 'true');
     });
+
+    // ✅ When Files tab opens, default to Commission Reports UI
+    if (target === 'files') {
+      setActiveFilesChip('reports');
+      await loadAndRenderFilesForChip('reports');
+    }
   }
 
-  // ✅ On load: pick an already-active tab if present, else first tab
   const preActive = Array.from(tabButtons).find(t => t.classList.contains('is-active'));
   const defaultTarget = (preActive || tabButtons[0]).getAttribute('data-tab');
 
-  // ✅ Hide everything except default immediately
   if (defaultTarget) activateTab(defaultTarget);
 
-  // Click behavior
   tabButtons.forEach(tab => {
-    tab.addEventListener('click', () => {
+    tab.addEventListener('click', async () => {
       const target = tab.getAttribute('data-tab');
       if (!target) return;
-      activateTab(target);
+      await activateTab(target);
     });
   });
 }
@@ -442,14 +472,9 @@ function initFilesChips() {
     const btn = e.target.closest('.chip');
     if (!btn) return;
 
-    const type = btn.getAttribute('data-doc-type') || 'all';
+    const type = btn.getAttribute('data-doc-type') || 'reports';
 
-    // Active state
-    chipsWrap.querySelectorAll('.chip').forEach(chip => {
-      chip.classList.toggle('is-active', chip === btn);
-    });
-
-    // ✅ Instead of just hiding/showing rows, we re-render the table
+    setActiveFilesChip(type);
     await loadAndRenderFilesForChip(type);
   });
 }
@@ -1608,28 +1633,28 @@ function renderPlaceholderFiles() {
   `).join('');
 }
 async function loadAndRenderFilesForChip(type) {
-  // ✅ If user selected "Commission Reports", show picker UI and hide table
+  const tbody = document.querySelector('#files-table tbody');
+  if (!tbody) return;
+
+  // ✅ Commission Reports = show real picker only, no placeholder rows
   if (type === 'reports') {
     showCommissionReportsPicker(true);
+    tbody.innerHTML = '';
     return;
   }
 
-  // Otherwise: show normal table
+  // Everything else uses the table
   showCommissionReportsPicker(false);
 
-  // Keep schedules special
+  // Pay schedules = real rows
   if (type === 'schedule') {
     await loadAndRenderPaySchedulesTable();
     return;
   }
 
-  // Default placeholder files
-  renderPlaceholderFiles(); 
+  // Other = only show "other" docs you explicitly want
+  tbody.innerHTML = '';
 
-  const tbody = document.querySelector('#files-table tbody');
-  if (!tbody) return;
-
-  // ✅ If user clicked "Other", prepend a Commission Manual row
   if (type === 'other') {
     const manualRow = document.createElement('tr');
     manualRow.setAttribute('data-doc-type', 'other');
@@ -1645,21 +1670,17 @@ async function loadAndRenderFilesForChip(type) {
         </button>
       </td>
     `;
-    tbody.prepend(manualRow);
+    tbody.appendChild(manualRow);
 
     const btn = manualRow.querySelector('.btn-download-manual');
     btn.addEventListener('click', async () => {
       await downloadCommissionManualPdf();
     });
+    return;
   }
 
-  // Filter placeholder rows (and the injected row)
-  const rows = Array.from(tbody.querySelectorAll('tr'));
-  rows.forEach(row => {
-    const rowType = row.getAttribute('data-doc-type') || 'other';
-    const shouldShow = type === 'all' || rowType === type;
-    row.style.display = shouldShow ? '' : 'none';
-  });
+  // fallback
+  tbody.innerHTML = '';
 }
 
 async function loadAndRenderPaySchedulesTable() {
