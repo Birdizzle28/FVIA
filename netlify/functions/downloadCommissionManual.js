@@ -43,8 +43,6 @@ function tryLoadLogoBuffer() {
 }
 
 function tryLoadBackgroundBuffer() {
-  // Put your background here (recommended):
-  // assets/commission-bg.jpg (or png)
   const candidates = [
     path.join(process.cwd(), 'assets', 'commission-bg.jpg'),
     path.join(process.cwd(), 'assets', 'commission-bg.png'),
@@ -61,182 +59,377 @@ function tryLoadBackgroundBuffer() {
 }
 
 /* ------------------------ TEXT SANITIZER ------------------------ */
-/**
- * PDFKit's built-in fonts are not full-Unicode.
- * Smart punctuation / arrows / special bullets can get rendered as weird junk like "!'" etc.
- * We normalize them here to safe ASCII-ish equivalents.
- */
+
 function cleanText(input) {
   if (input == null) return '';
   let s = String(input);
 
-  // normalize common smart punctuation
   s = s
-    .replace(/[\u2018\u2019\u201A\u201B]/g, "'")  // smart single quotes
-    .replace(/[\u201C\u201D\u201E\u201F]/g, '"')  // smart double quotes
-    .replace(/[\u2010\u2011\u2012\u2013\u2014]/g, '-') // hyphens/em-dash
-    .replace(/\u2026/g, '...')                    // ellipsis
-    .replace(/\u2022/g, '•')                      // bullet (we keep this; safe usually)
-    .replace(/\u2192/g, '->')                     // →
-    .replace(/\u2190/g, '<-')                     // ←
-    .replace(/\u00A0/g, ' ')                      // non-breaking space
-    .replace(/[\u200B-\u200D\uFEFF]/g, '');       // zero-width chars
+    .replace(/[\u2018\u2019\u201A\u201B]/g, "'")
+    .replace(/[\u201C\u201D\u201E\u201F]/g, '"')
+    .replace(/[\u2010\u2011\u2012\u2013\u2014]/g, '-')
+    .replace(/\u2026/g, '...')
+    .replace(/\u2022/g, '•')
+    .replace(/\u2192/g, '->')
+    .replace(/\u2190/g, '<-')
+    .replace(/\u00A0/g, ' ')
+    .replace(/[\u200B-\u200D\uFEFF]/g, '');
 
-  // strip any remaining control chars except newline/tab
   s = s.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '');
-
   return s;
 }
 
-/* ------------------------ PDF HELPERS ------------------------ */
+/* ------------------------ DESIGN HELPERS ------------------------ */
+
+const COLORS = {
+  brand: '#353468',
+  brandDark: '#25234c',
+  ink: '#1e1d35',
+  muted: '#66627f',
+  softLine: '#ddd8ee',
+  white: '#ffffff',
+  offWhite: '#fbfbfe',
+  warning: '#b00020',
+  warningSoft: '#fdecef',
+  lavenderSoft: '#f5f1ff',
+  footer: '#6f6a89'
+};
 
 function drawFullPageBackground(doc, bgBuffer) {
   if (!bgBuffer) return;
   try {
     doc.save();
-    // Draw behind everything; no opacity so it matches your image fully
     doc.image(bgBuffer, 0, 0, { width: doc.page.width, height: doc.page.height });
+    // soften it so content cards sit on top cleanly
+    doc.fillOpacity(0.86).rect(0, 0, doc.page.width, doc.page.height).fill('#ffffff');
     doc.restore();
   } catch {
-    // If image fails to render, silently continue (PDF still generates)
+    // ignore
   }
 }
 
-function drawHeader(doc, logo, meRow) {
-  // Keep header content consistent on every page
-  const left = doc.page.margins.left;
+function drawTopBrandBar(doc) {
+  doc.save();
+  doc.rect(0, 0, doc.page.width, 18).fill(COLORS.brand);
+  doc.restore();
+}
 
-  // Reserve some space for header
-  const topY = 32;
+function drawHeader(doc, logo, meRow, isCover = false) {
+  drawTopBrandBar(doc);
+
+  const left = doc.page.margins.left;
+  const right = doc.page.width - doc.page.margins.right;
+  const topY = isCover ? 42 : 34;
 
   if (logo) {
     try {
-      doc.image(logo, left, topY, { width: 60, height: 60 });
+      doc.image(logo, left, topY, { fit: [64, 64], align: 'left', valign: 'top' });
     } catch {}
   }
 
-  doc.fillColor('#111111');
-  doc.fontSize(18).text(cleanText('Family Values Group'), left + 75, topY + 5);
-  doc.fontSize(12).text(cleanText('Commission Manual'), left + 75, topY + 27);
+  const titleX = left + (logo ? 78 : 0);
 
-  doc.fontSize(9.5).fillColor('#555555')
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(isCover ? 24 : 17)
+    .fillColor(COLORS.brandDark)
+    .text(cleanText('Family Values Group'), titleX, topY + 2, { width: right - titleX });
+
+  doc
+    .font('Helvetica')
+    .fontSize(isCover ? 13 : 11)
+    .fillColor(COLORS.muted)
+    .text(cleanText('Commission Manual'), titleX, topY + (isCover ? 31 : 24), {
+      width: right - titleX
+    });
+
+  doc
+    .font('Helvetica')
+    .fontSize(9.5)
+    .fillColor(COLORS.footer)
     .text(
-      cleanText(`Generated for: ${meRow?.full_name || 'Agent'}   •   Date: ${new Date().toLocaleDateString()}`),
-      left + 75,
-      topY + 45
+      cleanText(`Generated for: ${meRow?.full_name || 'Agent'}  •  ${new Date().toLocaleDateString()}`),
+      titleX,
+      topY + (isCover ? 52 : 42),
+      { width: right - titleX }
     );
 
-  doc.fillColor('#000000');
-
-  // Put cursor beneath header area
-  doc.y = topY + 80;
+  doc.fillColor(COLORS.ink);
+  doc.y = topY + (isCover ? 92 : 78);
 }
 
 function drawFooter(doc) {
   const left = doc.page.margins.left;
   const right = doc.page.width - doc.page.margins.right;
-  const bottomY = doc.page.height - 28;
+  const y = doc.page.height - 30;
 
   doc.save();
-  doc.fontSize(9).fillColor('#777777');
-  doc.text(cleanText(`© ${new Date().getFullYear()} Family Values Group — Internal Use`), left, bottomY, {
-    width: right - left,
-    align: 'center'
-  });
-  doc.text(cleanText(`Page ${doc.page.number}`), left, bottomY, {
-    width: right - left,
-    align: 'right'
-  });
+  doc
+    .font('Helvetica')
+    .fontSize(8.5)
+    .fillColor(COLORS.footer)
+    .text(cleanText(`© ${new Date().getFullYear()} Family Values Group — Internal Use`), left, y, {
+      width: right - left,
+      align: 'left'
+    });
+
+  doc
+    .font('Helvetica')
+    .fontSize(8.5)
+    .fillColor(COLORS.footer)
+    .text(cleanText(`Page ${doc.page.number}`), left, y, {
+      width: right - left,
+      align: 'right'
+    });
   doc.restore();
+}
+
+function drawContentCard(doc, startY, height = null) {
+  const x = doc.page.margins.left - 4;
+  const w = doc.page.width - doc.page.margins.left - doc.page.margins.right + 8;
+  const y = startY;
+  const h = height ?? (doc.page.height - y - doc.page.margins.bottom - 18);
+
+  doc.save();
+  doc.roundedRect(x, y, w, h, 16).fillAndStroke('#ffffff', COLORS.softLine);
+  doc.restore();
+}
+
+function ensureSpace(doc, needed = 80) {
+  const remaining = doc.page.height - doc.y - doc.page.margins.bottom - 24;
+  if (remaining < needed) {
+    doc.addPage();
+  }
+}
+
+function sectionStart(doc, title, subtitle = '') {
+  doc.addPage();
+  const cardY = doc.y + 4;
+  drawContentCard(doc, cardY);
+  doc.y = cardY + 18;
+
+  const left = doc.page.margins.left + 10;
+  const w = doc.page.width - doc.page.margins.left - doc.page.margins.right - 20;
+
+  doc.save();
+  doc.roundedRect(left, doc.y, w, 34, 10).fill(COLORS.lavenderSoft);
+  doc.restore();
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(18)
+    .fillColor(COLORS.brandDark)
+    .text(cleanText(title), left + 14, doc.y + 8, { width: w - 28 });
+
+  doc.y += 42;
+
+  if (subtitle) {
+    doc
+      .font('Helvetica')
+      .fontSize(10.5)
+      .fillColor(COLORS.muted)
+      .text(cleanText(subtitle), left + 2, doc.y, { width: w - 4, lineGap: 2 });
+    doc.y += 24;
+  }
+
+  doc.fillColor(COLORS.ink);
 }
 
 function addTitle(doc, text) {
-  doc.fontSize(20).fillColor('#111111').text(cleanText(text), { align: 'left' });
-  doc.moveDown(0.4);
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(26)
+    .fillColor(COLORS.brandDark)
+    .text(cleanText(text), { align: 'left' });
+  doc.moveDown(0.25);
+}
+
+function addIntroSub(doc, text) {
+  doc
+    .font('Helvetica')
+    .fontSize(11.5)
+    .fillColor(COLORS.muted)
+    .text(cleanText(text), { lineGap: 3 });
+  doc.moveDown(0.8);
 }
 
 function addH1(doc, text) {
-  doc.moveDown(0.6);
-  doc.fontSize(16).fillColor('#111111').text(cleanText(text), { underline: false });
-  doc.moveDown(0.2);
+  ensureSpace(doc, 70);
+  doc.moveDown(0.35);
+  doc.save();
+  doc.roundedRect(doc.page.margins.left, doc.y, 6, 20, 3).fill(COLORS.brand);
+  doc.restore();
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(17)
+    .fillColor(COLORS.brandDark)
+    .text(cleanText(text), doc.page.margins.left + 16, doc.y - 1, {
+      width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 16
+    });
+
+  doc.moveDown(0.55);
+  doc.fillColor(COLORS.ink);
 }
 
 function addH2(doc, text) {
-  doc.moveDown(0.4);
-  doc.fontSize(13).fillColor('#111111').text(cleanText(text));
-  doc.moveDown(0.15);
+  ensureSpace(doc, 50);
+  doc.moveDown(0.2);
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(12.5)
+    .fillColor(COLORS.brand)
+    .text(cleanText(text));
+  doc.moveDown(0.22);
+  doc.fillColor(COLORS.ink);
 }
 
 function addBody(doc, text) {
-  doc.fontSize(10.5).fillColor('#111111').text(cleanText(text), { lineGap: 3 });
-  doc.moveDown(0.35);
+  doc
+    .font('Helvetica')
+    .fontSize(10.6)
+    .fillColor(COLORS.ink)
+    .text(cleanText(text), {
+      lineGap: 4,
+      width: doc.page.width - doc.page.margins.left - doc.page.margins.right - 10
+    });
+  doc.moveDown(0.45);
 }
 
 function addBullet(doc, items) {
-  doc.fontSize(10.5).fillColor('#111111');
-  items.forEach(t => {
-    doc.text(cleanText(`• ${t}`), { indent: 14, lineGap: 2 });
+  doc.font('Helvetica').fontSize(10.5).fillColor(COLORS.ink);
+
+  items.forEach(item => {
+    ensureSpace(doc, 28);
+    const bulletX = doc.page.margins.left + 6;
+    const textX = bulletX + 14;
+    const y = doc.y;
+
+    doc
+      .font('Helvetica-Bold')
+      .fontSize(11)
+      .fillColor(COLORS.brand)
+      .text('•', bulletX, y);
+
+    doc
+      .font('Helvetica')
+      .fontSize(10.5)
+      .fillColor(COLORS.ink)
+      .text(cleanText(item), textX, y, {
+        width: doc.page.width - textX - doc.page.margins.right,
+        lineGap: 3
+      });
+
+    doc.y += 3;
   });
+
   doc.moveDown(0.35);
 }
 
-/**
- * FIX #1: Banner auto-resizes height so text NEVER clips.
- * Also checks if there's enough space on the page before drawing it.
- */
 function addRedBanner(doc, text) {
+  ensureSpace(doc, 120);
+
   const x = doc.page.margins.left;
   const w = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-
-  const padX = 10;
-  const padY = 10;
-
+  const padX = 16;
+  const padY = 14;
   const content = cleanText(text);
-  const textWidth = w - (padX * 2);
-
-  // Measure required text height
-  doc.save();
-  doc.fontSize(11);
-  const textH = doc.heightOfString(content, { width: textWidth, lineGap: 2 });
-  doc.restore();
-
-  const h = Math.ceil(textH + (padY * 2)); // dynamic height
-
-  // If not enough space remaining, start a new page first
-  const remaining = doc.page.height - doc.y - doc.page.margins.bottom;
-  if (remaining < h + 10) doc.addPage();
-
-  const y = doc.y;
 
   doc.save();
-  doc.rect(x, y, w, h).fill('#b00020');
-  doc.fillColor('#ffffff').fontSize(11).text(content, x + padX, y + padY, {
-    width: textWidth,
-    lineGap: 2
-  });
-  doc.restore();
+  doc.font('Helvetica-Bold').fontSize(12);
+  const title = 'Important Payment Disclosure';
+  const titleH = doc.heightOfString(title, { width: w - (padX * 2) });
 
-  doc.fillColor('#111111');
-  doc.y = y + h + 12; // move cursor below banner
+  doc.font('Helvetica').fontSize(10.4);
+  const textH = doc.heightOfString(content, { width: w - (padX * 2), lineGap: 3 });
+
+  const h = padY + titleH + 8 + textH + padY;
+
+  doc.roundedRect(x, doc.y, w, h, 14).fill(COLORS.warningSoft);
+  doc.roundedRect(x, doc.y, 8, h, 14).fill(COLORS.warning);
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(12)
+    .fillColor(COLORS.warning)
+    .text(title, x + padX + 4, doc.y + padY, { width: w - (padX * 2) });
+
+  doc
+    .font('Helvetica')
+    .fontSize(10.4)
+    .fillColor(COLORS.ink)
+    .text(content, x + padX + 4, doc.y + padY + titleH + 8, {
+      width: w - (padX * 2) - 4,
+      lineGap: 3
+    });
+
+  doc.restore();
+  doc.y += h + 14;
 }
 
 function addDivider(doc) {
-  doc.moveDown(0.4);
+  doc.moveDown(0.25);
   doc.save();
-  doc.moveTo(doc.page.margins.left, doc.y)
-     .lineTo(doc.page.width - doc.page.margins.right, doc.y)
-     .strokeColor('#cccccc')
-     .stroke();
+  doc
+    .moveTo(doc.page.margins.left, doc.y)
+    .lineTo(doc.page.width - doc.page.margins.right, doc.y)
+    .strokeColor(COLORS.softLine)
+    .lineWidth(1)
+    .stroke();
   doc.restore();
-  doc.moveDown(0.6);
+  doc.moveDown(0.7);
 }
 
-/**
- * FIX #2: Start each section on its own page.
- */
-function startNewSectionPage(doc) {
-  doc.addPage();
+function addInfoBox(doc, title, lines = []) {
+  ensureSpace(doc, 80);
+
+  const x = doc.page.margins.left;
+  const w = doc.page.width - doc.page.margins.left - doc.page.margins.right;
+  const pad = 14;
+
+  doc.save();
+  doc.font('Helvetica-Bold').fontSize(11.5);
+  const titleH = doc.heightOfString(cleanText(title), { width: w - (pad * 2) });
+
+  doc.font('Helvetica').fontSize(10.4);
+  let bodyH = 0;
+  lines.forEach(line => {
+    bodyH += doc.heightOfString(cleanText(line), {
+      width: w - (pad * 2),
+      lineGap: 3
+    }) + 4;
+  });
+
+  const h = pad + titleH + 8 + bodyH + pad;
+
+  doc.roundedRect(x, doc.y, w, h, 12).fill('#faf9ff').stroke(COLORS.softLine);
+
+  let y = doc.y + pad;
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(11.5)
+    .fillColor(COLORS.brandDark)
+    .text(cleanText(title), x + pad, y, { width: w - (pad * 2) });
+
+  y += titleH + 8;
+
+  doc.font('Helvetica').fontSize(10.4).fillColor(COLORS.ink);
+  lines.forEach(line => {
+    doc.text(cleanText(line), x + pad, y, {
+      width: w - (pad * 2),
+      lineGap: 3
+    });
+    y += doc.heightOfString(cleanText(line), {
+      width: w - (pad * 2),
+      lineGap: 3
+    }) + 4;
+  });
+
+  doc.restore();
+  doc.y += h + 12;
 }
+
 /* ------------------------ HANDLER ------------------------ */
 
 export async function handler(event) {
@@ -260,7 +453,7 @@ export async function handler(event) {
 
   const doc = new PDFDocument({
     size: 'LETTER',
-    margin: 50,
+    margin: 54,
     info: {
       Title: 'Family Values Group — Commission Manual',
       Author: 'Family Values Group',
@@ -273,176 +466,210 @@ export async function handler(event) {
   const logo = tryLoadLogoBuffer();
   const bg   = tryLoadBackgroundBuffer();
 
-  // Draw background + header on FIRST page
   drawFullPageBackground(doc, bg);
-  drawHeader(doc, logo, meRow);
+  drawHeader(doc, logo, meRow, true);
 
-  // Draw background + header on EVERY new page
   doc.on('pageAdded', () => {
     drawFullPageBackground(doc, bg);
-    drawHeader(doc, logo, meRow);
+    drawHeader(doc, logo, meRow, false);
   });
 
-  /* ------------------------ PAGE 1: Intro + TOC ------------------------ */
+  /* ------------------------ COVER / INTRO PAGE ------------------------ */
+
+  drawContentCard(doc, doc.y + 4, 620);
+  doc.y += 22;
 
   addTitle(doc, 'Commission Manual');
+  addIntroSub(
+    doc,
+    'This guide explains how Family Values Group handles commission schedules, advances, pay-thru, overrides, promotions, and payment-related compliance.'
+  );
 
   addRedBanner(
     doc,
-    'IMPORTANT PAYMENT DISCLOSURE (READ FIRST):\n' +
-    'Family Values Group DOES NOT accept debit/credit cards, cash, or any direct money payments collected by an agent. ' +
-    'If a client attempts to pay using any of these methods, the agent will NOT be paid commission on that sale. ' +
-    'The correct process is to inform the client that Family Values Group does not accept those methods, and then provide the insurance carrier’s official payment phone number so the client can pay the carrier directly.'
+    'Family Values Group does not accept debit cards, credit cards, cash, or direct money payments collected by an agent. If a client tries to pay using one of those methods, the agent will not be paid commission on that sale. The correct process is to tell the client that Family Values Group does not accept those payment methods and then provide the insurance carrier’s official payment phone number so the client can pay the carrier directly.'
   );
 
   addDivider(doc);
 
-  addH1(doc, 'Table of Contents');
-  addBody(doc,
-    '1. How commissions are calculated (AP, commission rates, advances, pay-thru, renewals)\n' +
-    '2. How to read your Commission Schedules\n' +
-    '3. Pay timing and payout types (Advance, Pay-Thru, Renewals, Overrides)\n' +
-    '4. Override examples (different levels)\n' +
-    '5. Level promotions (Agent -> MIT -> Manager -> MGA -> Area Manager)\n' +
-    '6. Tax & identity verification (SSN/W-9/1099) + security'
+  addInfoBox(doc, 'What is inside this manual?', [
+    '1. How commissions are calculated',
+    '2. How to read your commission schedules',
+    '3. When and how you get paid',
+    '4. Override examples',
+    '5. Level promotions',
+    '6. SSN, W-9, 1099, and security guidance'
+  ]);
+
+  addInfoBox(doc, 'Who this is for', [
+    'This manual is written for Family Values Group agents and leaders who need a practical explanation of how commission payouts work inside the platform.'
+  ]);
+
+  /* ------------------------ SECTION 1 ------------------------ */
+
+  sectionStart(
+    doc,
+    '1) How commissions are calculated',
+    'The core ideas behind AP, commission rates, advances, pay-thru, renewals, and overrides.'
   );
 
-  /* ------------------------ PAGE 2: Section 1 ------------------------ */
-  startNewSectionPage(doc);
-
-  addH1(doc, '1) How commissions are calculated');
-  addBody(doc,
-    'Your commission amounts are driven by Annual Premium (AP) and the carrier-specific commission schedule for the product you wrote. ' +
-    'In simple terms, we take the policy premium and convert it into AP, then apply the schedule percentages.'
+  addBody(
+    doc,
+    'Your commission amounts are driven by Annual Premium (AP) and the carrier-specific commission schedule for the product you wrote. In simple terms, the system annualizes the premium, matches the correct schedule, and then applies the relevant percentages.'
   );
 
-  addH2(doc, 'Key Definitions');
+  addH2(doc, 'Key definitions');
   addBullet(doc, [
     'Annual Premium (AP): the annualized premium used for commission calculations.',
-    'Commission Rate: the percentage from your commission schedule (varies by carrier/product/type).',
-    'Advance: a portion of your expected first-year commission paid upfront (weekly).',
-    'Pay-Thru / Trails / Renewals: the remainder paid over time as the carrier pays commissions (usually monthly).',
-    'Overrides: commission you earn from the production of agents in your downline (based on your level).',
+    'Commission Rate: the percentage from your commission schedule for that carrier and product.',
+    'Advance: a portion of expected first-year commission paid upfront on the weekly cycle.',
+    'Pay-Thru / Trails / Renewals: the remaining amount paid over time as the carrier releases commission.',
+    'Overrides: commission earned from the production of agents in your downline, based on your level.'
   ]);
 
-  addH2(doc, 'Basic math (example)');
-  addBody(doc,
-    'Example policy:\n' +
-    '• Monthly premium = $80\n' +
-    '• AP = $80 x 12 = $960\n' +
-    '• Schedule rate = 90% (0.90)\n' +
-    '• Total commission (first year) = $960 x 0.90 = $864\n' +
-    'If the schedule advances 75%, then:\n' +
-    '• Advance = $864 x 0.75 = $648\n' +
-    '• Pay-Thru remainder = $864 - $648 = $216 (paid out over time depending on carrier rules)'
+  addH2(doc, 'Example');
+  addInfoBox(doc, 'Basic example math', [
+    'Monthly premium = $80',
+    'AP = $80 x 12 = $960',
+    'Schedule rate = 90%',
+    'Total commission = $960 x 90% = $864',
+    'If the advance rate is 75%, then the upfront advance is $648 and the remaining $216 is paid as pay-thru over time.'
+  ]);
+
+  /* ------------------------ SECTION 2 ------------------------ */
+
+  sectionStart(
+    doc,
+    '2) How to read your commission schedules',
+    'Your schedules are the source of truth for payout percentages.'
   );
 
-  /* ------------------------ PAGE 3: Section 2 ------------------------ */
-  startNewSectionPage(doc);
-
-  addH1(doc, '2) How to read your Commission Schedules');
-  addBody(doc,
-    'Your Commission Schedules are the source of truth for your commission percentages. ' +
-    'Schedules can vary by Carrier, Product Line, and Policy Type. Your payout is calculated using the schedule that matches the policy you wrote.'
+  addBody(
+    doc,
+    'Commission schedules can vary by carrier, product line, and policy type. The system uses the schedule that matches the business you wrote and your level in the hierarchy.'
   );
 
   addBullet(doc, [
-    'Carrier: the insurance company (example: TransAmerica).',
-    'Product Line: broad category (example: Term, Whole Life, Final Expense).',
-    'Policy Type: a more specific sub-type used in schedules (varies by carrier).',
-    'Rates: the % used to calculate total commissions, plus rules for advance vs pay-thru.',
+    'Carrier: the insurance company.',
+    'Product Line: the broad category, such as final expense, whole life, term, health, or P&C.',
+    'Policy Type: the more specific schedule label used for that carrier.',
+    'Rates: the percentages used to determine commission, including how much is advanced and how renewals or trails are paid.'
   ]);
 
-  /* ------------------------ PAGE 4: Section 3 ------------------------ */
-  startNewSectionPage(doc);
-
-  addH1(doc, '3) When you get paid (Advance, Pay-Thru, Renewals, Overrides)');
-  addH2(doc, 'Advances (Weekly)');
-  addBody(doc,
-    'Advances are paid on a weekly cycle. Your system calculates eligible commission ledger items and produces a weekly payout batch. ' +
-    'If you have outstanding debt (lead debt and/or chargebacks), your payout can be reduced based on repayment rules.'
+  addH2(doc, 'Why this matters');
+  addBody(
+    doc,
+    'If two products are sold through the same carrier, they can still pay differently. Always look at the schedule that matches the exact product line and policy type.'
   );
 
-  addH2(doc, 'Pay-Thru / Trails / Renewals (Monthly)');
-  addBody(doc,
-    'Pay-Thru (often called trails or renewals depending on product) is processed on a monthly schedule. ' +
-    'This is typically the remainder of commission not paid as an advance, plus ongoing renewal/trail payments when applicable.'
+  /* ------------------------ SECTION 3 ------------------------ */
+
+  sectionStart(
+    doc,
+    '3) When and how you get paid',
+    'A clean breakdown of weekly advances, monthly pay-thru, renewals, and overrides.'
   );
 
-  addH2(doc, 'Overrides (Weekly, tied to your downline)');
-  addBody(doc,
-    'Overrides are earnings generated when an agent in your downline writes business. ' +
-    'Overrides are paid based on your level and the override rules in effect for your hierarchy.'
+  addH2(doc, 'Advances');
+  addBody(
+    doc,
+    'Advances are generally processed on a weekly cycle. The platform checks eligible commission ledger items and produces a weekly payout batch. If you have open lead debt or chargebacks, your payout may be reduced according to repayment rules.'
   );
 
-  /* ------------------------ PAGE 5: Section 4 ------------------------ */
-  startNewSectionPage(doc);
-
-  addH1(doc, '4) Override example (different levels)');
-  addBody(doc,
-    'Overrides depend on level differences between you and the agent below you. Here is a simplified example.'
+  addH2(doc, 'Pay-Thru / Trails / Renewals');
+  addBody(
+    doc,
+    'Pay-thru is generally processed on a monthly cycle. This usually includes the part of first-year commission not advanced upfront, plus any ongoing trail or renewal amounts when the product supports them.'
   );
 
-  addBody(doc,
-    'Example:\n' +
-    '• Downline agent level payout = 80%\n' +
-    '• Your level payout = 90%\n' +
-    '• Override = (90% - 80%) = 10%\n' +
-    'If the policy AP is $1,200:\n' +
-    '• Override commission = $1,200 x 10% = $120'
+  addH2(doc, 'Overrides');
+  addBody(
+    doc,
+    'Overrides are earned when agents in your hierarchy write business and your level entitles you to the difference between schedule levels. The system calculates those differences using your stored hierarchy and the matching commission schedules.'
   );
 
-  addBody(doc,
-    'Important: The exact override structure can vary by program. The platform uses your stored hierarchy + levels to compute overrides consistently.'
+  /* ------------------------ SECTION 4 ------------------------ */
+
+  sectionStart(
+    doc,
+    '4) Override example',
+    'A simplified look at how override differences create earnings for leaders.'
   );
 
-  /* ------------------------ PAGE 6: Section 5 ------------------------ */
-  startNewSectionPage(doc);
+  addBody(
+    doc,
+    'Override calculations depend on the level difference between you and the agent below you. Here is a simplified example.'
+  );
 
-  addH1(doc, '5) Level promotions (how to move up)');
-  addBody(doc,
-    'Your level is based on consistent production and (for higher levels) active downline growth. ' +
-    'The rules below are evaluated by production over time.'
+  addInfoBox(doc, 'Simple override example', [
+    'Downline level payout = 80%',
+    'Your level payout = 90%',
+    'Override difference = 10%',
+    'If AP is $1,200, then override commission = $1,200 x 10% = $120'
+  ]);
+
+  addBody(
+    doc,
+    'Actual override behavior may vary depending on product, carrier, and schedule design, but the system applies the stored hierarchy and schedule rules consistently.'
+  );
+
+  /* ------------------------ SECTION 5 ------------------------ */
+
+  sectionStart(
+    doc,
+    '5) Level promotions',
+    'How production and team growth impact leadership progression.'
+  );
+
+  addBody(
+    doc,
+    'Your level is based on consistent production and, for higher levels, active downline growth. These benchmarks are used as operational guidance inside Family Values Group.'
   );
 
   addBullet(doc, [
-    'Agent -> MIT (Manager in Training): $10,000 AP for 3 months in a row.',
-    'MIT -> Manager: $30,000 AP for 3 months in a row AND at least 3 active agents in downline.',
-    'Manager -> MGA (Managing General Agent): $50,000 AP for 3 months in a row AND 5 active agents.',
-    'MGA -> Area Manager: $100,000 AP for 3 months in a row AND 15 active agents.',
+    'Agent -> MIT: $10,000 AP for 3 months in a row.',
+    'MIT -> Manager: $30,000 AP for 3 months in a row and at least 3 active agents in the downline.',
+    'Manager -> MGA: $50,000 AP for 3 months in a row and at least 5 active agents.',
+    'MGA -> Area Manager: $100,000 AP for 3 months in a row and at least 15 active agents.'
   ]);
 
-  /* ------------------------ PAGE 7: Section 6 ------------------------ */
-  startNewSectionPage(doc);
-
-  addH1(doc, '6) SSN, tax forms, and legal disclosures (W-9 / 1099 / security)');
-  addBody(doc,
-    'To get paid commissions, carriers and/or payment processors may require identity verification and tax reporting information. ' +
-    'This commonly includes your Social Security Number (SSN) or Tax ID for W-9/1099 reporting.'
+  addBody(
+    doc,
+    'Promotions are about sustained performance, not one strong week. Production consistency and team development both matter.'
   );
 
-  addH2(doc, 'Why SSN/W-9 may be required');
-  addBullet(doc, [
-    'Tax reporting: commissions are typically reported on a 1099-NEC for independent agents.',
-    'Identity verification: payment processors may require SSN/TIN to verify the recipient.',
-    'Compliance: carriers may require it to issue producer payments correctly.',
-  ]);
+  /* ------------------------ SECTION 6 ------------------------ */
 
-  addH2(doc, 'Security & handling');
-  addBullet(doc, [
-    'Never text or email SSNs in plain text.',
-    'Only submit SSN/TIN through secure official portals or verified encrypted channels.',
-    'If you suspect fraud or incorrect payment instructions, contact the carrier directly.',
-  ]);
-
-  addBody(doc,
-    'This manual is informational and operational guidance for agent payments within Family Values Group. ' +
-    'It is not legal or tax advice. Consult a qualified professional for legal/tax questions.'
+  sectionStart(
+    doc,
+    '6) SSN, W-9, 1099, and security',
+    'Why tax and identity information may be required and how to handle it safely.'
   );
 
-  // Footer on final page
+  addBody(
+    doc,
+    'To receive commission payouts, carriers and payment processors may require identity verification and tax reporting information. This commonly includes your Social Security Number or Tax ID for W-9 and 1099 reporting.'
+  );
+
+  addH2(doc, 'Why this information may be required');
+  addBullet(doc, [
+    'Tax reporting: commissions are commonly reported on a 1099-NEC for independent agents.',
+    'Identity verification: processors may require SSN or TIN to verify the payment recipient.',
+    'Compliance: carriers may require tax information to issue producer payments correctly.'
+  ]);
+
+  addH2(doc, 'Security reminders');
+  addBullet(doc, [
+    'Do not text or email SSNs in plain text.',
+    'Only submit SSN or TIN information through secure official portals or verified encrypted channels.',
+    'If something seems suspicious, contact the carrier or administrator directly before sending sensitive information.'
+  ]);
+
+  addInfoBox(doc, 'Final note', [
+    'This manual is intended as operational guidance for Family Values Group agents. It is not legal or tax advice. For legal or tax questions, consult a qualified professional.'
+  ]);
+
   drawFooter(doc);
-
   doc.end();
 
   const pdfBuffer = await new Promise((resolve) => {
