@@ -464,3 +464,34 @@ a, button, input, select, textarea{
     align-items:flex-start;
   }
 }
+/* Hide tabbed commissions UI until JS is ready */
+  .commissions-preload .commissions-tabs {
+    visibility: hidden;
+  }
+
+  /* Main commissions nav tabs */
+  .commissions-tabs .tab.is-active {
+    background: #353468 !important;
+    color: #fff !important;
+    border-color: #353468 !important;
+  }
+
+  .commissions-tabs .tab.is-active .icon,
+  .commissions-tabs .tab.is-active .label {
+    color: #fff !important;
+  }
+
+  /* Files chips */
+  .files-chips .chip.is-active {
+    background: #353468 !important;
+    color: #fff !important;
+    border-color: #353468 !important;
+  }
+
+  /* Optional: current page highlight in mobile menu */
+  #mobile-menu a.is-current,
+  #mobile-menu button.is-current {
+    background: rgba(53, 52, 104, 0.16);
+    color: #353468;
+    font-weight: 700;
+  }
