@@ -186,9 +186,9 @@ export default async function handler() {
     // We keep statuses that mean “issued happened”
     const { data: todayPolicies, error: polErr } = await sb
       .from("policies")
-      .select("id, agent_id, issued_at, premium_annual, premium_modal, status")
-      .gte("issued_at", startUtc)
-      .lte("issued_at", endUtc)
+      .select("id, agent_id, submitted_at, premium_annual, premium_modal, status")
+      .gte("submitted_at", startUtc)
+      .lte("submitted_at", endUtc)
       .in("status", ["issued", "in_force", "renewed", "reinstated"]);
 
     if (polErr) throw polErr;
