@@ -16,28 +16,23 @@ const PAY_TZ = 'America/Chicago';
  * Helper: return YYYY-MM-DD in America/Chicago
  */
 function getNextFridayYMD(fromYMD) {
-  // fromYMD is YYYY-MM-DD in PAY_TZ context
-  const d = new Date(`${fromYMD}T12:00:00Z`); // safe midday
-  // We'll walk day-by-day until we hit a Friday in PAY_TZ, but never allow same-day.
+  const d = new Date(`${fromYMD}T12:00:00Z`);
   let cur = fromYMD;
   for (let i = 1; i <= 14; i++) {
     cur = addDaysYMD(cur, 1);
     const dow = getLocalDOW(new Date(`${cur}T12:00:00Z`), PAY_TZ);
-    if (dow === 5) return cur; // Friday
+    if (dow === 5) return cur;
   }
-  return addDaysYMD(fromYMD, 7); // fallback
+  return addDaysYMD(fromYMD, 7);
 }
 
 function computePayFridayForIssuedYMD(issuedYMD) {
-  const dow = getLocalDOW(new Date(`${issuedYMD}T12:00:00Z`), PAY_TZ); // 0..6
+  const dow = getLocalDOW(new Date(`${issuedYMD}T12:00:00Z`), PAY_TZ);
 
-  // NEW: if issued on Friday, count that as "this Friday"
   const thisFriday = (dow === 5) ? issuedYMD : getNextFridayYMD(issuedYMD);
 
-  // Sun(0)-Tue(2) => NEXT Friday (one week after this Friday)
   if (dow <= 2) return addDaysYMD(thisFriday, 7);
 
-  // Wed(3)-Sat(6) => Friday AFTER next (two weeks after this Friday)
   return addDaysYMD(thisFriday, 14);
 }
 
@@ -70,7 +65,6 @@ function getLocalDOW(date = new Date(), tz = PAY_TZ) {
 
 /**
  * Add days to a YYYY-MM-DD string and return YYYY-MM-DD
- * (safe for “date math” because it operates at UTC midnight)
  */
 function addDaysYMD(ymd, days) {
   const d = new Date(`${ymd}T00:00:00Z`);
@@ -79,21 +73,19 @@ function addDaysYMD(ymd, days) {
 }
 
 /**
- * Get numeric offset like "-06:00" or "-05:00" for a given date (DST-safe enough)
+ * Get numeric offset like "-06:00" or "-05:00" for a given date
  */
 function getOffsetForYMD(ymd, tz = PAY_TZ) {
-  // use a midday probe to avoid DST edge-hour weirdness
   const probe = new Date(`${ymd}T12:00:00Z`);
   const s = new Intl.DateTimeFormat('en-US', {
     timeZone: tz,
     timeZoneName: 'shortOffset',
   }).format(probe);
 
-  // s often contains something like "GMT-6" or "GMT-05:00"
   const match = s.match(/GMT([+-]\d{1,2})(?::(\d{2}))?/);
   if (!match) return '-06:00';
 
-  const signHours = parseInt(match[1], 10); // includes sign
+  const signHours = parseInt(match[1], 10);
   const mins = match[2] ? parseInt(match[2], 10) : 0;
 
   const sign = signHours < 0 ? '-' : '+';
@@ -103,8 +95,7 @@ function getOffsetForYMD(ymd, tz = PAY_TZ) {
 }
 
 /**
- * Convert a local America/Chicago midnight (YYYY-MM-DDT00:00:00 offset)
- * into a UTC ISO string for Supabase comparisons.
+ * Convert local midnight to UTC ISO for Supabase comparisons.
  */
 function localMidnightToUtcIso(ymd, tz = PAY_TZ) {
   const offset = getOffsetForYMD(ymd, tz);
@@ -114,8 +105,6 @@ function localMidnightToUtcIso(ymd, tz = PAY_TZ) {
 
 /**
  * Helper: get pay_date (Friday) as YYYY-MM-DD.
- * - if ?pay_date=YYYY-MM-DD provided, use that.
- * - else: choose the NEXT Friday in America/Chicago (never “today” even if Friday)
  */
 function getPayDateStr(event) {
   const qs = event.queryStringParameters || {};
@@ -126,9 +115,8 @@ function getPayDateStr(event) {
 
   const now = new Date();
   const todayYMD = getLocalYMD(now, PAY_TZ);
-  const dow = getLocalDOW(now, PAY_TZ); // 0=Sun..6=Sat
+  const dow = getLocalDOW(now, PAY_TZ);
 
-  // Friday is 5. Always upcoming, not today.
   let diff = (5 - dow + 7) % 7;
   if (diff === 0) diff = 7;
 
@@ -136,12 +124,7 @@ function getPayDateStr(event) {
 }
 
 /**
- * Repayment rate rules:
- *   - if not active → 100% of this check (up to remaining debt)
- *   - if active:
- *        < 1000         => 30%
- *        1000–1999.99   => 40%
- *        >= 2000        => 50%
+ * Repayment rate rules
  */
 function getRepaymentRate(totalDebt, isActive) {
   if (!isActive) return 1.0;
@@ -157,6 +140,81 @@ function normalizeText(v) {
 
 function normalizePolicyType(v) {
   return String(v || '').trim().toLowerCase();
+}
+
+function normalizeState(v) {
+  return String(v || '').trim().toUpperCase();
+}
+
+/**
+ * NEW: Normalize LOA-ish text for matching
+ */
+function normalizeLoaText(v) {
+  return String(v || '')
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * NEW: Infer required license lines from policy
+ * Keep this conservative and minimal.
+ */
+function getRequiredLoasForPolicy(policy) {
+  const line = normalizeText(policy?.product_line);
+  const type = normalizeText(policy?.policy_type);
+  const combined = `${line} ${type}`.trim();
+
+  if (
+    combined.includes('health') ||
+    combined.includes('medicare') ||
+    combined.includes('aca') ||
+    combined.includes('dental') ||
+    combined.includes('vision') ||
+    combined.includes('supplement') ||
+    combined.includes('hospital indemnity') ||
+    combined.includes('critical illness')
+  ) {
+    return ['health'];
+  }
+
+  if (
+    combined.includes('life') ||
+    combined.includes('term') ||
+    combined.includes('whole') ||
+    combined.includes('final expense') ||
+    combined.includes('iul') ||
+    combined.includes('universal') ||
+    combined.includes('annuity')
+  ) {
+    return ['life'];
+  }
+
+  if (combined.includes('property') && combined.includes('casualty')) {
+    return ['property', 'casualty'];
+  }
+
+  if (combined.includes('property')) {
+    return ['property'];
+  }
+
+  if (
+    combined.includes('casualty') ||
+    combined.includes('auto') ||
+    combined.includes('car') ||
+    combined.includes('commercial auto')
+  ) {
+    return ['casualty'];
+  }
+
+  if (line === 'p&c' || combined.includes('p&c')) {
+    return ['property', 'casualty'];
+  }
+
+  return [];
 }
 
 function getLagWeeksForPolicy(policy, scheduleRows) {
@@ -196,6 +254,83 @@ function getLagWeeksForPolicy(policy, scheduleRows) {
 function computePayFridayForIssuedYMDWithLag(issuedYMD, lagWeeks = 0) {
   const basePay = computePayFridayForIssuedYMD(issuedYMD);
   return addDaysYMD(basePay, lagWeeks * 7);
+}
+
+/**
+ * NEW: Does this license row satisfy the policy at issue time?
+ */
+function licenseRowQualifiesForPolicy(licenseRow, state, requiredLoas, issueYMD) {
+  if (!licenseRow) return false;
+  if (licenseRow.active !== true) return false;
+
+  const licState = normalizeState(licenseRow.state);
+  if (!licState || licState !== normalizeState(state)) return false;
+
+  if (licenseRow.date_issue_orig && issueYMD < licenseRow.date_issue_orig) return false;
+  if (licenseRow.date_expire && issueYMD > licenseRow.date_expire) return false;
+
+  if (!requiredLoas.length) return false;
+
+  const loaNames = Array.isArray(licenseRow.loa_names) ? licenseRow.loa_names : [];
+  const normalizedNames = loaNames.map(normalizeLoaText);
+
+  return requiredLoas.some(req => {
+    const target = normalizeLoaText(req);
+    return normalizedNames.some(name =>
+      name === target ||
+      name.includes(target) ||
+      target.includes(name)
+    );
+  });
+}
+
+/**
+ * NEW: Determine whether an agent is eligible for override on this policy.
+ * agent.id is internal UUID
+ * agent.agent_id is external/NIPR agent id that matches agent_nipr_licenses.agent_id
+ */
+function agentQualifiesForPolicy(agent, policy, policyState, licensesByExternalAgentId) {
+  if (!agent) return false;
+  if (agent.is_active === false) return false;
+  if (!policy?.issued_at) return false;
+  if (!policyState) return false;
+
+  const externalAgentId = agent.agent_id;
+  if (!externalAgentId) return false;
+
+  const requiredLoas = getRequiredLoasForPolicy(policy);
+  if (!requiredLoas.length) return false;
+
+  const issueYMD = getLocalYMD(new Date(policy.issued_at), PAY_TZ);
+  const licenseRows = licensesByExternalAgentId.get(externalAgentId) || [];
+
+  return licenseRows.some(row =>
+    licenseRowQualifiesForPolicy(row, policyState, requiredLoas, issueYMD)
+  );
+}
+
+/**
+ * NEW: Walk up the chain starting from the CURRENT override recipient.
+ * If they don't qualify, keep going up recruiter_id until someone does.
+ */
+function findNearestEligibleUplineFromAgent(startAgentId, policy, policyState, agentsById, licensesByExternalAgentId) {
+  const visited = new Set();
+  let currentId = startAgentId;
+
+  while (currentId && !visited.has(currentId)) {
+    visited.add(currentId);
+
+    const currentAgent = agentsById.get(currentId);
+    if (!currentAgent) return null;
+
+    if (agentQualifiesForPolicy(currentAgent, policy, policyState, licensesByExternalAgentId)) {
+      return currentAgent.id;
+    }
+
+    currentId = currentAgent.recruiter_id || null;
+  }
+
+  return null;
 }
 
 /**
@@ -302,14 +437,13 @@ export async function handler(event) {
   }
 
   try {
-    const payDateStr = getPayDateStr(event); // YYYY-MM-DD (Friday)
+    const payDateStr = getPayDateStr(event);
 
-    // ✅ Pull a broad enough window (last 21 days) then compute exact pay Friday per policy.
     const startYMD = addDaysYMD(payDateStr, -21);
-    const endYMD   = addDaysYMD(payDateStr, 1); // include up through payDate day (exclusive next day)
-    
-    const startIso = localMidnightToUtcIso(startYMD, PAY_TZ); // inclusive
-    const endIso   = localMidnightToUtcIso(endYMD, PAY_TZ);   // exclusive
+    const endYMD   = addDaysYMD(payDateStr, 1);
+
+    const startIso = localMidnightToUtcIso(startYMD, PAY_TZ);
+    const endIso   = localMidnightToUtcIso(endYMD, PAY_TZ);
 
     console.log(
       '[runWeeklyAdvance] pay_date =',
@@ -321,10 +455,10 @@ export async function handler(event) {
       '(end exclusive)'
     );
 
-    // 2) Find eligible POLICIES by issued_at window (NOT ledger created_at)
+    // Pull policies in window
     const { data: policyRows, error: polErr } = await supabase
       .from('policies')
-      .select('id, as_earned, issued_at, carrier_name, product_line, policy_type')
+      .select('id, as_earned, issued_at, carrier_name, product_line, policy_type, agent_id, contact_id')
       .in('status', ['issued', 'in_force'])
       .gte('issued_at', startIso)
       .lt('issued_at', endIso);
@@ -371,23 +505,22 @@ export async function handler(event) {
       };
     }
 
-    // 2.2) Split counts + compute which policies are DUE on this pay_date
     const asEarnedCount = (policyRows || []).filter(p => p.as_earned === true).length;
-    
+
     const duePolicyRows = (policyRows || [])
       .filter(p => p.as_earned !== true)
       .filter(p => {
         if (!p.issued_at) return false;
-    
+
         const issuedYMD = getLocalYMD(new Date(p.issued_at), PAY_TZ);
         const lagWeeks = getLagWeeksForPolicy(p, scheduleRows);
         const computedPay = computePayFridayForIssuedYMDWithLag(issuedYMD, lagWeeks);
-    
+
         return computedPay === payDateStr;
       });
-    
+
     const eligiblePolicyIds = duePolicyRows.map(p => p.id);
-    
+
     console.log(
       '[runWeeklyAdvance] scanned policies in window =',
       (policyRows || []).length,
@@ -398,7 +531,7 @@ export async function handler(event) {
       'schedules loaded =',
       scheduleRows.length
     );
-    
+
     if (eligiblePolicyIds.length === 0) {
       return {
         statusCode: 200,
@@ -414,7 +547,7 @@ export async function handler(event) {
       };
     }
 
-    // 2.3) Load eligible ledger rows for those policies (ignore ledger.created_at completely)
+    // Load ledger rows
     const { data: ledgerRowsRaw, error: ledgerErr } = await supabase
       .from('commission_ledger')
       .select('id, policy_id, agent_id, amount, entry_type, is_settled')
@@ -430,7 +563,7 @@ export async function handler(event) {
       };
     }
 
-    const ledgerRows = ledgerRowsRaw || [];
+    let ledgerRows = ledgerRowsRaw || [];
     console.log('[runWeeklyAdvance] eligible ledger rows (issued_at-based) =', ledgerRows.length);
 
     if (ledgerRows.length === 0) {
@@ -447,8 +580,185 @@ export async function handler(event) {
       };
     }
 
-    // 3) Group by agent_id → gross per agent
-    const agentTotals = {}; // { agent_id: { advance: x, override: y, gross: z } }
+    // =========================
+    // NEW: Override license / state / active validation
+    // =========================
+
+    const policyMap = new Map(duePolicyRows.map(p => [p.id, p]));
+
+    const contactIds = [...new Set(duePolicyRows.map(p => p.contact_id).filter(Boolean))];
+    let contactStateMap = new Map();
+
+    if (contactIds.length) {
+      const { data: contactRows, error: contactErr } = await supabase
+        .from('contacts')
+        .select('id, state')
+        .in('id', contactIds);
+
+      if (contactErr) {
+        console.error('[runWeeklyAdvance] Error loading contact states for override validation:', contactErr);
+        return {
+          statusCode: 500,
+          body: JSON.stringify({
+            error: 'Failed to load contact states for override validation',
+            details: contactErr
+          }),
+        };
+      }
+
+      contactStateMap = new Map((contactRows || []).map(c => [c.id, normalizeState(c.state)]));
+    }
+
+    const { data: allAgentRows, error: allAgentErr } = await supabase
+      .from('agents')
+      .select('id, agent_id, recruiter_id, is_active');
+
+    if (allAgentErr) {
+      console.error('[runWeeklyAdvance] Error loading agents for override validation:', allAgentErr);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: 'Failed to load agents for override validation',
+          details: allAgentErr
+        }),
+      };
+    }
+
+    const agentsById = new Map((allAgentRows || []).map(a => [a.id, a]));
+    const externalAgentIds = [...new Set((allAgentRows || []).map(a => a.agent_id).filter(Boolean))];
+
+    let licensesByExternalAgentId = new Map();
+    if (externalAgentIds.length) {
+      const { data: licenseRows, error: licenseErr } = await supabase
+        .from('agent_nipr_licenses')
+        .select('agent_id, state, active, date_issue_orig, date_expire, loa_names')
+        .eq('active', true)
+        .in('agent_id', externalAgentIds);
+
+      if (licenseErr) {
+        console.error('[runWeeklyAdvance] Error loading licenses for override validation:', licenseErr);
+        return {
+          statusCode: 500,
+          body: JSON.stringify({
+            error: 'Failed to load licenses for override validation',
+            details: licenseErr
+          }),
+        };
+      }
+
+      licensesByExternalAgentId = new Map();
+      for (const row of (licenseRows || [])) {
+        const key = row.agent_id;
+        if (!licensesByExternalAgentId.has(key)) licensesByExternalAgentId.set(key, []);
+        licensesByExternalAgentId.get(key).push(row);
+      }
+    }
+
+    const payableLedgerRows = [];
+    const skippedOverrideRows = [];
+    const reroutedOverrideRows = [];
+
+    for (const row of ledgerRows) {
+      if (row.entry_type !== 'override') {
+        payableLedgerRows.push(row);
+        continue;
+      }
+
+      const policy = policyMap.get(row.policy_id);
+      if (!policy) {
+        skippedOverrideRows.push({
+          ledger_id: row.id,
+          policy_id: row.policy_id,
+          reason: 'missing_policy_context'
+        });
+        continue;
+      }
+
+      const policyState = contactStateMap.get(policy.contact_id);
+      if (!policyState) {
+        skippedOverrideRows.push({
+          ledger_id: row.id,
+          policy_id: row.policy_id,
+          reason: 'missing_policy_state'
+        });
+        continue;
+      }
+
+      const resolvedAgentId = findNearestEligibleUplineFromAgent(
+        row.agent_id,
+        policy,
+        policyState,
+        agentsById,
+        licensesByExternalAgentId
+      );
+
+      if (!resolvedAgentId) {
+        skippedOverrideRows.push({
+          ledger_id: row.id,
+          policy_id: row.policy_id,
+          original_agent_id: row.agent_id,
+          reason: 'no_eligible_upline_found'
+        });
+        continue;
+      }
+
+      if (resolvedAgentId !== row.agent_id) {
+        const { error: rerouteErr } = await supabase
+          .from('commission_ledger')
+          .update({ agent_id: resolvedAgentId })
+          .eq('id', row.id);
+
+        if (rerouteErr) {
+          console.error('[runWeeklyAdvance] Error rerouting override row:', rerouteErr, 'ledger_id=', row.id);
+          return {
+            statusCode: 500,
+            body: JSON.stringify({
+              error: 'Failed to reroute override ledger row',
+              details: rerouteErr,
+              ledger_id: row.id
+            }),
+          };
+        }
+
+        reroutedOverrideRows.push({
+          ledger_id: row.id,
+          policy_id: row.policy_id,
+          from_agent_id: row.agent_id,
+          to_agent_id: resolvedAgentId
+        });
+
+        row.agent_id = resolvedAgentId;
+      }
+
+      payableLedgerRows.push(row);
+    }
+
+    ledgerRows = payableLedgerRows;
+
+    console.log(
+      '[runWeeklyAdvance] override validation complete:',
+      'rerouted =', reroutedOverrideRows.length,
+      'skipped =', skippedOverrideRows.length,
+      'payable rows =', ledgerRows.length
+    );
+
+    if (ledgerRows.length === 0) {
+      return {
+        statusCode: 200,
+        body: JSON.stringify({
+          message: 'No payable commission_ledger rows remained after override license validation.',
+          pay_date: payDateStr,
+          window_start: startIso,
+          window_end_exclusive: endIso,
+          eligible_policy_count: eligiblePolicyIds.length,
+          excluded_as_earned_policies: asEarnedCount,
+          skipped_override_rows: skippedOverrideRows
+        }),
+      };
+    }
+
+    // Group by agent_id
+    const agentTotals = {};
 
     for (const row of ledgerRows) {
       const aid = row.agent_id;
@@ -471,11 +781,12 @@ export async function handler(event) {
           window_start: startIso,
           window_end_exclusive: endIso,
           excluded_as_earned_policies: asEarnedCount,
+          skipped_override_rows: skippedOverrideRows
         }),
       };
     }
 
-    // 4) Load each agent's current debt (lead + chargeback)
+    // Load debt
     const { data: debtRows, error: debtErr } = await supabase
       .from('agent_total_debt')
       .select('agent_id, lead_debt_total, chargeback_total, total_debt')
@@ -498,7 +809,7 @@ export async function handler(event) {
       });
     });
 
-    // 5) Load agent is_active flags
+    // Load agent is_active flags
     const { data: agentRows, error: agentErr } = await supabase
       .from('agents')
       .select('id, is_active')
@@ -517,7 +828,7 @@ export async function handler(event) {
       activeMap.set(a.id, a.is_active !== false);
     });
 
-    // 6) Build payout summary with tiered repayment
+    // Build payout summary
     const payoutSummary = [];
     let totalGross  = 0;
     let totalDebits = 0;
@@ -573,7 +884,7 @@ export async function handler(event) {
     totalDebits = Number(totalDebits.toFixed(2));
     const totalNet = Number((totalGross - totalDebits).toFixed(2));
 
-    // 7) Create a payout batch row
+    // Create payout batch
     const { data: batchRows, error: batchErr } = await supabase
       .from('payout_batches')
       .insert({
@@ -597,7 +908,7 @@ export async function handler(event) {
 
     const batch = batchRows && batchRows[0];
 
-    // 8) Mark ledger rows as settled + attach batch_id
+    // Mark only PAYABLE ledger rows as settled
     const ledgerIds = ledgerRows.map(r => r.id);
 
     const { error: updErr } = await supabase
@@ -618,7 +929,7 @@ export async function handler(event) {
       };
     }
 
-    // 9) Apply repayments
+    // Apply repayments
     for (const ps of payoutSummary) {
       const cbRepay = ps.chargeback_repayment || 0;
       const ldRepay = ps.lead_repayment || 0;
@@ -627,7 +938,6 @@ export async function handler(event) {
       }
     }
 
-    // 10) Return summary
     return {
       statusCode: 200,
       body: JSON.stringify(
@@ -644,6 +954,8 @@ export async function handler(event) {
           ledger_row_count: ledgerRows.length,
           eligible_policy_count: eligiblePolicyIds.length,
           excluded_as_earned_policies: asEarnedCount,
+          rerouted_override_rows: reroutedOverrideRows,
+          skipped_override_rows: skippedOverrideRows
         },
         null,
         2
