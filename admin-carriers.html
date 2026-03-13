@@ -280,6 +280,18 @@
                 <input id="sched-effective-to" type="date" />
               </label>
             </div>
+            
+            <div class="row" style="margin-top:10px;">
+              <label>
+                <div class="mini">Lag Time (weeks)</div>
+                <input id="sched-lag-weeks" type="number" min="0" step="1" placeholder="0" />
+              </label>
+              <label>
+                <div class="mini">Exclusive Months (optional)</div>
+                <input id="sched-exclusive-months" type="text" placeholder="e.g., 1,4,7,10" />
+                <div class="mini">Comma-separated month numbers 1–12. Leave blank for all months.</div>
+              </label>
+            </div>
 
             <div style="margin-top:12px;">
               <div class="pill">
@@ -386,6 +398,8 @@
                     <th>Level</th>
                     <th>Base</th>
                     <th>Advance</th>
+                    <th>Lag</th>
+                    <th>Exclusive Months</th>
                     <th>Term</th>
                     <th>Effective</th>
                     <th>Renewal Bands</th>
@@ -507,6 +521,18 @@
             <label>
               <div class="mini">Effective To</div>
               <input id="edit-sched-effective-to" type="date" />
+            </label>
+          </div>
+          
+          <div class="row" style="margin-top:10px;">
+            <label>
+              <div class="mini">Lag Time (weeks)</div>
+              <input id="edit-sched-lag-weeks" type="number" min="0" step="1" />
+            </label>
+            <label>
+              <div class="mini">Exclusive Months (optional)</div>
+              <input id="edit-sched-exclusive-months" type="text" placeholder="e.g., 1,4,7,10" />
+              <div class="mini">Comma-separated month numbers 1–12. Leave blank for all months.</div>
             </label>
           </div>
 
