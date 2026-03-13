@@ -5,7 +5,7 @@ import PDFDocument from 'pdfkit';
 import { createClient } from '@supabase/supabase-js';
 
 const supabaseUrl = process.env.SUPABASE_URL;
-const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, serviceKey);
 
 /* =========================================================
@@ -21,12 +21,15 @@ function getBearerToken(event) {
 
 async function requireAuthedUser(event) {
   const token = getBearerToken(event);
-  if (!token) return { ok: false, statusCode: 401, body: 'Missing Authorization Bearer token' };
+  if (!token) {
+    return { ok: false, statusCode: 401, body: 'Missing Authorization Bearer token' };
+  }
 
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data?.user) {
     return { ok: false, statusCode: 401, body: 'Invalid/expired session token' };
   }
+
   return { ok: true, user: data.user };
 }
 
@@ -69,7 +72,7 @@ function tryLoadBackgroundBuffer() {
 }
 
 /* =========================================================
-   TEXT
+   TEXT CLEANUP
 ========================================================= */
 
 function cleanText(input) {
@@ -112,43 +115,38 @@ const C = {
   dangerSoft: '#fff0f4',
   successSoft: '#eef8f4',
   success: '#2a8f6d',
-  footer: '#7b7694',
   cream: '#fffaf0',
   creamBorder: '#eedfb5',
-  creamText: '#8a6a1f'
+  creamText: '#8a6a1f',
+  footer: '#7b7694',
 };
 
 const PAGE = {
-  margin: 54,
-  footerReserve: 34
+  size: 'LETTER',
+  margin: 46,
+  topBar: 22,
+  bottomBar: 16,
+  headerTop: 34,
+  footerY: 760,
+  cardX: 42,
+  cardY: 118,
+  cardW: 528,
+  cardH: 610,
+  contentX: 62,
+  contentY: 142,
+  contentW: 488,
 };
 
 /* =========================================================
-   DOC UTILS
+   PDF DRAW HELPERS
 ========================================================= */
 
-function getContentWidth(doc) {
-  return doc.page.width - doc.page.margins.left - doc.page.margins.right;
-}
-
-function getBottomLimit(doc) {
-  return doc.page.height - doc.page.margins.bottom - PAGE.footerReserve;
-}
-
-function remainingSpace(doc) {
-  return getBottomLimit(doc) - doc.y;
-}
-
-function ensureSpace(doc, needed = 80) {
-  if (remainingSpace(doc) < needed) doc.addPage();
-}
-
-function textHeight(doc, text, opts = {}) {
-  const font = opts.font || 'Helvetica';
-  const size = opts.size || 10.5;
-  const width = opts.width || getContentWidth(doc);
-  const lineGap = opts.lineGap ?? 3;
-
+function textHeight(doc, text, {
+  font = 'Helvetica',
+  size = 10.5,
+  width = PAGE.contentW,
+  lineGap = 3
+} = {}) {
   doc.save();
   doc.font(font).fontSize(size);
   const h = doc.heightOfString(cleanText(text), { width, lineGap });
@@ -156,18 +154,18 @@ function textHeight(doc, text, opts = {}) {
   return h;
 }
 
-function roundedRect(doc, x, y, w, h, r = 16, fill = C.white, stroke = C.line) {
+function drawRoundedCard(doc, x, y, w, h, fill = C.white, stroke = C.line, radius = 18) {
   doc.save();
-  doc.roundedRect(x, y, w, h, r).fillAndStroke(fill, stroke);
+  doc.roundedRect(x, y, w, h, radius).fillAndStroke(fill, stroke);
   doc.restore();
 }
 
-function drawFullPageBackground(doc, bgBuffer) {
+function drawBackground(doc, bgBuffer) {
   if (bgBuffer) {
     try {
       doc.save();
       doc.image(bgBuffer, 0, 0, { width: doc.page.width, height: doc.page.height });
-      doc.fillOpacity(0.82).rect(0, 0, doc.page.width, doc.page.height).fill('#ffffff');
+      doc.fillOpacity(0.84).rect(0, 0, doc.page.width, doc.page.height).fill('#ffffff');
       doc.restore();
     } catch {
       doc.save();
@@ -181,176 +179,263 @@ function drawFullPageBackground(doc, bgBuffer) {
   }
 
   doc.save();
-  doc.rect(0, 0, doc.page.width, 22).fill(C.brand);
-  doc.rect(0, doc.page.height - 16, doc.page.width, 16).fill(C.brandDark);
+  doc.rect(0, 0, doc.page.width, PAGE.topBar).fill(C.brand);
+  doc.rect(0, doc.page.height - PAGE.bottomBar, doc.page.width, PAGE.bottomBar).fill(C.brandDark);
   doc.restore();
 }
 
-function drawFooter(doc, pageNumber) {
-  const left = doc.page.margins.left;
-  const right = doc.page.width - doc.page.margins.right;
-  const y = doc.page.height - 28;
-
-  doc.save();
-  doc.font('Helvetica').fontSize(8.5).fillColor(C.footer);
-  doc.text(cleanText(`© ${new Date().getFullYear()} Family Values Group — Internal Use`), left, y, {
-    width: right - left,
-    align: 'left'
-  });
-  doc.text(cleanText(`Page ${pageNumber}`), left, y, {
-    width: right - left,
-    align: 'right'
-  });
-  doc.restore();
-}
-
-function drawHeader(doc, logo, meRow, { cover = false } = {}) {
-  const left = doc.page.margins.left;
-  const right = doc.page.width - doc.page.margins.right;
-  const topY = cover ? 42 : 34;
+function drawHeader(doc, logo, meRow, pageNumber, cover = false) {
+  const left = PAGE.margin;
+  const titleX = left + (logo ? 80 : 0);
+  const topY = cover ? 40 : 32;
 
   if (logo) {
     try {
-      doc.image(logo, left, topY, { fit: [64, 64], align: 'left', valign: 'top' });
+      doc.image(logo, left, topY, { fit: [62, 62], align: 'left', valign: 'top' });
     } catch {}
   }
 
-  const titleX = left + (logo ? 80 : 0);
-
-  doc
-    .font('Helvetica-Bold')
-    .fontSize(cover ? 24 : 17)
+  doc.font('Helvetica-Bold')
+    .fontSize(cover ? 23 : 16.5)
     .fillColor(C.brandDark)
-    .text(cleanText('Family Values Group'), titleX, topY + 2, { width: right - titleX });
+    .text('Family Values Group', titleX, topY + 1, { width: 430 });
 
-  doc
-    .font('Helvetica')
-    .fontSize(cover ? 13 : 11)
+  doc.font('Helvetica')
+    .fontSize(cover ? 12.5 : 10.5)
     .fillColor(C.muted)
-    .text(cleanText('Commission Manual'), titleX, topY + (cover ? 31 : 24), { width: right - titleX });
+    .text('Commission Manual', titleX, topY + (cover ? 30 : 22), { width: 430 });
 
-  doc
-    .font('Helvetica')
-    .fontSize(9.5)
+  doc.font('Helvetica')
+    .fontSize(9.2)
     .fillColor(C.footer)
     .text(
       cleanText(`Generated for: ${meRow?.full_name || 'Agent'}  •  ${new Date().toLocaleDateString()}`),
       titleX,
-      topY + (cover ? 52 : 42),
-      { width: right - titleX }
+      topY + (cover ? 50 : 39),
+      { width: 430 }
     );
 
-  doc.fillColor(C.ink);
-  doc.y = topY + (cover ? 94 : 78);
+  doc.font('Helvetica')
+    .fontSize(8.5)
+    .fillColor(C.footer)
+    .text(`Page ${pageNumber}`, PAGE.margin, PAGE.footerY, {
+      width: doc.page.width - PAGE.margin * 2,
+      align: 'right'
+    });
+
+  doc.font('Helvetica')
+    .fontSize(8.5)
+    .fillColor(C.footer)
+    .text(`© ${new Date().getFullYear()} Family Values Group — Internal Use`, PAGE.margin, PAGE.footerY, {
+      width: doc.page.width - PAGE.margin * 2,
+      align: 'left'
+    });
 }
 
-function addTitle(doc, text) {
-  doc
-    .font('Helvetica-Bold')
-    .fontSize(28)
+function startPage(doc, bgBuffer, logo, meRow, pageNumber, { cover = false } = {}) {
+  if (pageNumber > 1) doc.addPage();
+  drawBackground(doc, bgBuffer);
+  drawHeader(doc, logo, meRow, pageNumber, cover);
+  drawRoundedCard(doc, PAGE.cardX, PAGE.cardY, PAGE.cardW, PAGE.cardH, C.white, C.line, 22);
+  doc.x = PAGE.contentX;
+  doc.y = PAGE.contentY;
+}
+
+function addPageTitle(doc, title, subtitle = null) {
+  doc.font('Helvetica-Bold')
+    .fontSize(27)
     .fillColor(C.brandDark)
-    .text(cleanText(text), { align: 'left' });
-  doc.moveDown(0.2);
+    .text(cleanText(title), PAGE.contentX, doc.y, {
+      width: PAGE.contentW,
+      lineGap: 2
+    });
+
+  doc.y += textHeight(doc, title, {
+    font: 'Helvetica-Bold',
+    size: 27,
+    width: PAGE.contentW,
+    lineGap: 2
+  }) + 6;
+
+  if (subtitle) {
+    doc.font('Helvetica')
+      .fontSize(11.3)
+      .fillColor(C.muted)
+      .text(cleanText(subtitle), PAGE.contentX, doc.y, {
+        width: PAGE.contentW,
+        lineGap: 4
+      });
+
+    doc.y += textHeight(doc, subtitle, {
+      font: 'Helvetica',
+      size: 11.3,
+      width: PAGE.contentW,
+      lineGap: 4
+    }) + 10;
+  }
 }
 
-function addSubTitle(doc, text) {
-  doc
-    .font('Helvetica')
-    .fontSize(11.4)
-    .fillColor(C.muted)
-    .text(cleanText(text), { lineGap: 4 });
-  doc.moveDown(0.7);
+function addSectionBanner(doc, title, subtitle = '') {
+  const x = PAGE.contentX;
+  const w = PAGE.contentW;
+
+  const titleH = textHeight(doc, title, {
+    font: 'Helvetica-Bold',
+    size: 18,
+    width: w - 46,
+    lineGap: 2
+  });
+
+  const subH = subtitle
+    ? textHeight(doc, subtitle, {
+        font: 'Helvetica',
+        size: 9.4,
+        width: w - 46,
+        lineGap: 2
+      })
+    : 0;
+
+  const h = 12 + titleH + (subtitle ? 4 + subH : 0) + 10;
+
+  doc.save();
+  doc.roundedRect(x, doc.y, w, h, 16).fill(C.brand);
+  doc.roundedRect(x + 12, doc.y + 10, 10, h - 20, 5).fill(C.gold);
+  doc.restore();
+
+  doc.font('Helvetica-Bold')
+    .fontSize(18)
+    .fillColor(C.white)
+    .text(cleanText(title), x + 30, doc.y + 10, {
+      width: w - 42,
+      lineGap: 2
+    });
+
+  if (subtitle) {
+    doc.font('Helvetica')
+      .fontSize(9.4)
+      .fillColor('#e7e4ff')
+      .text(cleanText(subtitle), x + 30, doc.y + 10 + titleH + 4, {
+        width: w - 42,
+        lineGap: 2
+      });
+  }
+
+  doc.y += h + 14;
+}
+
+function addMiniHeader(doc, text) {
+  const x = PAGE.contentX;
+  const w = 270;
+  const padX = 12;
+  const padY = 6;
+
+  const h = textHeight(doc, text, {
+    font: 'Helvetica-Bold',
+    size: 12,
+    width: w - padX * 2,
+    lineGap: 2
+  }) + padY * 2;
+
+  doc.save();
+  doc.roundedRect(x, doc.y, w, h, 11).fill(C.lavender);
+  doc.restore();
+
+  doc.font('Helvetica-Bold')
+    .fontSize(12)
+    .fillColor(C.brandDark)
+    .text(cleanText(text), x + padX, doc.y + padY, {
+      width: w - padX * 2,
+      lineGap: 2
+    });
+
+  doc.y += h + 10;
 }
 
 function addBody(doc, text, opts = {}) {
-  doc
-    .font(opts.bold ? 'Helvetica-Bold' : 'Helvetica')
-    .fontSize(opts.size || 10.7)
+  const width = opts.width || PAGE.contentW;
+  const size = opts.size || 10.7;
+  const lineGap = opts.lineGap ?? 4;
+
+  doc.font(opts.bold ? 'Helvetica-Bold' : 'Helvetica')
+    .fontSize(size)
     .fillColor(opts.color || C.ink)
-    .text(cleanText(text), {
-      width: opts.width || getContentWidth(doc),
-      lineGap: opts.lineGap ?? 4
+    .text(cleanText(text), PAGE.contentX, doc.y, {
+      width,
+      lineGap
     });
-  doc.moveDown(opts.after ?? 0.42);
+
+  doc.y += textHeight(doc, text, {
+    font: opts.bold ? 'Helvetica-Bold' : 'Helvetica',
+    size,
+    width,
+    lineGap
+  }) + (opts.after ?? 8);
 }
 
 function addDivider(doc) {
-  doc.moveDown(0.15);
   doc.save();
-  doc
-    .moveTo(doc.page.margins.left, doc.y)
-    .lineTo(doc.page.width - doc.page.margins.right, doc.y)
+  doc.moveTo(PAGE.contentX, doc.y)
+    .lineTo(PAGE.contentX + PAGE.contentW, doc.y)
     .strokeColor(C.line)
     .lineWidth(1)
     .stroke();
   doc.restore();
-  doc.moveDown(0.65);
+  doc.y += 12;
 }
 
-/* =========================================================
-   MEASURED BLOCKS
-========================================================= */
-
 function addWarningBox(doc, text) {
-  const x = doc.page.margins.left;
-  const y = doc.y;
-  const w = getContentWidth(doc);
+  const x = PAGE.contentX;
+  const w = PAGE.contentW;
   const pad = 16;
   const title = 'Important Payment Disclosure';
-  const titleX = x + 54;
-  const bodyX = x + 20;
 
   const titleH = textHeight(doc, title, {
     font: 'Helvetica-Bold',
     size: 12,
-    width: w - 66,
+    width: w - 70,
     lineGap: 2
   });
 
   const bodyH = textHeight(doc, text, {
     font: 'Helvetica',
-    size: 10.4,
-    width: w - 40,
+    size: 10.3,
+    width: w - 42,
     lineGap: 3
   });
 
   const h = pad + titleH + 10 + bodyH + pad;
 
-  ensureSpace(doc, h + 6);
-
-  const yy = doc.y;
-
   doc.save();
-  doc.roundedRect(x, yy, w, h, 16).fillAndStroke(C.dangerSoft, C.pinkBorder);
-  doc.roundedRect(x, yy, 12, h, 16).fill(C.danger);
+  doc.roundedRect(x, doc.y, w, h, 16).fillAndStroke(C.dangerSoft, C.pinkBorder);
+  doc.roundedRect(x, doc.y, 12, h, 16).fill(C.danger);
   doc.restore();
 
   doc.save();
-  doc.circle(x + 32, yy + 28, 12).fill(C.danger);
-  doc.font('Helvetica-Bold').fontSize(13).fillColor(C.white).text('!', x + 28.5, yy + 18.5);
+  doc.circle(x + 31, doc.y + 28, 12).fill(C.danger);
+  doc.font('Helvetica-Bold').fontSize(13).fillColor(C.white).text('!', x + 27.8, doc.y + 18.2);
   doc.restore();
 
-  doc
-    .font('Helvetica-Bold')
+  doc.font('Helvetica-Bold')
     .fontSize(12)
     .fillColor(C.danger)
-    .text(title, titleX, yy + pad, { width: w - 66 });
+    .text(title, x + 54, doc.y + pad, {
+      width: w - 66
+    });
 
-  doc
-    .font('Helvetica')
-    .fontSize(10.4)
+  doc.font('Helvetica')
+    .fontSize(10.3)
     .fillColor(C.ink)
-    .text(cleanText(text), bodyX, yy + pad + titleH + 10, {
-      width: w - 40,
+    .text(cleanText(text), x + 18, doc.y + pad + titleH + 10, {
+      width: w - 36,
       lineGap: 3
     });
 
-  doc.y = yy + h + 14;
+  doc.y += h + 14;
 }
 
 function addInfoBox(doc, title, lines = [], opts = {}) {
-  const x = doc.page.margins.left;
-  const w = getContentWidth(doc);
+  const x = PAGE.contentX;
+  const w = PAGE.contentW;
   const pad = 14;
   const fill = opts.fill || C.lavender2;
   const stroke = opts.stroke || C.line;
@@ -358,7 +443,7 @@ function addInfoBox(doc, title, lines = [], opts = {}) {
 
   const titleH = textHeight(doc, title, {
     font: 'Helvetica-Bold',
-    size: 11.5,
+    size: 11.3,
     width: w - pad * 2,
     lineGap: 2
   });
@@ -367,288 +452,178 @@ function addInfoBox(doc, title, lines = [], opts = {}) {
   for (const line of lines) {
     bodyH += textHeight(doc, line, {
       font: 'Helvetica',
-      size: 10.4,
+      size: 10.3,
       width: w - pad * 2,
       lineGap: 3
     }) + 5;
   }
 
   const h = pad + titleH + 10 + bodyH + pad;
-  ensureSpace(doc, h + 6);
 
-  const y = doc.y;
-  roundedRect(doc, x, y, w, h, 16, fill, stroke);
+  drawRoundedCard(doc, x, doc.y, w, h, fill, stroke, 16);
 
-  let cy = y + pad;
+  let yy = doc.y + pad;
 
-  doc
-    .font('Helvetica-Bold')
-    .fontSize(11.5)
+  doc.font('Helvetica-Bold')
+    .fontSize(11.3)
     .fillColor(titleColor)
-    .text(cleanText(title), x + pad, cy, { width: w - pad * 2 });
+    .text(cleanText(title), x + pad, yy, {
+      width: w - pad * 2
+    });
 
-  cy += titleH + 10;
+  yy += titleH + 10;
 
   for (const line of lines) {
-    doc
-      .font('Helvetica')
-      .fontSize(10.4)
+    doc.font('Helvetica')
+      .fontSize(10.3)
       .fillColor(C.ink)
-      .text(cleanText(line), x + pad, cy, {
+      .text(cleanText(line), x + pad, yy, {
         width: w - pad * 2,
         lineGap: 3
       });
 
-    cy += textHeight(doc, line, {
+    yy += textHeight(doc, line, {
       font: 'Helvetica',
-      size: 10.4,
+      size: 10.3,
       width: w - pad * 2,
       lineGap: 3
     }) + 5;
   }
 
-  doc.y = y + h + 12;
+  doc.y += h + 12;
 }
 
-function addBullets(doc, items, { box = false, fill = C.lavender2, stroke = C.line } = {}) {
-  const x = doc.page.margins.left;
-  const w = getContentWidth(doc);
+function addBullets(doc, items, opts = {}) {
+  const box = !!opts.box;
+  const fill = opts.fill || C.lavender2;
+  const stroke = opts.stroke || C.line;
 
-  const boxPad = box ? 14 : 0;
-  const bulletX = x + (box ? 14 : 4);
-  const textX = bulletX + 18;
+  const x = PAGE.contentX;
+  const w = PAGE.contentW;
+  const padX = box ? 14 : 0;
+  const bulletX = x + (box ? 16 : 6);
+  const textX = bulletX + 16;
   const textW = w - (textX - x) - (box ? 14 : 0);
 
   let totalH = 0;
   for (const item of items) {
     totalH += textHeight(doc, item, {
       font: 'Helvetica',
-      size: 10.5,
+      size: 10.4,
       width: textW,
       lineGap: 3
-    }) + 6;
+    }) + 7;
   }
 
-  const boxH = box ? totalH + 18 + 10 : totalH;
-  ensureSpace(doc, boxH + 8);
+  const boxH = box ? totalH + 18 : totalH;
 
-  let startY = doc.y;
   if (box) {
-    roundedRect(doc, x, startY, w, boxH, 14, fill, stroke);
-    doc.y = startY + boxPad;
+    drawRoundedCard(doc, x, doc.y, w, boxH, fill, stroke, 14);
+    doc.y += 12;
   }
 
   for (const item of items) {
-    const lineY = doc.y;
     const itemH = textHeight(doc, item, {
       font: 'Helvetica',
-      size: 10.5,
+      size: 10.4,
       width: textW,
       lineGap: 3
     });
 
     doc.save();
-    doc.circle(bulletX + 5, lineY + 8, 4).fill(C.brand);
+    doc.circle(bulletX + 4, doc.y + 8, 4).fill(C.brand);
     doc.restore();
 
-    doc
-      .font('Helvetica')
-      .fontSize(10.5)
+    doc.font('Helvetica')
+      .fontSize(10.4)
       .fillColor(C.ink)
-      .text(cleanText(item), textX, lineY, {
+      .text(cleanText(item), textX, doc.y, {
         width: textW,
         lineGap: 3
       });
 
-    doc.y = lineY + itemH + 6;
+    doc.y += itemH + 7;
   }
 
-  doc.moveDown(0.2);
-}
-
-function drawMiniHeader(doc, text) {
-  const x = doc.page.margins.left;
-  const w = Math.min(getContentWidth(doc), 320);
-  const padX = 12;
-  const padY = 6;
-
-  const tH = textHeight(doc, text, {
-    font: 'Helvetica-Bold',
-    size: 12,
-    width: w - padX * 2,
-    lineGap: 2
-  });
-
-  const h = tH + padY * 2;
-  ensureSpace(doc, h + 8);
-
-  const y = doc.y;
-  roundedRect(doc, x, y, w, h, 10, C.lavender, C.line);
-
-  doc
-    .font('Helvetica-Bold')
-    .fontSize(12)
-    .fillColor(C.brandDark)
-    .text(cleanText(text), x + padX, y + padY, {
-      width: w - padX * 2,
-      lineGap: 2
-    });
-
-  doc.y = y + h + 8;
-}
-
-function drawSectionBanner(doc, title, subtitle = '') {
-  const x = doc.page.margins.left;
-  const w = getContentWidth(doc);
-  const titleH = textHeight(doc, title, {
-    font: 'Helvetica-Bold',
-    size: 18,
-    width: w - 44,
-    lineGap: 2
-  });
-
-  const subH = subtitle
-    ? textHeight(doc, subtitle, {
-        font: 'Helvetica',
-        size: 9.6,
-        width: w - 44,
-        lineGap: 2
-      })
-    : 0;
-
-  const h = 12 + titleH + (subtitle ? 4 + subH : 0) + 10;
-  ensureSpace(doc, h + 8);
-
-  const y = doc.y;
-
-  doc.save();
-  doc.roundedRect(x, y, w, h, 14).fill(C.brand);
-  doc.roundedRect(x + 12, y + 10, 10, Math.max(18, h - 20), 5).fill(C.gold);
-  doc.restore();
-
-  doc
-    .font('Helvetica-Bold')
-    .fontSize(18)
-    .fillColor(C.white)
-    .text(cleanText(title), x + 32, y + 10, { width: w - 44, lineGap: 2 });
-
-  if (subtitle) {
-    doc
-      .font('Helvetica')
-      .fontSize(9.6)
-      .fillColor('#e7e4ff')
-      .text(cleanText(subtitle), x + 32, y + 10 + titleH + 4, {
-        width: w - 44,
-        lineGap: 2
-      });
-  }
-
-  doc.y = y + h + 14;
-  doc.fillColor(C.ink);
+  if (!box) doc.y += 4;
 }
 
 function addTwoColExampleBox(doc, leftTitle, leftText, rightTitle, rightText) {
-  const x = doc.page.margins.left;
-  const fullW = getContentWidth(doc);
+  const x = PAGE.contentX;
+  const fullW = PAGE.contentW;
   const gap = 12;
   const colW = (fullW - gap) / 2;
   const pad = 12;
+  const bodyW = colW - pad * 2;
 
   const lTitleH = textHeight(doc, leftTitle, {
     font: 'Helvetica-Bold',
     size: 11,
-    width: colW - pad * 2,
+    width: bodyW,
     lineGap: 2
   });
   const rTitleH = textHeight(doc, rightTitle, {
     font: 'Helvetica-Bold',
     size: 11,
-    width: colW - pad * 2,
+    width: bodyW,
     lineGap: 2
   });
+
   const lBodyH = textHeight(doc, leftText, {
     font: 'Helvetica',
     size: 10.2,
-    width: colW - pad * 2,
+    width: bodyW,
     lineGap: 3
   });
   const rBodyH = textHeight(doc, rightText, {
     font: 'Helvetica',
     size: 10.2,
-    width: colW - pad * 2,
+    width: bodyW,
     lineGap: 3
   });
 
-  const colH = Math.max(lTitleH + 8 + lBodyH, rTitleH + 8 + rBodyH) + pad * 2;
-  ensureSpace(doc, colH + 8);
+  const h = Math.max(lTitleH + 8 + lBodyH, rTitleH + 8 + rBodyH) + pad * 2;
 
-  const y = doc.y;
+  drawRoundedCard(doc, x, doc.y, colW, h, C.white, C.line, 14);
+  drawRoundedCard(doc, x + colW + gap, doc.y, colW, h, C.white, C.line, 14);
 
-  roundedRect(doc, x, y, colW, colH, 14, C.white, C.line);
-  roundedRect(doc, x + colW + gap, y, colW, colH, 14, C.white, C.line);
-
-  doc
-    .font('Helvetica-Bold')
+  doc.font('Helvetica-Bold')
     .fontSize(11)
     .fillColor(C.brandDark)
-    .text(cleanText(leftTitle), x + pad, y + pad, { width: colW - pad * 2 });
-  doc
-    .font('Helvetica')
+    .text(cleanText(leftTitle), x + pad, doc.y + pad, {
+      width: bodyW
+    });
+
+  doc.font('Helvetica')
     .fontSize(10.2)
     .fillColor(C.ink)
-    .text(cleanText(leftText), x + pad, y + pad + lTitleH + 8, {
-      width: colW - pad * 2,
+    .text(cleanText(leftText), x + pad, doc.y + pad + lTitleH + 8, {
+      width: bodyW,
       lineGap: 3
     });
 
   const rx = x + colW + gap;
-  doc
-    .font('Helvetica-Bold')
+
+  doc.font('Helvetica-Bold')
     .fontSize(11)
     .fillColor(C.brandDark)
-    .text(cleanText(rightTitle), rx + pad, y + pad, { width: colW - pad * 2 });
-  doc
-    .font('Helvetica')
+    .text(cleanText(rightTitle), rx + pad, doc.y + pad, {
+      width: bodyW
+    });
+
+  doc.font('Helvetica')
     .fontSize(10.2)
     .fillColor(C.ink)
-    .text(cleanText(rightText), rx + pad, y + pad + rTitleH + 8, {
-      width: colW - pad * 2,
+    .text(cleanText(rightText), rx + pad, doc.y + pad + rTitleH + 8, {
+      width: bodyW,
       lineGap: 3
     });
 
-  doc.y = y + colH + 14;
+  doc.y += h + 14;
 }
 
 /* =========================================================
-   PAGES
-========================================================= */
-
-function drawCoverCard(doc) {
-  const x = doc.page.margins.left - 2;
-  const y = doc.y + 8;
-  const w = getContentWidth(doc) + 4;
-  const h = getBottomLimit(doc) - y - 6;
-
-  roundedRect(doc, x, y, w, h, 22, C.white, C.line);
-  doc.y = y + 24;
-}
-
-function startSectionPage(doc, title, subtitle = '') {
-  doc.addPage();
-
-  const cardX = doc.page.margins.left - 4;
-  const cardY = doc.y + 4;
-  const cardW = getContentWidth(doc) + 8;
-  const cardH = getBottomLimit(doc) - cardY - 6;
-
-  roundedRect(doc, cardX, cardY, cardW, cardH, 20, C.white, C.line);
-  doc.y = cardY + 18;
-
-  drawSectionBanner(doc, title, subtitle);
-}
-
-/* =========================================================
-   HANDLER
+   MAIN HANDLER
 ========================================================= */
 
 export async function handler(event) {
@@ -671,9 +646,8 @@ export async function handler(event) {
   }
 
   const doc = new PDFDocument({
-    size: 'LETTER',
+    size: PAGE.size,
     margin: PAGE.margin,
-    bufferPages: true,
     info: {
       Title: 'Family Values Group — Commission Manual',
       Author: 'Family Values Group',
@@ -684,23 +658,15 @@ export async function handler(event) {
   doc.on('data', c => chunks.push(c));
 
   const logo = tryLoadLogoBuffer();
-  const bg   = tryLoadBackgroundBuffer();
+  const bg = tryLoadBackgroundBuffer();
 
-  drawFullPageBackground(doc, bg);
-  drawHeader(doc, logo, meRow, { cover: true });
+  /* ---------------- PAGE 1: COVER ---------------- */
 
-  doc.on('pageAdded', () => {
-    drawFullPageBackground(doc, bg);
-    drawHeader(doc, logo, meRow, { cover: false });
-  });
+  startPage(doc, bg, logo, meRow, 1, { cover: true });
 
-  /* ---------------- COVER ---------------- */
-
-  drawCoverCard(doc);
-
-  addTitle(doc, 'Commission Manual');
-  addSubTitle(
+  addPageTitle(
     doc,
+    'Commission Manual',
     'A clearer guide to how Family Values Group handles commissions, advances, pay-thru, overrides, promotions, and payment-related compliance.'
   );
 
@@ -731,9 +697,10 @@ export async function handler(event) {
     titleColor: C.brandDark
   });
 
-  /* ---------------- SECTION 1 ---------------- */
+  /* ---------------- PAGE 2 ---------------- */
 
-  startSectionPage(
+  startPage(doc, bg, logo, meRow, 2);
+  addSectionBanner(
     doc,
     '1) How commissions are calculated',
     'The foundation: AP, commission rates, advances, pay-thru, renewals, and overrides.'
@@ -744,7 +711,7 @@ export async function handler(event) {
     'Your commission amounts are driven by Annual Premium (AP) and the carrier-specific commission schedule for the product you wrote. The platform annualizes the premium, matches the right schedule, and then applies the correct percentages.'
   );
 
-  drawMiniHeader(doc, 'Key definitions');
+  addMiniHeader(doc, 'Key definitions');
   addBullets(doc, [
     'Annual Premium (AP): the annualized premium used for commission calculations.',
     'Commission Rate: the percentage assigned to the matching carrier schedule.',
@@ -753,7 +720,7 @@ export async function handler(event) {
     'Overrides: commission earned from the production of agents in your downline.'
   ], { box: true });
 
-  drawMiniHeader(doc, 'Commission example');
+  addMiniHeader(doc, 'Commission example');
   addTwoColExampleBox(
     doc,
     'Policy details',
@@ -762,9 +729,10 @@ export async function handler(event) {
     'Total commission: $864\nAdvance at 75%: $648\nRemaining pay-thru: $216'
   );
 
-  /* ---------------- SECTION 2 ---------------- */
+  /* ---------------- PAGE 3 ---------------- */
 
-  startSectionPage(
+  startPage(doc, bg, logo, meRow, 3);
+  addSectionBanner(
     doc,
     '2) How to read your commission schedules',
     'Schedules are the source of truth for percentages and payout behavior.'
@@ -790,9 +758,10 @@ export async function handler(event) {
     'Two products under the same carrier can still pay differently. The product line and policy type matter, so always match the exact schedule to the business written.'
   );
 
-  /* ---------------- SECTION 3 ---------------- */
+  /* ---------------- PAGE 4 ---------------- */
 
-  startSectionPage(
+  startPage(doc, bg, logo, meRow, 4);
+  addSectionBanner(
     doc,
     '3) When and how you get paid',
     'A cleaner breakdown of advances, pay-thru, renewals, and overrides.'
@@ -825,9 +794,10 @@ export async function handler(event) {
     stroke: C.pinkBorder
   });
 
-  /* ---------------- SECTION 4 ---------------- */
+  /* ---------------- PAGE 5 ---------------- */
 
-  startSectionPage(
+  startPage(doc, bg, logo, meRow, 5);
+  addSectionBanner(
     doc,
     '4) Override example',
     'A simplified view of how leadership earnings are created.'
@@ -851,9 +821,10 @@ export async function handler(event) {
     'Actual override behavior may vary depending on product, carrier, and schedule design, but the platform applies your stored hierarchy and the matching schedule consistently.'
   );
 
-  /* ---------------- SECTION 5 ---------------- */
+  /* ---------------- PAGE 6 ---------------- */
 
-  startSectionPage(
+  startPage(doc, bg, logo, meRow, 6);
+  addSectionBanner(
     doc,
     '5) Level promotions',
     'How production and team growth support advancement.'
@@ -883,9 +854,10 @@ export async function handler(event) {
     titleColor: C.creamText
   });
 
-  /* ---------------- SECTION 6 ---------------- */
+  /* ---------------- PAGE 7 ---------------- */
 
-  startSectionPage(
+  startPage(doc, bg, logo, meRow, 7);
+  addSectionBanner(
     doc,
     '6) SSN, W-9, 1099, and security',
     'Why this information may be required and how to handle it safely.'
@@ -896,14 +868,14 @@ export async function handler(event) {
     'To receive commission payouts, carriers and payment processors may require identity verification and tax reporting information. This commonly includes your Social Security Number or Tax ID for W-9 and 1099 reporting.'
   );
 
-  drawMiniHeader(doc, 'Why it may be required');
+  addMiniHeader(doc, 'Why it may be required');
   addBullets(doc, [
     'Tax reporting: commissions are commonly reported on a 1099-NEC for independent agents.',
     'Identity verification: processors may require SSN or TIN to verify the payment recipient.',
     'Compliance: carriers may require tax information to issue producer payments correctly.'
   ], { box: true });
 
-  drawMiniHeader(doc, 'Security reminders');
+  addMiniHeader(doc, 'Security reminders');
   addBullets(doc, [
     'Do not text or email SSNs in plain text.',
     'Only submit SSN or TIN information through secure official portals or verified encrypted channels.',
@@ -921,14 +893,6 @@ export async function handler(event) {
     stroke: C.pinkBorder,
     titleColor: C.danger
   });
-
-  /* ---------------- FOOTERS ON ALL PAGES ---------------- */
-
-  const range = doc.bufferedPageRange();
-  for (let i = 0; i < range.count; i++) {
-    doc.switchToPage(i);
-    drawFooter(doc, i + 1);
-  }
 
   doc.end();
 
