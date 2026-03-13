@@ -53,6 +53,126 @@ function todayISO() {
   return `${yyyy}-${mm}-${dd}`;
 }
 
+function normalizeExclusiveMonths(value) {
+  if (value == null) return null;
+
+  let arr = value;
+
+  if (typeof arr === "string") {
+    try {
+      arr = JSON.parse(arr);
+    } catch {
+      arr = String(arr)
+        .replace(/[{}]/g, "")
+        .split(",")
+        .map(v => v.trim())
+        .filter(Boolean);
+    }
+  }
+
+  if (!Array.isArray(arr)) return null;
+
+  const nums = Array.from(
+    new Set(
+      arr
+        .map(v => Number(v))
+        .filter(v => Number.isInteger(v) && v >= 1 && v <= 12)
+    )
+  ).sort((a, b) => a - b);
+
+  return nums.length ? nums : null;
+}
+
+function monthNumberToName(n) {
+  const names = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December"
+  ];
+  return names[n - 1] || String(n);
+}
+
+function naturalList(items = []) {
+  const arr = items.filter(Boolean);
+  if (!arr.length) return "";
+  if (arr.length === 1) return arr[0];
+  if (arr.length === 2) return `${arr[0]} and ${arr[1]}`;
+  return `${arr.slice(0, -1).join(", ")}, and ${arr[arr.length - 1]}`;
+}
+
+function formatExclusiveMonthsPretty(months) {
+  const normalized = normalizeExclusiveMonths(months);
+  if (!normalized || !normalized.length) return "";
+  return naturalList(normalized.map(monthNumberToName));
+}
+
+function getLagTimingMessage(carrierName, lagWeeks) {
+  const n = Number(lagWeeks || 0);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const weeksText = n === 1 ? "1 week" : `${n} weeks`;
+  return `${carrierName} typically pays about ${weeksText} later than the standard schedule.`;
+}
+
+function getExclusiveMonthsMessage(carrierName, months) {
+  const pretty = formatExclusiveMonthsPretty(months);
+  if (!pretty) return null;
+  return `${carrierName} only pays out in ${pretty}.`;
+}
+
+function buildCarrierTimingNotes(rows, carrierName) {
+  const activeRows = Array.isArray(rows) ? rows : [];
+  const notes = [];
+
+  // ---- Lag note ----
+  const lagCounts = new Map();
+  for (const row of activeRows) {
+    const lag = Number(row?.lag_time_weeks ?? 0);
+    if (Number.isFinite(lag) && lag > 0) {
+      lagCounts.set(lag, (lagCounts.get(lag) || 0) + 1);
+    }
+  }
+
+  let chosenLag = null;
+  let chosenLagCount = 0;
+  for (const [lag, count] of lagCounts.entries()) {
+    if (count > chosenLagCount) {
+      chosenLag = lag;
+      chosenLagCount = count;
+    }
+  }
+
+  if (chosenLag != null && chosenLagCount >= 5) {
+    const msg = getLagTimingMessage(carrierName, chosenLag);
+    if (msg) notes.push(msg);
+  }
+
+  // ---- Exclusive months note ----
+  const monthCounts = new Map();
+  for (const row of activeRows) {
+    const months = normalizeExclusiveMonths(row?.exclusive_months);
+    if (months && months.length) {
+      const key = months.join(",");
+      monthCounts.set(key, (monthCounts.get(key) || 0) + 1);
+    }
+  }
+
+  let chosenMonthsKey = null;
+  let chosenMonthsCount = 0;
+  for (const [key, count] of monthCounts.entries()) {
+    if (count > chosenMonthsCount) {
+      chosenMonthsKey = key;
+      chosenMonthsCount = count;
+    }
+  }
+
+  if (chosenMonthsKey && chosenMonthsCount >= 5) {
+    const chosenMonths = chosenMonthsKey.split(",").map(Number);
+    const msg = getExclusiveMonthsMessage(carrierName, chosenMonths);
+    if (msg) notes.push(msg);
+  }
+
+  return notes;
+}
+
 // “Active with carrier” rule (based on your intent):
 // - is_contracted MUST be true
 // - status must be 'active'
@@ -107,6 +227,64 @@ function drawFooter(doc, disclaimerText) {
       align: "center"
     })
     .fillColor("#000000");
+}
+
+function drawTimingNotesBox(doc, notes = []) {
+  if (!notes.length) return doc.y;
+
+  const left = doc.page.margins.left;
+  const right = doc.page.width - doc.page.margins.right;
+  const width = right - left;
+
+  const title = "Important Payout Timing";
+  const bulletIndent = 18;
+  const innerPad = 12;
+
+  doc.font("Helvetica-Bold").fontSize(11);
+  const titleHeight = doc.heightOfString(title, { width: width - innerPad * 2 });
+
+  doc.font("Helvetica").fontSize(10);
+  let notesHeight = 0;
+  for (const note of notes) {
+    notesHeight += doc.heightOfString(`• ${note}`, {
+      width: width - innerPad * 2 - bulletIndent
+    }) + 6;
+  }
+
+  const boxHeight = innerPad + titleHeight + 8 + notesHeight + innerPad;
+
+  doc
+    .roundedRect(left, doc.y, width, boxHeight, 10)
+    .fill("#f4f1ff")
+    .strokeColor("#d8cff6")
+    .stroke();
+
+  let y = doc.y + innerPad;
+
+  doc
+    .font("Helvetica-Bold")
+    .fontSize(11)
+    .fillColor("#353468")
+    .text(title, left + innerPad, y, {
+      width: width - innerPad * 2
+    });
+
+  y += titleHeight + 8;
+
+  doc.font("Helvetica").fontSize(10).fillColor("#2a274a");
+
+  for (const note of notes) {
+    doc.text("•", left + innerPad, y);
+    doc.text(note, left + innerPad + bulletIndent, y, {
+      width: width - innerPad * 2 - bulletIndent
+    });
+    y += doc.heightOfString(note, {
+      width: width - innerPad * 2 - bulletIndent
+    }) + 6;
+  }
+
+  doc.fillColor("#000000");
+  return doc.y + boxHeight + 12;
 }
 
 function drawTableHeader(doc, y) {
@@ -333,6 +511,24 @@ export async function handler(event) {
 
     if (sErr) throw sErr;
 
+    // Load active rows across all levels for payout timing summary
+    const { data: timingRows, error: tErr } = await supabase
+      .from("commission_schedules")
+      .select(`
+        id,
+        lag_time_weeks,
+        exclusive_months,
+        effective_from,
+        effective_to
+      `)
+      .eq("carrier_id", carrierId)
+      .lte("effective_from", iso)
+      .or(`effective_to.is.null,effective_to.gte.${iso}`);
+
+    if (tErr) throw tErr;
+
+    const payoutTimingNotes = buildCarrierTimingNotes(timingRows || [], carrier.carrier_name || "This carrier");
+
     // If none, still produce a PDF that says “no schedules”
     const disclaimer =
       "This schedule is for informational purposes only. Commission rates and advance terms may change. Refer to carrier contracting documents for final terms.";
@@ -391,6 +587,12 @@ export async function handler(event) {
         .strokeColor("#dddddd")
         .stroke();
       doc.moveDown(1);
+
+      // Friendly payout timing notes
+      if (payoutTimingNotes.length) {
+        const newY = drawTimingNotesBox(doc, payoutTimingNotes);
+        doc.y = newY;
+      }
 
       // Body
       if (!schedules || schedules.length === 0) {
