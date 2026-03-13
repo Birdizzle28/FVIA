@@ -1404,6 +1404,10 @@ function wireModalButtons() {
       const dd = String(today.getDate()).padStart(2, '0');
       sd.value = `${yyyy}-${mm}-${dd}`;
     }
+    // Default Issued Date = blank (optional)
+    const idt = document.getElementById('policy-issued-date');
+    if (idt) idt.value = '';
+    
     openModal(policyModal);
   });
 
@@ -1587,10 +1591,12 @@ function wirePolicySubmit() {
       
       const submitted_raw = document.getElementById('policy-submitted-date')?.value || null;
       const submitted_at = submitted_raw ? new Date(submitted_raw).toISOString() : null;
+      
+      const issued_raw = document.getElementById('policy-issued-date')?.value || null;
+      const issued_at = issued_raw ? new Date(issued_raw).toISOString() : null;
+      
       const as_earned = (document.getElementById('policy-as-earned')?.value === 'true');
       const status = document.getElementById('policy-status')?.value || 'pending';
-      const shouldSetIssued = (status === 'in_force' || status === 'issued');
-      const issued_at = (shouldSetIssued && submitted_at) ? submitted_at : null;
       
       if (!agent_id || !carrier_name || !product_line || !policy_type || !policy_number || !(premium_annual > 0) || !submitted_at) {
         if (errEl) errEl.textContent = 'Please complete all required fields.';
