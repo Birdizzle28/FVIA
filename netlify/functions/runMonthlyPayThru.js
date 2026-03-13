@@ -48,6 +48,48 @@ function getRepaymentRate(totalDebt, isActive) {
 }
 
 /* ---------------------------
+   EXCLUSIVE MONTH HELPERS
+   --------------------------- */
+
+function normalizeExclusiveMonths(value) {
+  if (value == null) return null;
+
+  let arr = value;
+
+  if (typeof arr === 'string') {
+    try {
+      arr = JSON.parse(arr);
+    } catch {
+      arr = String(arr)
+        .replace(/[{}]/g, '')
+        .split(',')
+        .map(v => v.trim())
+        .filter(Boolean);
+    }
+  }
+
+  if (!Array.isArray(arr)) return null;
+
+  const nums = Array.from(
+    new Set(
+      arr
+        .map(v => Number(v))
+        .filter(v => Number.isInteger(v) && v >= 1 && v <= 12)
+    )
+  ).sort((a, b) => a - b);
+
+  return nums.length ? nums : null;
+}
+
+function isPayMonthAllowed(exclusiveMonths, payDate) {
+  const months = normalizeExclusiveMonths(exclusiveMonths);
+  if (!months || !months.length) return true;
+
+  const payMonthNumber = payDate.getMonth() + 1; // 1..12
+  return months.includes(payMonthNumber);
+}
+
+/* ---------------------------
    TIME / TERM HELPERS
    --------------------------- */
 
@@ -392,6 +434,7 @@ export async function handler(event) {
 
     const agentCache = new Map();
     const schedCache = new Map();
+    const policyCache = new Map();
 
     async function getAgent(agentId) {
       if (!agentId) return null;
@@ -426,7 +469,7 @@ export async function handler(event) {
         .from('commission_schedules')
         .select(
           'base_commission_rate, advance_rate, renewal_commission_rate, ' +
-          'renewal_start_year, renewal_end_year, renewal_trail_rule, term_length_months'
+          'renewal_start_year, renewal_end_year, renewal_trail_rule, term_length_months, exclusive_months'
         )
         .eq('carrier_name', policy.carrier_name)
         .eq('product_line', policy.product_line)
@@ -442,6 +485,42 @@ export async function handler(event) {
 
       schedCache.set(key, data);
       return data;
+    }
+
+    async function getPolicyBasic(policyId) {
+      if (!policyId) return null;
+      if (policyCache.has(policyId)) return policyCache.get(policyId);
+
+      const { data, error } = await supabase
+        .from('policies')
+        .select('id, carrier_name, product_line, policy_type')
+        .eq('id', policyId)
+        .single();
+
+      if (error || !data) {
+        console.warn('[runMonthlyPayThru] Missing policy record for id:', policyId, error);
+        policyCache.set(policyId, null);
+        return null;
+      }
+
+      policyCache.set(policyId, data);
+      return data;
+    }
+
+    async function getLedgerRowExclusiveMonths(row) {
+      const metaMonths = normalizeExclusiveMonths(row?.meta?.exclusive_months);
+      if (metaMonths) return metaMonths;
+
+      if (!row?.policy_id || !row?.agent_id) return null;
+
+      const policy = await getPolicyBasic(row.policy_id);
+      if (!policy) return null;
+
+      const agent = await getAgent(row.agent_id);
+      const level = agent?.level || 'agent';
+
+      const schedule = await getSchedule(policy, level);
+      return normalizeExclusiveMonths(schedule?.exclusive_months);
     }
 
     const newLedgerRows = [];
@@ -581,6 +660,8 @@ export async function handler(event) {
 
         payThruCountMap.set(key, priorCount + 1);
 
+        const exclusiveMonths = normalizeExclusiveMonths(node.schedule?.exclusive_months);
+
         newLedgerRows.push({
           agent_id: node.agent.id,
           policy_id: policy.id,
@@ -609,7 +690,8 @@ export async function handler(event) {
             advance_rate_applied: globalAdvanceRate,
             months_advanced: monthsAdvanced,
             divisor_months: divisorMonths,
-            issued_at: policy.issued_at
+            issued_at: policy.issued_at,
+            exclusive_months: exclusiveMonths
           }
         });
       }
@@ -627,9 +709,9 @@ export async function handler(event) {
     }
 
     // Now select unpaid paythru rows through this pay month and apply $100 threshold
-    const { data: unpaidTrails, error: unpaidErr } = await supabase
+    const { data: unpaidTrailsRaw, error: unpaidErr } = await supabase
       .from('commission_ledger')
-      .select('id, agent_id, amount')
+      .select('id, agent_id, amount, policy_id, meta')
       .eq('entry_type', 'paythru')
       .eq('is_settled', false)
       .lte('meta->>pay_month', payMonthKey);
@@ -637,6 +719,14 @@ export async function handler(event) {
     if (unpaidErr) {
       console.error('[runMonthlyPayThru] Error loading unpaid paythru:', unpaidErr);
       return { statusCode: 500, body: JSON.stringify({ error: 'Failed to load unpaid paythru', details: unpaidErr }) };
+    }
+
+    const unpaidTrails = [];
+    for (const row of (unpaidTrailsRaw || [])) {
+      const exclusiveMonths = await getLedgerRowExclusiveMonths(row);
+      if (isPayMonthAllowed(exclusiveMonths, payDate)) {
+        unpaidTrails.push(row);
+      }
     }
 
     if (!unpaidTrails || unpaidTrails.length === 0) {
