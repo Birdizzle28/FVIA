@@ -424,7 +424,10 @@ document.addEventListener("DOMContentLoaded", async () => {
       "agent-text-cta",
       "agent-email-cta",
       "careers-contact-email",
-      "faq-contact-link"
+      "faq-contact-link",
+      "btn-step1",
+      "btn-step2",
+      "btn-submit"
     ];
   
     const radius = settings?.button_radius || "14px";
@@ -758,25 +761,24 @@ document.addEventListener("DOMContentLoaded", async () => {
       } else {
         detailsEl.style.boxShadow = "";
       }
-
+  
       if (sectionEl) {
         sectionEl.style.border = "";
         sectionEl.style.borderRadius = "0";
         sectionEl.style.boxShadow = "";
       }
-            
+  
       if (shellEl) {
         shellEl.style.border = "";
         shellEl.style.borderRadius = "0";
         shellEl.style.boxShadow = "";
       }
-            
+  
       if (headingWrapEl) {
         headingWrapEl.style.border = "";
         headingWrapEl.style.borderRadius = "0";
         headingWrapEl.style.boxShadow = "";
       }
-      
   
       if (headingEl) {
         headingEl.style.border = "";
@@ -802,33 +804,34 @@ document.addEventListener("DOMContentLoaded", async () => {
   
       return;
     }
-
+  
     if (sectionKey === "quote") {
       const shellEl = document.getElementById("quote-shell");
       const formEl = document.getElementById("free-quote-form");
       const headingWrapEl = document.getElementById("quote-heading-wrap");
       const headingEl = document.getElementById("quote-heading");
       const subheadingEl = document.getElementById("quote-subheading");
-
+      const lifeFormEl = document.getElementById("life-form");
+  
       const bgColor =
         style.background_color_mode === "custom"
           ? (style.background_color_custom || "")
           : (style.background_color || "");
-
+  
       if (shellEl) {
         shellEl.style.width = "100%";
         shellEl.style.height = "100%";
         shellEl.style.textAlign = style.text_align || "";
         shellEl.style.backgroundColor = bgColor || "";
-
+  
         if (style.border_width && style.border_style && style.border_color) {
           shellEl.style.border = `${style.border_width} ${style.border_style} ${style.border_color}`;
         } else {
           shellEl.style.border = "";
         }
-
+  
         shellEl.style.borderRadius = style.border_radius || "";
-
+  
         if (
           style.shadow_color &&
           (style.shadow_blur || style.shadow_x || style.shadow_y)
@@ -838,7 +841,7 @@ document.addEventListener("DOMContentLoaded", async () => {
           shellEl.style.boxShadow = "";
         }
       }
-
+  
       if (formEl) {
         formEl.style.width = "100%";
         formEl.style.height = "100%";
@@ -849,25 +852,38 @@ document.addEventListener("DOMContentLoaded", async () => {
         formEl.style.borderRadius = "0";
         formEl.style.boxShadow = "none";
       }
-
+  
+      if (lifeFormEl) {
+        lifeFormEl.style.width = "100%";
+        lifeFormEl.style.height = "100%";
+        lifeFormEl.style.backgroundColor = bgColor || "";
+        lifeFormEl.style.border = "0";
+        lifeFormEl.style.borderRadius = "0";
+        lifeFormEl.style.boxShadow = "none";
+      }
+  
       if (headingWrapEl) {
         headingWrapEl.style.border = "";
         headingWrapEl.style.borderRadius = "";
         headingWrapEl.style.boxShadow = "";
+        headingWrapEl.style.backgroundColor = bgColor || "";
+        headingWrapEl.style.textAlign = style.text_align || "";
       }
-
+  
       if (headingEl) {
         headingEl.style.border = "";
         headingEl.style.borderRadius = "";
         headingEl.style.boxShadow = "";
+        headingEl.style.textAlign = style.text_align || "";
       }
-
+  
       if (subheadingEl) {
         subheadingEl.style.border = "";
         subheadingEl.style.borderRadius = "";
         subheadingEl.style.boxShadow = "";
+        subheadingEl.style.textAlign = style.text_align || "";
       }
-
+  
       return;
     }
   
@@ -1034,7 +1050,6 @@ document.addEventListener("DOMContentLoaded", async () => {
       .tcpa,
       .tcpa strong,
       .like-back,
-      .cta,
       #result-title,
       #result-body
     `);
@@ -1043,6 +1058,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       el.style.background = style.quote_body_highlight || "";
       el.style.color = style.quote_body_color || "";
       el.style.fontSize = style.quote_body_font_size || "";
+      el.style.fontWeight = style.quote_body_font_weight || "";
       el.style.fontStyle = style.quote_body_font_style || "";
       el.style.textDecoration = style.quote_body_text_decoration || "";
     });
