@@ -151,6 +151,53 @@ function getRepaymentRate(totalDebt, isActive) {
   return 0.50;
 }
 
+function normalizeText(v) {
+  return String(v || '').trim().toLowerCase();
+}
+
+function normalizePolicyType(v) {
+  return String(v || '').trim().toLowerCase();
+}
+
+function getLagWeeksForPolicy(policy, scheduleRows) {
+  if (!policy || !policy.issued_at) return 0;
+
+  const issuedYMD = getLocalYMD(new Date(policy.issued_at), PAY_TZ);
+
+  const carrier = normalizeText(policy.carrier_name);
+  const line = normalizeText(policy.product_line);
+  const type = normalizePolicyType(policy.policy_type);
+
+  const matches = (scheduleRows || []).filter(s => {
+    const sameCarrier = normalizeText(s.carrier_name) === carrier;
+    const sameLine = normalizeText(s.product_line) === line;
+
+    const schedType = normalizePolicyType(s.policy_type);
+    const sameType = schedType === type;
+
+    const startsOk = !s.effective_from || s.effective_from <= issuedYMD;
+    const endsOk = !s.effective_to || s.effective_to >= issuedYMD;
+
+    return sameCarrier && sameLine && sameType && startsOk && endsOk;
+  });
+
+  if (!matches.length) return 0;
+
+  matches.sort((a, b) => {
+    const aDate = a.effective_from || '0000-00-00';
+    const bDate = b.effective_from || '0000-00-00';
+    return bDate.localeCompare(aDate);
+  });
+
+  const lag = Number(matches[0].lag_time_weeks || 0);
+  return Number.isFinite(lag) && lag > 0 ? lag : 0;
+}
+
+function computePayFridayForIssuedYMDWithLag(issuedYMD, lagWeeks = 0) {
+  const basePay = computePayFridayForIssuedYMD(issuedYMD);
+  return addDaysYMD(basePay, lagWeeks * 7);
+}
+
 /**
  * Record actual repayment events into DB
  */
@@ -277,7 +324,7 @@ export async function handler(event) {
     // 2) Find eligible POLICIES by issued_at window (NOT ledger created_at)
     const { data: policyRows, error: polErr } = await supabase
       .from('policies')
-      .select('id, as_earned, issued_at')
+      .select('id, as_earned, issued_at, carrier_name, product_line, policy_type')
       .in('status', ['issued', 'in_force'])
       .gte('issued_at', startIso)
       .lt('issued_at', endIso);
@@ -288,6 +335,26 @@ export async function handler(event) {
         statusCode: 500,
         body: JSON.stringify({ error: 'Failed to load eligible policies', details: polErr }),
       };
+    }
+
+    const carrierNames = [...new Set((policyRows || []).map(p => p.carrier_name).filter(Boolean))];
+
+    let scheduleRows = [];
+    if (carrierNames.length) {
+      const { data: schedData, error: schedErr } = await supabase
+        .from('commission_schedules')
+        .select('carrier_name, product_line, policy_type, effective_from, effective_to, lag_time_weeks')
+        .in('carrier_name', carrierNames);
+
+      if (schedErr) {
+        console.error('[runWeeklyAdvance] Error loading commission schedules for lag lookup:', schedErr);
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ error: 'Failed to load commission schedules', details: schedErr }),
+        };
+      }
+
+      scheduleRows = schedData || [];
     }
 
     const allPolicyIds = (policyRows || []).map(p => p.id);
@@ -312,11 +379,9 @@ export async function handler(event) {
       .filter(p => {
         if (!p.issued_at) return false;
     
-        // issued_at -> local YYYY-MM-DD in PAY_TZ
         const issuedYMD = getLocalYMD(new Date(p.issued_at), PAY_TZ);
-    
-        // Sun–Tue => next Friday, Wed–Sat => Friday after next
-        const computedPay = computePayFridayForIssuedYMD(issuedYMD);
+        const lagWeeks = getLagWeeksForPolicy(p, scheduleRows);
+        const computedPay = computePayFridayForIssuedYMDWithLag(issuedYMD, lagWeeks);
     
         return computedPay === payDateStr;
       });
@@ -329,7 +394,9 @@ export async function handler(event) {
       'as-earned excluded =',
       asEarnedCount,
       'due this pay_date =',
-      eligiblePolicyIds.length
+      eligiblePolicyIds.length,
+      'schedules loaded =',
+      scheduleRows.length
     );
     
     if (eligiblePolicyIds.length === 0) {
