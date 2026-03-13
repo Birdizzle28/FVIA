@@ -11,48 +11,122 @@ console.log("[admin-carriers] loaded from file");
 
   const LEVEL_MULTIPLIERS = [
     { level: "area_manager", mult: 0.90 },
-    { level: "mga",          mult: 0.85 },
-    { level: "manager",      mult: 0.80 },
-    { level: "mit",          mult: 0.75 },
-    { level: "agent",        mult: 0.70 },
+    { level: "mga", mult: 0.85 },
+    { level: "manager", mult: 0.80 },
+    { level: "mit", mult: 0.75 },
+    { level: "agent", mult: 0.70 },
   ];
 
   // ---------- DOM helpers ----------
   const $ = (sel) => document.querySelector(sel);
   const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-   async function uploadCarrierLogoFile(file, carrierName) {
-     if (!file) return null;
-   
-     // bucket name you created in Supabase Storage:
-     const BUCKET = "carrier-logos";
-   
-     // safe-ish filename
-     const ext = (file.name.split(".").pop() || "png").toLowerCase();
-     const safeName = String(carrierName || "carrier")
-       .toLowerCase()
-       .replace(/[^a-z0-9]+/g, "-")
-       .replace(/(^-|-$)/g, "");
-   
-     const path = `${safeName}/${crypto.randomUUID()}.${ext}`;
-   
-     // upload
-     const { error: upErr } = await supabase
-       .storage
-       .from(BUCKET)
-       .upload(path, file, {
-         cacheControl: "3600",
-         upsert: false,
-         contentType: file.type || undefined
-       });
-   
-     if (upErr) throw upErr;
-   
-     // get PUBLIC URL (bucket must be public)
-     const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
-     return data?.publicUrl || null;
-   }
-   
+  // ---------- App state ----------
+  let supabase;
+  let sessionUserId = null;
+
+  let carriers = [];
+  const carrierById = new Map();
+
+  let schedules = [];
+
+  // used for "click carrier -> filter schedules"
+  let selectedCarrierId = "";
+
+  // ---------- Elements ----------
+  const els = {
+    // tabs/panels
+    tabCarriers: $("#tab-carriers"),
+    tabSchedules: $("#tab-schedules"),
+    panelCarriers: $("#panel-carriers"),
+    panelSchedules: $("#panel-schedules"),
+
+    // carriers form
+    carrierName: $("#carrier-name"),
+    carrierLogo: $("#carrier-logo"), // optional manual URL input if present
+    carrierUrl: $("#carrier-url"),
+    carrierNotes: $("#carrier-notes"),
+    addCarrierBtn: $("#add-carrier-btn"),
+    carrierAddMsg: $("#carrier-add-msg"),
+    carrierLogoFile: $("#carrier-logo-file"),
+
+    // carriers list
+    carrierSearch: $("#carrier-search"),
+    carriersTableBody: $("#carriers-table tbody"),
+
+    // carrier edit modal
+    editCarrierModal: $("#edit-carrier-modal"),
+    editCarrierId: $("#edit-carrier-id"),
+    editCarrierName: $("#edit-carrier-name"),
+    editCarrierUrl: $("#edit-carrier-url"),
+    editCarrierLogo: $("#edit-carrier-logo"), // optional manual URL input if present
+    editCarrierNotes: $("#edit-carrier-notes"),
+    saveCarrierBtn: $("#save-carrier-btn"),
+    cancelCarrierBtn: $("#cancel-carrier-btn"),
+    closeEditCarrier: $("#close-edit-carrier"),
+    editCarrierMsg: $("#edit-carrier-msg"),
+    editCarrierLogoFile: $("#edit-carrier-logo-file"),
+
+    // schedule create form
+    schedCarrier: $("#sched-carrier"),
+    schedProductLine: $("#sched-product-line"),
+    schedPolicyType: $("#sched-policy-type"),
+    schedTermLength: $("#sched-term-length"),
+    schedFvgRate: $("#sched-fvg-rate"),
+    schedAdvanceRate: $("#sched-advance-rate"),
+    schedEffectiveFrom: $("#sched-effective-from"),
+    schedEffectiveTo: $("#sched-effective-to"),
+    schedLagWeeks: $("#sched-lag-weeks"),
+    schedExclusiveMonths: $("#sched-exclusive-months"),
+    schedRequiredLoas: $("#sched-required-loas"),
+    schedNotes: $("#sched-notes"),
+    createScheduleBtn: $("#create-schedule-btn"),
+    schedCreateMsg: $("#sched-create-msg"),
+
+    // bands builder
+    bandsContainer: $("#bands-container"),
+    addBandBtn: $("#add-band-btn"),
+    previewJsonBtn: $("#preview-json-btn"),
+    jsonPreviewModal: $("#json-preview-modal"),
+    jsonPreview: $("#json-preview"),
+    closeJsonPreview: $("#close-json-preview"),
+
+    // schedules list/filters
+    refreshSchedulesBtn: $("#refresh-schedules-btn"),
+    filterCarrier: $("#filter-carrier"),
+    filterProductLine: $("#filter-product-line"),
+    filterPolicyType: $("#filter-policy-type"),
+    filterAgentLevel: $("#filter-agent-level"),
+    filterActiveOnly: $("#filter-active-only"),
+    applyScheduleFilters: $("#apply-schedule-filters"),
+    resetScheduleFilters: $("#reset-schedule-filters"),
+    schedulesTableBody: $("#schedules-table tbody"),
+    schedulesMsg: $("#schedules-msg"),
+
+    // schedule edit modal
+    editScheduleModal: $("#edit-schedule-modal"),
+    editSchedId: $("#edit-sched-id"),
+    editSchedCarrierName: $("#edit-sched-carrier-name"),
+    editSchedAgentLevel: $("#edit-sched-agent-level"),
+    editSchedProductLine: $("#edit-sched-product-line"),
+    editSchedPolicyType: $("#edit-sched-policy-type"),
+    editSchedBase: $("#edit-sched-base"),
+    editSchedAdvance: $("#edit-sched-advance"),
+    editSchedTerm: $("#edit-sched-term"),
+    editSchedEffFrom: $("#edit-sched-effective-from"),
+    editSchedEffTo: $("#edit-sched-effective-to"),
+    editSchedLagWeeks: $("#edit-sched-lag-weeks"),
+    editSchedExclusiveMonths: $("#edit-sched-exclusive-months"),
+    editSchedRequiredLoas: $("#edit-sched-required-loas"),
+    editSchedRenewalJson: $("#edit-sched-renewal-json"),
+    editSchedNotes: $("#edit-sched-notes"),
+    saveSchedBtn: $("#save-sched-btn"),
+    cancelSchedBtn: $("#cancel-sched-btn"),
+    closeEditSchedule: $("#close-edit-schedule"),
+    editSchedMsg: $("#edit-sched-msg"),
+  };
+
+  // ---------- General helpers ----------
   function setStatus(el, msg, type = "") {
     if (!el) return;
     el.textContent = msg || "";
@@ -78,7 +152,6 @@ console.log("[admin-carriers] loaded from file");
   }
 
   function round4(n) {
-    // numeric(6,4) compatible
     const x = Number(n);
     if (!Number.isFinite(x)) return null;
     return Math.round(x * 10000) / 10000;
@@ -115,167 +188,120 @@ console.log("[admin-carriers] loaded from file");
     return s.length ? s : null;
   }
 
-   function parseExclusiveMonthsInput(v) {
-     const raw = String(v ?? "").trim();
-     if (!raw) return null;
-   
-     const nums = raw
-       .split(",")
-       .map(x => Number(String(x).trim()))
-       .filter(n => Number.isInteger(n));
-   
-     const deduped = [...new Set(nums)].sort((a, b) => a - b);
-   
-     if (!deduped.length) return null;
-     if (deduped.some(n => n < 1 || n > 12)) {
-       throw new Error("Exclusive months must be comma-separated integers between 1 and 12.");
-     }
-   
-     return deduped;
-   }
-   
-   function formatExclusiveMonths(value) {
-     if (!Array.isArray(value) || !value.length) return "";
-     return value.join(",");
-   }
+  function parseExclusiveMonthsInput(v) {
+    const raw = String(v ?? "").trim();
+    if (!raw) return null;
 
-  // ---------- App state ----------
-  let supabase;
-  let sessionUserId = null;
+    const nums = raw
+      .split(",")
+      .map((x) => Number(String(x).trim()))
+      .filter((n) => Number.isInteger(n));
 
-  let carriers = [];
-  const carrierById = new Map();
+    const deduped = [...new Set(nums)].sort((a, b) => a - b);
 
-  let schedules = [];
+    if (!deduped.length) return null;
+    if (deduped.some((n) => n < 1 || n > 12)) {
+      throw new Error("Exclusive months must be comma-separated integers between 1 and 12.");
+    }
 
-  // used for "click carrier -> filter schedules"
-  let selectedCarrierId = "";
+    return deduped;
+  }
 
-  // ---------- Elements ----------
-  const els = {
-    // tabs/panels
-    tabCarriers: $("#tab-carriers"),
-    tabSchedules: $("#tab-schedules"),
-    panelCarriers: $("#panel-carriers"),
-    panelSchedules: $("#panel-schedules"),
+  function formatExclusiveMonths(value) {
+    if (!Array.isArray(value) || !value.length) return "";
+    return value.join(",");
+  }
 
-    // carriers form
-    carrierName: $("#carrier-name"),
-    carrierLogo: $("#carrier-logo"),
-    carrierUrl: $("#carrier-url"),
-    carrierNotes: $("#carrier-notes"),
-    addCarrierBtn: $("#add-carrier-btn"),
-    carrierAddMsg: $("#carrier-add-msg"),
-     carrierLogoFile: $("#carrier-logo-file"),
+  function readCheckedLoas(container) {
+    if (!container) return null;
 
-    // carriers list
-    carrierSearch: $("#carrier-search"),
-    carriersTableBody: $("#carriers-table tbody"),
+    const values = Array.from(
+      container.querySelectorAll('input[type="checkbox"]:checked')
+    )
+      .map((cb) => String(cb.value || "").trim().toLowerCase())
+      .filter(Boolean);
 
-    // carrier edit modal
-    editCarrierModal: $("#edit-carrier-modal"),
-    editCarrierId: $("#edit-carrier-id"),
-    editCarrierName: $("#edit-carrier-name"),
-    editCarrierUrl: $("#edit-carrier-url"),
-    editCarrierLogo: $("#edit-carrier-logo"),
-    editCarrierNotes: $("#edit-carrier-notes"),
-    saveCarrierBtn: $("#save-carrier-btn"),
-    cancelCarrierBtn: $("#cancel-carrier-btn"),
-    closeEditCarrier: $("#close-edit-carrier"),
-    editCarrierMsg: $("#edit-carrier-msg"),
-     editCarrierLogoFile: $("#edit-carrier-logo-file"),
+    const deduped = [...new Set(values)];
+    return deduped.length ? deduped : null;
+  }
 
-    // schedule create form
-   schedCarrier: $("#sched-carrier"),
-   schedProductLine: $("#sched-product-line"),
-   schedPolicyType: $("#sched-policy-type"),
-   schedTermLength: $("#sched-term-length"),
-   schedFvgRate: $("#sched-fvg-rate"),
-   schedAdvanceRate: $("#sched-advance-rate"),
-   schedEffectiveFrom: $("#sched-effective-from"),
-   schedEffectiveTo: $("#sched-effective-to"),
-   schedLagWeeks: $("#sched-lag-weeks"),
-   schedExclusiveMonths: $("#sched-exclusive-months"),
-   schedNotes: $("#sched-notes"),
-   createScheduleBtn: $("#create-schedule-btn"),
-   schedCreateMsg: $("#sched-create-msg"),
+  function setCheckedLoas(container, loas) {
+    if (!container) return;
+    const allowed = new Set(
+      (Array.isArray(loas) ? loas : []).map((v) => String(v).trim().toLowerCase())
+    );
 
-    // bands builder
-    bandsContainer: $("#bands-container"),
-    addBandBtn: $("#add-band-btn"),
-    previewJsonBtn: $("#preview-json-btn"),
-    jsonPreviewModal: $("#json-preview-modal"),
-    jsonPreview: $("#json-preview"),
-    closeJsonPreview: $("#close-json-preview"),
+    container.querySelectorAll('input[type="checkbox"]').forEach((cb) => {
+      cb.checked = allowed.has(String(cb.value).trim().toLowerCase());
+    });
+  }
 
-    // schedules list/filters
-    refreshSchedulesBtn: $("#refresh-schedules-btn"),
-    filterCarrier: $("#filter-carrier"),
-    filterProductLine: $("#filter-product-line"),
-    filterPolicyType: $("#filter-policy-type"),
-    filterAgentLevel: $("#filter-agent-level"),
-    filterActiveOnly: $("#filter-active-only"),
-    applyScheduleFilters: $("#apply-schedule-filters"),
-    resetScheduleFilters: $("#reset-schedule-filters"),
-    schedulesTableBody: $("#schedules-table tbody"),
-    schedulesMsg: $("#schedules-msg"),
+  function formatLoas(loas) {
+    if (!Array.isArray(loas) || !loas.length) return "";
+    return loas.join(", ");
+  }
 
-    // schedule edit modal
-   editScheduleModal: $("#edit-schedule-modal"),
-   editSchedId: $("#edit-sched-id"),
-   editSchedCarrierName: $("#edit-sched-carrier-name"),
-   editSchedAgentLevel: $("#edit-sched-agent-level"),
-   editSchedProductLine: $("#edit-sched-product-line"),
-   editSchedPolicyType: $("#edit-sched-policy-type"),
-   editSchedBase: $("#edit-sched-base"),
-   editSchedAdvance: $("#edit-sched-advance"),
-   editSchedTerm: $("#edit-sched-term"),
-   editSchedEffFrom: $("#edit-sched-effective-from"),
-   editSchedEffTo: $("#edit-sched-effective-to"),
-   editSchedLagWeeks: $("#edit-sched-lag-weeks"),
-   editSchedExclusiveMonths: $("#edit-sched-exclusive-months"),
-   editSchedRenewalJson: $("#edit-sched-renewal-json"),
-   editSchedNotes: $("#edit-sched-notes"),
-   saveSchedBtn: $("#save-sched-btn"),
-   cancelSchedBtn: $("#cancel-sched-btn"),
-   closeEditSchedule: $("#close-edit-schedule"),
-   editSchedMsg: $("#edit-sched-msg"),
-  };
+  async function uploadCarrierLogoFile(file, carrierName) {
+    if (!file) return null;
+
+    const BUCKET = "carrier-logos";
+
+    const ext = (file.name.split(".").pop() || "png").toLowerCase();
+    const safeName = String(carrierName || "carrier")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+
+    const path = `${safeName}/${crypto.randomUUID()}.${ext}`;
+
+    const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: file.type || undefined,
+    });
+
+    if (upErr) throw upErr;
+
+    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    return data?.publicUrl || null;
+  }
 
   // ---------- Nav fallback (admin page buttons) ----------
   function wireAdminPageNavFallback() {
     const nav = $("#admin-page-nav");
     if (!nav) return;
+
     nav.addEventListener("click", (e) => {
       const btn = e.target.closest("button[data-href]");
       if (!btn) return;
+
       const href = btn.getAttribute("data-href");
       if (!href) return;
-      if (href.endsWith("admin-carriers.html")) return; // already here
+      if (href.endsWith("admin-carriers.html")) return;
+
       window.location.href = href;
     });
   }
 
-    function showTab(name) {
-     const carriersPanel = els.panelCarriers;
-     const schedulesPanel = els.panelSchedules;
-   
-     if (name === "carriers") {
-       els.tabCarriers?.classList.add("active");
-       els.tabSchedules?.classList.remove("active");
-   
-       if (carriersPanel) carriersPanel.style.display = "block";     // ✅ force visible
-       if (schedulesPanel) schedulesPanel.style.display = "none";
-       return;
-     }
-   
-     // schedules
-     els.tabSchedules?.classList.add("active");
-     els.tabCarriers?.classList.remove("active");
-   
-     if (schedulesPanel) schedulesPanel.style.display = "block";     // ✅ force visible
-     if (carriersPanel) carriersPanel.style.display = "none";
-   }
+  function showTab(name) {
+    const carriersPanel = els.panelCarriers;
+    const schedulesPanel = els.panelSchedules;
+
+    if (name === "carriers") {
+      els.tabCarriers?.classList.add("active");
+      els.tabSchedules?.classList.remove("active");
+
+      if (carriersPanel) carriersPanel.style.display = "block";
+      if (schedulesPanel) schedulesPanel.style.display = "none";
+      return;
+    }
+
+    els.tabSchedules?.classList.add("active");
+    els.tabCarriers?.classList.remove("active");
+
+    if (schedulesPanel) schedulesPanel.style.display = "block";
+    if (carriersPanel) carriersPanel.style.display = "none";
+  }
 
   // ---------- Carriers ----------
   async function loadCarriers() {
@@ -308,9 +334,14 @@ console.log("[admin-carriers] loaded from file");
 
     els.carriersTableBody.innerHTML = filtered
       .map((c) => {
-        const logo = c.carrier_logo ? `<a href="${esc(c.carrier_logo)}" target="_blank" rel="noopener">link</a>` : "";
-        const url = c.carrier_url ? `<a href="${esc(c.carrier_url)}" target="_blank" rel="noopener">${esc(c.carrier_url)}</a>` : "";
+        const logo = c.carrier_logo
+          ? `<a href="${esc(c.carrier_logo)}" target="_blank" rel="noopener">link</a>`
+          : "";
+        const url = c.carrier_url
+          ? `<a href="${esc(c.carrier_url)}" target="_blank" rel="noopener">${esc(c.carrier_url)}</a>`
+          : "";
         const notes = c.notes ? esc(c.notes) : "";
+
         return `
           <tr data-carrier-id="${esc(c.id)}">
             <td class="clickable" title="Click to filter schedules">
@@ -328,10 +359,10 @@ console.log("[admin-carriers] loaded from file");
       })
       .join("");
 
-    // row interactions
     els.carriersTableBody.onclick = (e) => {
       const tr = e.target.closest("tr[data-carrier-id]");
       if (!tr) return;
+
       const id = tr.getAttribute("data-carrier-id");
       const actionBtn = e.target.closest("button[data-action]");
       const carrier = carrierById.get(id);
@@ -344,148 +375,137 @@ console.log("[admin-carriers] loaded from file");
         return;
       }
 
-      // click carrier name -> set schedules filter and switch tabs
       selectedCarrierId = id;
       if (els.filterCarrier) els.filterCarrier.value = id;
       if (els.schedCarrier) els.schedCarrier.value = id;
       showTab("schedules");
-      // load schedules filtered
       refreshSchedules();
     };
   }
 
   function populateCarrierSelects() {
-    // Create schedule carrier select
     if (els.schedCarrier) {
       els.schedCarrier.innerHTML = carriers
         .map((c) => `<option value="${esc(c.id)}">${esc(c.carrier_name)}</option>`)
         .join("");
-      // preserve selectedCarrierId if set
+
       if (selectedCarrierId) els.schedCarrier.value = selectedCarrierId;
     }
 
-    // Filter carrier select
     if (els.filterCarrier) {
-      const opts =
+      els.filterCarrier.innerHTML =
         `<option value="">All</option>` +
-        carriers.map((c) => `<option value="${esc(c.id)}">${esc(c.carrier_name)}</option>`).join("");
-      els.filterCarrier.innerHTML = opts;
+        carriers
+          .map((c) => `<option value="${esc(c.id)}">${esc(c.carrier_name)}</option>`)
+          .join("");
+
       if (selectedCarrierId) els.filterCarrier.value = selectedCarrierId;
     }
   }
 
   async function addCarrier() {
-     setStatus(els.carrierAddMsg, "", "");
-   
-     const carrier_name = (els.carrierName?.value || "").trim();
-     if (!carrier_name) {
-       setStatus(els.carrierAddMsg, "Carrier name is required.", "err");
-       return;
-     }
-   
-     const carrier_url = toNullableStr(els.carrierUrl?.value);
-     const notes = toNullableStr(els.carrierNotes?.value);
-   
-     // optional manual URL (if you kept the text box)
-     const manualLogoUrl = toNullableStr(els.carrierLogo?.value);
-   
-     // optional uploaded file
-     const file = els.carrierLogoFile?.files?.[0] || null;
-   
-     els.addCarrierBtn.disabled = true;
-   
-     try {
-       let carrier_logo = manualLogoUrl;
-   
-       // ✅ if a file is selected, upload it and use its URL
-       if (file) {
-         carrier_logo = await uploadCarrierLogoFile(file, carrier_name);
-       }
-   
-       const { error } = await supabase
-         .from("carriers")
-         .insert([{ carrier_name, carrier_logo, carrier_url, notes }]);
-   
-       if (error) throw error;
-   
-       // clear form
-       if (els.carrierName) els.carrierName.value = "";
-       if (els.carrierLogo) els.carrierLogo.value = "";
-       if (els.carrierLogoFile) els.carrierLogoFile.value = "";
-       if (els.carrierUrl) els.carrierUrl.value = "";
-       if (els.carrierNotes) els.carrierNotes.value = "";
-   
-       setStatus(els.carrierAddMsg, "Carrier added.", "ok");
-       await loadCarriers();
-     } catch (err) {
-       setStatus(els.carrierAddMsg, err.message || "Failed to add carrier.", "err");
-     } finally {
-       els.addCarrierBtn.disabled = false;
-     }
-   }
+    setStatus(els.carrierAddMsg, "", "");
+
+    const carrier_name = (els.carrierName?.value || "").trim();
+    if (!carrier_name) {
+      setStatus(els.carrierAddMsg, "Carrier name is required.", "err");
+      return;
+    }
+
+    const carrier_url = toNullableStr(els.carrierUrl?.value);
+    const notes = toNullableStr(els.carrierNotes?.value);
+    const manualLogoUrl = toNullableStr(els.carrierLogo?.value);
+    const file = els.carrierLogoFile?.files?.[0] || null;
+
+    els.addCarrierBtn.disabled = true;
+
+    try {
+      let carrier_logo = manualLogoUrl;
+
+      if (file) {
+        carrier_logo = await uploadCarrierLogoFile(file, carrier_name);
+      }
+
+      const { error } = await supabase
+        .from("carriers")
+        .insert([{ carrier_name, carrier_logo, carrier_url, notes }]);
+
+      if (error) throw error;
+
+      if (els.carrierName) els.carrierName.value = "";
+      if (els.carrierLogo) els.carrierLogo.value = "";
+      if (els.carrierLogoFile) els.carrierLogoFile.value = "";
+      if (els.carrierUrl) els.carrierUrl.value = "";
+      if (els.carrierNotes) els.carrierNotes.value = "";
+
+      setStatus(els.carrierAddMsg, "Carrier added.", "ok");
+      await loadCarriers();
+    } catch (err) {
+      setStatus(els.carrierAddMsg, err.message || "Failed to add carrier.", "err");
+    } finally {
+      els.addCarrierBtn.disabled = false;
+    }
+  }
 
   function openEditCarrier(carrier) {
     setStatus(els.editCarrierMsg, "", "");
+
     els.editCarrierId.value = carrier.id;
     els.editCarrierName.value = carrier.carrier_name || "";
     els.editCarrierUrl.value = carrier.carrier_url || "";
-    els.editCarrierLogo.value = carrier.carrier_logo || "";
+    if (els.editCarrierLogo) els.editCarrierLogo.value = carrier.carrier_logo || "";
     els.editCarrierNotes.value = carrier.notes || "";
-     if (els.editCarrierLogoFile) els.editCarrierLogoFile.value = "";
+    if (els.editCarrierLogoFile) els.editCarrierLogoFile.value = "";
+
     openOverlay(els.editCarrierModal);
   }
 
   async function saveCarrier() {
-     setStatus(els.editCarrierMsg, "", "");
-   
-     const id = els.editCarrierId.value;
-     const carrier_name = (els.editCarrierName.value || "").trim();
-     if (!carrier_name) {
-       setStatus(els.editCarrierMsg, "Carrier name is required.", "err");
-       return;
-     }
-   
-     const carrier_url = toNullableStr(els.editCarrierUrl.value);
-     const notes = toNullableStr(els.editCarrierNotes.value);
-   
-     // manual URL field
-     const manualLogoUrl = toNullableStr(els.editCarrierLogo.value);
-   
-     // optional uploaded file
-     const file = els.editCarrierLogoFile?.files?.[0] || null;
-   
-     els.saveCarrierBtn.disabled = true;
-   
-     try {
-       let carrier_logo = manualLogoUrl;
-   
-       // ✅ if user picked a file, upload it and use that URL
-       if (file) {
-         carrier_logo = await uploadCarrierLogoFile(file, carrier_name);
-       }
-   
-       const payload = {
-         carrier_name,
-         carrier_url,
-         carrier_logo,
-         notes,
-       };
-   
-       const { error } = await supabase
-         .from("carriers")
-         .update(payload)
-         .eq("id", id);
-   
-       if (error) throw error;
-   
-       setStatus(els.editCarrierMsg, "Saved.", "ok");
-       await loadCarriers();
-     } catch (err) {
-       setStatus(els.editCarrierMsg, err.message || "Failed to save.", "err");
-     } finally {
-       els.saveCarrierBtn.disabled = false;
-     }
-   }
+    setStatus(els.editCarrierMsg, "", "");
+
+    const id = els.editCarrierId.value;
+    const carrier_name = (els.editCarrierName.value || "").trim();
+
+    if (!carrier_name) {
+      setStatus(els.editCarrierMsg, "Carrier name is required.", "err");
+      return;
+    }
+
+    const carrier_url = toNullableStr(els.editCarrierUrl.value);
+    const notes = toNullableStr(els.editCarrierNotes.value);
+    const manualLogoUrl = toNullableStr(els.editCarrierLogo?.value);
+    const file = els.editCarrierLogoFile?.files?.[0] || null;
+
+    els.saveCarrierBtn.disabled = true;
+
+    try {
+      let carrier_logo = manualLogoUrl;
+
+      if (file) {
+        carrier_logo = await uploadCarrierLogoFile(file, carrier_name);
+      } else if (!els.editCarrierLogo) {
+        const existing = carrierById.get(id);
+        carrier_logo = existing?.carrier_logo || null;
+      }
+
+      const payload = {
+        carrier_name,
+        carrier_url,
+        carrier_logo,
+        notes,
+      };
+
+      const { error } = await supabase.from("carriers").update(payload).eq("id", id);
+      if (error) throw error;
+
+      setStatus(els.editCarrierMsg, "Saved.", "ok");
+      await loadCarriers();
+    } catch (err) {
+      setStatus(els.editCarrierMsg, err.message || "Failed to save.", "err");
+    } finally {
+      els.saveCarrierBtn.disabled = false;
+    }
+  }
 
   async function deleteCarrier(carrier) {
     const ok = confirm(
@@ -497,11 +517,9 @@ console.log("[admin-carriers] loaded from file");
       const { error } = await supabase.from("carriers").delete().eq("id", carrier.id);
       if (error) throw error;
 
-      // clear selected carrier if it was this one
       if (selectedCarrierId === carrier.id) selectedCarrierId = "";
       await loadCarriers();
       setStatus(els.carrierAddMsg, `Deleted ${carrier.carrier_name}.`, "ok");
-      // refresh schedules too
       await refreshSchedules();
     } catch (err) {
       setStatus(els.carrierAddMsg, err.message || "Failed to delete carrier.", "err");
@@ -510,7 +528,6 @@ console.log("[admin-carriers] loaded from file");
 
   // ---------- Renewal bands UI ----------
   function bandRowTemplate({ rate = "", start_year = "2", end_year = "" } = {}) {
-    // end_year blank => null
     return `
       <div class="band-row" data-band>
         <label>
@@ -571,7 +588,6 @@ console.log("[admin-carriers] loaded from file");
       });
     }
 
-    // sort by start_year for cleanliness
     bands.sort((a, b) => (a.start_year ?? 0) - (b.start_year ?? 0));
     return bands;
   }
@@ -615,6 +631,7 @@ console.log("[admin-carriers] loaded from file");
     }
 
     const policy_type = toNullableStr(els.schedPolicyType?.value);
+
     const term_length_months = parseNullableInt(els.schedTermLength?.value);
     if (term_length_months != null && (term_length_months < 1 || term_length_months > 24)) {
       setStatus(els.schedCreateMsg, "Term length must be 1–24 months (or blank).", "err");
@@ -623,57 +640,62 @@ console.log("[admin-carriers] loaded from file");
 
     const fvgRate = parseNullableNum(els.schedFvgRate?.value);
     if (!Number.isFinite(fvgRate) || fvgRate == null || fvgRate <= 0) {
-      setStatus(els.schedCreateMsg, "FVG base commission rate must be a positive decimal (e.g., 0.1000).", "err");
+      setStatus(
+        els.schedCreateMsg,
+        "FVG base commission rate must be a positive decimal (e.g., 0.1000).",
+        "err"
+      );
       return;
     }
 
     const advance_rate = parseNullableNum(els.schedAdvanceRate?.value);
     if (!Number.isFinite(advance_rate) || advance_rate == null || advance_rate < 0) {
-      setStatus(els.schedCreateMsg, "Advance rate must be a valid decimal (e.g., 0.7500).", "err");
+      setStatus(
+        els.schedCreateMsg,
+        "Advance rate must be a valid decimal (e.g., 0.7500).",
+        "err"
+      );
       return;
     }
 
     const effective_from = els.schedEffectiveFrom?.value || todayISO();
     const effective_to = els.schedEffectiveTo?.value || null;
 
-     const lag_time_weeks = parseNullableInt(els.schedLagWeeks?.value) ?? 0;
-      if (lag_time_weeks < 0) {
-        setStatus(els.schedCreateMsg, "Lag time must be 0 or greater.", "err");
-        return;
-      }
-      
-      let exclusive_months = null;
-      try {
-        exclusive_months = parseExclusiveMonthsInput(els.schedExclusiveMonths?.value);
-      } catch (err) {
-        setStatus(els.schedCreateMsg, err.message || "Invalid exclusive months.", "err");
-        return;
-      }
+    const lag_time_weeks = parseNullableInt(els.schedLagWeeks?.value) ?? 0;
+    if (lag_time_weeks < 0) {
+      setStatus(els.schedCreateMsg, "Lag time must be 0 or greater.", "err");
+      return;
+    }
 
-    let renewal_trail_rule;
+    let exclusive_months = null;
     try {
-      renewal_trail_rule = buildRenewalTrailRuleJSON(); // {bands:[...]}
+      exclusive_months = parseExclusiveMonthsInput(els.schedExclusiveMonths?.value);
+    } catch (err) {
+      setStatus(els.schedCreateMsg, err.message || "Invalid exclusive months.", "err");
+      return;
+    }
+
+    const required_loas = readCheckedLoas(els.schedRequiredLoas);
+
+    let baseRule;
+    try {
+      baseRule = buildRenewalTrailRuleJSON();
     } catch (err) {
       setStatus(els.schedCreateMsg, err.message || "Invalid renewal bands.", "err");
       return;
     }
 
-    // read the "FVG renewal bands" once
-   const baseRule = buildRenewalTrailRuleJSON(); // { bands: [...] }
-   
-   // create 5 rows
-   const rows = LEVEL_MULTIPLIERS.map(({ level, mult }) => {
-     const base_commission_rate = round4(fvgRate * mult);
-   
-     // ✅ scale renewal band rates per agent level (same mult as base)
-     const renewal_trail_rule = {
-       bands: (baseRule.bands || []).map(b => ({
-         ...b,
-         rate: round4(Number(b.rate) * mult),
-       }))
-     };
-   
-     return {
+    const rows = LEVEL_MULTIPLIERS.map(({ level, mult }) => {
+      const base_commission_rate = round4(fvgRate * mult);
+
+      const renewal_trail_rule = {
+        bands: (baseRule.bands || []).map((b) => ({
+          ...b,
+          rate: round4(Number(b.rate) * mult),
+        })),
+      };
+
+      return {
         carrier_id: carrier.id,
         carrier_name: carrier.carrier_name,
         product_line,
@@ -685,12 +707,13 @@ console.log("[admin-carriers] loaded from file");
         effective_to,
         lag_time_weeks,
         exclusive_months,
+        required_loas,
         created_by: sessionUserId,
         notes: toNullableStr(els.schedNotes?.value),
         renewal_trail_rule,
         term_length_months,
       };
-   });
+    });
 
     els.createScheduleBtn.disabled = true;
     try {
@@ -698,12 +721,24 @@ console.log("[admin-carriers] loaded from file");
       if (error) throw error;
 
       setStatus(els.schedCreateMsg, "Created 5 rows.", "ok");
-       if (els.schedLagWeeks) els.schedLagWeeks.value = "";
-      if (els.schedExclusiveMonths) els.schedExclusiveMonths.value = "";
 
-      // switch to schedules tab and load
+      if (els.schedProductLine) els.schedProductLine.value = "";
+      if (els.schedPolicyType) els.schedPolicyType.value = "";
+      if (els.schedTermLength) els.schedTermLength.value = "";
+      if (els.schedFvgRate) els.schedFvgRate.value = "";
+      if (els.schedAdvanceRate) els.schedAdvanceRate.value = "";
+      if (els.schedEffectiveTo) els.schedEffectiveTo.value = "";
+      if (els.schedLagWeeks) els.schedLagWeeks.value = "";
+      if (els.schedExclusiveMonths) els.schedExclusiveMonths.value = "";
+      if (els.schedNotes) els.schedNotes.value = "";
+      setCheckedLoas(els.schedRequiredLoas, []);
+
+      if (els.bandsContainer) els.bandsContainer.innerHTML = "";
+      addBand({ rate: "", start_year: 2, end_year: "" });
+
       selectedCarrierId = carrier.id;
       if (els.filterCarrier) els.filterCarrier.value = carrier.id;
+
       showTab("schedules");
       await refreshSchedules();
     } catch (err) {
@@ -714,12 +749,13 @@ console.log("[admin-carriers] loaded from file");
   }
 
   function currentScheduleFilters() {
-    const carrier_id = els.filterCarrier?.value || "";
-    const product_line = (els.filterProductLine?.value || "").trim();
-    const policy_type = (els.filterPolicyType?.value || "").trim();
-    const agent_level = els.filterAgentLevel?.value || "";
-    const activeOnly = !!els.filterActiveOnly?.checked;
-    return { carrier_id, product_line, policy_type, agent_level, activeOnly };
+    return {
+      carrier_id: els.filterCarrier?.value || "",
+      product_line: (els.filterProductLine?.value || "").trim(),
+      policy_type: (els.filterPolicyType?.value || "").trim(),
+      agent_level: els.filterAgentLevel?.value || "",
+      activeOnly: !!els.filterActiveOnly?.checked,
+    };
   }
 
   async function loadSchedules(filters) {
@@ -728,7 +764,7 @@ console.log("[admin-carriers] loaded from file");
     let q = supabase
       .from("commission_schedules")
       .select(
-        "id, carrier_id, carrier_name, product_line, policy_type, agent_level, base_commission_rate, advance_rate, effective_from, effective_to, lag_time_weeks, exclusive_months, renewal_trail_rule, term_length_months, notes, created_at"
+        "id, carrier_id, carrier_name, product_line, policy_type, agent_level, base_commission_rate, advance_rate, effective_from, effective_to, lag_time_weeks, exclusive_months, required_loas, renewal_trail_rule, term_length_months, notes, created_at"
       )
       .order("carrier_name", { ascending: true })
       .order("product_line", { ascending: true })
@@ -739,13 +775,11 @@ console.log("[admin-carriers] loaded from file");
 
     if (filters.carrier_id) q = q.eq("carrier_id", filters.carrier_id);
     if (filters.agent_level) q = q.eq("agent_level", filters.agent_level);
-
     if (filters.product_line) q = q.ilike("product_line", `%${filters.product_line}%`);
     if (filters.policy_type) q = q.ilike("policy_type", `%${filters.policy_type}%`);
 
     if (filters.activeOnly) {
       const t = todayISO();
-      // effective_to is null OR effective_to >= today
       q = q.or(`effective_to.is.null,effective_to.gte.${t}`);
     }
 
@@ -761,7 +795,7 @@ console.log("[admin-carriers] loaded from file");
 
     if (!schedules.length) {
       els.schedulesTableBody.innerHTML = `
-        <tr><td colspan="12" class="mini">No schedules found for the current filters.</td></tr>
+        <tr><td colspan="13" class="mini">No schedules found for the current filters.</td></tr>
       `;
       return;
     }
@@ -769,30 +803,34 @@ console.log("[admin-carriers] loaded from file");
     els.schedulesTableBody.innerHTML = schedules
       .map((s) => {
         const eff = `${esc(s.effective_from)}${s.effective_to ? " → " + esc(s.effective_to) : " → (open)"}`;
-         const lag = s.lag_time_weeks == null ? "0" : esc(s.lag_time_weeks);
-         const exMonths = Array.isArray(s.exclusive_months) && s.exclusive_months.length
-           ? esc(s.exclusive_months.join(","))
-           : "";
-         const term = s.term_length_months == null ? "" : esc(s.term_length_months);
-         const bandsShort = formatBandsShort(s.renewal_trail_rule);
+        const lag = s.lag_time_weeks == null ? "0" : esc(s.lag_time_weeks);
+        const exMonths =
+          Array.isArray(s.exclusive_months) && s.exclusive_months.length
+            ? esc(s.exclusive_months.join(","))
+            : "";
+        const term = s.term_length_months == null ? "" : esc(s.term_length_months);
+        const requiredLoas = formatLoas(s.required_loas);
+        const bandsShort = formatBandsShort(s.renewal_trail_rule);
+
         return `
           <tr data-sched-id="${esc(s.id)}">
-           <td>${esc(s.carrier_name)}</td>
-           <td>${esc(s.product_line)}</td>
-           <td>${esc(s.policy_type ?? "")}</td>
-           <td><span class="pill">${esc(s.agent_level)}</span></td>
-           <td>${esc(s.base_commission_rate)}</td>
-           <td>${esc(s.advance_rate)}</td>
-           <td>${lag}</td>
-           <td>${exMonths}</td>
-           <td>${term}</td>
-           <td class="mini">${eff}</td>
-           <td class="mini">${esc(bandsShort)}</td>
-           <td>
-             <button class="btn btn-muted" data-action="edit-sched" type="button"><i class="fa-solid fa-pen"></i> Edit</button>
-             <button class="btn btn-danger" data-action="delete-sched" type="button"><i class="fa-solid fa-trash"></i> Delete</button>
-           </td>
-         </tr>
+            <td>${esc(s.carrier_name)}</td>
+            <td>${esc(s.product_line)}</td>
+            <td>${esc(s.policy_type ?? "")}</td>
+            <td><span class="pill">${esc(s.agent_level)}</span></td>
+            <td>${esc(s.base_commission_rate)}</td>
+            <td>${esc(s.advance_rate)}</td>
+            <td>${lag}</td>
+            <td>${exMonths}</td>
+            <td>${term}</td>
+            <td>${esc(requiredLoas)}</td>
+            <td class="mini">${eff}</td>
+            <td class="mini">${esc(bandsShort)}</td>
+            <td>
+              <button class="btn btn-muted" data-action="edit-sched" type="button"><i class="fa-solid fa-pen"></i> Edit</button>
+              <button class="btn btn-danger" data-action="delete-sched" type="button"><i class="fa-solid fa-trash"></i> Delete</button>
+            </td>
+          </tr>
         `;
       })
       .join("");
@@ -800,6 +838,7 @@ console.log("[admin-carriers] loaded from file");
     els.schedulesTableBody.onclick = (e) => {
       const tr = e.target.closest("tr[data-sched-id]");
       if (!tr) return;
+
       const id = tr.getAttribute("data-sched-id");
       const row = schedules.find((x) => x.id === id);
       if (!row) return;
@@ -834,6 +873,7 @@ console.log("[admin-carriers] loaded from file");
   // ---------- Edit schedule modal ----------
   function openEditSchedule(row) {
     setStatus(els.editSchedMsg, "", "");
+
     els.editSchedId.value = row.id;
     els.editSchedCarrierName.value = row.carrier_name || "";
     els.editSchedAgentLevel.value = row.agent_level || "agent";
@@ -844,8 +884,9 @@ console.log("[admin-carriers] loaded from file");
     els.editSchedTerm.value = row.term_length_months ?? "";
     els.editSchedEffFrom.value = row.effective_from || "";
     els.editSchedEffTo.value = row.effective_to || "";
-     els.editSchedLagWeeks.value = row.lag_time_weeks ?? 0;
-   els.editSchedExclusiveMonths.value = formatExclusiveMonths(row.exclusive_months);
+    els.editSchedLagWeeks.value = row.lag_time_weeks ?? 0;
+    els.editSchedExclusiveMonths.value = formatExclusiveMonths(row.exclusive_months);
+    setCheckedLoas(els.editSchedRequiredLoas, row.required_loas || []);
     els.editSchedNotes.value = row.notes || "";
 
     const rule = row.renewal_trail_rule || { bands: [] };
@@ -861,17 +902,30 @@ console.log("[admin-carriers] loaded from file");
     } catch {
       throw new Error("Renewal JSON is not valid JSON.");
     }
-    if (!obj || typeof obj !== "object") throw new Error("Renewal JSON must be an object.");
-    if (!Array.isArray(obj.bands)) throw new Error('Renewal JSON must contain a "bands" array.');
+
+    if (!obj || typeof obj !== "object") {
+      throw new Error("Renewal JSON must be an object.");
+    }
+
+    if (!Array.isArray(obj.bands)) {
+      throw new Error('Renewal JSON must contain a "bands" array.');
+    }
+
     for (const b of obj.bands) {
-      if (typeof b !== "object" || b == null) throw new Error("Each band must be an object.");
-      if (!Number.isFinite(Number(b.rate))) throw new Error("Each band needs a numeric rate.");
-      if (!Number.isFinite(Number(b.start_year))) throw new Error("Each band needs a numeric start_year.");
-      // end_year can be null
+      if (typeof b !== "object" || b == null) {
+        throw new Error("Each band must be an object.");
+      }
+      if (!Number.isFinite(Number(b.rate))) {
+        throw new Error("Each band needs a numeric rate.");
+      }
+      if (!Number.isFinite(Number(b.start_year))) {
+        throw new Error("Each band needs a numeric start_year.");
+      }
       if (!(b.end_year === null || b.end_year === undefined || Number.isFinite(Number(b.end_year)))) {
         throw new Error("Band end_year must be a number or null.");
       }
     }
+
     return obj;
   }
 
@@ -889,6 +943,7 @@ console.log("[admin-carriers] loaded from file");
 
     const base = parseNullableNum(els.editSchedBase.value);
     const adv = parseNullableNum(els.editSchedAdvance.value);
+
     if (!Number.isFinite(base) || base == null) {
       setStatus(els.editSchedMsg, "Base commission rate must be a valid number.", "err");
       return;
@@ -909,21 +964,24 @@ console.log("[admin-carriers] loaded from file");
       setStatus(els.editSchedMsg, "Effective From is required.", "err");
       return;
     }
+
     const effective_to = els.editSchedEffTo.value || null;
 
-     const lag_time_weeks = parseNullableInt(els.editSchedLagWeeks.value) ?? 0;
-      if (lag_time_weeks < 0) {
-        setStatus(els.editSchedMsg, "Lag time must be 0 or greater.", "err");
-        return;
-      }
-      
-      let exclusive_months = null;
-      try {
-        exclusive_months = parseExclusiveMonthsInput(els.editSchedExclusiveMonths.value);
-      } catch (err) {
-        setStatus(els.editSchedMsg, err.message || "Invalid exclusive months.", "err");
-        return;
-      }
+    const lag_time_weeks = parseNullableInt(els.editSchedLagWeeks.value) ?? 0;
+    if (lag_time_weeks < 0) {
+      setStatus(els.editSchedMsg, "Lag time must be 0 or greater.", "err");
+      return;
+    }
+
+    let exclusive_months = null;
+    try {
+      exclusive_months = parseExclusiveMonthsInput(els.editSchedExclusiveMonths.value);
+    } catch (err) {
+      setStatus(els.editSchedMsg, err.message || "Invalid exclusive months.", "err");
+      return;
+    }
+
+    const required_loas = readCheckedLoas(els.editSchedRequiredLoas);
 
     let renewal_trail_rule;
     try {
@@ -941,8 +999,9 @@ console.log("[admin-carriers] loaded from file");
       term_length_months: term,
       effective_from,
       effective_to,
-       lag_time_weeks,
+      lag_time_weeks,
       exclusive_months,
+      required_loas,
       renewal_trail_rule,
       notes: toNullableStr(els.editSchedNotes.value),
     };
@@ -1017,6 +1076,7 @@ console.log("[admin-carriers] loaded from file");
     els.bandsContainer?.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-remove-band]");
       if (!btn) return;
+
       const row = btn.closest("[data-band]");
       row?.remove();
       ensureAtLeastOneBand();
@@ -1063,35 +1123,31 @@ console.log("[admin-carriers] loaded from file");
       return;
     }
 
-    // get session user id (for created_by)
-    const { data: { session } = {} } = await supabase.auth.getSession();
+    const {
+      data: { session } = {},
+    } = await supabase.auth.getSession();
+
     sessionUserId = session?.user?.id || null;
 
-    // load carriers first
     await loadCarriers();
 
-    // init band rows
     addBand({ rate: "", start_year: 2, end_year: "" });
 
-    // wire events
     wireEvents();
-   showTab("carriers");
-    // schedules default load only if tab is opened; but if user lands and clicks schedules it refreshes.
-    // If you prefer immediate load, uncomment:
-    // await refreshSchedules();
+    showTab("carriers");
   }
 
   function start() {
-     init().catch((err) => {
-       console.error(err);
-       setStatus(els.carrierAddMsg, err.message || "Init failed.", "err");
-       setStatus(els.schedulesMsg, err.message || "Init failed.", "err");
-     });
-   }
-   
-   if (document.readyState === "loading") {
-     document.addEventListener("DOMContentLoaded", start);
-   } else {
-     start(); // DOM already ready
-   }
+    init().catch((err) => {
+      console.error(err);
+      setStatus(els.carrierAddMsg, err.message || "Init failed.", "err");
+      setStatus(els.schedulesMsg, err.message || "Init failed.", "err");
+    });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", start);
+  } else {
+    start();
+  }
 })();
