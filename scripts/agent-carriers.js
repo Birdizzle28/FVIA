@@ -19,13 +19,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   const productTypesSelect = document.getElementById('product-types');
   const formMessage = document.getElementById('form-message');
   const resetBtn = document.getElementById('reset-form-btn');
+  const cancelEditBtn = document.getElementById('cancel-edit-btn');
   const searchInput = document.getElementById('search-input');
   const tbody = document.getElementById('agent-carriers-tbody');
+  const editingRowIdInput = document.getElementById('editing-row-id');
+  const formTitle = document.getElementById('form-title');
+  const formSubtitle = document.getElementById('form-subtitle');
+  const saveBtn = document.getElementById('save-btn');
 
   let allRows = [];
+  let currentlyEditingId = null;
 
   function getMultiValues(selectEl) {
     return Array.from(selectEl.selectedOptions).map(opt => opt.value);
+  }
+
+  function setSelectedValues(selectEl, values = []) {
+    const valueSet = new Set(values || []);
+    Array.from(selectEl.options).forEach(option => {
+      option.selected = valueSet.has(option.value);
+    });
   }
 
   function setMessage(text, type = '') {
@@ -34,16 +47,69 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (type) formMessage.classList.add(type);
   }
 
-  function resetForm() {
+  function clearEditingHighlight() {
+    document.querySelectorAll('#agent-carriers-tbody tr').forEach(tr => {
+      tr.classList.remove('editing-row');
+    });
+  }
+
+  function enterCreateMode() {
+    currentlyEditingId = null;
+    editingRowIdInput.value = '';
+    formTitle.textContent = 'Add Agent Carrier';
+    formSubtitle.innerHTML = 'Create a new row in <code>agent_carriers</code>.';
+    saveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Agent Carrier';
+    cancelEditBtn.classList.add('hidden');
+    clearEditingHighlight();
+  }
+
+  function resetFormFields() {
     form.reset();
     statusSelect.value = 'inactive';
     isContractedInput.checked = true;
     isAppointedInput.checked = false;
+    setSelectedValues(statesSelect, []);
+    setSelectedValues(productTypesSelect, []);
+  }
 
-    Array.from(statesSelect.options).forEach(opt => (opt.selected = false));
-    Array.from(productTypesSelect.options).forEach(opt => (opt.selected = false));
-
+  function resetForm() {
+    resetFormFields();
+    enterCreateMode();
     setMessage('');
+  }
+
+  function enterEditMode(row) {
+    currentlyEditingId = row.id;
+    editingRowIdInput.value = row.id;
+
+    formTitle.textContent = 'Edit Agent Carrier';
+    formSubtitle.innerHTML = 'Update this existing <code>agent_carriers</code> row.';
+    saveBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Update Agent Carrier';
+    cancelEditBtn.classList.remove('hidden');
+
+    agentSelect.value = row.agent_id || '';
+    carrierSelect.value = row.carrier_id || '';
+    statusSelect.value = row.status || 'inactive';
+    writingNumberInput.value = row.writing_number || '';
+    npnInput.value = row.npn || '';
+    effectiveDateInput.value = row.effective_date || '';
+    terminatedDateInput.value = row.terminated_date || '';
+    isContractedInput.checked = !!row.is_contracted;
+    isAppointedInput.checked = !!row.is_appointed;
+
+    setSelectedValues(statesSelect, row.states || []);
+    setSelectedValues(productTypesSelect, row.product_types || []);
+
+    setMessage('Editing row. Make changes and click Update Agent Carrier.', 'success');
+
+    clearEditingHighlight();
+    const targetRow = document.querySelector(`#agent-carriers-tbody tr[data-row-id="${row.id}"]`);
+    if (targetRow) {
+      targetRow.classList.add('editing-row');
+      targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+
+    form.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   function formatDate(dateStr) {
@@ -161,7 +227,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       const carrierName = row.carriers?.carrier_name || row.carrier_id;
 
       return `
-        <tr>
+        <tr data-row-id="${row.id}">
           <td>${agentName}</td>
           <td>${carrierName}</td>
           <td>${makeBadge(row.status)}</td>
@@ -174,15 +240,25 @@ document.addEventListener('DOMContentLoaded', async () => {
           <td>${formatDate(row.effective_date)}</td>
           <td>${formatDate(row.terminated_date)}</td>
           <td>
-            <button class="delete-btn" data-id="${row.id}" type="button">
-              <i class="fa-solid fa-trash"></i> Delete
-            </button>
+            <div class="row-actions">
+              <button class="edit-btn" data-id="${row.id}" type="button">
+                <i class="fa-solid fa-pen"></i> Edit
+              </button>
+              <button class="delete-btn" data-id="${row.id}" type="button">
+                <i class="fa-solid fa-trash"></i> Delete
+              </button>
+            </div>
           </td>
         </tr>
       `;
     }).join('');
 
-    attachDeleteHandlers();
+    attachRowActionHandlers();
+
+    if (currentlyEditingId) {
+      const editingRow = document.querySelector(`#agent-carriers-tbody tr[data-row-id="${currentlyEditingId}"]`);
+      if (editingRow) editingRow.classList.add('editing-row');
+    }
   }
 
   function applySearch() {
@@ -229,10 +305,24 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
+    if (currentlyEditingId === id) {
+      resetForm();
+    }
+
     await loadAgentCarriers();
+    applySearch();
   }
 
-  function attachDeleteHandlers() {
+  function attachRowActionHandlers() {
+    document.querySelectorAll('.edit-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.dataset.id;
+        const row = allRows.find(item => item.id === id);
+        if (!row) return;
+        enterEditMode(row);
+      });
+    });
+
     document.querySelectorAll('.delete-btn').forEach(btn => {
       btn.addEventListener('click', async () => {
         const id = btn.dataset.id;
@@ -268,9 +358,30 @@ document.addEventListener('DOMContentLoaded', async () => {
       terminated_date: terminatedDateInput.value || null
     };
 
+    const editingId = editingRowIdInput.value || null;
+
+    if (editingId) {
+      const { error } = await supabase
+        .from('agent_carriers')
+        .update(payload)
+        .eq('id', editingId);
+
+      if (error) {
+        console.error('Error updating agent carrier:', error);
+        setMessage(error.message, 'error');
+        return;
+      }
+
+      setMessage('Agent carrier updated successfully.', 'success');
+      resetForm();
+      await loadAgentCarriers();
+      applySearch();
+      return;
+    }
+
     const { error } = await supabase
       .from('agent_carriers')
-      .upsert(payload, { onConflict: 'agent_id,carrier_id' });
+      .insert([payload]);
 
     if (error) {
       console.error('Error saving agent carrier:', error);
@@ -279,14 +390,23 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     setMessage('Agent carrier saved successfully.', 'success');
-    resetForm();
+    resetFormFields();
     await loadAgentCarriers();
+    applySearch();
   });
 
-  resetBtn.addEventListener('click', resetForm);
+  resetBtn.addEventListener('click', () => {
+    resetForm();
+  });
+
+  cancelEditBtn.addEventListener('click', () => {
+    resetForm();
+  });
+
   searchInput.addEventListener('input', applySearch);
 
   await loadAgents();
   await loadCarriers();
+  resetForm();
   await loadAgentCarriers();
 });
