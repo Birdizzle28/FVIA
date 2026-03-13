@@ -115,6 +115,30 @@ console.log("[admin-carriers] loaded from file");
     return s.length ? s : null;
   }
 
+   function parseExclusiveMonthsInput(v) {
+     const raw = String(v ?? "").trim();
+     if (!raw) return null;
+   
+     const nums = raw
+       .split(",")
+       .map(x => Number(String(x).trim()))
+       .filter(n => Number.isInteger(n));
+   
+     const deduped = [...new Set(nums)].sort((a, b) => a - b);
+   
+     if (!deduped.length) return null;
+     if (deduped.some(n => n < 1 || n > 12)) {
+       throw new Error("Exclusive months must be comma-separated integers between 1 and 12.");
+     }
+   
+     return deduped;
+   }
+   
+   function formatExclusiveMonths(value) {
+     if (!Array.isArray(value) || !value.length) return "";
+     return value.join(",");
+   }
+
   // ---------- App state ----------
   let supabase;
   let sessionUserId = null;
@@ -162,17 +186,19 @@ console.log("[admin-carriers] loaded from file");
      editCarrierLogoFile: $("#edit-carrier-logo-file"),
 
     // schedule create form
-    schedCarrier: $("#sched-carrier"),
-    schedProductLine: $("#sched-product-line"),
-    schedPolicyType: $("#sched-policy-type"),
-    schedTermLength: $("#sched-term-length"),
-    schedFvgRate: $("#sched-fvg-rate"),
-    schedAdvanceRate: $("#sched-advance-rate"),
-    schedEffectiveFrom: $("#sched-effective-from"),
-    schedEffectiveTo: $("#sched-effective-to"),
-    schedNotes: $("#sched-notes"),
-    createScheduleBtn: $("#create-schedule-btn"),
-    schedCreateMsg: $("#sched-create-msg"),
+   schedCarrier: $("#sched-carrier"),
+   schedProductLine: $("#sched-product-line"),
+   schedPolicyType: $("#sched-policy-type"),
+   schedTermLength: $("#sched-term-length"),
+   schedFvgRate: $("#sched-fvg-rate"),
+   schedAdvanceRate: $("#sched-advance-rate"),
+   schedEffectiveFrom: $("#sched-effective-from"),
+   schedEffectiveTo: $("#sched-effective-to"),
+   schedLagWeeks: $("#sched-lag-weeks"),
+   schedExclusiveMonths: $("#sched-exclusive-months"),
+   schedNotes: $("#sched-notes"),
+   createScheduleBtn: $("#create-schedule-btn"),
+   schedCreateMsg: $("#sched-create-msg"),
 
     // bands builder
     bandsContainer: $("#bands-container"),
@@ -195,23 +221,25 @@ console.log("[admin-carriers] loaded from file");
     schedulesMsg: $("#schedules-msg"),
 
     // schedule edit modal
-    editScheduleModal: $("#edit-schedule-modal"),
-    editSchedId: $("#edit-sched-id"),
-    editSchedCarrierName: $("#edit-sched-carrier-name"),
-    editSchedAgentLevel: $("#edit-sched-agent-level"),
-    editSchedProductLine: $("#edit-sched-product-line"),
-    editSchedPolicyType: $("#edit-sched-policy-type"),
-    editSchedBase: $("#edit-sched-base"),
-    editSchedAdvance: $("#edit-sched-advance"),
-    editSchedTerm: $("#edit-sched-term"),
-    editSchedEffFrom: $("#edit-sched-effective-from"),
-    editSchedEffTo: $("#edit-sched-effective-to"),
-    editSchedRenewalJson: $("#edit-sched-renewal-json"),
-    editSchedNotes: $("#edit-sched-notes"),
-    saveSchedBtn: $("#save-sched-btn"),
-    cancelSchedBtn: $("#cancel-sched-btn"),
-    closeEditSchedule: $("#close-edit-schedule"),
-    editSchedMsg: $("#edit-sched-msg"),
+   editScheduleModal: $("#edit-schedule-modal"),
+   editSchedId: $("#edit-sched-id"),
+   editSchedCarrierName: $("#edit-sched-carrier-name"),
+   editSchedAgentLevel: $("#edit-sched-agent-level"),
+   editSchedProductLine: $("#edit-sched-product-line"),
+   editSchedPolicyType: $("#edit-sched-policy-type"),
+   editSchedBase: $("#edit-sched-base"),
+   editSchedAdvance: $("#edit-sched-advance"),
+   editSchedTerm: $("#edit-sched-term"),
+   editSchedEffFrom: $("#edit-sched-effective-from"),
+   editSchedEffTo: $("#edit-sched-effective-to"),
+   editSchedLagWeeks: $("#edit-sched-lag-weeks"),
+   editSchedExclusiveMonths: $("#edit-sched-exclusive-months"),
+   editSchedRenewalJson: $("#edit-sched-renewal-json"),
+   editSchedNotes: $("#edit-sched-notes"),
+   saveSchedBtn: $("#save-sched-btn"),
+   cancelSchedBtn: $("#cancel-sched-btn"),
+   closeEditSchedule: $("#close-edit-schedule"),
+   editSchedMsg: $("#edit-sched-msg"),
   };
 
   // ---------- Nav fallback (admin page buttons) ----------
@@ -608,6 +636,20 @@ console.log("[admin-carriers] loaded from file");
     const effective_from = els.schedEffectiveFrom?.value || todayISO();
     const effective_to = els.schedEffectiveTo?.value || null;
 
+     const lag_time_weeks = parseNullableInt(els.schedLagWeeks?.value) ?? 0;
+      if (lag_time_weeks < 0) {
+        setStatus(els.schedCreateMsg, "Lag time must be 0 or greater.", "err");
+        return;
+      }
+      
+      let exclusive_months = null;
+      try {
+        exclusive_months = parseExclusiveMonthsInput(els.schedExclusiveMonths?.value);
+      } catch (err) {
+        setStatus(els.schedCreateMsg, err.message || "Invalid exclusive months.", "err");
+        return;
+      }
+
     let renewal_trail_rule;
     try {
       renewal_trail_rule = buildRenewalTrailRuleJSON(); // {bands:[...]}
@@ -632,20 +674,22 @@ console.log("[admin-carriers] loaded from file");
      };
    
      return {
-       carrier_id: carrier.id,
-       carrier_name: carrier.carrier_name,
-       product_line,
-       policy_type,
-       agent_level: level,
-       base_commission_rate,
-       advance_rate: round4(advance_rate),
-       effective_from,
-       effective_to,
-       created_by: sessionUserId,
-       notes: toNullableStr(els.schedNotes?.value),
-       renewal_trail_rule,
-       term_length_months,
-     };
+        carrier_id: carrier.id,
+        carrier_name: carrier.carrier_name,
+        product_line,
+        policy_type,
+        agent_level: level,
+        base_commission_rate,
+        advance_rate: round4(advance_rate),
+        effective_from,
+        effective_to,
+        lag_time_weeks,
+        exclusive_months,
+        created_by: sessionUserId,
+        notes: toNullableStr(els.schedNotes?.value),
+        renewal_trail_rule,
+        term_length_months,
+      };
    });
 
     els.createScheduleBtn.disabled = true;
@@ -654,6 +698,8 @@ console.log("[admin-carriers] loaded from file");
       if (error) throw error;
 
       setStatus(els.schedCreateMsg, "Created 5 rows.", "ok");
+       if (els.schedLagWeeks) els.schedLagWeeks.value = "";
+      if (els.schedExclusiveMonths) els.schedExclusiveMonths.value = "";
 
       // switch to schedules tab and load
       selectedCarrierId = carrier.id;
@@ -682,7 +728,7 @@ console.log("[admin-carriers] loaded from file");
     let q = supabase
       .from("commission_schedules")
       .select(
-        "id, carrier_id, carrier_name, product_line, policy_type, agent_level, base_commission_rate, advance_rate, effective_from, effective_to, renewal_trail_rule, term_length_months, notes, created_at"
+        "id, carrier_id, carrier_name, product_line, policy_type, agent_level, base_commission_rate, advance_rate, effective_from, effective_to, lag_time_weeks, exclusive_months, renewal_trail_rule, term_length_months, notes, created_at"
       )
       .order("carrier_name", { ascending: true })
       .order("product_line", { ascending: true })
@@ -715,7 +761,7 @@ console.log("[admin-carriers] loaded from file");
 
     if (!schedules.length) {
       els.schedulesTableBody.innerHTML = `
-        <tr><td colspan="10" class="mini">No schedules found for the current filters.</td></tr>
+        <tr><td colspan="12" class="mini">No schedules found for the current filters.</td></tr>
       `;
       return;
     }
@@ -723,24 +769,30 @@ console.log("[admin-carriers] loaded from file");
     els.schedulesTableBody.innerHTML = schedules
       .map((s) => {
         const eff = `${esc(s.effective_from)}${s.effective_to ? " → " + esc(s.effective_to) : " → (open)"}`;
-        const term = s.term_length_months == null ? "" : esc(s.term_length_months);
-        const bandsShort = formatBandsShort(s.renewal_trail_rule);
+         const lag = s.lag_time_weeks == null ? "0" : esc(s.lag_time_weeks);
+         const exMonths = Array.isArray(s.exclusive_months) && s.exclusive_months.length
+           ? esc(s.exclusive_months.join(","))
+           : "";
+         const term = s.term_length_months == null ? "" : esc(s.term_length_months);
+         const bandsShort = formatBandsShort(s.renewal_trail_rule);
         return `
           <tr data-sched-id="${esc(s.id)}">
-            <td>${esc(s.carrier_name)}</td>
-            <td>${esc(s.product_line)}</td>
-            <td>${esc(s.policy_type ?? "")}</td>
-            <td><span class="pill">${esc(s.agent_level)}</span></td>
-            <td>${esc(s.base_commission_rate)}</td>
-            <td>${esc(s.advance_rate)}</td>
-            <td>${term}</td>
-            <td class="mini">${eff}</td>
-            <td class="mini">${esc(bandsShort)}</td>
-            <td>
-              <button class="btn btn-muted" data-action="edit-sched" type="button"><i class="fa-solid fa-pen"></i> Edit</button>
-              <button class="btn btn-danger" data-action="delete-sched" type="button"><i class="fa-solid fa-trash"></i> Delete</button>
-            </td>
-          </tr>
+           <td>${esc(s.carrier_name)}</td>
+           <td>${esc(s.product_line)}</td>
+           <td>${esc(s.policy_type ?? "")}</td>
+           <td><span class="pill">${esc(s.agent_level)}</span></td>
+           <td>${esc(s.base_commission_rate)}</td>
+           <td>${esc(s.advance_rate)}</td>
+           <td>${lag}</td>
+           <td>${exMonths}</td>
+           <td>${term}</td>
+           <td class="mini">${eff}</td>
+           <td class="mini">${esc(bandsShort)}</td>
+           <td>
+             <button class="btn btn-muted" data-action="edit-sched" type="button"><i class="fa-solid fa-pen"></i> Edit</button>
+             <button class="btn btn-danger" data-action="delete-sched" type="button"><i class="fa-solid fa-trash"></i> Delete</button>
+           </td>
+         </tr>
         `;
       })
       .join("");
@@ -792,6 +844,8 @@ console.log("[admin-carriers] loaded from file");
     els.editSchedTerm.value = row.term_length_months ?? "";
     els.editSchedEffFrom.value = row.effective_from || "";
     els.editSchedEffTo.value = row.effective_to || "";
+     els.editSchedLagWeeks.value = row.lag_time_weeks ?? 0;
+   els.editSchedExclusiveMonths.value = formatExclusiveMonths(row.exclusive_months);
     els.editSchedNotes.value = row.notes || "";
 
     const rule = row.renewal_trail_rule || { bands: [] };
@@ -857,6 +911,20 @@ console.log("[admin-carriers] loaded from file");
     }
     const effective_to = els.editSchedEffTo.value || null;
 
+     const lag_time_weeks = parseNullableInt(els.editSchedLagWeeks.value) ?? 0;
+      if (lag_time_weeks < 0) {
+        setStatus(els.editSchedMsg, "Lag time must be 0 or greater.", "err");
+        return;
+      }
+      
+      let exclusive_months = null;
+      try {
+        exclusive_months = parseExclusiveMonthsInput(els.editSchedExclusiveMonths.value);
+      } catch (err) {
+        setStatus(els.editSchedMsg, err.message || "Invalid exclusive months.", "err");
+        return;
+      }
+
     let renewal_trail_rule;
     try {
       renewal_trail_rule = validateRenewalJSON(els.editSchedRenewalJson.value);
@@ -873,6 +941,8 @@ console.log("[admin-carriers] loaded from file");
       term_length_months: term,
       effective_from,
       effective_to,
+       lag_time_weeks,
+      exclusive_months,
       renewal_trail_rule,
       notes: toNullableStr(els.editSchedNotes.value),
     };
