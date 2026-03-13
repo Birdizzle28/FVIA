@@ -65,6 +65,48 @@ function getRepaymentRate(totalDebt, isActive) {
 }
 
 /* ---------------------------
+   EXCLUSIVE MONTH HELPERS
+   --------------------------- */
+
+function normalizeExclusiveMonths(value) {
+  if (value == null) return null;
+
+  let arr = value;
+
+  if (typeof arr === 'string') {
+    try {
+      arr = JSON.parse(arr);
+    } catch {
+      arr = String(arr)
+        .replace(/[{}]/g, '')
+        .split(',')
+        .map(v => v.trim())
+        .filter(Boolean);
+    }
+  }
+
+  if (!Array.isArray(arr)) return null;
+
+  const nums = Array.from(
+    new Set(
+      arr
+        .map(v => Number(v))
+        .filter(v => Number.isInteger(v) && v >= 1 && v <= 12)
+    )
+  ).sort((a, b) => a - b);
+
+  return nums.length ? nums : null;
+}
+
+function isPayMonthAllowed(exclusiveMonths, payDate) {
+  const months = normalizeExclusiveMonths(exclusiveMonths);
+  if (!months || !months.length) return true;
+
+  const payMonthNumber = payDate.getMonth() + 1; // 1..12
+  return months.includes(payMonthNumber);
+}
+
+/* ---------------------------
    TIME / TERM HELPERS
    --------------------------- */
 
@@ -245,6 +287,7 @@ export async function handler(event) {
     // ---- caches (match run) ----
     const agentCache = new Map();
     const schedCache = new Map();
+    const policyCache = new Map();
 
     async function getAgent(agentId) {
       if (!agentId) return null;
@@ -280,7 +323,7 @@ export async function handler(event) {
         .from('commission_schedules')
         .select(
           'base_commission_rate, advance_rate, renewal_commission_rate, ' +
-          'renewal_start_year, renewal_end_year, renewal_trail_rule, term_length_months'
+          'renewal_start_year, renewal_end_year, renewal_trail_rule, term_length_months, exclusive_months'
         )
         .eq('carrier_name', policy.carrier_name)
         .eq('product_line', policy.product_line)
@@ -296,6 +339,42 @@ export async function handler(event) {
 
       schedCache.set(key, data);
       return data;
+    }
+
+    async function getPolicyBasic(policyId) {
+      if (!policyId) return null;
+      if (policyCache.has(policyId)) return policyCache.get(policyId);
+
+      const { data, error } = await supabase
+        .from('policies')
+        .select('id, carrier_name, product_line, policy_type')
+        .eq('id', policyId)
+        .single();
+
+      if (error || !data) {
+        console.warn('[previewMonthlyPayThru] Missing policy record for id:', policyId, error);
+        policyCache.set(policyId, null);
+        return null;
+      }
+
+      policyCache.set(policyId, data);
+      return data;
+    }
+
+    async function getLedgerRowExclusiveMonths(row) {
+      const metaMonths = normalizeExclusiveMonths(row?.meta?.exclusive_months);
+      if (metaMonths) return metaMonths;
+
+      if (!row?.policy_id || !row?.agent_id) return null;
+
+      const policy = await getPolicyBasic(row.policy_id);
+      if (!policy) return null;
+
+      const agent = await getAgent(row.agent_id);
+      const level = agent?.level || 'agent';
+
+      const schedule = await getSchedule(policy, level);
+      return normalizeExclusiveMonths(schedule?.exclusive_months);
     }
 
     // ---- Build policy list (preview for target agent only) ----
@@ -516,6 +595,8 @@ export async function handler(event) {
         // increment simulated count map (so multiple policies don’t break caps)
         payThruCountMap.set(key, priorCount + 1);
 
+        const exclusiveMonths = normalizeExclusiveMonths(node.schedule?.exclusive_months);
+
         const row = {
           agent_id: node.agent.id,
           policy_id: policy.id,
@@ -536,7 +617,8 @@ export async function handler(event) {
             advance_rate_applied: globalAdvanceRate,
             months_advanced: monthsAdvanced,
             divisor_months: divisorMonths,
-            issued_at: policy.issued_at
+            issued_at: policy.issued_at,
+            exclusive_months: exclusiveMonths
           }
         };
 
@@ -550,11 +632,15 @@ export async function handler(event) {
 
     simulatedNewGross = round2(simulatedNewGross);
 
+    const payableSimulatedRows = simulatedRows.filter(row =>
+      isPayMonthAllowed(normalizeExclusiveMonths(row?.meta?.exclusive_months), payDate)
+    );
+
     // ---- existing unpaid rows for target agent (<= payMonthKey) ----
     // ✅ now includes policy_id so we can filter out rows whose policies are cancelled/lapsed/etc.
     const { data: unpaidExistingRaw, error: unpaidErr } = await supabase
       .from('commission_ledger')
-      .select('id, agent_id, amount, policy_id')
+      .select('id, agent_id, amount, policy_id, meta')
       .eq('entry_type', 'paythru')
       .eq('is_settled', false)
       .eq('agent_id', targetAgentId)
@@ -593,17 +679,25 @@ export async function handler(event) {
       }
     }
     
-    const unpaidExisting = unpaidExistingAll.filter(r => {
+    const unpaidExistingEligibleStatus = unpaidExistingAll.filter(r => {
       if (!r.policy_id) return false;
       return eligiblePolicyIdSet.has(r.policy_id);
     });
+
+    const unpaidExisting = [];
+    for (const row of unpaidExistingEligibleStatus) {
+      const exclusiveMonths = await getLedgerRowExclusiveMonths(row);
+      if (isPayMonthAllowed(exclusiveMonths, payDate)) {
+        unpaidExisting.push(row);
+      }
+    }
     
     const filteredOutUnpaidCount = unpaidExistingAll.length - unpaidExisting.length;
     
-    // ---- threshold accrual = (eligible unpaid existing) + (simulated new) ----
+    // ---- threshold accrual = (eligible unpaid existing) + (simulated new allowed this month) ----
     let grossTowardThreshold = 0;
     for (const row of unpaidExisting) grossTowardThreshold += Number(row.amount || 0);
-    for (const row of simulatedRows) grossTowardThreshold += Number(row.amount || 0);
+    for (const row of payableSimulatedRows) grossTowardThreshold += Number(row.amount || 0);
     grossTowardThreshold = round2(grossTowardThreshold);
 
     const threshold = 100;
@@ -620,10 +714,11 @@ export async function handler(event) {
           pay_month: payMonthKey,
           cutoff: cutoffIso,
           threshold,
-          existing_unpaid_rows_count: (unpaidExisting || []).length,
+          existing_unpaid_rows_count: unpaidExisting.length,
           simulated_new_rows_count: simulatedRows.length,
           total_new_paythru_gross_preview: simulatedNewGross,
           gross_accrued_toward_threshold_preview: grossTowardThreshold,
+          filtered_out_unpaid_count: filteredOutUnpaidCount,
           agents_paid_preview: 0
         }, null, 2)
       };
@@ -688,7 +783,7 @@ export async function handler(event) {
         pay_month: payMonthKey,
         cutoff: cutoffIso,
         threshold,
-        existing_unpaid_rows_count: (unpaidExisting || []).length,
+        existing_unpaid_rows_count: unpaidExisting.length,
         simulated_new_rows_count: simulatedRows.length,
         total_new_paythru_gross_preview: simulatedNewGross,
         gross_accrued_toward_threshold_preview: grossTowardThreshold,
@@ -696,6 +791,7 @@ export async function handler(event) {
         net_payout_preview: net,
         lead_repayment_preview: round2(leadRepay),
         chargeback_repayment_preview: round2(chargebackRepay),
+        filtered_out_unpaid_count: filteredOutUnpaidCount,
         details_preview: {
           simulated_new_rows: simulatedRows
         }
