@@ -125,7 +125,7 @@ function drawFullPageBackground(doc, bgBuffer) {
   doc.restore();
 }
 
-function drawFooter(doc) {
+function drawFooter(doc, pageNumber) {
   const left = doc.page.margins.left;
   const right = doc.page.width - doc.page.margins.right;
   const y = doc.page.height - 30;
@@ -136,7 +136,7 @@ function drawFooter(doc) {
     width: right - left,
     align: 'left'
   });
-  doc.text(cleanText(`Page ${doc.page.number}`), left, y, {
+  doc.text(cleanText(`Page ${pageNumber}`), left, y, {
     width: right - left,
     align: 'right'
   });
@@ -308,46 +308,58 @@ function addBullets(doc, items, {
 }
 
 function addWarningBox(doc, text) {
-  ensureSpace(doc, 120);
-
   const x = doc.page.margins.left;
   const w = doc.page.width - doc.page.margins.left - doc.page.margins.right;
   const pad = 16;
 
-  doc.font('Helvetica-Bold').fontSize(12);
   const title = 'Important Payment Disclosure';
-  const titleH = doc.heightOfString(title, { width: w - 48 });
+  const body = cleanText(text);
+
+  // Measure first
+  doc.font('Helvetica-Bold').fontSize(12);
+  const titleH = doc.heightOfString(title, { width: w - 66 });
 
   doc.font('Helvetica').fontSize(10.4);
-  const textH = doc.heightOfString(cleanText(text), { width: w - 48, lineGap: 3 });
+  const textH = doc.heightOfString(body, {
+    width: w - 40,
+    lineGap: 3
+  });
 
   const h = pad + titleH + 10 + textH + pad;
 
+  // If it won't fit, move to a new page BEFORE drawing
+  const remaining = doc.page.height - doc.y - doc.page.margins.bottom - 24;
+  if (remaining < h) {
+    doc.addPage();
+  }
+
+  const y = doc.y;
+
   doc.save();
-  doc.roundedRect(x, doc.y, w, h, 16).fillAndStroke(C.dangerSoft, C.pinkBorder);
-  doc.roundedRect(x, doc.y, 12, h, 16).fill(C.danger);
+  doc.roundedRect(x, y, w, h, 16).fillAndStroke(C.dangerSoft, C.pinkBorder);
+  doc.roundedRect(x, y, 12, h, 16).fill(C.danger);
   doc.restore();
 
-  // icon-ish badge
+  // icon badge
   doc.save();
-  doc.circle(x + 32, doc.y + 28, 12).fill(C.danger);
-  doc.font('Helvetica-Bold').fontSize(13).fillColor(C.white).text('!', x + 28.5, doc.y + 18.5);
+  doc.circle(x + 32, y + 28, 12).fill(C.danger);
+  doc.font('Helvetica-Bold').fontSize(13).fillColor(C.white).text('!', x + 28.5, y + 18.5);
   doc.restore();
 
   doc.font('Helvetica-Bold')
     .fontSize(12)
     .fillColor(C.danger)
-    .text(title, x + 54, doc.y + pad, { width: w - 66 });
+    .text(title, x + 54, y + pad, { width: w - 66 });
 
   doc.font('Helvetica')
     .fontSize(10.4)
     .fillColor(C.ink)
-    .text(cleanText(text), x + 20, doc.y + pad + titleH + 10, {
+    .text(body, x + 20, y + pad + titleH + 10, {
       width: w - 40,
       lineGap: 3
     });
 
-  doc.y += h + 14;
+  doc.y = y + h + 14;
 }
 
 function addInfoBox(doc, title, lines = [], opts = {}) {
@@ -492,6 +504,7 @@ export async function handler(event) {
     }
   });
 
+  let currentPageNumber = 1;
   const chunks = [];
   doc.on('data', c => chunks.push(c));
 
@@ -502,6 +515,7 @@ export async function handler(event) {
   drawHeader(doc, logo, meRow, { cover: true });
 
   doc.on('pageAdded', () => {
+    currentPageNumber += 1;
     drawFullPageBackground(doc, bg);
     drawHeader(doc, logo, meRow, { cover: false });
   });
@@ -741,7 +755,7 @@ export async function handler(event) {
     titleColor: C.danger
   });
 
-  drawFooter(doc);
+  drawFooter(doc, currentPageNumber);
   doc.end();
 
   const pdfBuffer = await new Promise((resolve) => {
