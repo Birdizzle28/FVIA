@@ -380,6 +380,32 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
+  function applyQuoteButtonsFromSettings(settings = {}) {
+    const buttonIds = ["btn-step1", "btn-step2", "btn-submit"];
+  
+    const radius = settings?.button_radius || "14px";
+    const bg = settings?.button_bg_color || "#545454";
+    const text = settings?.button_text_color || "#ffffff";
+    const borderColor = settings?.button_border_color || "#272727";
+    const borderWidth = settings?.button_border_width || "1px";
+    const borderStyle = settings?.button_border_style || "solid";
+  
+    buttonIds.forEach(id => {
+      const el = document.getElementById(id);
+      if (!el) return;
+  
+      el.classList.add("fvg-btn");
+  
+      el.style.borderRadius = radius;
+      el.style.backgroundColor = bg;
+      el.style.color = text;
+      el.style.borderColor = borderColor;
+      el.style.borderWidth = borderWidth;
+      el.style.borderStyle = borderStyle;
+      el.style.border = `${borderWidth} ${borderStyle} ${borderColor}`;
+    });
+  }
+
   function loadGoogleFont(fontName) {
     if (!fontName) return;
   
@@ -1405,6 +1431,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       await loadScriptOnce("/scripts/agent-quote-override.js");
       await loadScriptOnce("/scripts/freequote.js");
+      applyQuoteButtonsFromSettings(settings || {});
 
       if (quoteSectionRow) {
         const quoteContent = previewMode
@@ -1418,6 +1445,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         fillSectionContent("home", "quote", quoteContent);
         applySectionStyle("home", "quote", quoteStyle);
         applyQuoteBodyStyle(quoteStyle);
+        applyQuoteButtonsFromSettings(settings || {});
       }
     }
   }
