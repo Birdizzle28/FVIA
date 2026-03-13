@@ -126,7 +126,6 @@ const L = {
   topBarH: 22,
   bottomBarH: 16,
 
-  headerTop: 34,
   headerLogo: 62,
 
   cardX: 36,
@@ -138,7 +137,8 @@ const L = {
   contentY: 140,
   contentW: 496,
 
-  footerY: 760
+  // moved up so PDFKit does not force phantom pages
+  footerY: 736
 };
 
 /* =========================================================
@@ -215,7 +215,8 @@ function drawHeader(doc, logo, meRow, pageNumber, { cover = false } = {}) {
     .fillColor(C.footer)
     .text(`© ${new Date().getFullYear()} Family Values Group — Internal Use`, L.margin, L.footerY, {
       width: L.pageW - (L.margin * 2),
-      align: 'left'
+      align: 'left',
+      lineBreak: false
     });
 
   doc
@@ -224,7 +225,8 @@ function drawHeader(doc, logo, meRow, pageNumber, { cover = false } = {}) {
     .fillColor(C.footer)
     .text(`Page ${pageNumber}`, L.margin, L.footerY, {
       width: L.pageW - (L.margin * 2),
-      align: 'right'
+      align: 'right',
+      lineBreak: false
     });
 }
 
