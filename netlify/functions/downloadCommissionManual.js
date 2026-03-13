@@ -8,6 +8,10 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const serviceKey  = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, serviceKey);
 
+/* =========================================================
+   AUTH
+========================================================= */
+
 function getBearerToken(event) {
   const h = event.headers || {};
   const auth = h.authorization || h.Authorization || '';
@@ -26,7 +30,9 @@ async function requireAuthedUser(event) {
   return { ok: true, user: data.user };
 }
 
-/* ------------------------ ASSET LOADERS ------------------------ */
+/* =========================================================
+   ASSETS
+========================================================= */
 
 function tryLoadLogoBuffer() {
   const candidates = [
@@ -37,7 +43,9 @@ function tryLoadLogoBuffer() {
   ];
 
   for (const p of candidates) {
-    try { if (fs.existsSync(p)) return fs.readFileSync(p); } catch {}
+    try {
+      if (fs.existsSync(p)) return fs.readFileSync(p);
+    } catch {}
   }
   return null;
 }
@@ -53,12 +61,16 @@ function tryLoadBackgroundBuffer() {
   ];
 
   for (const p of candidates) {
-    try { if (fs.existsSync(p)) return fs.readFileSync(p); } catch {}
+    try {
+      if (fs.existsSync(p)) return fs.readFileSync(p);
+    } catch {}
   }
   return null;
 }
 
-/* ------------------------ TEXT SANITIZER ------------------------ */
+/* =========================================================
+   TEXT
+========================================================= */
 
 function cleanText(input) {
   if (input == null) return '';
@@ -79,7 +91,9 @@ function cleanText(input) {
   return s;
 }
 
-/* ------------------------ DESIGN TOKENS ------------------------ */
+/* =========================================================
+   DESIGN TOKENS
+========================================================= */
 
 const C = {
   brand: '#353468',
@@ -98,10 +112,55 @@ const C = {
   dangerSoft: '#fff0f4',
   successSoft: '#eef8f4',
   success: '#2a8f6d',
-  footer: '#7b7694'
+  footer: '#7b7694',
+  cream: '#fffaf0',
+  creamBorder: '#eedfb5',
+  creamText: '#8a6a1f'
 };
 
-/* ------------------------ PDF HELPERS ------------------------ */
+const PAGE = {
+  margin: 54,
+  footerReserve: 34
+};
+
+/* =========================================================
+   DOC UTILS
+========================================================= */
+
+function getContentWidth(doc) {
+  return doc.page.width - doc.page.margins.left - doc.page.margins.right;
+}
+
+function getBottomLimit(doc) {
+  return doc.page.height - doc.page.margins.bottom - PAGE.footerReserve;
+}
+
+function remainingSpace(doc) {
+  return getBottomLimit(doc) - doc.y;
+}
+
+function ensureSpace(doc, needed = 80) {
+  if (remainingSpace(doc) < needed) doc.addPage();
+}
+
+function textHeight(doc, text, opts = {}) {
+  const font = opts.font || 'Helvetica';
+  const size = opts.size || 10.5;
+  const width = opts.width || getContentWidth(doc);
+  const lineGap = opts.lineGap ?? 3;
+
+  doc.save();
+  doc.font(font).fontSize(size);
+  const h = doc.heightOfString(cleanText(text), { width, lineGap });
+  doc.restore();
+  return h;
+}
+
+function roundedRect(doc, x, y, w, h, r = 16, fill = C.white, stroke = C.line) {
+  doc.save();
+  doc.roundedRect(x, y, w, h, r).fillAndStroke(fill, stroke);
+  doc.restore();
+}
 
 function drawFullPageBackground(doc, bgBuffer) {
   if (bgBuffer) {
@@ -110,16 +169,18 @@ function drawFullPageBackground(doc, bgBuffer) {
       doc.image(bgBuffer, 0, 0, { width: doc.page.width, height: doc.page.height });
       doc.fillOpacity(0.82).rect(0, 0, doc.page.width, doc.page.height).fill('#ffffff');
       doc.restore();
-    } catch {}
+    } catch {
+      doc.save();
+      doc.rect(0, 0, doc.page.width, doc.page.height).fill('#faf8ff');
+      doc.restore();
+    }
   } else {
     doc.save();
     doc.rect(0, 0, doc.page.width, doc.page.height).fill('#faf8ff');
     doc.restore();
   }
 
-  // decorative top and bottom wash
   doc.save();
-  doc.fillOpacity(1);
   doc.rect(0, 0, doc.page.width, 22).fill(C.brand);
   doc.rect(0, doc.page.height - 16, doc.page.width, 16).fill(C.brandDark);
   doc.restore();
@@ -128,7 +189,7 @@ function drawFullPageBackground(doc, bgBuffer) {
 function drawFooter(doc, pageNumber) {
   const left = doc.page.margins.left;
   const right = doc.page.width - doc.page.margins.right;
-  const y = doc.page.height - 30;
+  const y = doc.page.height - 28;
 
   doc.save();
   doc.font('Helvetica').fontSize(8.5).fillColor(C.footer);
@@ -156,17 +217,20 @@ function drawHeader(doc, logo, meRow, { cover = false } = {}) {
 
   const titleX = left + (logo ? 80 : 0);
 
-  doc.font('Helvetica-Bold')
+  doc
+    .font('Helvetica-Bold')
     .fontSize(cover ? 24 : 17)
     .fillColor(C.brandDark)
     .text(cleanText('Family Values Group'), titleX, topY + 2, { width: right - titleX });
 
-  doc.font('Helvetica')
+  doc
+    .font('Helvetica')
     .fontSize(cover ? 13 : 11)
     .fillColor(C.muted)
     .text(cleanText('Commission Manual'), titleX, topY + (cover ? 31 : 24), { width: right - titleX });
 
-  doc.font('Helvetica')
+  doc
+    .font('Helvetica')
     .fontSize(9.5)
     .fillColor(C.footer)
     .text(
@@ -176,62 +240,13 @@ function drawHeader(doc, logo, meRow, { cover = false } = {}) {
       { width: right - titleX }
     );
 
+  doc.fillColor(C.ink);
   doc.y = topY + (cover ? 94 : 78);
 }
 
-function drawRoundedCard(doc, x, y, w, h, fill = C.white, stroke = C.line, radius = 16) {
-  doc.save();
-  doc.roundedRect(x, y, w, h, radius).fillAndStroke(fill, stroke);
-  doc.restore();
-}
-
-function drawSectionBanner(doc, title, subtitle = '') {
-  const x = doc.page.margins.left;
-  const w = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-
-  ensureSpace(doc, 90);
-
-  doc.save();
-  doc.roundedRect(x, doc.y, w, 48, 14).fill(C.brand);
-  doc.roundedRect(x + 12, doc.y + 10, 10, 28, 5).fill(C.gold);
-  doc.restore();
-
-  doc.font('Helvetica-Bold')
-    .fontSize(18)
-    .fillColor(C.white)
-    .text(cleanText(title), x + 32, doc.y + 9, { width: w - 44 });
-
-  if (subtitle) {
-    doc.font('Helvetica')
-      .fontSize(9.6)
-      .fillColor('#e7e4ff')
-      .text(cleanText(subtitle), x + 32, doc.y + 28, { width: w - 44 });
-  }
-
-  doc.y += 62;
-  doc.fillColor(C.ink);
-}
-
-function drawMiniHeader(doc, text) {
-  ensureSpace(doc, 40);
-  const x = doc.page.margins.left;
-  const w = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-
-  doc.save();
-  doc.roundedRect(x, doc.y, Math.min(w, 260), 24, 10).fill(C.lavender);
-  doc.restore();
-
-  doc.font('Helvetica-Bold')
-    .fontSize(12)
-    .fillColor(C.brandDark)
-    .text(cleanText(text), x + 12, doc.y + 6, { width: 240 });
-
-  doc.y += 32;
-  doc.fillColor(C.ink);
-}
-
 function addTitle(doc, text) {
-  doc.font('Helvetica-Bold')
+  doc
+    .font('Helvetica-Bold')
     .fontSize(28)
     .fillColor(C.brandDark)
     .text(cleanText(text), { align: 'left' });
@@ -239,7 +254,8 @@ function addTitle(doc, text) {
 }
 
 function addSubTitle(doc, text) {
-  doc.font('Helvetica')
+  doc
+    .font('Helvetica')
     .fontSize(11.4)
     .fillColor(C.muted)
     .text(cleanText(text), { lineGap: 4 });
@@ -247,206 +263,22 @@ function addSubTitle(doc, text) {
 }
 
 function addBody(doc, text, opts = {}) {
-  doc.font(opts.bold ? 'Helvetica-Bold' : 'Helvetica')
+  doc
+    .font(opts.bold ? 'Helvetica-Bold' : 'Helvetica')
     .fontSize(opts.size || 10.7)
     .fillColor(opts.color || C.ink)
     .text(cleanText(text), {
-      lineGap: opts.lineGap ?? 4,
-      width: opts.width || (doc.page.width - doc.page.margins.left - doc.page.margins.right - 4)
+      width: opts.width || getContentWidth(doc),
+      lineGap: opts.lineGap ?? 4
     });
   doc.moveDown(opts.after ?? 0.42);
-}
-
-function addBullets(doc, items, {
-  box = false,
-  fill = C.lavender2,
-  stroke = C.line
-} = {}) {
-  ensureSpace(doc, 80);
-
-  const x = doc.page.margins.left;
-  const w = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-
-  let startY = doc.y;
-
-  if (box) {
-    // measure box height first
-    let measure = 18;
-    items.forEach(item => {
-      measure += doc.heightOfString(cleanText(item), {
-        width: w - 42,
-        lineGap: 3
-      }) + 8;
-    });
-    drawRoundedCard(doc, x, startY, w, measure, fill, stroke, 14);
-    doc.y = startY + 14;
-  }
-
-  items.forEach(item => {
-    ensureSpace(doc, 26);
-
-    const bulletX = x + (box ? 14 : 4);
-    const textX = bulletX + 18;
-    const y = doc.y;
-
-    doc.save();
-    doc.circle(bulletX + 5, y + 8, 4).fill(C.brand);
-    doc.restore();
-
-    doc.font('Helvetica')
-      .fontSize(10.5)
-      .fillColor(C.ink)
-      .text(cleanText(item), textX, y, {
-        width: w - (textX - x) - (box ? 14 : 0),
-        lineGap: 3
-      });
-
-    doc.y += 4;
-  });
-
-  doc.moveDown(0.35);
-}
-
-function addWarningBox(doc, text) {
-  const x = doc.page.margins.left;
-  const w = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-  const pad = 16;
-
-  const title = 'Important Payment Disclosure';
-  const body = cleanText(text);
-
-  // Measure first
-  doc.font('Helvetica-Bold').fontSize(12);
-  const titleH = doc.heightOfString(title, { width: w - 66 });
-
-  doc.font('Helvetica').fontSize(10.4);
-  const textH = doc.heightOfString(body, {
-    width: w - 40,
-    lineGap: 3
-  });
-
-  const h = pad + titleH + 10 + textH + pad;
-
-  // If it won't fit, move to a new page BEFORE drawing
-  const remaining = doc.page.height - doc.y - doc.page.margins.bottom - 24;
-  if (remaining < h) {
-    doc.addPage();
-  }
-
-  const y = doc.y;
-
-  doc.save();
-  doc.roundedRect(x, y, w, h, 16).fillAndStroke(C.dangerSoft, C.pinkBorder);
-  doc.roundedRect(x, y, 12, h, 16).fill(C.danger);
-  doc.restore();
-
-  // icon badge
-  doc.save();
-  doc.circle(x + 32, y + 28, 12).fill(C.danger);
-  doc.font('Helvetica-Bold').fontSize(13).fillColor(C.white).text('!', x + 28.5, y + 18.5);
-  doc.restore();
-
-  doc.font('Helvetica-Bold')
-    .fontSize(12)
-    .fillColor(C.danger)
-    .text(title, x + 54, y + pad, { width: w - 66 });
-
-  doc.font('Helvetica')
-    .fontSize(10.4)
-    .fillColor(C.ink)
-    .text(body, x + 20, y + pad + titleH + 10, {
-      width: w - 40,
-      lineGap: 3
-    });
-
-  doc.y = y + h + 14;
-}
-
-function addInfoBox(doc, title, lines = [], opts = {}) {
-  ensureSpace(doc, 90);
-
-  const x = doc.page.margins.left;
-  const w = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-  const pad = 14;
-  const fill = opts.fill || C.lavender2;
-  const stroke = opts.stroke || C.line;
-  const titleColor = opts.titleColor || C.brandDark;
-
-  doc.font('Helvetica-Bold').fontSize(11.5);
-  const titleH = doc.heightOfString(cleanText(title), { width: w - pad * 2 });
-
-  doc.font('Helvetica').fontSize(10.4);
-  let bodyH = 0;
-  lines.forEach(line => {
-    bodyH += doc.heightOfString(cleanText(line), { width: w - pad * 2, lineGap: 3 }) + 5;
-  });
-
-  const h = pad + titleH + 10 + bodyH + pad;
-
-  drawRoundedCard(doc, x, doc.y, w, h, fill, stroke, 16);
-
-  let y = doc.y + pad;
-
-  doc.font('Helvetica-Bold')
-    .fontSize(11.5)
-    .fillColor(titleColor)
-    .text(cleanText(title), x + pad, y, { width: w - pad * 2 });
-
-  y += titleH + 10;
-
-  doc.font('Helvetica')
-    .fontSize(10.4)
-    .fillColor(C.ink);
-
-  lines.forEach(line => {
-    doc.text(cleanText(line), x + pad, y, { width: w - pad * 2, lineGap: 3 });
-    y += doc.heightOfString(cleanText(line), { width: w - pad * 2, lineGap: 3 }) + 5;
-  });
-
-  doc.y += h + 12;
-}
-
-function addTwoColExampleBox(doc, leftTitle, leftText, rightTitle, rightText) {
-  ensureSpace(doc, 120);
-
-  const x = doc.page.margins.left;
-  const fullW = doc.page.width - doc.page.margins.left - doc.page.margins.right;
-  const gap = 12;
-  const colW = (fullW - gap) / 2;
-  const y = doc.y;
-
-  const pad = 12;
-
-  doc.font('Helvetica-Bold').fontSize(11);
-  const lTitleH = doc.heightOfString(cleanText(leftTitle), { width: colW - pad * 2 });
-  const rTitleH = doc.heightOfString(cleanText(rightTitle), { width: colW - pad * 2 });
-
-  doc.font('Helvetica').fontSize(10.2);
-  const lBodyH = doc.heightOfString(cleanText(leftText), { width: colW - pad * 2, lineGap: 3 });
-  const rBodyH = doc.heightOfString(cleanText(rightText), { width: colW - pad * 2, lineGap: 3 });
-
-  const h = Math.max(lTitleH + lBodyH, rTitleH + rBodyH) + pad * 2 + 10;
-
-  drawRoundedCard(doc, x, y, colW, h, '#ffffff', C.line, 14);
-  drawRoundedCard(doc, x + colW + gap, y, colW, h, '#ffffff', C.line, 14);
-
-  doc.font('Helvetica-Bold').fontSize(11).fillColor(C.brandDark)
-    .text(cleanText(leftTitle), x + pad, y + pad, { width: colW - pad * 2 });
-  doc.font('Helvetica').fontSize(10.2).fillColor(C.ink)
-    .text(cleanText(leftText), x + pad, y + pad + lTitleH + 8, { width: colW - pad * 2, lineGap: 3 });
-
-  doc.font('Helvetica-Bold').fontSize(11).fillColor(C.brandDark)
-    .text(cleanText(rightTitle), x + colW + gap + pad, y + pad, { width: colW - pad * 2 });
-  doc.font('Helvetica').fontSize(10.2).fillColor(C.ink)
-    .text(cleanText(rightText), x + colW + gap + pad, y + pad + rTitleH + 8, { width: colW - pad * 2, lineGap: 3 });
-
-  doc.y += h + 14;
 }
 
 function addDivider(doc) {
   doc.moveDown(0.15);
   doc.save();
-  doc.moveTo(doc.page.margins.left, doc.y)
+  doc
+    .moveTo(doc.page.margins.left, doc.y)
     .lineTo(doc.page.width - doc.page.margins.right, doc.y)
     .strokeColor(C.line)
     .lineWidth(1)
@@ -455,9 +287,350 @@ function addDivider(doc) {
   doc.moveDown(0.65);
 }
 
-function ensureSpace(doc, needed = 80) {
-  const remaining = doc.page.height - doc.y - doc.page.margins.bottom - 22;
-  if (remaining < needed) doc.addPage();
+/* =========================================================
+   MEASURED BLOCKS
+========================================================= */
+
+function addWarningBox(doc, text) {
+  const x = doc.page.margins.left;
+  const y = doc.y;
+  const w = getContentWidth(doc);
+  const pad = 16;
+  const title = 'Important Payment Disclosure';
+  const titleX = x + 54;
+  const bodyX = x + 20;
+
+  const titleH = textHeight(doc, title, {
+    font: 'Helvetica-Bold',
+    size: 12,
+    width: w - 66,
+    lineGap: 2
+  });
+
+  const bodyH = textHeight(doc, text, {
+    font: 'Helvetica',
+    size: 10.4,
+    width: w - 40,
+    lineGap: 3
+  });
+
+  const h = pad + titleH + 10 + bodyH + pad;
+
+  ensureSpace(doc, h + 6);
+
+  const yy = doc.y;
+
+  doc.save();
+  doc.roundedRect(x, yy, w, h, 16).fillAndStroke(C.dangerSoft, C.pinkBorder);
+  doc.roundedRect(x, yy, 12, h, 16).fill(C.danger);
+  doc.restore();
+
+  doc.save();
+  doc.circle(x + 32, yy + 28, 12).fill(C.danger);
+  doc.font('Helvetica-Bold').fontSize(13).fillColor(C.white).text('!', x + 28.5, yy + 18.5);
+  doc.restore();
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(12)
+    .fillColor(C.danger)
+    .text(title, titleX, yy + pad, { width: w - 66 });
+
+  doc
+    .font('Helvetica')
+    .fontSize(10.4)
+    .fillColor(C.ink)
+    .text(cleanText(text), bodyX, yy + pad + titleH + 10, {
+      width: w - 40,
+      lineGap: 3
+    });
+
+  doc.y = yy + h + 14;
+}
+
+function addInfoBox(doc, title, lines = [], opts = {}) {
+  const x = doc.page.margins.left;
+  const w = getContentWidth(doc);
+  const pad = 14;
+  const fill = opts.fill || C.lavender2;
+  const stroke = opts.stroke || C.line;
+  const titleColor = opts.titleColor || C.brandDark;
+
+  const titleH = textHeight(doc, title, {
+    font: 'Helvetica-Bold',
+    size: 11.5,
+    width: w - pad * 2,
+    lineGap: 2
+  });
+
+  let bodyH = 0;
+  for (const line of lines) {
+    bodyH += textHeight(doc, line, {
+      font: 'Helvetica',
+      size: 10.4,
+      width: w - pad * 2,
+      lineGap: 3
+    }) + 5;
+  }
+
+  const h = pad + titleH + 10 + bodyH + pad;
+  ensureSpace(doc, h + 6);
+
+  const y = doc.y;
+  roundedRect(doc, x, y, w, h, 16, fill, stroke);
+
+  let cy = y + pad;
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(11.5)
+    .fillColor(titleColor)
+    .text(cleanText(title), x + pad, cy, { width: w - pad * 2 });
+
+  cy += titleH + 10;
+
+  for (const line of lines) {
+    doc
+      .font('Helvetica')
+      .fontSize(10.4)
+      .fillColor(C.ink)
+      .text(cleanText(line), x + pad, cy, {
+        width: w - pad * 2,
+        lineGap: 3
+      });
+
+    cy += textHeight(doc, line, {
+      font: 'Helvetica',
+      size: 10.4,
+      width: w - pad * 2,
+      lineGap: 3
+    }) + 5;
+  }
+
+  doc.y = y + h + 12;
+}
+
+function addBullets(doc, items, { box = false, fill = C.lavender2, stroke = C.line } = {}) {
+  const x = doc.page.margins.left;
+  const w = getContentWidth(doc);
+
+  const boxPad = box ? 14 : 0;
+  const bulletX = x + (box ? 14 : 4);
+  const textX = bulletX + 18;
+  const textW = w - (textX - x) - (box ? 14 : 0);
+
+  let totalH = 0;
+  for (const item of items) {
+    totalH += textHeight(doc, item, {
+      font: 'Helvetica',
+      size: 10.5,
+      width: textW,
+      lineGap: 3
+    }) + 6;
+  }
+
+  const boxH = box ? totalH + 18 + 10 : totalH;
+  ensureSpace(doc, boxH + 8);
+
+  let startY = doc.y;
+  if (box) {
+    roundedRect(doc, x, startY, w, boxH, 14, fill, stroke);
+    doc.y = startY + boxPad;
+  }
+
+  for (const item of items) {
+    const lineY = doc.y;
+    const itemH = textHeight(doc, item, {
+      font: 'Helvetica',
+      size: 10.5,
+      width: textW,
+      lineGap: 3
+    });
+
+    doc.save();
+    doc.circle(bulletX + 5, lineY + 8, 4).fill(C.brand);
+    doc.restore();
+
+    doc
+      .font('Helvetica')
+      .fontSize(10.5)
+      .fillColor(C.ink)
+      .text(cleanText(item), textX, lineY, {
+        width: textW,
+        lineGap: 3
+      });
+
+    doc.y = lineY + itemH + 6;
+  }
+
+  doc.moveDown(0.2);
+}
+
+function drawMiniHeader(doc, text) {
+  const x = doc.page.margins.left;
+  const w = Math.min(getContentWidth(doc), 320);
+  const padX = 12;
+  const padY = 6;
+
+  const tH = textHeight(doc, text, {
+    font: 'Helvetica-Bold',
+    size: 12,
+    width: w - padX * 2,
+    lineGap: 2
+  });
+
+  const h = tH + padY * 2;
+  ensureSpace(doc, h + 8);
+
+  const y = doc.y;
+  roundedRect(doc, x, y, w, h, 10, C.lavender, C.line);
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(12)
+    .fillColor(C.brandDark)
+    .text(cleanText(text), x + padX, y + padY, {
+      width: w - padX * 2,
+      lineGap: 2
+    });
+
+  doc.y = y + h + 8;
+}
+
+function drawSectionBanner(doc, title, subtitle = '') {
+  const x = doc.page.margins.left;
+  const w = getContentWidth(doc);
+  const titleH = textHeight(doc, title, {
+    font: 'Helvetica-Bold',
+    size: 18,
+    width: w - 44,
+    lineGap: 2
+  });
+
+  const subH = subtitle
+    ? textHeight(doc, subtitle, {
+        font: 'Helvetica',
+        size: 9.6,
+        width: w - 44,
+        lineGap: 2
+      })
+    : 0;
+
+  const h = 12 + titleH + (subtitle ? 4 + subH : 0) + 10;
+  ensureSpace(doc, h + 8);
+
+  const y = doc.y;
+
+  doc.save();
+  doc.roundedRect(x, y, w, h, 14).fill(C.brand);
+  doc.roundedRect(x + 12, y + 10, 10, Math.max(18, h - 20), 5).fill(C.gold);
+  doc.restore();
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(18)
+    .fillColor(C.white)
+    .text(cleanText(title), x + 32, y + 10, { width: w - 44, lineGap: 2 });
+
+  if (subtitle) {
+    doc
+      .font('Helvetica')
+      .fontSize(9.6)
+      .fillColor('#e7e4ff')
+      .text(cleanText(subtitle), x + 32, y + 10 + titleH + 4, {
+        width: w - 44,
+        lineGap: 2
+      });
+  }
+
+  doc.y = y + h + 14;
+  doc.fillColor(C.ink);
+}
+
+function addTwoColExampleBox(doc, leftTitle, leftText, rightTitle, rightText) {
+  const x = doc.page.margins.left;
+  const fullW = getContentWidth(doc);
+  const gap = 12;
+  const colW = (fullW - gap) / 2;
+  const pad = 12;
+
+  const lTitleH = textHeight(doc, leftTitle, {
+    font: 'Helvetica-Bold',
+    size: 11,
+    width: colW - pad * 2,
+    lineGap: 2
+  });
+  const rTitleH = textHeight(doc, rightTitle, {
+    font: 'Helvetica-Bold',
+    size: 11,
+    width: colW - pad * 2,
+    lineGap: 2
+  });
+  const lBodyH = textHeight(doc, leftText, {
+    font: 'Helvetica',
+    size: 10.2,
+    width: colW - pad * 2,
+    lineGap: 3
+  });
+  const rBodyH = textHeight(doc, rightText, {
+    font: 'Helvetica',
+    size: 10.2,
+    width: colW - pad * 2,
+    lineGap: 3
+  });
+
+  const colH = Math.max(lTitleH + 8 + lBodyH, rTitleH + 8 + rBodyH) + pad * 2;
+  ensureSpace(doc, colH + 8);
+
+  const y = doc.y;
+
+  roundedRect(doc, x, y, colW, colH, 14, C.white, C.line);
+  roundedRect(doc, x + colW + gap, y, colW, colH, 14, C.white, C.line);
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(11)
+    .fillColor(C.brandDark)
+    .text(cleanText(leftTitle), x + pad, y + pad, { width: colW - pad * 2 });
+  doc
+    .font('Helvetica')
+    .fontSize(10.2)
+    .fillColor(C.ink)
+    .text(cleanText(leftText), x + pad, y + pad + lTitleH + 8, {
+      width: colW - pad * 2,
+      lineGap: 3
+    });
+
+  const rx = x + colW + gap;
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(11)
+    .fillColor(C.brandDark)
+    .text(cleanText(rightTitle), rx + pad, y + pad, { width: colW - pad * 2 });
+  doc
+    .font('Helvetica')
+    .fontSize(10.2)
+    .fillColor(C.ink)
+    .text(cleanText(rightText), rx + pad, y + pad + rTitleH + 8, {
+      width: colW - pad * 2,
+      lineGap: 3
+    });
+
+  doc.y = y + colH + 14;
+}
+
+/* =========================================================
+   PAGES
+========================================================= */
+
+function drawCoverCard(doc) {
+  const x = doc.page.margins.left - 2;
+  const y = doc.y + 8;
+  const w = getContentWidth(doc) + 4;
+  const h = getBottomLimit(doc) - y - 6;
+
+  roundedRect(doc, x, y, w, h, 22, C.white, C.line);
+  doc.y = y + 24;
 }
 
 function startSectionPage(doc, title, subtitle = '') {
@@ -465,16 +638,18 @@ function startSectionPage(doc, title, subtitle = '') {
 
   const cardX = doc.page.margins.left - 4;
   const cardY = doc.y + 4;
-  const cardW = doc.page.width - doc.page.margins.left - doc.page.margins.right + 8;
-  const cardH = doc.page.height - cardY - doc.page.margins.bottom - 24;
+  const cardW = getContentWidth(doc) + 8;
+  const cardH = getBottomLimit(doc) - cardY - 6;
 
-  drawRoundedCard(doc, cardX, cardY, cardW, cardH, C.white, C.line, 20);
+  roundedRect(doc, cardX, cardY, cardW, cardH, 20, C.white, C.line);
   doc.y = cardY + 18;
 
   drawSectionBanner(doc, title, subtitle);
 }
 
-/* ------------------------ HANDLER ------------------------ */
+/* =========================================================
+   HANDLER
+========================================================= */
 
 export async function handler(event) {
   if (event.httpMethod !== 'GET') {
@@ -497,14 +672,14 @@ export async function handler(event) {
 
   const doc = new PDFDocument({
     size: 'LETTER',
-    margin: 54,
+    margin: PAGE.margin,
+    bufferPages: true,
     info: {
       Title: 'Family Values Group — Commission Manual',
       Author: 'Family Values Group',
     }
   });
 
-  let currentPageNumber = 1;
   const chunks = [];
   doc.on('data', c => chunks.push(c));
 
@@ -515,56 +690,48 @@ export async function handler(event) {
   drawHeader(doc, logo, meRow, { cover: true });
 
   doc.on('pageAdded', () => {
-    currentPageNumber += 1;
     drawFullPageBackground(doc, bg);
     drawHeader(doc, logo, meRow, { cover: false });
   });
 
-  /* ------------------------ COVER PAGE ------------------------ */
+  /* ---------------- COVER ---------------- */
 
-  {
-    const x = doc.page.margins.left - 2;
-    const y = doc.y + 8;
-    const w = doc.page.width - doc.page.margins.left - doc.page.margins.right + 4;
-    const h = 610;
-    drawRoundedCard(doc, x, y, w, h, 'rgba(255,255,255,0.95)', C.line, 22);
-    doc.y = y + 24;
+  drawCoverCard(doc);
 
-    addTitle(doc, 'Commission Manual');
-    addSubTitle(
-      doc,
-      'A clearer guide to how Family Values Group handles commissions, advances, pay-thru, overrides, promotions, and payment-related compliance.'
-    );
+  addTitle(doc, 'Commission Manual');
+  addSubTitle(
+    doc,
+    'A clearer guide to how Family Values Group handles commissions, advances, pay-thru, overrides, promotions, and payment-related compliance.'
+  );
 
-    addWarningBox(
-      doc,
-      'Family Values Group does not accept debit cards, credit cards, cash, or direct money payments collected by an agent. If a client tries to pay using one of those methods, the agent will not be paid commission on that sale. The correct process is to tell the client that Family Values Group does not accept those payment methods and then provide the insurance carrier’s official payment phone number so the client can pay the carrier directly.'
-    );
+  addWarningBox(
+    doc,
+    'Family Values Group does not accept debit cards, credit cards, cash, or direct money payments collected by an agent. If a client tries to pay using one of those methods, the agent will not be paid commission on that sale. The correct process is to tell the client that Family Values Group does not accept those payment methods and then provide the insurance carrier’s official payment phone number so the client can pay the carrier directly.'
+  );
 
-    addDivider(doc);
+  addDivider(doc);
 
-    addInfoBox(doc, 'Inside this manual', [
-      '1. How commissions are calculated',
-      '2. How to read your commission schedules',
-      '3. When and how you get paid',
-      '4. Override examples',
-      '5. Level promotions',
-      '6. SSN, W-9, 1099, and security guidance'
-    ], {
-      fill: C.lavender2,
-      stroke: C.line
-    });
+  addInfoBox(doc, 'Inside this manual', [
+    '1. How commissions are calculated',
+    '2. How to read your commission schedules',
+    '3. When and how you get paid',
+    '4. Override examples',
+    '5. Level promotions',
+    '6. SSN, W-9, 1099, and security guidance'
+  ], {
+    fill: C.lavender2,
+    stroke: C.line
+  });
 
-    addInfoBox(doc, 'Who this is for', [
-      'This guide is meant for Family Values Group agents and leaders who need a practical, easy-to-read explanation of how the commission system works.'
-    ], {
-      fill: C.pinkSoft,
-      stroke: C.pinkBorder,
-      titleColor: C.brandDark
-    });
-  }
+  addInfoBox(doc, 'Who this is for', [
+    'This guide is meant for Family Values Group agents and leaders who need a practical, easy-to-read explanation of how the commission system works.'
+  ], {
+    fill: C.pinkSoft,
+    stroke: C.pinkBorder,
+    titleColor: C.brandDark
+  });
 
-  /* ------------------------ SECTION 1 ------------------------ */
+  /* ---------------- SECTION 1 ---------------- */
 
   startSectionPage(
     doc,
@@ -595,7 +762,7 @@ export async function handler(event) {
     'Total commission: $864\nAdvance at 75%: $648\nRemaining pay-thru: $216'
   );
 
-  /* ------------------------ SECTION 2 ------------------------ */
+  /* ---------------- SECTION 2 ---------------- */
 
   startSectionPage(
     doc,
@@ -623,7 +790,7 @@ export async function handler(event) {
     'Two products under the same carrier can still pay differently. The product line and policy type matter, so always match the exact schedule to the business written.'
   );
 
-  /* ------------------------ SECTION 3 ------------------------ */
+  /* ---------------- SECTION 3 ---------------- */
 
   startSectionPage(
     doc,
@@ -658,7 +825,7 @@ export async function handler(event) {
     stroke: C.pinkBorder
   });
 
-  /* ------------------------ SECTION 4 ------------------------ */
+  /* ---------------- SECTION 4 ---------------- */
 
   startSectionPage(
     doc,
@@ -684,7 +851,7 @@ export async function handler(event) {
     'Actual override behavior may vary depending on product, carrier, and schedule design, but the platform applies your stored hierarchy and the matching schedule consistently.'
   );
 
-  /* ------------------------ SECTION 5 ------------------------ */
+  /* ---------------- SECTION 5 ---------------- */
 
   startSectionPage(
     doc,
@@ -711,12 +878,12 @@ export async function handler(event) {
   addInfoBox(doc, 'Reminder', [
     'Promotions are based on sustained performance, not one strong week. Consistency and team development both matter.'
   ], {
-    fill: '#fffaf0',
-    stroke: '#eedfb5',
-    titleColor: '#8a6a1f'
+    fill: C.cream,
+    stroke: C.creamBorder,
+    titleColor: C.creamText
   });
 
-  /* ------------------------ SECTION 6 ------------------------ */
+  /* ---------------- SECTION 6 ---------------- */
 
   startSectionPage(
     doc,
@@ -755,7 +922,14 @@ export async function handler(event) {
     titleColor: C.danger
   });
 
-  drawFooter(doc, currentPageNumber);
+  /* ---------------- FOOTERS ON ALL PAGES ---------------- */
+
+  const range = doc.bufferedPageRange();
+  for (let i = 0; i < range.count; i++) {
+    doc.switchToPage(i);
+    drawFooter(doc, i + 1);
+  }
+
   doc.end();
 
   const pdfBuffer = await new Promise((resolve) => {
