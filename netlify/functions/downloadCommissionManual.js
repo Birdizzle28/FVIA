@@ -21,15 +21,12 @@ function getBearerToken(event) {
 
 async function requireAuthedUser(event) {
   const token = getBearerToken(event);
-  if (!token) {
-    return { ok: false, statusCode: 401, body: 'Missing Authorization Bearer token' };
-  }
+  if (!token) return { ok: false, statusCode: 401, body: 'Missing Authorization Bearer token' };
 
   const { data, error } = await supabase.auth.getUser(token);
   if (error || !data?.user) {
     return { ok: false, statusCode: 401, body: 'Invalid/expired session token' };
   }
-
   return { ok: true, user: data.user };
 }
 
@@ -72,7 +69,7 @@ function tryLoadBackgroundBuffer() {
 }
 
 /* =========================================================
-   TEXT CLEANUP
+   TEXT SANITIZER
 ========================================================= */
 
 function cleanText(input) {
@@ -121,30 +118,129 @@ const C = {
   footer: '#7b7694',
 };
 
-const PAGE = {
-  size: 'LETTER',
-  margin: 46,
-  topBar: 22,
-  bottomBar: 16,
+const L = {
+  pageW: 612,
+  pageH: 792,
+  margin: 42,
+
+  topBarH: 22,
+  bottomBarH: 16,
+
   headerTop: 34,
-  footerY: 760,
-  cardX: 42,
-  cardY: 118,
-  cardW: 528,
-  cardH: 610,
-  contentX: 62,
-  contentY: 142,
-  contentW: 488,
+  headerLogo: 62,
+
+  cardX: 36,
+  cardY: 116,
+  cardW: 540,
+  cardH: 620,
+
+  contentX: 58,
+  contentY: 140,
+  contentW: 496,
+
+  footerY: 760
 };
 
 /* =========================================================
-   PDF DRAW HELPERS
+   BASE DRAW HELPERS
 ========================================================= */
 
-function textHeight(doc, text, {
+function drawBackground(doc, bgBuffer) {
+  if (bgBuffer) {
+    try {
+      doc.save();
+      doc.image(bgBuffer, 0, 0, { width: L.pageW, height: L.pageH });
+      doc.fillOpacity(0.84).rect(0, 0, L.pageW, L.pageH).fill('#ffffff');
+      doc.restore();
+    } catch {
+      doc.save();
+      doc.rect(0, 0, L.pageW, L.pageH).fill('#faf8ff');
+      doc.restore();
+    }
+  } else {
+    doc.save();
+    doc.rect(0, 0, L.pageW, L.pageH).fill('#faf8ff');
+    doc.restore();
+  }
+
+  doc.save();
+  doc.rect(0, 0, L.pageW, L.topBarH).fill(C.brand);
+  doc.rect(0, L.pageH - L.bottomBarH, L.pageW, L.bottomBarH).fill(C.brandDark);
+  doc.restore();
+}
+
+function drawRoundedCard(doc, x, y, w, h, fill = C.white, stroke = C.line, radius = 18) {
+  doc.save();
+  doc.roundedRect(x, y, w, h, radius).fillAndStroke(fill, stroke);
+  doc.restore();
+}
+
+function drawHeader(doc, logo, meRow, pageNumber, { cover = false } = {}) {
+  const left = L.margin;
+  const titleX = left + (logo ? 80 : 0);
+  const topY = cover ? 40 : 32;
+
+  if (logo) {
+    try {
+      doc.image(logo, left, topY, { fit: [L.headerLogo, L.headerLogo], align: 'left', valign: 'top' });
+    } catch {}
+  }
+
+  doc
+    .font('Helvetica-Bold')
+    .fontSize(cover ? 23 : 16.5)
+    .fillColor(C.brandDark)
+    .text('Family Values Group', titleX, topY + 2, { width: 420 });
+
+  doc
+    .font('Helvetica')
+    .fontSize(cover ? 12.5 : 10.5)
+    .fillColor(C.muted)
+    .text('Commission Manual', titleX, topY + (cover ? 30 : 22), { width: 420 });
+
+  doc
+    .font('Helvetica')
+    .fontSize(9.2)
+    .fillColor(C.footer)
+    .text(
+      cleanText(`Generated for: ${meRow?.full_name || 'Agent'}  •  ${new Date().toLocaleDateString()}`),
+      titleX,
+      topY + (cover ? 50 : 39),
+      { width: 420 }
+    );
+
+  doc
+    .font('Helvetica')
+    .fontSize(8.5)
+    .fillColor(C.footer)
+    .text(`© ${new Date().getFullYear()} Family Values Group — Internal Use`, L.margin, L.footerY, {
+      width: L.pageW - (L.margin * 2),
+      align: 'left'
+    });
+
+  doc
+    .font('Helvetica')
+    .fontSize(8.5)
+    .fillColor(C.footer)
+    .text(`Page ${pageNumber}`, L.margin, L.footerY, {
+      width: L.pageW - (L.margin * 2),
+      align: 'right'
+    });
+}
+
+function startPage(doc, bgBuffer, logo, meRow, pageNumber, opts = {}) {
+  if (pageNumber > 1) doc.addPage();
+  drawBackground(doc, bgBuffer);
+  drawHeader(doc, logo, meRow, pageNumber, opts);
+  drawRoundedCard(doc, L.cardX, L.cardY, L.cardW, L.cardH, C.white, C.line, 22);
+  doc.x = L.contentX;
+  doc.y = L.contentY;
+}
+
+function hText(doc, text, {
   font = 'Helvetica',
   size = 10.5,
-  width = PAGE.contentW,
+  width = L.contentW,
   lineGap = 3
 } = {}) {
   doc.save();
@@ -154,217 +250,147 @@ function textHeight(doc, text, {
   return h;
 }
 
-function drawRoundedCard(doc, x, y, w, h, fill = C.white, stroke = C.line, radius = 18) {
-  doc.save();
-  doc.roundedRect(x, y, w, h, radius).fillAndStroke(fill, stroke);
-  doc.restore();
-}
-
-function drawBackground(doc, bgBuffer) {
-  if (bgBuffer) {
-    try {
-      doc.save();
-      doc.image(bgBuffer, 0, 0, { width: doc.page.width, height: doc.page.height });
-      doc.fillOpacity(0.84).rect(0, 0, doc.page.width, doc.page.height).fill('#ffffff');
-      doc.restore();
-    } catch {
-      doc.save();
-      doc.rect(0, 0, doc.page.width, doc.page.height).fill('#faf8ff');
-      doc.restore();
-    }
-  } else {
-    doc.save();
-    doc.rect(0, 0, doc.page.width, doc.page.height).fill('#faf8ff');
-    doc.restore();
-  }
-
-  doc.save();
-  doc.rect(0, 0, doc.page.width, PAGE.topBar).fill(C.brand);
-  doc.rect(0, doc.page.height - PAGE.bottomBar, doc.page.width, PAGE.bottomBar).fill(C.brandDark);
-  doc.restore();
-}
-
-function drawHeader(doc, logo, meRow, pageNumber, cover = false) {
-  const left = PAGE.margin;
-  const titleX = left + (logo ? 80 : 0);
-  const topY = cover ? 40 : 32;
-
-  if (logo) {
-    try {
-      doc.image(logo, left, topY, { fit: [62, 62], align: 'left', valign: 'top' });
-    } catch {}
-  }
-
-  doc.font('Helvetica-Bold')
-    .fontSize(cover ? 23 : 16.5)
-    .fillColor(C.brandDark)
-    .text('Family Values Group', titleX, topY + 1, { width: 430 });
-
-  doc.font('Helvetica')
-    .fontSize(cover ? 12.5 : 10.5)
-    .fillColor(C.muted)
-    .text('Commission Manual', titleX, topY + (cover ? 30 : 22), { width: 430 });
-
-  doc.font('Helvetica')
-    .fontSize(9.2)
-    .fillColor(C.footer)
-    .text(
-      cleanText(`Generated for: ${meRow?.full_name || 'Agent'}  •  ${new Date().toLocaleDateString()}`),
-      titleX,
-      topY + (cover ? 50 : 39),
-      { width: 430 }
-    );
-
-  doc.font('Helvetica')
-    .fontSize(8.5)
-    .fillColor(C.footer)
-    .text(`Page ${pageNumber}`, PAGE.margin, PAGE.footerY, {
-      width: doc.page.width - PAGE.margin * 2,
-      align: 'right'
-    });
-
-  doc.font('Helvetica')
-    .fontSize(8.5)
-    .fillColor(C.footer)
-    .text(`© ${new Date().getFullYear()} Family Values Group — Internal Use`, PAGE.margin, PAGE.footerY, {
-      width: doc.page.width - PAGE.margin * 2,
-      align: 'left'
-    });
-}
-
-function startPage(doc, bgBuffer, logo, meRow, pageNumber, { cover = false } = {}) {
-  if (pageNumber > 1) doc.addPage();
-  drawBackground(doc, bgBuffer);
-  drawHeader(doc, logo, meRow, pageNumber, cover);
-  drawRoundedCard(doc, PAGE.cardX, PAGE.cardY, PAGE.cardW, PAGE.cardH, C.white, C.line, 22);
-  doc.x = PAGE.contentX;
-  doc.y = PAGE.contentY;
-}
+/* =========================================================
+   STYLED CONTENT HELPERS
+========================================================= */
 
 function addPageTitle(doc, title, subtitle = null) {
-  doc.font('Helvetica-Bold')
+  doc
+    .font('Helvetica-Bold')
     .fontSize(27)
     .fillColor(C.brandDark)
-    .text(cleanText(title), PAGE.contentX, doc.y, {
-      width: PAGE.contentW,
+    .text(cleanText(title), L.contentX, doc.y, {
+      width: L.contentW,
       lineGap: 2
     });
 
-  doc.y += textHeight(doc, title, {
+  doc.y += hText(doc, title, {
     font: 'Helvetica-Bold',
     size: 27,
-    width: PAGE.contentW,
+    width: L.contentW,
     lineGap: 2
   }) + 6;
 
   if (subtitle) {
-    doc.font('Helvetica')
+    doc
+      .font('Helvetica')
       .fontSize(11.3)
       .fillColor(C.muted)
-      .text(cleanText(subtitle), PAGE.contentX, doc.y, {
-        width: PAGE.contentW,
+      .text(cleanText(subtitle), L.contentX, doc.y, {
+        width: L.contentW,
         lineGap: 4
       });
 
-    doc.y += textHeight(doc, subtitle, {
+    doc.y += hText(doc, subtitle, {
       font: 'Helvetica',
       size: 11.3,
-      width: PAGE.contentW,
+      width: L.contentW,
       lineGap: 4
     }) + 10;
   }
 }
 
 function addSectionBanner(doc, title, subtitle = '') {
-  const x = PAGE.contentX;
-  const w = PAGE.contentW;
+  const x = L.contentX;
+  const y = doc.y;
+  const w = L.contentW;
 
-  const titleH = textHeight(doc, title, {
+  const titleH = hText(doc, title, {
     font: 'Helvetica-Bold',
     size: 18,
-    width: w - 46,
+    width: w - 44,
     lineGap: 2
   });
 
-  const subH = subtitle
-    ? textHeight(doc, subtitle, {
+  const subtitleH = subtitle
+    ? hText(doc, subtitle, {
         font: 'Helvetica',
         size: 9.4,
-        width: w - 46,
+        width: w - 44,
         lineGap: 2
       })
     : 0;
 
-  const h = 12 + titleH + (subtitle ? 4 + subH : 0) + 10;
+  const h = 12 + titleH + (subtitle ? 4 + subtitleH : 0) + 10;
 
   doc.save();
-  doc.roundedRect(x, doc.y, w, h, 16).fill(C.brand);
-  doc.roundedRect(x + 12, doc.y + 10, 10, h - 20, 5).fill(C.gold);
+  doc.roundedRect(x, y, w, h, 16).fill(C.brand);
+  doc.roundedRect(x + 12, y + 10, 10, h - 20, 5).fill(C.gold);
   doc.restore();
 
-  doc.font('Helvetica-Bold')
+  doc
+    .font('Helvetica-Bold')
     .fontSize(18)
     .fillColor(C.white)
-    .text(cleanText(title), x + 30, doc.y + 10, {
+    .text(cleanText(title), x + 30, y + 10, {
       width: w - 42,
       lineGap: 2
     });
 
   if (subtitle) {
-    doc.font('Helvetica')
+    doc
+      .font('Helvetica')
       .fontSize(9.4)
       .fillColor('#e7e4ff')
-      .text(cleanText(subtitle), x + 30, doc.y + 10 + titleH + 4, {
+      .text(cleanText(subtitle), x + 30, y + 10 + titleH + 4, {
         width: w - 42,
         lineGap: 2
       });
   }
 
-  doc.y += h + 14;
+  doc.y = y + h + 14;
 }
 
 function addMiniHeader(doc, text) {
-  const x = PAGE.contentX;
+  const x = L.contentX;
+  const y = doc.y;
   const w = 270;
   const padX = 12;
   const padY = 6;
 
-  const h = textHeight(doc, text, {
+  const textH = hText(doc, text, {
     font: 'Helvetica-Bold',
     size: 12,
-    width: w - padX * 2,
+    width: w - (padX * 2),
     lineGap: 2
-  }) + padY * 2;
+  });
+
+  const h = textH + (padY * 2);
 
   doc.save();
-  doc.roundedRect(x, doc.y, w, h, 11).fill(C.lavender);
+  doc.roundedRect(x, y, w, h, 11).fill(C.lavender);
   doc.restore();
 
-  doc.font('Helvetica-Bold')
+  doc
+    .font('Helvetica-Bold')
     .fontSize(12)
     .fillColor(C.brandDark)
-    .text(cleanText(text), x + padX, doc.y + padY, {
-      width: w - padX * 2,
+    .text(cleanText(text), x + padX, y + padY, {
+      width: w - (padX * 2),
       lineGap: 2
     });
 
-  doc.y += h + 10;
+  doc.y = y + h + 10;
 }
 
 function addBody(doc, text, opts = {}) {
-  const width = opts.width || PAGE.contentW;
+  const width = opts.width || L.contentW;
   const size = opts.size || 10.7;
   const lineGap = opts.lineGap ?? 4;
 
-  doc.font(opts.bold ? 'Helvetica-Bold' : 'Helvetica')
+  const x = opts.x || L.contentX;
+  const y = doc.y;
+
+  doc
+    .font(opts.bold ? 'Helvetica-Bold' : 'Helvetica')
     .fontSize(size)
     .fillColor(opts.color || C.ink)
-    .text(cleanText(text), PAGE.contentX, doc.y, {
+    .text(cleanText(text), x, y, {
       width,
       lineGap
     });
 
-  doc.y += textHeight(doc, text, {
+  doc.y = y + hText(doc, text, {
     font: opts.bold ? 'Helvetica-Bold' : 'Helvetica',
     size,
     width,
@@ -374,8 +400,8 @@ function addBody(doc, text, opts = {}) {
 
 function addDivider(doc) {
   doc.save();
-  doc.moveTo(PAGE.contentX, doc.y)
-    .lineTo(PAGE.contentX + PAGE.contentW, doc.y)
+  doc.moveTo(L.contentX, doc.y)
+    .lineTo(L.contentX + L.contentW, doc.y)
     .strokeColor(C.line)
     .lineWidth(1)
     .stroke();
@@ -384,113 +410,119 @@ function addDivider(doc) {
 }
 
 function addWarningBox(doc, text) {
-  const x = PAGE.contentX;
-  const w = PAGE.contentW;
+  const x = L.contentX;
+  const y = doc.y;
+  const w = L.contentW;
   const pad = 16;
-  const title = 'Important Payment Disclosure';
 
-  const titleH = textHeight(doc, title, {
+  const title = 'Important Payment Disclosure';
+  const titleH = hText(doc, title, {
     font: 'Helvetica-Bold',
     size: 12,
-    width: w - 70,
+    width: w - 66,
     lineGap: 2
   });
 
-  const bodyH = textHeight(doc, text, {
+  const bodyH = hText(doc, text, {
     font: 'Helvetica',
     size: 10.3,
-    width: w - 42,
+    width: w - 36,
     lineGap: 3
   });
 
   const h = pad + titleH + 10 + bodyH + pad;
 
   doc.save();
-  doc.roundedRect(x, doc.y, w, h, 16).fillAndStroke(C.dangerSoft, C.pinkBorder);
-  doc.roundedRect(x, doc.y, 12, h, 16).fill(C.danger);
+  doc.roundedRect(x, y, w, h, 16).fillAndStroke(C.dangerSoft, C.pinkBorder);
+  doc.roundedRect(x, y, 12, h, 16).fill(C.danger);
   doc.restore();
 
   doc.save();
-  doc.circle(x + 31, doc.y + 28, 12).fill(C.danger);
-  doc.font('Helvetica-Bold').fontSize(13).fillColor(C.white).text('!', x + 27.8, doc.y + 18.2);
+  doc.circle(x + 31, y + 28, 12).fill(C.danger);
+  doc.font('Helvetica-Bold').fontSize(13).fillColor(C.white).text('!', x + 27.8, y + 18.2);
   doc.restore();
 
-  doc.font('Helvetica-Bold')
+  doc
+    .font('Helvetica-Bold')
     .fontSize(12)
     .fillColor(C.danger)
-    .text(title, x + 54, doc.y + pad, {
+    .text(title, x + 54, y + pad, {
       width: w - 66
     });
 
-  doc.font('Helvetica')
+  doc
+    .font('Helvetica')
     .fontSize(10.3)
     .fillColor(C.ink)
-    .text(cleanText(text), x + 18, doc.y + pad + titleH + 10, {
-      width: w - 36,
+    .text(cleanText(text), x + 18, y + pad + titleH + 10, {
+      width: w - 30,
       lineGap: 3
     });
 
-  doc.y += h + 14;
+  doc.y = y + h + 14;
 }
 
 function addInfoBox(doc, title, lines = [], opts = {}) {
-  const x = PAGE.contentX;
-  const w = PAGE.contentW;
+  const x = L.contentX;
+  const y = doc.y;
+  const w = L.contentW;
   const pad = 14;
   const fill = opts.fill || C.lavender2;
   const stroke = opts.stroke || C.line;
   const titleColor = opts.titleColor || C.brandDark;
 
-  const titleH = textHeight(doc, title, {
+  const titleH = hText(doc, title, {
     font: 'Helvetica-Bold',
     size: 11.3,
-    width: w - pad * 2,
+    width: w - (pad * 2),
     lineGap: 2
   });
 
   let bodyH = 0;
   for (const line of lines) {
-    bodyH += textHeight(doc, line, {
+    bodyH += hText(doc, line, {
       font: 'Helvetica',
       size: 10.3,
-      width: w - pad * 2,
+      width: w - (pad * 2),
       lineGap: 3
     }) + 5;
   }
 
   const h = pad + titleH + 10 + bodyH + pad;
 
-  drawRoundedCard(doc, x, doc.y, w, h, fill, stroke, 16);
+  drawRoundedCard(doc, x, y, w, h, fill, stroke, 16);
 
-  let yy = doc.y + pad;
+  let yy = y + pad;
 
-  doc.font('Helvetica-Bold')
+  doc
+    .font('Helvetica-Bold')
     .fontSize(11.3)
     .fillColor(titleColor)
     .text(cleanText(title), x + pad, yy, {
-      width: w - pad * 2
+      width: w - (pad * 2)
     });
 
   yy += titleH + 10;
 
   for (const line of lines) {
-    doc.font('Helvetica')
+    doc
+      .font('Helvetica')
       .fontSize(10.3)
       .fillColor(C.ink)
       .text(cleanText(line), x + pad, yy, {
-        width: w - pad * 2,
+        width: w - (pad * 2),
         lineGap: 3
       });
 
-    yy += textHeight(doc, line, {
+    yy += hText(doc, line, {
       font: 'Helvetica',
       size: 10.3,
-      width: w - pad * 2,
+      width: w - (pad * 2),
       lineGap: 3
     }) + 5;
   }
 
-  doc.y += h + 12;
+  doc.y = y + h + 12;
 }
 
 function addBullets(doc, items, opts = {}) {
@@ -498,16 +530,17 @@ function addBullets(doc, items, opts = {}) {
   const fill = opts.fill || C.lavender2;
   const stroke = opts.stroke || C.line;
 
-  const x = PAGE.contentX;
-  const w = PAGE.contentW;
-  const padX = box ? 14 : 0;
-  const bulletX = x + (box ? 16 : 6);
+  const x = L.contentX;
+  const y = doc.y;
+  const w = L.contentW;
+
+  const bulletX = x + (box ? 18 : 8);
   const textX = bulletX + 16;
   const textW = w - (textX - x) - (box ? 14 : 0);
 
   let totalH = 0;
   for (const item of items) {
-    totalH += textHeight(doc, item, {
+    totalH += hText(doc, item, {
       font: 'Helvetica',
       size: 10.4,
       width: textW,
@@ -515,15 +548,14 @@ function addBullets(doc, items, opts = {}) {
     }) + 7;
   }
 
-  const boxH = box ? totalH + 18 : totalH;
-
   if (box) {
-    drawRoundedCard(doc, x, doc.y, w, boxH, fill, stroke, 14);
-    doc.y += 12;
+    drawRoundedCard(doc, x, y, w, totalH + 18, fill, stroke, 14);
+    doc.y = y + 12;
   }
 
   for (const item of items) {
-    const itemH = textHeight(doc, item, {
+    const itemY = doc.y;
+    const itemH = hText(doc, item, {
       font: 'Helvetica',
       size: 10.4,
       width: textW,
@@ -531,99 +563,104 @@ function addBullets(doc, items, opts = {}) {
     });
 
     doc.save();
-    doc.circle(bulletX + 4, doc.y + 8, 4).fill(C.brand);
+    doc.circle(bulletX + 4, itemY + 8, 4).fill(C.brand);
     doc.restore();
 
-    doc.font('Helvetica')
+    doc
+      .font('Helvetica')
       .fontSize(10.4)
       .fillColor(C.ink)
-      .text(cleanText(item), textX, doc.y, {
+      .text(cleanText(item), textX, itemY, {
         width: textW,
         lineGap: 3
       });
 
-    doc.y += itemH + 7;
+    doc.y = itemY + itemH + 7;
   }
 
   if (!box) doc.y += 4;
 }
 
 function addTwoColExampleBox(doc, leftTitle, leftText, rightTitle, rightText) {
-  const x = PAGE.contentX;
-  const fullW = PAGE.contentW;
+  const x = L.contentX;
+  const y = doc.y;
+  const fullW = L.contentW;
   const gap = 12;
   const colW = (fullW - gap) / 2;
   const pad = 12;
-  const bodyW = colW - pad * 2;
+  const bodyW = colW - (pad * 2);
 
-  const lTitleH = textHeight(doc, leftTitle, {
+  const lTitleH = hText(doc, leftTitle, {
     font: 'Helvetica-Bold',
     size: 11,
     width: bodyW,
     lineGap: 2
   });
-  const rTitleH = textHeight(doc, rightTitle, {
+  const rTitleH = hText(doc, rightTitle, {
     font: 'Helvetica-Bold',
     size: 11,
     width: bodyW,
     lineGap: 2
   });
-
-  const lBodyH = textHeight(doc, leftText, {
+  const lBodyH = hText(doc, leftText, {
     font: 'Helvetica',
     size: 10.2,
     width: bodyW,
     lineGap: 3
   });
-  const rBodyH = textHeight(doc, rightText, {
+  const rBodyH = hText(doc, rightText, {
     font: 'Helvetica',
     size: 10.2,
     width: bodyW,
     lineGap: 3
   });
 
-  const h = Math.max(lTitleH + 8 + lBodyH, rTitleH + 8 + rBodyH) + pad * 2;
+  const h = Math.max(lTitleH + 8 + lBodyH, rTitleH + 8 + rBodyH) + (pad * 2);
 
-  drawRoundedCard(doc, x, doc.y, colW, h, C.white, C.line, 14);
-  drawRoundedCard(doc, x + colW + gap, doc.y, colW, h, C.white, C.line, 14);
+  drawRoundedCard(doc, x, y, colW, h, C.white, C.line, 14);
+  drawRoundedCard(doc, x + colW + gap, y, colW, h, C.white, C.line, 14);
 
-  doc.font('Helvetica-Bold')
+  doc
+    .font('Helvetica-Bold')
     .fontSize(11)
     .fillColor(C.brandDark)
-    .text(cleanText(leftTitle), x + pad, doc.y + pad, {
+    .text(cleanText(leftTitle), x + pad, y + pad, {
       width: bodyW
     });
 
-  doc.font('Helvetica')
+  doc
+    .font('Helvetica')
     .fontSize(10.2)
     .fillColor(C.ink)
-    .text(cleanText(leftText), x + pad, doc.y + pad + lTitleH + 8, {
+    .text(cleanText(leftText), x + pad, y + pad + lTitleH + 8, {
       width: bodyW,
       lineGap: 3
     });
 
   const rx = x + colW + gap;
 
-  doc.font('Helvetica-Bold')
+  doc
+    .font('Helvetica-Bold')
     .fontSize(11)
     .fillColor(C.brandDark)
-    .text(cleanText(rightTitle), rx + pad, doc.y + pad, {
+    .text(cleanText(rightTitle), rx + pad, y + pad, {
       width: bodyW
     });
 
-  doc.font('Helvetica')
+  doc
+    .font('Helvetica')
     .fontSize(10.2)
     .fillColor(C.ink)
-    .text(cleanText(rightText), rx + pad, doc.y + pad + rTitleH + 8, {
+    .text(cleanText(rightText), rx + pad, y + pad + rTitleH + 8, {
       width: bodyW,
       lineGap: 3
     });
 
-  doc.y += h + 14;
+  doc.y = y + h + 14;
 }
 
 /* =========================================================
-   MAIN HANDLER
+   HANDLER
 ========================================================= */
 
 export async function handler(event) {
@@ -646,8 +683,9 @@ export async function handler(event) {
   }
 
   const doc = new PDFDocument({
-    size: PAGE.size,
-    margin: PAGE.margin,
+    size: 'LETTER',
+    margin: L.margin,
+    autoFirstPage: true,
     info: {
       Title: 'Family Values Group — Commission Manual',
       Author: 'Family Values Group',
@@ -660,7 +698,7 @@ export async function handler(event) {
   const logo = tryLoadLogoBuffer();
   const bg = tryLoadBackgroundBuffer();
 
-  /* ---------------- PAGE 1: COVER ---------------- */
+  /* ---------------- PAGE 1 ---------------- */
 
   startPage(doc, bg, logo, meRow, 1, { cover: true });
 
@@ -700,6 +738,7 @@ export async function handler(event) {
   /* ---------------- PAGE 2 ---------------- */
 
   startPage(doc, bg, logo, meRow, 2);
+
   addSectionBanner(
     doc,
     '1) How commissions are calculated',
@@ -712,6 +751,7 @@ export async function handler(event) {
   );
 
   addMiniHeader(doc, 'Key definitions');
+
   addBullets(doc, [
     'Annual Premium (AP): the annualized premium used for commission calculations.',
     'Commission Rate: the percentage assigned to the matching carrier schedule.',
@@ -721,6 +761,7 @@ export async function handler(event) {
   ], { box: true });
 
   addMiniHeader(doc, 'Commission example');
+
   addTwoColExampleBox(
     doc,
     'Policy details',
@@ -732,6 +773,7 @@ export async function handler(event) {
   /* ---------------- PAGE 3 ---------------- */
 
   startPage(doc, bg, logo, meRow, 3);
+
   addSectionBanner(
     doc,
     '2) How to read your commission schedules',
@@ -761,6 +803,7 @@ export async function handler(event) {
   /* ---------------- PAGE 4 ---------------- */
 
   startPage(doc, bg, logo, meRow, 4);
+
   addSectionBanner(
     doc,
     '3) When and how you get paid',
@@ -797,6 +840,7 @@ export async function handler(event) {
   /* ---------------- PAGE 5 ---------------- */
 
   startPage(doc, bg, logo, meRow, 5);
+
   addSectionBanner(
     doc,
     '4) Override example',
@@ -824,6 +868,7 @@ export async function handler(event) {
   /* ---------------- PAGE 6 ---------------- */
 
   startPage(doc, bg, logo, meRow, 6);
+
   addSectionBanner(
     doc,
     '5) Level promotions',
@@ -857,6 +902,7 @@ export async function handler(event) {
   /* ---------------- PAGE 7 ---------------- */
 
   startPage(doc, bg, logo, meRow, 7);
+
   addSectionBanner(
     doc,
     '6) SSN, W-9, 1099, and security',
@@ -869,6 +915,7 @@ export async function handler(event) {
   );
 
   addMiniHeader(doc, 'Why it may be required');
+
   addBullets(doc, [
     'Tax reporting: commissions are commonly reported on a 1099-NEC for independent agents.',
     'Identity verification: processors may require SSN or TIN to verify the payment recipient.',
@@ -876,6 +923,7 @@ export async function handler(event) {
   ], { box: true });
 
   addMiniHeader(doc, 'Security reminders');
+
   addBullets(doc, [
     'Do not text or email SSNs in plain text.',
     'Only submit SSN or TIN information through secure official portals or verified encrypted channels.',
