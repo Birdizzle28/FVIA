@@ -192,6 +192,8 @@ main.auth-container{
 
 .primary-btn,
 .secondary-btn,
+.cancel-edit-btn,
+.edit-btn,
 .delete-btn{
   border: 0;
   cursor: pointer;
@@ -213,8 +215,16 @@ main.auth-container{
   border: 1px solid var(--ac-border);
 }
 
+.cancel-edit-btn{
+  background: #fff7e6;
+  color: #9a6400;
+  border: 1px solid #f2d18b;
+}
+
 .primary-btn:hover,
 .secondary-btn:hover,
+.cancel-edit-btn:hover,
+.edit-btn:hover,
 .delete-btn:hover,
 .back-btn:hover{
   filter: brightness(1.03);
@@ -232,6 +242,10 @@ main.auth-container{
 
 .form-message.error{
   color: #b42318;
+}
+
+.hidden{
+  display: none !important;
 }
 
 .table-toolbar{
@@ -285,6 +299,11 @@ main.auth-container{
 
 #agent-carriers-table tbody tr:nth-child(even){
   background: #fafbff;
+}
+
+#agent-carriers-table tbody tr.editing-row{
+  background: #fff5f8 !important;
+  box-shadow: inset 0 0 0 2px rgba(237,158,165,.55);
 }
 
 .empty-row{
@@ -355,6 +374,19 @@ main.auth-container{
   border-radius: 999px;
 }
 
+.row-actions{
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.edit-btn{
+  background: #eef4ff;
+  color: #2546a8;
+  border: 1px solid #bfd1ff;
+  padding: 9px 12px;
+}
+
 .delete-btn{
   background: #fff0f0;
   color: #b42318;
@@ -392,7 +424,8 @@ code{
   }
 
   .primary-btn,
-  .secondary-btn{
+  .secondary-btn,
+  .cancel-edit-btn{
     width: 100%;
   }
 }
