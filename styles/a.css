@@ -881,3 +881,80 @@ body.agent-theme-light #mobile-menu {
   border-color: white !important;
   border-radius: 12px !important;
 }
+
+/* =========================
+   QUOTE SECTION HARD OVERRIDES
+   ========================= */
+
+#agent-quote,
+#quote-container,
+#quote-shell,
+#quote-shell #free-quote-form,
+#quote-shell #life-form {
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+/* Main quote shell fills full area */
+#quote-shell {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* This is likely the "big white box" area */
+#quote-shell #free-quote-form,
+#quote-shell #life-form {
+  width: 100% !important;
+  max-width: none !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+}
+
+/* Make the inner form area inherit the section color */
+#quote-shell #free-quote-form,
+#quote-shell #life-form,
+#quote-shell .step-card,
+#quote-shell .step-card.active,
+#quote-shell #result-screen {
+  background: inherit !important;
+}
+
+/* Keep cards from drawing their own white panel */
+#quote-shell .step-card,
+#quote-shell .step-card.active,
+#quote-shell #result-screen {
+  box-shadow: none !important;
+}
+
+/* Heading area */
+#quote-heading-wrap {
+  width: 100%;
+}
+
+/* =========================
+   QUOTE BUTTON OVERRIDES
+   ========================= */
+
+#quote-shell .cta,
+#quote-shell button.cta,
+#quote-shell #btn-step1,
+#quote-shell #btn-step2,
+#quote-shell #btn-submit {
+  appearance: none !important;
+  -webkit-appearance: none !important;
+  text-decoration: none !important;
+  box-shadow: none !important;
+}
+
+/* Let JS-controlled inline styles show properly */
+#quote-shell .cta.fvg-btn,
+#quote-shell button.cta.fvg-btn,
+#quote-shell #btn-step1.fvg-btn,
+#quote-shell #btn-step2.fvg-btn,
+#quote-shell #btn-submit.fvg-btn {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
