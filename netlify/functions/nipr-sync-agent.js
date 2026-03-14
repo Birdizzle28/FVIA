@@ -19,7 +19,7 @@ const NIPR_PASSWORD = process.env.NIPR_PROD_PASSWORD;
 //
 // Then change the NPN value to NPN_HERE so we can .replace() it.
 const NIPR_URL_TEMPLATE =
-  "https://pdb-xml-reports.api.prod.nipr.com/pdb-xml-reports/entityinfo_xml.cgi?id_entity=NPN_HERE";
+  "https://pdb-xml-reports.api.nipr.com/pdb-xml-reports/entityinfo_xml.cgi?id_entity=NPN_HERE";
 
 export async function handler(event) {
   if (event.httpMethod !== "POST") {
