@@ -8,8 +8,8 @@ const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
 // NIPR beta credentials – move fully to env vars later if you want
-const NIPR_USERNAME = process.env.NIPR_BETA_USERNAME;
-const NIPR_PASSWORD = process.env.NIPR_BETA_PASSWORD;
+const NIPR_USERNAME = process.env.NIPR_PROD_USERNAME;
+const NIPR_PASSWORD = process.env.NIPR_PROD_PASSWORD;
 
 // 🔥 IMPORTANT: replace this with the EXACT URL you see in Postman
 // AFTER you typed an NPN and hit Send, for the request that returned <PDB>...</PDB>.
