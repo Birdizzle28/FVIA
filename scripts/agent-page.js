@@ -838,26 +838,27 @@ document.addEventListener("DOMContentLoaded", async () => {
       const headingEl = document.getElementById("quote-heading");
       const subheadingEl = document.getElementById("quote-subheading");
       const lifeFormEl = document.getElementById("life-form");
-  
+    
       const bgColor =
         style.background_color_mode === "custom"
           ? (style.background_color_custom || "")
           : (style.background_color || "");
-  
+    
       if (shellEl) {
         shellEl.style.width = "100%";
         shellEl.style.height = "100%";
         shellEl.style.textAlign = style.text_align || "";
         shellEl.style.backgroundColor = bgColor || "";
-  
+        shellEl.style.setProperty("--quote-section-bg", bgColor || "transparent");
+    
         if (style.border_width && style.border_style && style.border_color) {
           shellEl.style.border = `${style.border_width} ${style.border_style} ${style.border_color}`;
         } else {
           shellEl.style.border = "";
         }
-  
+    
         shellEl.style.borderRadius = style.border_radius || "";
-  
+    
         if (
           style.shadow_color &&
           (style.shadow_blur || style.shadow_x || style.shadow_y)
@@ -867,49 +868,52 @@ document.addEventListener("DOMContentLoaded", async () => {
           shellEl.style.boxShadow = "";
         }
       }
-  
+    
       if (formEl) {
         formEl.style.width = "100%";
         formEl.style.height = "100%";
         formEl.style.maxWidth = "none";
         formEl.style.margin = "0";
-        formEl.style.background = "transparent";
+        formEl.style.backgroundColor = bgColor || "";
+        formEl.style.backgroundImage = "none";
         formEl.style.border = "0";
         formEl.style.borderRadius = "0";
         formEl.style.boxShadow = "none";
       }
-  
+    
       if (lifeFormEl) {
         lifeFormEl.style.width = "100%";
         lifeFormEl.style.height = "100%";
         lifeFormEl.style.backgroundColor = bgColor || "";
+        lifeFormEl.style.backgroundImage = "none";
         lifeFormEl.style.border = "0";
         lifeFormEl.style.borderRadius = "0";
         lifeFormEl.style.boxShadow = "none";
       }
-  
+    
       if (headingWrapEl) {
+        headingWrapEl.style.backgroundColor = bgColor || "";
+        headingWrapEl.style.backgroundImage = "none";
+        headingWrapEl.style.textAlign = style.text_align || "";
         headingWrapEl.style.border = "";
         headingWrapEl.style.borderRadius = "";
         headingWrapEl.style.boxShadow = "";
-        headingWrapEl.style.backgroundColor = bgColor || "";
-        headingWrapEl.style.textAlign = style.text_align || "";
       }
-  
+    
       if (headingEl) {
+        headingEl.style.textAlign = style.text_align || "";
         headingEl.style.border = "";
         headingEl.style.borderRadius = "";
         headingEl.style.boxShadow = "";
-        headingEl.style.textAlign = style.text_align || "";
       }
-  
+    
       if (subheadingEl) {
+        subheadingEl.style.textAlign = style.text_align || "";
         subheadingEl.style.border = "";
         subheadingEl.style.borderRadius = "";
         subheadingEl.style.boxShadow = "";
-        subheadingEl.style.textAlign = style.text_align || "";
       }
-  
+    
       return;
     }
   
