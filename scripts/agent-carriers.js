@@ -552,7 +552,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   
     contractingRulesTbody.innerHTML = rows.map(row => `
       <tr data-rule-id="${row.id}">
-        <td>${escapeHtml(row.carriers?.carrier_name || '—')}</td>
+        <td>${escapeHtml(row.carriers?.carrier_name || 'FMO Packet')}</td>
         <td>${makeMethodBadge(row.start_method)}</td>
         <td>${escapeHtml(row.destination_group || '—')}</td>
         <td>${escapeHtml((row.email_to || []).join(', ') || '—')}</td>
@@ -648,11 +648,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     e.preventDefault();
     setRulesMessage('');
   
-    const carrier_id = ruleCarrierId.value;
-    if (!carrier_id) {
-      setRulesMessage('Please select a carrier.', 'error');
-      return;
-    }
+    const carrier_id = ruleCarrierId.value || null;
   
     const payload = {
       carrier_id,
@@ -791,7 +787,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         <article class="rule-card">
           <div class="rule-card-top">
             <div>
-              <h3>${escapeHtml(rule.carriers?.carrier_name || 'Unknown Carrier')}</h3>
+              <h3>${escapeHtml(rule.carriers?.carrier_name || 'FMO Packet')}</h3>
               <p class="rule-destination">${escapeHtml(rule.destination_group || 'No group')}</p>
             </div>
             ${makeMethodBadge(rule.start_method)}
@@ -1202,6 +1198,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         created_at,
         agent_id,
         carrier_id,
+        rule_id,
         status,
         start_method_snapshot,
         destination_group_snapshot,
