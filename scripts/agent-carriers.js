@@ -245,25 +245,25 @@ document.addEventListener('DOMContentLoaded', async () => {
   async function loadAgents() {
     const { data, error } = await supabase
       .from('agents')
-      .select('id, full_name, email, phone, agent_id, npn, is_active')
+      .select('id, full_name, email, phone, agent_id, is_active')
       .order('full_name', { ascending: true });
-
+  
     if (error) {
       console.error('Error loading agents:', error);
       return;
     }
-
+  
     allAgents = data || [];
-
+  
     agentSelect.innerHTML = '<option value="">Select agent</option>';
     startAgentSelect.innerHTML = '';
-
+  
     allAgents.forEach(agent => {
       const opt = document.createElement('option');
       opt.value = agent.id;
       opt.textContent = agent.full_name || agent.email || agent.id;
       agentSelect.appendChild(opt);
-
+  
       const opt2 = document.createElement('option');
       opt2.value = agent.id;
       opt2.textContent = `${agent.full_name || agent.email || agent.id}${agent.is_active ? '' : ' (Inactive)'}`;
