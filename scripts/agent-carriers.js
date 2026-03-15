@@ -44,6 +44,31 @@ document.addEventListener('DOMContentLoaded', async () => {
   const selectedAgentReadiness = document.getElementById('selected-agent-readiness');
   const contractingRequestsTbody = document.getElementById('contracting-requests-tbody');
 
+  const rulesForm = document.getElementById('contracting-rules-form');
+  const ruleCarrierId = document.getElementById('rule-carrier-id');
+  const ruleStartMethod = document.getElementById('rule-start-method');
+  const ruleDestinationGroup = document.getElementById('rule-destination-group');
+  const ruleStartUrl = document.getElementById('rule-start-url');
+  const ruleEmailTo = document.getElementById('rule-email-to');
+  const ruleEmailCc = document.getElementById('rule-email-cc');
+  const ruleEmailBcc = document.getElementById('rule-email-bcc');
+  const ruleEmailSubjectTemplate = document.getElementById('rule-email-subject-template');
+  const ruleEmailBodyTemplate = document.getElementById('rule-email-body-template');
+  const ruleInstructions = document.getElementById('rule-instructions');
+  const ruleSortOrder = document.getElementById('rule-sort-order');
+  const ruleIsActive = document.getElementById('rule-is-active');
+  const ruleSupportsMultiAgent = document.getElementById('rule-supports-multi-agent');
+  const ruleSupportsMultiCarrier = document.getElementById('rule-supports-multi-carrier');
+  const rulesFormMessage = document.getElementById('rules-form-message');
+  const rulesResetBtn = document.getElementById('rules-reset-btn');
+  const rulesCancelEditBtn = document.getElementById('rules-cancel-edit-btn');
+  const rulesSaveBtn = document.getElementById('rules-save-btn');
+  const rulesEditingId = document.getElementById('rules-editing-id');
+  const rulesFormTitle = document.getElementById('rules-form-title');
+  const rulesFormSubtitle = document.getElementById('rules-form-subtitle');
+  const rulesSearchInput = document.getElementById('rules-search-input');
+  const contractingRulesTbody = document.getElementById('contracting-rules-tbody');
+
   let allRows = [];
   let currentlyEditingId = null;
 
@@ -52,6 +77,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   let allContractingRules = [];
   let pendingSelections = [];
   let pendingSavedRequests = [];
+
+  let allRulesRows = [];
+  let currentlyEditingRuleId = null;
 
   function getMultiValues(selectEl) {
     return Array.from(selectEl.selectedOptions).map(opt => opt.value);
@@ -114,6 +142,84 @@ document.addEventListener('DOMContentLoaded', async () => {
     resetFormFields();
     enterCreateMode();
     setMessage('');
+  }
+
+  function parseEmailList(value) {
+    return String(value || '')
+      .split(',')
+      .map(v => v.trim())
+      .filter(Boolean);
+  }
+  
+  function setRulesMessage(text, type = '') {
+    rulesFormMessage.textContent = text;
+    rulesFormMessage.className = 'form-message';
+    if (type) rulesFormMessage.classList.add(type);
+  }
+  
+  function resetRulesFormFields() {
+    rulesForm.reset();
+    ruleIsActive.checked = true;
+    ruleSupportsMultiAgent.checked = false;
+    ruleSupportsMultiCarrier.checked = false;
+    ruleSortOrder.value = 0;
+  }
+  
+  function enterRulesCreateMode() {
+    currentlyEditingRuleId = null;
+    rulesEditingId.value = '';
+    rulesFormTitle.textContent = 'Add Contracting Rule';
+    rulesFormSubtitle.textContent = 'Define how a carrier gets started in the Start Contracting tab.';
+    rulesSaveBtn.innerHTML = '<i class="fa-solid fa-floppy-disk"></i> Save Rule';
+    rulesCancelEditBtn.classList.add('hidden');
+  
+    document.querySelectorAll('#contracting-rules-tbody tr').forEach(tr => {
+      tr.classList.remove('editing-row');
+    });
+  }
+  
+  function resetRulesForm() {
+    resetRulesFormFields();
+    enterRulesCreateMode();
+    setRulesMessage('');
+  }
+  
+  function enterRulesEditMode(row) {
+    currentlyEditingRuleId = row.id;
+    rulesEditingId.value = row.id;
+  
+    rulesFormTitle.textContent = 'Edit Contracting Rule';
+    rulesFormSubtitle.textContent = 'Update this carrier contracting rule.';
+    rulesSaveBtn.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Update Rule';
+    rulesCancelEditBtn.classList.remove('hidden');
+  
+    ruleCarrierId.value = row.carrier_id || '';
+    ruleStartMethod.value = row.start_method || 'link';
+    ruleDestinationGroup.value = row.destination_group || '';
+    ruleStartUrl.value = row.start_url || '';
+    ruleEmailTo.value = (row.email_to || []).join(', ');
+    ruleEmailCc.value = (row.email_cc || []).join(', ');
+    ruleEmailBcc.value = (row.email_bcc || []).join(', ');
+    ruleEmailSubjectTemplate.value = row.email_subject_template || '';
+    ruleEmailBodyTemplate.value = row.email_body_template || '';
+    ruleInstructions.value = row.instructions || '';
+    ruleSortOrder.value = row.sort_order ?? 0;
+    ruleIsActive.checked = !!row.is_active;
+    ruleSupportsMultiAgent.checked = !!row.supports_multi_agent_batch;
+    ruleSupportsMultiCarrier.checked = !!row.supports_multi_carrier_batch;
+  
+    document.querySelectorAll('#contracting-rules-tbody tr').forEach(tr => {
+      tr.classList.remove('editing-row');
+    });
+  
+    const targetRow = document.querySelector(`#contracting-rules-tbody tr[data-rule-id="${row.id}"]`);
+    if (targetRow) {
+      targetRow.classList.add('editing-row');
+      targetRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  
+    rulesForm.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    setRulesMessage('Editing rule. Make changes and click Update Rule.', 'success');
   }
 
   function enterEditMode(row) {
@@ -291,8 +397,228 @@ document.addEventListener('DOMContentLoaded', async () => {
       opt.textContent = carrier.carrier_name || carrier.id;
       carrierSelect.appendChild(opt);
     });
+
+    ruleCarrierId.innerHTML = '<option value="">Select carrier</option>';
+
+    allCarriers.forEach(carrier => {
+      const opt = document.createElement('option');
+      opt.value = carrier.id;
+      opt.textContent = carrier.carrier_name || carrier.id;
+      ruleCarrierId.appendChild(opt);
+    });
   }
 
+  async function loadRulesTable() {
+    contractingRulesTbody.innerHTML = '<tr><td colspan="10" class="empty-row">Loading...</td></tr>';
+  
+    const { data, error } = await supabase
+      .from('carrier_contracting_rules')
+      .select(`
+        id,
+        carrier_id,
+        is_active,
+        start_method,
+        destination_group,
+        start_url,
+        email_to,
+        email_cc,
+        email_bcc,
+        email_subject_template,
+        email_body_template,
+        instructions,
+        supports_multi_agent_batch,
+        supports_multi_carrier_batch,
+        sort_order,
+        carriers:carrier_id (
+          carrier_name
+        )
+      `)
+      .order('sort_order', { ascending: true });
+  
+    if (error) {
+      console.error('Error loading rules table:', error);
+      contractingRulesTbody.innerHTML = '<tr><td colspan="10" class="empty-row">Could not load rules.</td></tr>';
+      return;
+    }
+  
+    allRulesRows = data || [];
+    renderRulesTable(allRulesRows);
+  }
+
+  function renderRulesTable(rows) {
+    if (!rows.length) {
+      contractingRulesTbody.innerHTML = '<tr><td colspan="10" class="empty-row">No contracting rules found.</td></tr>';
+      return;
+    }
+  
+    contractingRulesTbody.innerHTML = rows.map(row => `
+      <tr data-rule-id="${row.id}">
+        <td>${escapeHtml(row.carriers?.carrier_name || '—')}</td>
+        <td>${makeMethodBadge(row.start_method)}</td>
+        <td>${escapeHtml(row.destination_group || '—')}</td>
+        <td>${escapeHtml((row.email_to || []).join(', ') || '—')}</td>
+        <td>
+          ${row.start_url ? `<a href="${escapeHtml(row.start_url)}" target="_blank" rel="noopener noreferrer">Open</a>` : '—'}
+        </td>
+        <td>${makeBoolPill(row.is_active)}</td>
+        <td>${makeBoolPill(row.supports_multi_agent_batch)}</td>
+        <td>${makeBoolPill(row.supports_multi_carrier_batch)}</td>
+        <td>${escapeHtml(row.sort_order ?? 0)}</td>
+        <td>
+          <div class="row-actions">
+            <button class="edit-rule-btn" data-id="${row.id}" type="button">
+              <i class="fa-solid fa-pen"></i> Edit
+            </button>
+            <button class="delete-rule-btn" data-id="${row.id}" type="button">
+              <i class="fa-solid fa-trash"></i> Delete
+            </button>
+          </div>
+        </td>
+      </tr>
+    `).join('');
+  
+    document.querySelectorAll('.edit-rule-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const row = allRulesRows.find(item => item.id === btn.dataset.id);
+        if (!row) return;
+        enterRulesEditMode(row);
+      });
+    });
+  
+    document.querySelectorAll('.delete-rule-btn').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.id;
+        if (!id) return;
+  
+        const confirmed = confirm('Delete this contracting rule?');
+        if (!confirmed) return;
+  
+        const { error } = await supabase
+          .from('carrier_contracting_rules')
+          .delete()
+          .eq('id', id);
+  
+        if (error) {
+          console.error('Error deleting contracting rule:', error);
+          alert('Could not delete rule: ' + error.message);
+          return;
+        }
+  
+        if (currentlyEditingRuleId === id) {
+          resetRulesForm();
+        }
+  
+        await loadRulesTable();
+        await loadContractingRules();
+      });
+    });
+  }
+
+  function applyRulesSearch() {
+    const term = (rulesSearchInput.value || '').trim().toLowerCase();
+  
+    if (!term) {
+      renderRulesTable(allRulesRows);
+      return;
+    }
+  
+    const filtered = allRulesRows.filter(row => {
+      const haystack = [
+        row.carriers?.carrier_name,
+        row.start_method,
+        row.destination_group,
+        row.start_url,
+        ...(row.email_to || []),
+        ...(row.email_cc || []),
+        ...(row.email_bcc || []),
+        row.instructions,
+        row.email_subject_template,
+        row.email_body_template
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+  
+      return haystack.includes(term);
+    });
+  
+    renderRulesTable(filtered);
+  }
+
+  rulesForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    setRulesMessage('');
+  
+    const carrier_id = ruleCarrierId.value;
+    if (!carrier_id) {
+      setRulesMessage('Please select a carrier.', 'error');
+      return;
+    }
+  
+    const payload = {
+      carrier_id,
+      is_active: ruleIsActive.checked,
+      start_method: ruleStartMethod.value,
+      destination_group: ruleDestinationGroup.value.trim() || null,
+      start_url: ruleStartUrl.value.trim() || null,
+      email_to: parseEmailList(ruleEmailTo.value),
+      email_cc: parseEmailList(ruleEmailCc.value),
+      email_bcc: parseEmailList(ruleEmailBcc.value),
+      email_subject_template: ruleEmailSubjectTemplate.value.trim() || null,
+      email_body_template: ruleEmailBodyTemplate.value.trim() || null,
+      instructions: ruleInstructions.value.trim() || null,
+      supports_multi_agent_batch: ruleSupportsMultiAgent.checked,
+      supports_multi_carrier_batch: ruleSupportsMultiCarrier.checked,
+      sort_order: Number(ruleSortOrder.value || 0)
+    };
+  
+    const editingId = rulesEditingId.value || null;
+  
+    if (editingId) {
+      const { error } = await supabase
+        .from('carrier_contracting_rules')
+        .update(payload)
+        .eq('id', editingId);
+  
+      if (error) {
+        console.error('Error updating rule:', error);
+        setRulesMessage(error.message, 'error');
+        return;
+      }
+  
+      setRulesMessage('Rule updated successfully.', 'success');
+      resetRulesForm();
+      await loadRulesTable();
+      await loadContractingRules();
+      return;
+    }
+  
+    const { error } = await supabase
+      .from('carrier_contracting_rules')
+      .insert([payload]);
+  
+    if (error) {
+      console.error('Error saving rule:', error);
+      setRulesMessage(error.message, 'error');
+      return;
+    }
+  
+    setRulesMessage('Rule saved successfully.', 'success');
+    resetRulesFormFields();
+    await loadRulesTable();
+    await loadContractingRules();
+  });
+
+  rulesResetBtn.addEventListener('click', () => {
+    resetRulesForm();
+  });
+  
+  rulesCancelEditBtn.addEventListener('click', () => {
+    resetRulesForm();
+  });
+  
+  rulesSearchInput.addEventListener('input', applyRulesSearch);
+  
   async function loadContractingRules() {
     const { data, error } = await supabase
       .from('carrier_contracting_rules')
@@ -1062,6 +1388,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   renderSelectedAgentReadiness();
   renderPendingBatch();
   resetForm();
+  resetRulesForm();
   await loadAgentCarriers();
   await loadContractingRequests();
+  await loadRulesTable();
 });
