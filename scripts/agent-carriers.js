@@ -51,6 +51,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   let allCarriers = [];
   let allContractingRules = [];
   let pendingSelections = [];
+  let pendingSavedRequests = [];
 
   function getMultiValues(selectEl) {
     return Array.from(selectEl.selectedOptions).map(opt => opt.value);
@@ -571,30 +572,41 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   async function saveContractingRequests() {
     const { selectedAgents, selectedRules } = buildBatchSummary();
-
+  
     if (!currentAdminId) {
       setStartMessage('Could not determine current admin session.', 'error');
       return;
     }
-
+  
     if (!selectedAgents.length) {
       setStartMessage('Select at least one agent first.', 'error');
       return;
     }
-
+  
     if (!selectedRules.length) {
       setStartMessage('Add at least one carrier to the batch.', 'error');
       return;
     }
-
+  
+    await loadContractingRequests();
+  
+    const existingOpen = new Set(
+      pendingSavedRequests
+        .filter(req => ['draft', 'queued', 'sent'].includes((req.status || '').toLowerCase()))
+        .map(req => `${req.agent_id}__${req.carrier_id}`)
+    );
+  
     const payload = [];
-
+  
     selectedAgents.forEach(agent => {
       selectedRules.forEach(rule => {
+        const dedupeKey = `${agent.id}__${rule.carrier_id}`;
+        if (existingOpen.has(dedupeKey)) return;
+  
         const carrierName = rule.carriers?.carrier_name || 'Unknown Carrier';
         const subject = fillTemplate(rule.email_subject_template, agent, [carrierName]);
         const body = fillTemplate(rule.email_body_template, agent, [carrierName]);
-
+  
         payload.push({
           agent_id: agent.id,
           carrier_id: rule.carrier_id,
@@ -614,17 +626,22 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
       });
     });
-
+  
+    if (!payload.length) {
+      setStartMessage('All selected agent/carrier combinations already have open requests.', 'error');
+      return;
+    }
+  
     const { error } = await supabase
       .from('carrier_contracting_requests')
       .insert(payload);
-
+  
     if (error) {
       console.error('Error saving contracting requests:', error);
       setStartMessage(error.message || 'Could not save contracting requests.', 'error');
       return;
     }
-
+  
     setStartMessage('Contracting requests saved successfully.', 'success');
     pendingSelections = [];
     renderCarrierRules();
@@ -632,46 +649,95 @@ document.addEventListener('DOMContentLoaded', async () => {
     await loadContractingRequests();
   }
 
-  function launchContractingActions() {
+  async function launchContractingActions() {
     const { selectedAgents, selectedRules, emailGroups, linkItems } = buildBatchSummary();
-
+  
     if (!selectedAgents.length || !selectedRules.length) {
       setStartMessage('Select agents and add carriers first.', 'error');
       return;
     }
-
-    linkItems.forEach(item => {
+  
+    for (const item of linkItems) {
       if (item.rule.start_url) {
         window.open(item.rule.start_url, '_blank', 'noopener,noreferrer');
       }
+    }
+  
+    const emailRequestRows = [];
+    selectedAgents.forEach(agent => {
+      selectedRules.forEach(rule => {
+        if ((rule.start_method || '').toLowerCase() !== 'email') return;
+  
+        const existing = pendingSavedRequests.find(req =>
+          req.agent_id === agent.id &&
+          req.carrier_id === rule.carrier_id &&
+          ['draft', 'queued', 'sent'].includes((req.status || '').toLowerCase())
+        );
+  
+        if (existing) {
+          emailRequestRows.push(existing.id);
+        }
+      });
     });
-
-    emailGroups.forEach(group => {
-      const carrierNames = group.rules.map(rule => rule.carriers?.carrier_name || 'Unknown Carrier');
-      const firstRule = group.rules[0];
-
-      const subject = fillTemplate(firstRule.email_subject_template, group.agent, carrierNames);
-      const body = fillTemplate(firstRule.email_body_template, group.agent, carrierNames);
-
-      const to = encodeURIComponent((group.email_to || []).join(','));
-      const cc = encodeURIComponent((group.email_cc || []).join(','));
-      const bcc = encodeURIComponent((group.email_bcc || []).join(','));
-
-      const mailto = `mailto:${to}?subject=${encodeURIComponent(subject || '')}&body=${body || ''}${cc ? `&cc=${cc}` : ''}${bcc ? `&bcc=${bcc}` : ''}`;
-      window.open(mailto, '_blank');
-    });
-
-    setStartMessage('Launched available link and email actions.', 'success');
+  
+    if (!emailRequestRows.length) {
+      if (emailGroups.length) {
+        setStartMessage('No saved email requests were found yet. Click Save Requests first.', 'error');
+        return;
+      }
+  
+      setStartMessage('Launched available link actions.', 'success');
+      return;
+    }
+  
+    try {
+      const response = await fetch('/.netlify/functions/send-contracting-emails', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          request_ids: emailRequestRows
+        })
+      });
+  
+      const result = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(result.error || 'Could not send contracting emails.');
+      }
+  
+      const failed = (result.results || []).filter(item => !item.success);
+      const successCount = (result.results || []).filter(item => item.success).length;
+  
+      await loadContractingRequests();
+  
+      if (failed.length) {
+        console.error('Some contracting emails failed:', failed);
+        setStartMessage(
+          `Sent ${successCount} email group(s), but ${failed.length} failed. Check console/logs.`,
+          successCount ? 'success' : 'error'
+        );
+        return;
+      }
+  
+      setStartMessage(`Sent ${successCount} email group(s) successfully.`, 'success');
+    } catch (error) {
+      console.error('Error launching contracting actions:', error);
+      setStartMessage(error.message || 'Could not send contracting emails.', 'error');
+    }
   }
 
   async function loadContractingRequests() {
     contractingRequestsTbody.innerHTML = '<tr><td colspan="7" class="empty-row">Loading...</td></tr>';
-
+  
     const { data, error } = await supabase
       .from('carrier_contracting_requests')
       .select(`
         id,
         created_at,
+        agent_id,
+        carrier_id,
         status,
         start_method_snapshot,
         destination_group_snapshot,
@@ -689,22 +755,23 @@ document.addEventListener('DOMContentLoaded', async () => {
         )
       `)
       .order('created_at', { ascending: false })
-      .limit(25);
-
+      .limit(100);
+  
     if (error) {
       console.error('Error loading contracting requests:', error);
       contractingRequestsTbody.innerHTML = '<tr><td colspan="7" class="empty-row">Could not load requests.</td></tr>';
       return;
     }
-
+  
     const rows = data || [];
-
+    pendingSavedRequests = rows;
+  
     if (!rows.length) {
       contractingRequestsTbody.innerHTML = '<tr><td colspan="7" class="empty-row">No contracting requests found.</td></tr>';
       return;
     }
-
-    contractingRequestsTbody.innerHTML = rows.map(row => `
+  
+    contractingRequestsTbody.innerHTML = rows.slice(0, 25).map(row => `
       <tr>
         <td>${formatDate(row.created_at)}</td>
         <td>${escapeHtml(row.agents?.full_name || row.agents?.email || '—')}</td>
