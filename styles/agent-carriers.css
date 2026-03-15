@@ -630,3 +630,53 @@ code{
     grid-template-columns: 1fr;
   }
 }
+#contracting-rules-form textarea {
+  width: 100%;
+  border: 1px solid var(--ac-border);
+  background: #fff;
+  padding: 10px 12px;
+  border-radius: 0;
+  outline: none;
+  font-family: inherit;
+  color: var(--ac-text);
+  resize: vertical;
+}
+
+#contracting-rules-form textarea:focus {
+  border-color: var(--ac-pink);
+  box-shadow: var(--ac-ring);
+}
+
+#contracting-rules-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  background: #fff;
+}
+
+#contracting-rules-table thead th {
+  background: var(--ac-indigo);
+  color: #fff;
+  text-align: left;
+  padding: 12px 10px;
+  white-space: nowrap;
+  font-size: .92rem;
+}
+
+#contracting-rules-table td {
+  padding: 12px 10px;
+  border-top: 1px solid #eef0f6;
+  vertical-align: top;
+  white-space: normal;
+  color: var(--ac-text);
+  font-size: .93rem;
+}
+
+#contracting-rules-table tbody tr:nth-child(even) {
+  background: #fafbff;
+}
+
+#contracting-rules-table tbody tr.editing-row {
+  background: #fff5f8 !important;
+  box-shadow: inset 0 0 0 2px rgba(237,158,165,.55);
+}
