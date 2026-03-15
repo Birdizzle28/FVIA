@@ -410,6 +410,68 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  async function sendAgentPackets() {
+    const { selectedAgents, selectedRules } = buildBatchSummary();
+  
+    if (!selectedAgents.length || !selectedRules.length) {
+      setStartMessage('Select agents and add carriers first.', 'error');
+      return;
+    }
+  
+    const packetRules = selectedRules.filter(rule => !!rule.send_agent_packet);
+  
+    if (!packetRules.length) {
+      setStartMessage('None of the selected carriers are configured to send agent packets.', 'error');
+      return;
+    }
+  
+    await loadContractingRequests();
+  
+    const matchingRequestIds = pendingSavedRequests
+      .filter(req =>
+        selectedAgents.some(agent => agent.id === req.agent_id) &&
+        packetRules.some(rule => rule.id === req.rule_id)
+      )
+      .map(req => req.id);
+  
+    if (!matchingRequestIds.length) {
+      setStartMessage('Save Requests first so packets can be matched to saved requests.', 'error');
+      return;
+    }
+  
+    try {
+      const response = await fetch('/.netlify/functions/send-agent-packets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ request_ids: matchingRequestIds })
+      });
+  
+      const result = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(result.error || 'Could not send agent packets.');
+      }
+  
+      const failed = (result.results || []).filter(item => !item.success);
+      const successCount = (result.results || []).filter(item => item.success).length;
+  
+      if (failed.length) {
+        console.error('Some agent packets failed:', failed);
+        setStartMessage(`Sent ${successCount} packet email(s), but ${failed.length} failed.`, successCount ? 'success' : 'error');
+        return;
+      }
+  
+      setStartMessage(`Sent ${successCount} agent packet email(s) successfully.`, 'success');
+    } catch (error) {
+      console.error('Error sending agent packets:', error);
+      setStartMessage(error.message || 'Could not send agent packets.', 'error');
+    }
+  }
+  
+  sendAgentPacketsBtn.addEventListener('click', () => {
+    sendAgentPackets();
+  });
+  
   async function loadCarriers() {
     const { data, error } = await supabase
       .from('carriers')
