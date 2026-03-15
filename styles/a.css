@@ -958,3 +958,38 @@ body.agent-theme-light #mobile-menu {
   align-items: center !important;
   justify-content: center !important;
 }
+/* =========================
+   QUOTE SECTION: FORCE ONE BACKGROUND COLOR
+   ========================= */
+
+#quote-shell,
+#quote-shell #free-quote-form,
+#quote-shell #life-form,
+#quote-shell .step-card,
+#quote-shell .step-card.active,
+#quote-shell #result-screen,
+#quote-shell .row,
+#quote-shell .row-zip-age,
+#quote-shell .row-name,
+#quote-shell .step-nav,
+#quote-shell .fl-field,
+#quote-shell #cover-fl,
+#quote-shell .multi-select,
+#quote-shell .ms-menu,
+#quote-shell .ms-option,
+#quote-shell .ms-value {
+  background-color: var(--quote-section-bg, transparent) !important;
+  background-image: none !important;
+}
+
+/* keep the whole quote area from showing random white panels */
+#quote-shell #free-quote-form,
+#quote-shell #life-form,
+#quote-shell .step-card,
+#quote-shell .step-card.active,
+#quote-shell #result-screen,
+#quote-shell .fl-field,
+#quote-shell .multi-select,
+#quote-shell .ms-menu {
+  box-shadow: none !important;
+}
