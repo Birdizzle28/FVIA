@@ -993,3 +993,64 @@ body.agent-theme-light #mobile-menu {
 #quote-shell .ms-menu {
   box-shadow: none !important;
 }
+
+/* =========================
+   QUOTE INPUT + FLOAT LABEL OVERRIDES
+   ========================= */
+
+/* actual fields stay white */
+#quote-shell .fl-field input,
+#quote-shell .fl-field select,
+#quote-shell .multi-select,
+#quote-shell #cover-select,
+#quote-shell #cover-menu,
+#quote-shell #cover-menu .ms-option,
+#quote-shell .ms-option {
+  background: #ffffff !important;
+  background-color: #ffffff !important;
+  background-image: none !important;
+}
+
+/* typed / selected text inside controls */
+#quote-shell .fl-field input,
+#quote-shell .fl-field select,
+#quote-shell .multi-select,
+#quote-shell .ms-value,
+#quote-shell .ms-option {
+  color: #333 !important;
+}
+
+/* label while sitting inside input */
+#quote-shell .fl-field > label {
+  background: #ffffff !important;
+  color: #888 !important;
+}
+
+/* floated label should match surrounding quote section */
+#quote-shell .fl-field.is-focused > label,
+#quote-shell .fl-field.has-value > label,
+#quote-shell .fl-field.is-open > label {
+  background: var(--quote-section-bg, transparent) !important;
+  color: var(--quote-body-color, #111) !important;
+}
+
+/* make the cover dropdown panel white */
+#quote-shell #cover-menu.ms-menu {
+  background: #ffffff !important;
+  border-color: #ccc !important;
+}
+
+/* make each option box white */
+#quote-shell #cover-menu .ms-option,
+#quote-shell .ms-option {
+  background: #ffffff !important;
+}
+
+/* hover/selected can still tint slightly without becoming gray */
+#quote-shell .ms-option:hover {
+  background: #f5f9ff !important;
+}
+
+#quote-shell .ms-option.selected {
+  background: #eaf4ff !important;
+}
