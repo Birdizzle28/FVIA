@@ -468,8 +468,16 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   }
   
-  sendAgentPacketsBtn.addEventListener('click', () => {
-    sendAgentPackets();
+  sendAgentPacketsBtn.addEventListener('click', async () => {
+  
+    sendAgentPacketsBtn.disabled = true;
+    sendAgentPacketsBtn.innerText = 'Sending...';
+  
+    await sendAgentPackets();
+  
+    sendAgentPacketsBtn.disabled = false;
+    sendAgentPacketsBtn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Send Agent Packets';
+  
   });
   
   async function loadCarriers() {
