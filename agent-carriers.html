@@ -438,7 +438,8 @@
             </section>
           </div>
         </section>
-        
+
+        <!--Contracting Rules Tab-->
         <section id="contracting-rules-tab" class="tab-panel">
           <div class="carrier-layout">
             <section class="carrier-card">
@@ -507,6 +508,40 @@
                       id="rule-email-body-template"
                       rows="7"
                       placeholder="Use placeholders like {{agent_name}}, {{agent_email}}, {{agent_id}}, {{carrier_names}}, {{carrier_names_list}}"
+                    ></textarea>
+                  </div>
+
+                  <div class="field checkbox-field">
+                    <label class="checkbox-wrap">
+                      <input type="checkbox" id="rule-send-agent-packet" />
+                      <span>Send Agent Packet</span>
+                    </label>
+                  </div>
+                  
+                  <div class="field field-full">
+                    <label for="rule-attachment-urls">Attachment URLs</label>
+                    <textarea
+                      id="rule-attachment-urls"
+                      rows="4"
+                      placeholder="One URL per line for ICA packet, W9, etc."
+                    ></textarea>
+                  </div>
+                  
+                  <div class="field field-full">
+                    <label for="rule-agent-packet-subject-template">Agent Packet Subject Template</label>
+                    <input
+                      type="text"
+                      id="rule-agent-packet-subject-template"
+                      placeholder="Family Values Group Contracting Packet – {{carrier_names}}"
+                    />
+                  </div>
+                  
+                  <div class="field field-full">
+                    <label for="rule-agent-packet-body-template">Agent Packet Body Template</label>
+                    <textarea
+                      id="rule-agent-packet-body-template"
+                      rows="7"
+                      placeholder="Hello {{agent_name}}, attached is your packet for {{carrier_names}}..."
                     ></textarea>
                   </div>
         
