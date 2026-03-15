@@ -975,10 +975,18 @@ document.addEventListener('DOMContentLoaded', async () => {
   }
 
   async function launchContractingActions() {
+    console.log('Launch Actions clicked');
+  
     const { selectedAgents, selectedRules, emailGroups, linkItems } = buildBatchSummary();
+  
+    console.log('selectedAgents:', selectedAgents);
+    console.log('selectedRules:', selectedRules);
+    console.log('emailGroups:', emailGroups);
+    console.log('linkItems:', linkItems);
   
     if (!selectedAgents.length || !selectedRules.length) {
       setStartMessage('Select agents and add carriers first.', 'error');
+      alert('No selected agents or rules found in the current batch.');
       return;
     }
   
@@ -989,6 +997,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   
     const emailRequestRows = [];
+  
     selectedAgents.forEach(agent => {
       selectedRules.forEach(rule => {
         if ((rule.start_method || '').toLowerCase() !== 'email') return;
@@ -1005,17 +1014,23 @@ document.addEventListener('DOMContentLoaded', async () => {
       });
     });
   
+    console.log('emailRequestRows:', emailRequestRows);
+  
     if (!emailRequestRows.length) {
       if (emailGroups.length) {
         setStartMessage('No saved email requests were found yet. Click Save Requests first.', 'error');
+        alert('No matching saved email requests were found.');
         return;
       }
   
       setStartMessage('Launched available link actions.', 'success');
+      alert('Only link actions were available.');
       return;
     }
   
     try {
+      alert('About to call send-contracting-emails function.');
+  
       const response = await fetch('/.netlify/functions/send-contracting-emails', {
         method: 'POST',
         headers: {
@@ -1026,10 +1041,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         })
       });
   
-      const result = await response.json();
+      console.log('response status:', response.status);
+      console.log('response ok:', response.ok);
+  
+      const rawText = await response.text();
+      console.log('raw function response:', rawText);
+  
+      let result = {};
+      try {
+        result = rawText ? JSON.parse(rawText) : {};
+      } catch (jsonErr) {
+        console.error('Could not parse function response as JSON:', jsonErr);
+        alert('Function returned non-JSON response. Check console.');
+        setStartMessage('Function returned invalid response.', 'error');
+        return;
+      }
   
       if (!response.ok) {
-        throw new Error(result.error || 'Could not send contracting emails.');
+        throw new Error(result.error || `Could not send contracting emails. HTTP ${response.status}`);
       }
   
       const failed = (result.results || []).filter(item => !item.success);
@@ -1043,13 +1072,16 @@ document.addEventListener('DOMContentLoaded', async () => {
           `Sent ${successCount} email group(s), but ${failed.length} failed. Check console/logs.`,
           successCount ? 'success' : 'error'
         );
+        alert(`Partial failure. Sent ${successCount}, failed ${failed.length}.`);
         return;
       }
   
       setStartMessage(`Sent ${successCount} email group(s) successfully.`, 'success');
+      alert(`Success: sent ${successCount} email group(s).`);
     } catch (error) {
       console.error('Error launching contracting actions:', error);
       setStartMessage(error.message || 'Could not send contracting emails.', 'error');
+      alert(`Launch failed: ${error.message || 'Unknown error'}`);
     }
   }
 
