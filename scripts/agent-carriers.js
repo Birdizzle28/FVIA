@@ -68,6 +68,11 @@ document.addEventListener('DOMContentLoaded', async () => {
   const rulesFormSubtitle = document.getElementById('rules-form-subtitle');
   const rulesSearchInput = document.getElementById('rules-search-input');
   const contractingRulesTbody = document.getElementById('contracting-rules-tbody');
+  const ruleSendAgentPacket = document.getElementById('rule-send-agent-packet');
+  const ruleAttachmentUrls = document.getElementById('rule-attachment-urls');
+  const ruleAgentPacketSubjectTemplate = document.getElementById('rule-agent-packet-subject-template');
+  const ruleAgentPacketBodyTemplate = document.getElementById('rule-agent-packet-body-template');
+  const sendAgentPacketsBtn = document.getElementById('send-agent-packets-btn');
 
   let allRows = [];
   let currentlyEditingId = null;
@@ -119,6 +124,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  function parseLineList(value) {
+    return String(value || '')
+      .split('\n')
+      .map(v => v.trim())
+      .filter(Boolean);
+  }
+  
+  function fillPacketTemplate(template, agent, carrierNames, destinationEmail = '') {
+    const namesList = carrierNames.map(name => `- ${name}`).join('\n');
+  
+    return String(template || '')
+      .replaceAll('{{agent_name}}', agent.full_name || '')
+      .replaceAll('{{agent_email}}', agent.email || '')
+      .replaceAll('{{agent_id}}', agent.agent_id || '')
+      .replaceAll('{{carrier_names}}', carrierNames.join(', '))
+      .replaceAll('{{carrier_names_list}}', namesList)
+      .replaceAll('{{destination_email}}', destinationEmail || '');
+  }
+
   function enterCreateMode() {
     currentlyEditingId = null;
     editingRowIdInput.value = '';
@@ -163,6 +187,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     ruleSupportsMultiAgent.checked = false;
     ruleSupportsMultiCarrier.checked = false;
     ruleSortOrder.value = 0;
+    ruleSendAgentPacket.checked = false;
+    ruleAttachmentUrls.value = '';
+    ruleAgentPacketSubjectTemplate.value = '';
+    ruleAgentPacketBodyTemplate.value = '';
   }
   
   function enterRulesCreateMode() {
@@ -207,6 +235,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     ruleIsActive.checked = !!row.is_active;
     ruleSupportsMultiAgent.checked = !!row.supports_multi_agent_batch;
     ruleSupportsMultiCarrier.checked = !!row.supports_multi_carrier_batch;
+
+    ruleSendAgentPacket.checked = !!row.send_agent_packet;
+    ruleAttachmentUrls.value = (row.attachment_urls || []).join('\n');
+    ruleAgentPacketSubjectTemplate.value = row.agent_packet_subject_template || '';
+    ruleAgentPacketBodyTemplate.value = row.agent_packet_body_template || '';
   
     document.querySelectorAll('#contracting-rules-tbody tr').forEach(tr => {
       tr.classList.remove('editing-row');
@@ -429,6 +462,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         supports_multi_agent_batch,
         supports_multi_carrier_batch,
         sort_order,
+        send_agent_packet,
+        attachment_urls,
+        agent_packet_subject_template,
+        agent_packet_body_template,
         carriers:carrier_id (
           carrier_name
         )
@@ -569,6 +606,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       instructions: ruleInstructions.value.trim() || null,
       supports_multi_agent_batch: ruleSupportsMultiAgent.checked,
       supports_multi_carrier_batch: ruleSupportsMultiCarrier.checked,
+      send_agent_packet: ruleSendAgentPacket.checked,
+      attachment_urls: parseLineList(ruleAttachmentUrls.value),
+      agent_packet_subject_template: ruleAgentPacketSubjectTemplate.value.trim() || null,
+      agent_packet_body_template: ruleAgentPacketBodyTemplate.value.trim() || null,
       sort_order: Number(ruleSortOrder.value || 0)
     };
   
@@ -638,6 +679,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         supports_multi_agent_batch,
         supports_multi_carrier_batch,
         sort_order,
+        send_agent_packet,
+        attachment_urls,
+        agent_packet_subject_template,
+        agent_packet_body_template,
         carriers:carrier_id (
           carrier_name
         )
