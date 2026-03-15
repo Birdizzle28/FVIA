@@ -22,8 +22,8 @@ function getEnvConfig(envName = "prod") {
   }
 
   return {
-    username: process.env.NIPR_PROD_USERNAME,
-    password: process.env.NIPR_PROD_PASSWORD,
+    username: process.env.NIPR_ALERTS_USERNAME,
+    password: process.env.NIPR_ALERTS_PASSWORD,
     url: "https://pdb-alerts-industry-services.api.nipr.com/pdb-alerts-industry-services/services/industry-ws",
   };
 }
