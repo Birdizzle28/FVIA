@@ -969,7 +969,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   
     setStartMessage('Contracting requests saved successfully.', 'success');
-    pendingSelections = [];
     renderCarrierRules();
     renderPendingBatch();
     await loadContractingRequests();
