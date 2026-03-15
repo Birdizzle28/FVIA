@@ -850,6 +850,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         shellEl.style.textAlign = style.text_align || "";
         shellEl.style.backgroundColor = bgColor || "";
         shellEl.style.setProperty("--quote-section-bg", bgColor || "transparent");
+        shellEl.style.setProperty("--quote-section-bg", bgColor || "transparent");
+        shellEl.style.setProperty("--quote-body-color", style.quote_body_color || "");
     
         if (style.border_width && style.border_style && style.border_color) {
           shellEl.style.border = `${style.border_width} ${style.border_style} ${style.border_color}`;
