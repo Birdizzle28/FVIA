@@ -16,7 +16,6 @@ const PAY_TZ = 'America/Chicago';
  * Helper: return YYYY-MM-DD in America/Chicago
  */
 function getNextFridayYMD(fromYMD) {
-  const d = new Date(`${fromYMD}T12:00:00Z`);
   let cur = fromYMD;
   for (let i = 1; i <= 14; i++) {
     cur = addDaysYMD(cur, 1);
@@ -146,9 +145,6 @@ function normalizeState(v) {
   return String(v || '').trim().toUpperCase();
 }
 
-/**
- * NEW: Normalize LOA-ish text for matching
- */
 function normalizeLoaText(v) {
   return String(v || '')
     .trim()
@@ -157,64 +153,6 @@ function normalizeLoaText(v) {
     .replace(/[^a-z0-9\s]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
-}
-
-/**
- * NEW: Infer required license lines from policy
- * Keep this conservative and minimal.
- */
-function getRequiredLoasForPolicy(policy) {
-  const line = normalizeText(policy?.product_line);
-  const type = normalizeText(policy?.policy_type);
-  const combined = `${line} ${type}`.trim();
-
-  if (
-    combined.includes('health') ||
-    combined.includes('medicare') ||
-    combined.includes('aca') ||
-    combined.includes('dental') ||
-    combined.includes('vision') ||
-    combined.includes('supplement') ||
-    combined.includes('hospital indemnity') ||
-    combined.includes('critical illness')
-  ) {
-    return ['health'];
-  }
-
-  if (
-    combined.includes('life') ||
-    combined.includes('term') ||
-    combined.includes('whole') ||
-    combined.includes('final expense') ||
-    combined.includes('iul') ||
-    combined.includes('universal') ||
-    combined.includes('annuity')
-  ) {
-    return ['life'];
-  }
-
-  if (combined.includes('property') && combined.includes('casualty')) {
-    return ['property', 'casualty'];
-  }
-
-  if (combined.includes('property')) {
-    return ['property'];
-  }
-
-  if (
-    combined.includes('casualty') ||
-    combined.includes('auto') ||
-    combined.includes('car') ||
-    combined.includes('commercial auto')
-  ) {
-    return ['casualty'];
-  }
-
-  if (line === 'p&c' || combined.includes('p&c')) {
-    return ['property', 'casualty'];
-  }
-
-  return [];
 }
 
 function getLagWeeksForPolicy(policy, scheduleRows) {
@@ -257,7 +195,42 @@ function computePayFridayForIssuedYMDWithLag(issuedYMD, lagWeeks = 0) {
 }
 
 /**
+ * NEW: find the exact commission schedule row for a policy as of issue date.
+ * This is now also the source of truth for required_loas.
+ */
+function getMatchingScheduleForPolicy(policy, scheduleRows) {
+  if (!policy || !policy.issued_at) return null;
+
+  const issuedYMD = getLocalYMD(new Date(policy.issued_at), PAY_TZ);
+  const carrier = normalizeText(policy.carrier_name);
+  const line = normalizeText(policy.product_line);
+  const type = normalizePolicyType(policy.policy_type);
+
+  const matches = (scheduleRows || []).filter(s => {
+    const sameCarrier = normalizeText(s.carrier_name) === carrier;
+    const sameLine = normalizeText(s.product_line) === line;
+    const sameType = normalizePolicyType(s.policy_type) === type;
+
+    const startsOk = !s.effective_from || s.effective_from <= issuedYMD;
+    const endsOk = !s.effective_to || s.effective_to >= issuedYMD;
+
+    return sameCarrier && sameLine && sameType && startsOk && endsOk;
+  });
+
+  if (!matches.length) return null;
+
+  matches.sort((a, b) => {
+    const aDate = a.effective_from || '0000-00-00';
+    const bDate = b.effective_from || '0000-00-00';
+    return bDate.localeCompare(aDate);
+  });
+
+  return matches[0];
+}
+
+/**
  * NEW: Does this license row satisfy the policy at issue time?
+ * Rule used here: agent must satisfy ALL required_loas.
  */
 function licenseRowQualifiesForPolicy(licenseRow, state, requiredLoas, issueYMD) {
   if (!licenseRow) return false;
@@ -274,7 +247,7 @@ function licenseRowQualifiesForPolicy(licenseRow, state, requiredLoas, issueYMD)
   const loaNames = Array.isArray(licenseRow.loa_names) ? licenseRow.loa_names : [];
   const normalizedNames = loaNames.map(normalizeLoaText);
 
-  return requiredLoas.some(req => {
+  return requiredLoas.every(req => {
     const target = normalizeLoaText(req);
     return normalizedNames.some(name =>
       name === target ||
@@ -286,10 +259,9 @@ function licenseRowQualifiesForPolicy(licenseRow, state, requiredLoas, issueYMD)
 
 /**
  * NEW: Determine whether an agent is eligible for override on this policy.
- * agent.id is internal UUID
- * agent.agent_id is external/NIPR agent id that matches agent_nipr_licenses.agent_id
+ * Uses commission_schedules.required_loas as the source of truth.
  */
-function agentQualifiesForPolicy(agent, policy, policyState, licensesByExternalAgentId) {
+function agentQualifiesForPolicy(agent, policy, policyState, scheduleRows, licensesByExternalAgentId) {
   if (!agent) return false;
   if (agent.is_active === false) return false;
   if (!policy?.issued_at) return false;
@@ -298,7 +270,12 @@ function agentQualifiesForPolicy(agent, policy, policyState, licensesByExternalA
   const externalAgentId = agent.agent_id;
   if (!externalAgentId) return false;
 
-  const requiredLoas = getRequiredLoasForPolicy(policy);
+  const schedule = getMatchingScheduleForPolicy(policy, scheduleRows);
+  const requiredLoasRaw = Array.isArray(schedule?.required_loas) ? schedule.required_loas : [];
+  const requiredLoas = requiredLoasRaw
+    .map(normalizeLoaText)
+    .filter(Boolean);
+
   if (!requiredLoas.length) return false;
 
   const issueYMD = getLocalYMD(new Date(policy.issued_at), PAY_TZ);
@@ -313,7 +290,7 @@ function agentQualifiesForPolicy(agent, policy, policyState, licensesByExternalA
  * NEW: Walk up the chain starting from the CURRENT override recipient.
  * If they don't qualify, keep going up recruiter_id until someone does.
  */
-function findNearestEligibleUplineFromAgent(startAgentId, policy, policyState, agentsById, licensesByExternalAgentId) {
+function findNearestEligibleUplineFromAgent(startAgentId, policy, policyState, scheduleRows, agentsById, licensesByExternalAgentId) {
   const visited = new Set();
   let currentId = startAgentId;
 
@@ -323,7 +300,7 @@ function findNearestEligibleUplineFromAgent(startAgentId, policy, policyState, a
     const currentAgent = agentsById.get(currentId);
     if (!currentAgent) return null;
 
-    if (agentQualifiesForPolicy(currentAgent, policy, policyState, licensesByExternalAgentId)) {
+    if (agentQualifiesForPolicy(currentAgent, policy, policyState, scheduleRows, licensesByExternalAgentId)) {
       return currentAgent.id;
     }
 
@@ -477,7 +454,7 @@ export async function handler(event) {
     if (carrierNames.length) {
       const { data: schedData, error: schedErr } = await supabase
         .from('commission_schedules')
-        .select('carrier_name, product_line, policy_type, effective_from, effective_to, lag_time_weeks')
+        .select('carrier_name, product_line, policy_type, effective_from, effective_to, lag_time_weeks, required_loas')
         .in('carrier_name', carrierNames);
 
       if (schedErr) {
@@ -581,7 +558,7 @@ export async function handler(event) {
     }
 
     // =========================
-    // NEW: Override license / state / active validation
+    // Override license / state / active validation
     // =========================
 
     const policyMap = new Map(duePolicyRows.map(p => [p.id, p]));
@@ -674,6 +651,21 @@ export async function handler(event) {
         continue;
       }
 
+      const matchingSchedule = getMatchingScheduleForPolicy(policy, scheduleRows);
+      const requiredLoas = Array.isArray(matchingSchedule?.required_loas)
+        ? matchingSchedule.required_loas.filter(Boolean)
+        : [];
+
+      if (!matchingSchedule || !requiredLoas.length) {
+        skippedOverrideRows.push({
+          ledger_id: row.id,
+          policy_id: row.policy_id,
+          original_agent_id: row.agent_id,
+          reason: 'missing_schedule_or_required_loas'
+        });
+        continue;
+      }
+
       const policyState = contactStateMap.get(policy.contact_id);
       if (!policyState) {
         skippedOverrideRows.push({
@@ -688,6 +680,7 @@ export async function handler(event) {
         row.agent_id,
         policy,
         policyState,
+        scheduleRows,
         agentsById,
         licensesByExternalAgentId
       );
@@ -697,6 +690,7 @@ export async function handler(event) {
           ledger_id: row.id,
           policy_id: row.policy_id,
           original_agent_id: row.agent_id,
+          required_loas: requiredLoas,
           reason: 'no_eligible_upline_found'
         });
         continue;
@@ -724,7 +718,8 @@ export async function handler(event) {
           ledger_id: row.id,
           policy_id: row.policy_id,
           from_agent_id: row.agent_id,
-          to_agent_id: resolvedAgentId
+          to_agent_id: resolvedAgentId,
+          required_loas: requiredLoas
         });
 
         row.agent_id = resolvedAgentId;
