@@ -99,6 +99,10 @@
             <i class="fa-solid fa-building-circle-check"></i>
             Add Contracting
           </button>
+          <button type="button" class="tab-btn" data-tab="contracting-rules-tab">
+            <i class="fa-solid fa-sliders"></i>
+            Contracting Rules
+          </button>
         </div>
 
         <!-- START CONTRACTING TAB -->
@@ -427,6 +431,178 @@
                   <tbody id="agent-carriers-tbody">
                     <tr>
                       <td colspan="12" class="empty-row">Loading...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+        
+        <section id="contracting-rules-tab" class="tab-panel">
+          <div class="carrier-layout">
+            <section class="carrier-card">
+              <div class="card-header">
+                <h2 id="rules-form-title">Add Contracting Rule</h2>
+                <p id="rules-form-subtitle">Define how a carrier gets started in the Start Contracting tab.</p>
+              </div>
+        
+              <form id="contracting-rules-form" class="carrier-form">
+                <input type="hidden" id="rules-editing-id" />
+        
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="rule-carrier-id">Carrier</label>
+                    <select id="rule-carrier-id" required>
+                      <option value="">Select carrier</option>
+                    </select>
+                  </div>
+        
+                  <div class="field">
+                    <label for="rule-start-method">Start Method</label>
+                    <select id="rule-start-method" required>
+                      <option value="link">Link</option>
+                      <option value="email">Email</option>
+                      <option value="manual">Manual</option>
+                    </select>
+                  </div>
+        
+                  <div class="field">
+                    <label for="rule-destination-group">Destination Group</label>
+                    <input type="text" id="rule-destination-group" placeholder="ex: moo_transamerica_group" />
+                  </div>
+        
+                  <div class="field">
+                    <label for="rule-start-url">Start URL</label>
+                    <input type="text" id="rule-start-url" placeholder="https://..." />
+                  </div>
+        
+                  <div class="field field-full">
+                    <label for="rule-email-to">Email To</label>
+                    <input type="text" id="rule-email-to" placeholder="one@example.com, two@example.com" />
+                  </div>
+        
+                  <div class="field field-full">
+                    <label for="rule-email-cc">Email CC</label>
+                    <input type="text" id="rule-email-cc" placeholder="optional comma-separated emails" />
+                  </div>
+        
+                  <div class="field field-full">
+                    <label for="rule-email-bcc">Email BCC</label>
+                    <input type="text" id="rule-email-bcc" placeholder="optional comma-separated emails" />
+                  </div>
+        
+                  <div class="field field-full">
+                    <label for="rule-email-subject-template">Email Subject Template</label>
+                    <input
+                      type="text"
+                      id="rule-email-subject-template"
+                      placeholder="Contracting Request - {{agent_name}} - {{carrier_names}}"
+                    />
+                  </div>
+        
+                  <div class="field field-full">
+                    <label for="rule-email-body-template">Email Body Template</label>
+                    <textarea
+                      id="rule-email-body-template"
+                      rows="7"
+                      placeholder="Use placeholders like {{agent_name}}, {{agent_email}}, {{agent_id}}, {{carrier_names}}, {{carrier_names_list}}"
+                    ></textarea>
+                  </div>
+        
+                  <div class="field field-full">
+                    <label for="rule-instructions">Instructions</label>
+                    <textarea
+                      id="rule-instructions"
+                      rows="4"
+                      placeholder="Internal instructions for this carrier"
+                    ></textarea>
+                  </div>
+        
+                  <div class="field">
+                    <label for="rule-sort-order">Sort Order</label>
+                    <input type="number" id="rule-sort-order" value="0" />
+                  </div>
+        
+                  <div class="field checkbox-field">
+                    <label class="checkbox-wrap">
+                      <input type="checkbox" id="rule-is-active" checked />
+                      <span>Rule Active</span>
+                    </label>
+                  </div>
+        
+                  <div class="field checkbox-field">
+                    <label class="checkbox-wrap">
+                      <input type="checkbox" id="rule-supports-multi-agent" />
+                      <span>Supports Multi-Agent Batch</span>
+                    </label>
+                  </div>
+        
+                  <div class="field checkbox-field">
+                    <label class="checkbox-wrap">
+                      <input type="checkbox" id="rule-supports-multi-carrier" />
+                      <span>Supports Multi-Carrier Batch</span>
+                    </label>
+                  </div>
+                </div>
+        
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn" id="rules-save-btn">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Save Rule
+                  </button>
+        
+                  <button type="button" id="rules-reset-btn" class="secondary-btn">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    Reset
+                  </button>
+        
+                  <button type="button" id="rules-cancel-edit-btn" class="cancel-edit-btn hidden">
+                    <i class="fa-solid fa-xmark"></i>
+                    Cancel Edit
+                  </button>
+                </div>
+        
+                <p id="rules-form-message" class="form-message"></p>
+              </form>
+            </section>
+        
+            <section class="carrier-card">
+              <div class="card-header">
+                <h2>Existing Contracting Rules</h2>
+                <p>Manage how carriers behave in Start Contracting.</p>
+              </div>
+        
+              <div class="table-toolbar">
+                <div class="field search-field">
+                  <label for="rules-search-input">Search</label>
+                  <input
+                    type="text"
+                    id="rules-search-input"
+                    placeholder="Search by carrier, method, group, email, instructions..."
+                  />
+                </div>
+              </div>
+        
+              <div class="table-wrap">
+                <table id="contracting-rules-table">
+                  <thead>
+                    <tr>
+                      <th>Carrier</th>
+                      <th>Method</th>
+                      <th>Destination Group</th>
+                      <th>Email To</th>
+                      <th>URL</th>
+                      <th>Active</th>
+                      <th>Multi-Agent</th>
+                      <th>Multi-Carrier</th>
+                      <th>Sort</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="contracting-rules-tbody">
+                    <tr>
+                      <td colspan="10" class="empty-row">Loading...</td>
                     </tr>
                   </tbody>
                 </table>
