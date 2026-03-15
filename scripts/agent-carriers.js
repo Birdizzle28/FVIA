@@ -454,14 +454,26 @@ document.addEventListener('DOMContentLoaded', async () => {
   
       const failed = (result.results || []).filter(item => !item.success);
       const successCount = (result.results || []).filter(item => item.success).length;
-  
+      
       if (failed.length) {
         console.error('Some agent packets failed:', failed);
-        setStartMessage(`Sent ${successCount} packet email(s), but ${failed.length} failed.`, successCount ? 'success' : 'error');
+      
+        const firstError = failed[0]?.error || 'Unknown packet error';
+      
+        setStartMessage(
+          `Sent ${successCount} packet email(s), but ${failed.length} failed. First error: ${firstError}`,
+          successCount ? 'success' : 'error'
+        );
+      
+        alert(`Partial success: ${successCount} packet(s) sent. ${failed.length} failed.\n\nFirst error: ${firstError}`);
         return;
       }
-  
+      
+      console.log(`Agent packets sent successfully: ${successCount}`);
+      
       setStartMessage(`Sent ${successCount} agent packet email(s) successfully.`, 'success');
+      
+      alert(`✅ Agent packets sent successfully!\n\n${successCount} email(s) delivered.`);
     } catch (error) {
       console.error('Error sending agent packets:', error);
       setStartMessage(error.message || 'Could not send agent packets.', 'error');
