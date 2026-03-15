@@ -27,7 +27,6 @@
   </head>
 
   <body id="dashboardbody">
-    <!-- Header -->
     <header class="index-grid-header">
       <div id="logofvcontainer">
         <div id="logodiv">
@@ -48,7 +47,6 @@
       </div>
     </header>
 
-    <!-- Mobile Menu -->
     <div id="mobile-menu">
       <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
 
@@ -80,7 +78,7 @@
             <p class="eyebrow">Admin Tools</p>
             <h1>Agent Carriers</h1>
             <p class="page-subtext">
-              Track which carriers each agent is contracted and appointed with.
+              Start contracting for new agents and track which carriers each agent is contracted and appointed with.
             </p>
           </div>
 
@@ -92,222 +90,353 @@
           </div>
         </div>
 
-        <div class="carrier-layout">
-          <!-- Form Card -->
+        <div class="tab-switcher">
+          <button type="button" class="tab-btn active" data-tab="start-contracting-tab">
+            <i class="fa-solid fa-paper-plane"></i>
+            Start Contracting
+          </button>
+          <button type="button" class="tab-btn" data-tab="add-contracting-tab">
+            <i class="fa-solid fa-building-circle-check"></i>
+            Add Contracting
+          </button>
+        </div>
+
+        <!-- START CONTRACTING TAB -->
+        <section id="start-contracting-tab" class="tab-panel active">
+          <div class="carrier-layout two-col-top">
+            <section class="carrier-card">
+              <div class="card-header">
+                <h2>Start Contracting</h2>
+                <p>Select one or more agents, then queue carriers based on their contracting rules.</p>
+              </div>
+
+              <div class="carrier-form">
+                <div class="form-grid">
+                  <div class="field field-full">
+                    <label for="start-agent-select">Agents</label>
+                    <select id="start-agent-select" multiple size="8"></select>
+                    <small>Pick one or more agents to start contracting for.</small>
+                  </div>
+
+                  <div class="field field-full">
+                    <label for="start-carrier-search">Search Carriers</label>
+                    <input
+                      type="text"
+                      id="start-carrier-search"
+                      placeholder="Search by carrier name, destination group, method..."
+                    />
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <button type="button" class="primary-btn" id="build-contracting-batch-btn">
+                    <i class="fa-solid fa-layer-group"></i>
+                    Build Batch
+                  </button>
+
+                  <button type="button" class="secondary-btn" id="clear-contracting-batch-btn">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    Clear
+                  </button>
+                </div>
+
+                <p id="start-contracting-message" class="form-message"></p>
+              </div>
+            </section>
+
+            <section class="carrier-card">
+              <div class="card-header">
+                <h2>Selected Agents</h2>
+                <p>Quick readiness check before you start.</p>
+              </div>
+
+              <div id="selected-agent-readiness" class="readiness-list">
+                <p class="empty-row">Select one or more agents to review readiness.</p>
+              </div>
+            </section>
+          </div>
+
           <section class="carrier-card">
             <div class="card-header">
-              <h2 id="form-title">Add Agent Carrier</h2>
-              <p id="form-subtitle">Create a new row in <code>agent_carriers</code>.</p>
+              <h2>Carrier Rules</h2>
+              <p>Click carriers to add them to the current batch.</p>
             </div>
 
-            <form id="agent-carriers-form" class="carrier-form">
-              <input type="hidden" id="editing-row-id" />
-
-              <div class="form-grid">
-                <div class="field">
-                  <label for="agent-id">Agent</label>
-                  <select id="agent-id" required>
-                    <option value="">Select agent</option>
-                  </select>
-                </div>
-
-                <div class="field">
-                  <label for="carrier-id">Carrier</label>
-                  <select id="carrier-id" required>
-                    <option value="">Select carrier</option>
-                  </select>
-                </div>
-
-                <div class="field">
-                  <label for="status">Status</label>
-                  <select id="status" required>
-                    <option value="inactive">Inactive</option>
-                    <option value="active">Active</option>
-                    <option value="pending">Pending</option>
-                    <option value="terminated">Terminated</option>
-                  </select>
-                </div>
-
-                <div class="field">
-                  <label for="writing-number">Writing Number</label>
-                  <input type="text" id="writing-number" placeholder="Optional" />
-                </div>
-
-                <div class="field">
-                  <label for="npn">NPN</label>
-                  <input type="text" id="npn" placeholder="Optional" />
-                </div>
-
-                <div class="field">
-                  <label for="effective-date">Effective Date</label>
-                  <input type="date" id="effective-date" />
-                </div>
-
-                <div class="field">
-                  <label for="terminated-date">Terminated Date</label>
-                  <input type="date" id="terminated-date" />
-                </div>
-
-                <div class="field checkbox-field">
-                  <label class="checkbox-wrap">
-                    <input type="checkbox" id="is-contracted" checked />
-                    <span>Is Contracted</span>
-                  </label>
-                </div>
-
-                <div class="field checkbox-field">
-                  <label class="checkbox-wrap">
-                    <input type="checkbox" id="is-appointed" />
-                    <span>Is Appointed</span>
-                  </label>
-                </div>
-
-                <div class="field field-full">
-                  <label for="states">States</label>
-                  <select id="states" multiple size="8">
-                    <option value="AL">Alabama (AL)</option>
-                    <option value="AK">Alaska (AK)</option>
-                    <option value="AZ">Arizona (AZ)</option>
-                    <option value="AR">Arkansas (AR)</option>
-                    <option value="CA">California (CA)</option>
-                    <option value="CO">Colorado (CO)</option>
-                    <option value="CT">Connecticut (CT)</option>
-                    <option value="DE">Delaware (DE)</option>
-                    <option value="FL">Florida (FL)</option>
-                    <option value="GA">Georgia (GA)</option>
-                    <option value="HI">Hawaii (HI)</option>
-                    <option value="ID">Idaho (ID)</option>
-                    <option value="IL">Illinois (IL)</option>
-                    <option value="IN">Indiana (IN)</option>
-                    <option value="IA">Iowa (IA)</option>
-                    <option value="KS">Kansas (KS)</option>
-                    <option value="KY">Kentucky (KY)</option>
-                    <option value="LA">Louisiana (LA)</option>
-                    <option value="ME">Maine (ME)</option>
-                    <option value="MD">Maryland (MD)</option>
-                    <option value="MA">Massachusetts (MA)</option>
-                    <option value="MI">Michigan (MI)</option>
-                    <option value="MN">Minnesota (MN)</option>
-                    <option value="MS">Mississippi (MS)</option>
-                    <option value="MO">Missouri (MO)</option>
-                    <option value="MT">Montana (MT)</option>
-                    <option value="NE">Nebraska (NE)</option>
-                    <option value="NV">Nevada (NV)</option>
-                    <option value="NH">New Hampshire (NH)</option>
-                    <option value="NJ">New Jersey (NJ)</option>
-                    <option value="NM">New Mexico (NM)</option>
-                    <option value="NY">New York (NY)</option>
-                    <option value="NC">North Carolina (NC)</option>
-                    <option value="ND">North Dakota (ND)</option>
-                    <option value="OH">Ohio (OH)</option>
-                    <option value="OK">Oklahoma (OK)</option>
-                    <option value="OR">Oregon (OR)</option>
-                    <option value="PA">Pennsylvania (PA)</option>
-                    <option value="RI">Rhode Island (RI)</option>
-                    <option value="SC">South Carolina (SC)</option>
-                    <option value="SD">South Dakota (SD)</option>
-                    <option value="TN">Tennessee (TN)</option>
-                    <option value="TX">Texas (TX)</option>
-                    <option value="UT">Utah (UT)</option>
-                    <option value="VT">Vermont (VT)</option>
-                    <option value="VA">Virginia (VA)</option>
-                    <option value="WA">Washington (WA)</option>
-                    <option value="WV">West Virginia (WV)</option>
-                    <option value="WI">Wisconsin (WI)</option>
-                    <option value="WY">Wyoming (WY)</option>
-                  </select>
-                  <small>Hold Ctrl / Cmd to select multiple.</small>
-                </div>
-
-                <div class="field field-full">
-                  <label for="product-types">Product Types</label>
-                  <select id="product-types" multiple size="6">
-                    <option value="Life">Life</option>
-                    <option value="Health">Health</option>
-                    <option value="Property">Property</option>
-                    <option value="Casualty">Casualty</option>
-                    <option value="P&C">P&C</option>
-                    <option value="Medicare">Medicare</option>
-                    <option value="Annuity">Annuity</option>
-                    <option value="Legal">Legal</option>
-                    <option value="Realty">Realty</option>
-                    <option value="Commercial">Commercial</option>
-                    <option value="Pet">Pet</option>
-                  </select>
-                  <small>Use whatever product labels match your system.</small>
-                </div>
-              </div>
-
-              <div class="form-actions">
-                <button type="submit" class="primary-btn" id="save-btn">
-                  <i class="fa-solid fa-floppy-disk"></i>
-                  Save Agent Carrier
-                </button>
-
-                <button type="button" id="reset-form-btn" class="secondary-btn">
-                  <i class="fa-solid fa-rotate-left"></i>
-                  Reset
-                </button>
-
-                <button type="button" id="cancel-edit-btn" class="cancel-edit-btn hidden">
-                  <i class="fa-solid fa-xmark"></i>
-                  Cancel Edit
-                </button>
-              </div>
-
-              <p id="form-message" class="form-message"></p>
-            </form>
+            <div id="start-carrier-rules-grid" class="rules-grid">
+              <p class="empty-row">Loading carrier rules...</p>
+            </div>
           </section>
 
-          <!-- Existing Rows -->
           <section class="carrier-card">
             <div class="card-header">
-              <h2>Existing Agent Carrier Rows</h2>
-              <p>Search, review, edit, and delete existing relationships.</p>
+              <h2>Pending Batch</h2>
+              <p>
+                Email carriers are grouped by destination group per agent. Link/manual carriers are listed separately.
+              </p>
             </div>
 
-            <div class="table-toolbar">
-              <div class="field search-field">
-                <label for="search-input">Search</label>
-                <input
-                  type="text"
-                  id="search-input"
-                  placeholder="Search by agent, carrier, status, state, product, NPN..."
-                />
-              </div>
+            <div id="pending-batch-wrap" class="pending-batch-wrap">
+              <p class="empty-row">No carriers added yet.</p>
+            </div>
+
+            <div class="form-actions top-space">
+              <button type="button" class="primary-btn" id="create-contracting-requests-btn">
+                <i class="fa-solid fa-floppy-disk"></i>
+                Save Requests
+              </button>
+
+              <button type="button" class="secondary-btn" id="launch-contracting-actions-btn">
+                <i class="fa-solid fa-bolt"></i>
+                Launch Actions
+              </button>
+            </div>
+          </section>
+
+          <section class="carrier-card">
+            <div class="card-header">
+              <h2>Recent Contracting Requests</h2>
+              <p>Most recent started contracting activity.</p>
             </div>
 
             <div class="table-wrap">
-              <table id="agent-carriers-table">
+              <table id="contracting-requests-table">
                 <thead>
                   <tr>
+                    <th>Created</th>
                     <th>Agent</th>
                     <th>Carrier</th>
                     <th>Status</th>
-                    <th>Contracted</th>
-                    <th>Appointed</th>
-                    <th>States</th>
-                    <th>Products</th>
-                    <th>Writing #</th>
-                    <th>NPN</th>
-                    <th>Effective</th>
-                    <th>Terminated</th>
-                    <th>Actions</th>
+                    <th>Method</th>
+                    <th>Destination Group</th>
+                    <th>Requested By</th>
                   </tr>
                 </thead>
-                <tbody id="agent-carriers-tbody">
+                <tbody id="contracting-requests-tbody">
                   <tr>
-                    <td colspan="12" class="empty-row">Loading...</td>
+                    <td colspan="7" class="empty-row">Loading...</td>
                   </tr>
                 </tbody>
               </table>
             </div>
           </section>
-        </div>
+        </section>
+
+        <!-- ADD CONTRACTING TAB -->
+        <section id="add-contracting-tab" class="tab-panel">
+          <div class="carrier-layout">
+            <section class="carrier-card">
+              <div class="card-header">
+                <h2 id="form-title">Add Agent Carrier</h2>
+                <p id="form-subtitle">Create a new row in <code>agent_carriers</code>.</p>
+              </div>
+
+              <form id="agent-carriers-form" class="carrier-form">
+                <input type="hidden" id="editing-row-id" />
+
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="agent-id">Agent</label>
+                    <select id="agent-id" required>
+                      <option value="">Select agent</option>
+                    </select>
+                  </div>
+
+                  <div class="field">
+                    <label for="carrier-id">Carrier</label>
+                    <select id="carrier-id" required>
+                      <option value="">Select carrier</option>
+                    </select>
+                  </div>
+
+                  <div class="field">
+                    <label for="status">Status</label>
+                    <select id="status" required>
+                      <option value="inactive">Inactive</option>
+                      <option value="active">Active</option>
+                      <option value="pending">Pending</option>
+                      <option value="terminated">Terminated</option>
+                    </select>
+                  </div>
+
+                  <div class="field">
+                    <label for="writing-number">Writing Number</label>
+                    <input type="text" id="writing-number" placeholder="Optional" />
+                  </div>
+
+                  <div class="field">
+                    <label for="npn">NPN</label>
+                    <input type="text" id="npn" placeholder="Optional" />
+                  </div>
+
+                  <div class="field">
+                    <label for="effective-date">Effective Date</label>
+                    <input type="date" id="effective-date" />
+                  </div>
+
+                  <div class="field">
+                    <label for="terminated-date">Terminated Date</label>
+                    <input type="date" id="terminated-date" />
+                  </div>
+
+                  <div class="field checkbox-field">
+                    <label class="checkbox-wrap">
+                      <input type="checkbox" id="is-contracted" checked />
+                      <span>Is Contracted</span>
+                    </label>
+                  </div>
+
+                  <div class="field checkbox-field">
+                    <label class="checkbox-wrap">
+                      <input type="checkbox" id="is-appointed" />
+                      <span>Is Appointed</span>
+                    </label>
+                  </div>
+
+                  <div class="field field-full">
+                    <label for="states">States</label>
+                    <select id="states" multiple size="8">
+                      <option value="AL">Alabama (AL)</option>
+                      <option value="AK">Alaska (AK)</option>
+                      <option value="AZ">Arizona (AZ)</option>
+                      <option value="AR">Arkansas (AR)</option>
+                      <option value="CA">California (CA)</option>
+                      <option value="CO">Colorado (CO)</option>
+                      <option value="CT">Connecticut (CT)</option>
+                      <option value="DE">Delaware (DE)</option>
+                      <option value="FL">Florida (FL)</option>
+                      <option value="GA">Georgia (GA)</option>
+                      <option value="HI">Hawaii (HI)</option>
+                      <option value="ID">Idaho (ID)</option>
+                      <option value="IL">Illinois (IL)</option>
+                      <option value="IN">Indiana (IN)</option>
+                      <option value="IA">Iowa (IA)</option>
+                      <option value="KS">Kansas (KS)</option>
+                      <option value="KY">Kentucky (KY)</option>
+                      <option value="LA">Louisiana (LA)</option>
+                      <option value="ME">Maine (ME)</option>
+                      <option value="MD">Maryland (MD)</option>
+                      <option value="MA">Massachusetts (MA)</option>
+                      <option value="MI">Michigan (MI)</option>
+                      <option value="MN">Minnesota (MN)</option>
+                      <option value="MS">Mississippi (MS)</option>
+                      <option value="MO">Missouri (MO)</option>
+                      <option value="MT">Montana (MT)</option>
+                      <option value="NE">Nebraska (NE)</option>
+                      <option value="NV">Nevada (NV)</option>
+                      <option value="NH">New Hampshire (NH)</option>
+                      <option value="NJ">New Jersey (NJ)</option>
+                      <option value="NM">New Mexico (NM)</option>
+                      <option value="NY">New York (NY)</option>
+                      <option value="NC">North Carolina (NC)</option>
+                      <option value="ND">North Dakota (ND)</option>
+                      <option value="OH">Ohio (OH)</option>
+                      <option value="OK">Oklahoma (OK)</option>
+                      <option value="OR">Oregon (OR)</option>
+                      <option value="PA">Pennsylvania (PA)</option>
+                      <option value="RI">Rhode Island (RI)</option>
+                      <option value="SC">South Carolina (SC)</option>
+                      <option value="SD">South Dakota (SD)</option>
+                      <option value="TN">Tennessee (TN)</option>
+                      <option value="TX">Texas (TX)</option>
+                      <option value="UT">Utah (UT)</option>
+                      <option value="VT">Vermont (VT)</option>
+                      <option value="VA">Virginia (VA)</option>
+                      <option value="WA">Washington (WA)</option>
+                      <option value="WV">West Virginia (WV)</option>
+                      <option value="WI">Wisconsin (WI)</option>
+                      <option value="WY">Wyoming (WY)</option>
+                    </select>
+                    <small>Hold Ctrl / Cmd to select multiple.</small>
+                  </div>
+
+                  <div class="field field-full">
+                    <label for="product-types">Product Types</label>
+                    <select id="product-types" multiple size="6">
+                      <option value="Life">Life</option>
+                      <option value="Health">Health</option>
+                      <option value="Property">Property</option>
+                      <option value="Casualty">Casualty</option>
+                      <option value="P&C">P&C</option>
+                      <option value="Medicare">Medicare</option>
+                      <option value="Annuity">Annuity</option>
+                      <option value="Legal">Legal</option>
+                      <option value="Realty">Realty</option>
+                      <option value="Commercial">Commercial</option>
+                      <option value="Pet">Pet</option>
+                    </select>
+                    <small>Use whatever product labels match your system.</small>
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn" id="save-btn">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Save Agent Carrier
+                  </button>
+
+                  <button type="button" id="reset-form-btn" class="secondary-btn">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    Reset
+                  </button>
+
+                  <button type="button" id="cancel-edit-btn" class="cancel-edit-btn hidden">
+                    <i class="fa-solid fa-xmark"></i>
+                    Cancel Edit
+                  </button>
+                </div>
+
+                <p id="form-message" class="form-message"></p>
+              </form>
+            </section>
+
+            <section class="carrier-card">
+              <div class="card-header">
+                <h2>Existing Agent Carrier Rows</h2>
+                <p>Search, review, edit, and delete existing relationships.</p>
+              </div>
+
+              <div class="table-toolbar">
+                <div class="field search-field">
+                  <label for="search-input">Search</label>
+                  <input
+                    type="text"
+                    id="search-input"
+                    placeholder="Search by agent, carrier, status, state, product, NPN..."
+                  />
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table id="agent-carriers-table">
+                  <thead>
+                    <tr>
+                      <th>Agent</th>
+                      <th>Carrier</th>
+                      <th>Status</th>
+                      <th>Contracted</th>
+                      <th>Appointed</th>
+                      <th>States</th>
+                      <th>Products</th>
+                      <th>Writing #</th>
+                      <th>NPN</th>
+                      <th>Effective</th>
+                      <th>Terminated</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="agent-carriers-tbody">
+                    <tr>
+                      <td colspan="12" class="empty-row">Loading...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
       </section>
     </main>
 
-    <!-- Footer -->
     <footer class="index-grid-footer">
       <img id="footerlogo" src="Pics/img17.png">
       <hr class="footerhr">
@@ -339,13 +468,11 @@
       <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
     </footer>
 
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="scripts/supabase-client.js"></script>
     <script src="scripts/general.js"></script>
     <script src="scripts/agent-carriers.js"></script>
 
-    <!-- Admin-only gate -->
     <script>
       (async () => {
         const supabase = window.supabaseClient;
