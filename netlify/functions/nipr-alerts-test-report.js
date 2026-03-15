@@ -7,7 +7,7 @@ export async function handler() {
     const password = process.env.NIPR_PROD_PASSWORD;
 
     const endpoint =
-      "https://pdb-services.nipr.com/pdb-alerts-industry-services/industry-ws/receiveSpecificReportForSubscription";
+      "https://pdb-services.nipr.com/pdb-alerts-industry-services/industry-ws";
 
     const soap = `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
