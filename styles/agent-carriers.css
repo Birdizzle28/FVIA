@@ -437,24 +437,25 @@ code{
 }
 
 .tab-btn {
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(255,255,255,0.06);
-  color: #fff;
-  padding: 12px 18px;
-  border-radius: 14px;
-  cursor: pointer;
-  font-family: inherit;
-  font-size: 1rem;
   display: inline-flex;
   align-items: center;
   gap: 10px;
+  padding: 12px 18px;
+  border-radius: 0;
+  border: 1px solid var(--ac-border);
+  background: #ffffff;
+  color: var(--ac-indigo);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 1rem;
+  font-weight: 800;
+  box-shadow: var(--ac-shadow);
 }
 
 .tab-btn.active {
-  background: #ed9ea5;
+  background: var(--ac-pink);
   color: #111;
-  border-color: #ed9ea5;
-  font-weight: 700;
+  border-color: var(--ac-pink);
 }
 
 .tab-panel {
