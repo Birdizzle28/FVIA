@@ -5,6 +5,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     return;
   }
 
+  let currentAdminId = null;
+
   const form = document.getElementById('agent-carriers-form');
   const agentSelect = document.getElementById('agent-id');
   const carrierSelect = document.getElementById('carrier-id');
@@ -27,8 +29,28 @@ document.addEventListener('DOMContentLoaded', async () => {
   const formSubtitle = document.getElementById('form-subtitle');
   const saveBtn = document.getElementById('save-btn');
 
+  const tabButtons = document.querySelectorAll('.tab-btn');
+  const tabPanels = document.querySelectorAll('.tab-panel');
+
+  const startAgentSelect = document.getElementById('start-agent-select');
+  const startCarrierSearch = document.getElementById('start-carrier-search');
+  const buildContractingBatchBtn = document.getElementById('build-contracting-batch-btn');
+  const clearContractingBatchBtn = document.getElementById('clear-contracting-batch-btn');
+  const startContractingMessage = document.getElementById('start-contracting-message');
+  const startCarrierRulesGrid = document.getElementById('start-carrier-rules-grid');
+  const pendingBatchWrap = document.getElementById('pending-batch-wrap');
+  const createContractingRequestsBtn = document.getElementById('create-contracting-requests-btn');
+  const launchContractingActionsBtn = document.getElementById('launch-contracting-actions-btn');
+  const selectedAgentReadiness = document.getElementById('selected-agent-readiness');
+  const contractingRequestsTbody = document.getElementById('contracting-requests-tbody');
+
   let allRows = [];
   let currentlyEditingId = null;
+
+  let allAgents = [];
+  let allCarriers = [];
+  let allContractingRules = [];
+  let pendingSelections = [];
 
   function getMultiValues(selectEl) {
     return Array.from(selectEl.selectedOptions).map(opt => opt.value);
@@ -41,10 +63,25 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;')
+      .replaceAll("'", '&#039;');
+  }
+
   function setMessage(text, type = '') {
     formMessage.textContent = text;
     formMessage.className = 'form-message';
     if (type) formMessage.classList.add(type);
+  }
+
+  function setStartMessage(text, type = '') {
+    startContractingMessage.textContent = text;
+    startContractingMessage.className = 'form-message';
+    if (type) startContractingMessage.classList.add(type);
   }
 
   function clearEditingHighlight() {
@@ -124,6 +161,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     return `<span class="badge ${normalized}">${normalized}</span>`;
   }
 
+  function makeMethodBadge(method) {
+    const normalized = (method || 'manual').toLowerCase();
+    return `<span class="method-badge ${normalized}">${escapeHtml(normalized)}</span>`;
+  }
+
   function makeBoolPill(value) {
     if (value) {
       return `<span class="bool-pill yes"><i class="fa-solid fa-circle-check"></i> Yes</span>`;
@@ -135,15 +177,74 @@ document.addEventListener('DOMContentLoaded', async () => {
     if (!items || !items.length) return '—';
     return `
       <div class="inline-list">
-        ${items.map(item => `<span class="inline-chip">${item}</span>`).join('')}
+        ${items.map(item => `<span class="inline-chip">${escapeHtml(item)}</span>`).join('')}
       </div>
     `;
+  }
+
+  function getSelectedStartAgentIds() {
+    return Array.from(startAgentSelect.selectedOptions).map(option => option.value);
+  }
+
+  function getSelectedStartAgents() {
+    const ids = new Set(getSelectedStartAgentIds());
+    return allAgents.filter(agent => ids.has(agent.id));
+  }
+
+  function checkAgentReadiness(agent) {
+    const missing = [];
+    if (!agent.full_name) missing.push('Full Name');
+    if (!agent.email) missing.push('Email');
+    if (!agent.agent_id) missing.push('Agent ID');
+    if (!agent.phone) missing.push('Phone');
+    return {
+      ready: missing.length === 0,
+      missing
+    };
+  }
+
+  function renderSelectedAgentReadiness() {
+    const selectedAgents = getSelectedStartAgents();
+
+    if (!selectedAgents.length) {
+      selectedAgentReadiness.innerHTML = '<p class="empty-row">Select one or more agents to review readiness.</p>';
+      return;
+    }
+
+    selectedAgentReadiness.innerHTML = selectedAgents.map(agent => {
+      const readiness = checkAgentReadiness(agent);
+      return `
+        <div class="readiness-card ${readiness.ready ? 'ready' : 'not-ready'}">
+          <div class="readiness-top">
+            <strong>${escapeHtml(agent.full_name || agent.email || 'Unnamed Agent')}</strong>
+            <span class="readiness-status ${readiness.ready ? 'ready' : 'not-ready'}">
+              ${readiness.ready ? 'Ready' : 'Missing Info'}
+            </span>
+          </div>
+          <div class="readiness-meta">
+            <span><strong>Email:</strong> ${escapeHtml(agent.email || '—')}</span>
+            <span><strong>Agent ID:</strong> ${escapeHtml(agent.agent_id || '—')}</span>
+            <span><strong>Phone:</strong> ${escapeHtml(agent.phone || '—')}</span>
+          </div>
+          ${
+            readiness.ready
+              ? '<p class="readiness-good">This agent has the main info needed to start the process.</p>'
+              : `<p class="readiness-bad"><strong>Missing:</strong> ${escapeHtml(readiness.missing.join(', '))}</p>`
+          }
+        </div>
+      `;
+    }).join('');
+  }
+
+  async function loadCurrentAdmin() {
+    const { data: { session } = {} } = await supabase.auth.getSession();
+    currentAdminId = session?.user?.id || null;
   }
 
   async function loadAgents() {
     const { data, error } = await supabase
       .from('agents')
-      .select('id, full_name, email')
+      .select('id, full_name, email, phone, agent_id, npn, is_active')
       .order('full_name', { ascending: true });
 
     if (error) {
@@ -151,13 +252,21 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
-    agentSelect.innerHTML = '<option value="">Select agent</option>';
+    allAgents = data || [];
 
-    (data || []).forEach(agent => {
+    agentSelect.innerHTML = '<option value="">Select agent</option>';
+    startAgentSelect.innerHTML = '';
+
+    allAgents.forEach(agent => {
       const opt = document.createElement('option');
       opt.value = agent.id;
       opt.textContent = agent.full_name || agent.email || agent.id;
       agentSelect.appendChild(opt);
+
+      const opt2 = document.createElement('option');
+      opt2.value = agent.id;
+      opt2.textContent = `${agent.full_name || agent.email || agent.id}${agent.is_active ? '' : ' (Inactive)'}`;
+      startAgentSelect.appendChild(opt2);
     });
   }
 
@@ -172,14 +281,440 @@ document.addEventListener('DOMContentLoaded', async () => {
       return;
     }
 
+    allCarriers = data || [];
     carrierSelect.innerHTML = '<option value="">Select carrier</option>';
 
-    (data || []).forEach(carrier => {
+    allCarriers.forEach(carrier => {
       const opt = document.createElement('option');
       opt.value = carrier.id;
       opt.textContent = carrier.carrier_name || carrier.id;
       carrierSelect.appendChild(opt);
     });
+  }
+
+  async function loadContractingRules() {
+    const { data, error } = await supabase
+      .from('carrier_contracting_rules')
+      .select(`
+        id,
+        carrier_id,
+        is_active,
+        start_method,
+        destination_group,
+        start_url,
+        email_to,
+        email_cc,
+        email_bcc,
+        email_subject_template,
+        email_body_template,
+        instructions,
+        supports_multi_agent_batch,
+        supports_multi_carrier_batch,
+        sort_order,
+        carriers:carrier_id (
+          carrier_name
+        )
+      `)
+      .eq('is_active', true)
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      console.error('Error loading contracting rules:', error);
+      startCarrierRulesGrid.innerHTML = '<p class="empty-row">Could not load carrier rules.</p>';
+      return;
+    }
+
+    allContractingRules = data || [];
+    renderCarrierRules();
+  }
+
+  function renderCarrierRules() {
+    const term = (startCarrierSearch.value || '').trim().toLowerCase();
+
+    const filtered = allContractingRules.filter(rule => {
+      const haystack = [
+        rule.carriers?.carrier_name,
+        rule.start_method,
+        rule.destination_group,
+        rule.instructions,
+        ...(rule.email_to || [])
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+
+      return haystack.includes(term);
+    });
+
+    if (!filtered.length) {
+      startCarrierRulesGrid.innerHTML = '<p class="empty-row">No carrier rules found.</p>';
+      return;
+    }
+
+    startCarrierRulesGrid.innerHTML = filtered.map(rule => {
+      const isQueued = pendingSelections.some(item => item.rule_id === rule.id);
+      return `
+        <article class="rule-card">
+          <div class="rule-card-top">
+            <div>
+              <h3>${escapeHtml(rule.carriers?.carrier_name || 'Unknown Carrier')}</h3>
+              <p class="rule-destination">${escapeHtml(rule.destination_group || 'No group')}</p>
+            </div>
+            ${makeMethodBadge(rule.start_method)}
+          </div>
+
+          <div class="rule-card-body">
+            <p><strong>Instructions:</strong> ${escapeHtml(rule.instructions || '—')}</p>
+            <p><strong>Email To:</strong> ${escapeHtml((rule.email_to || []).join(', ') || '—')}</p>
+            <p><strong>Link:</strong> ${rule.start_url ? `<a href="${escapeHtml(rule.start_url)}" target="_blank" rel="noopener noreferrer">Open Link</a>` : '—'}</p>
+          </div>
+
+          <div class="rule-card-actions">
+            <button
+              type="button"
+              class="primary-btn add-rule-btn"
+              data-rule-id="${rule.id}"
+              ${isQueued ? 'disabled' : ''}
+            >
+              <i class="fa-solid fa-plus"></i>
+              ${isQueued ? 'Added' : 'Add to Batch'}
+            </button>
+          </div>
+        </article>
+      `;
+    }).join('');
+
+    document.querySelectorAll('.add-rule-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const ruleId = btn.dataset.ruleId;
+        const rule = allContractingRules.find(item => item.id === ruleId);
+        if (!rule) return;
+
+        if (pendingSelections.some(item => item.rule_id === rule.id)) {
+          return;
+        }
+
+        pendingSelections.push({
+          rule_id: rule.id,
+          carrier_id: rule.carrier_id
+        });
+
+        renderCarrierRules();
+        renderPendingBatch();
+      });
+    });
+  }
+
+  function buildEmailGroups(selectedAgents, selectedRules) {
+    const groups = [];
+
+    selectedAgents.forEach(agent => {
+      selectedRules.forEach(rule => {
+        if (rule.start_method !== 'email') return;
+
+        const key = `${agent.id}__${rule.destination_group || rule.id}`;
+        let existing = groups.find(group => group.key === key);
+
+        if (!existing) {
+          existing = {
+            key,
+            agent,
+            method: 'email',
+            destination_group: rule.destination_group || null,
+            rules: [],
+            email_to: rule.email_to || [],
+            email_cc: rule.email_cc || [],
+            email_bcc: rule.email_bcc || []
+          };
+          groups.push(existing);
+        }
+
+        existing.rules.push(rule);
+      });
+    });
+
+    return groups;
+  }
+
+  function buildLinkItems(selectedAgents, selectedRules) {
+    const items = [];
+    selectedAgents.forEach(agent => {
+      selectedRules.forEach(rule => {
+        if (rule.start_method !== 'link') return;
+        items.push({
+          key: `${agent.id}__${rule.id}`,
+          agent,
+          rule
+        });
+      });
+    });
+    return items;
+  }
+
+  function buildManualItems(selectedAgents, selectedRules) {
+    const items = [];
+    selectedAgents.forEach(agent => {
+      selectedRules.forEach(rule => {
+        if (rule.start_method !== 'manual') return;
+        items.push({
+          key: `${agent.id}__${rule.id}`,
+          agent,
+          rule
+        });
+      });
+    });
+    return items;
+  }
+
+  function buildBatchSummary() {
+    const selectedAgents = getSelectedStartAgents();
+    const selectedRules = allContractingRules.filter(rule =>
+      pendingSelections.some(item => item.rule_id === rule.id)
+    );
+
+    return {
+      selectedAgents,
+      selectedRules,
+      emailGroups: buildEmailGroups(selectedAgents, selectedRules),
+      linkItems: buildLinkItems(selectedAgents, selectedRules),
+      manualItems: buildManualItems(selectedAgents, selectedRules)
+    };
+  }
+
+  function renderPendingBatch() {
+    const { selectedAgents, selectedRules, emailGroups, linkItems, manualItems } = buildBatchSummary();
+
+    if (!selectedAgents.length) {
+      pendingBatchWrap.innerHTML = '<p class="empty-row">Select one or more agents first.</p>';
+      return;
+    }
+
+    if (!selectedRules.length) {
+      pendingBatchWrap.innerHTML = '<p class="empty-row">No carriers added yet.</p>';
+      return;
+    }
+
+    const emailHtml = emailGroups.length
+      ? `
+        <div class="pending-section">
+          <h3>Email Groups</h3>
+          ${emailGroups.map(group => {
+            const carrierNames = group.rules.map(rule => rule.carriers?.carrier_name || 'Unknown Carrier');
+            return `
+              <div class="pending-item">
+                <div class="pending-top">
+                  <strong>${escapeHtml(group.agent.full_name || group.agent.email || 'Agent')}</strong>
+                  ${makeMethodBadge('email')}
+                </div>
+                <p><strong>Destination Group:</strong> ${escapeHtml(group.destination_group || '—')}</p>
+                <p><strong>To:</strong> ${escapeHtml((group.email_to || []).join(', ') || '—')}</p>
+                <p><strong>Carriers:</strong> ${escapeHtml(carrierNames.join(', '))}</p>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `
+      : '';
+
+    const linkHtml = linkItems.length
+      ? `
+        <div class="pending-section">
+          <h3>Link Actions</h3>
+          ${linkItems.map(item => `
+            <div class="pending-item">
+              <div class="pending-top">
+                <strong>${escapeHtml(item.agent.full_name || item.agent.email || 'Agent')}</strong>
+                ${makeMethodBadge('link')}
+              </div>
+              <p><strong>Carrier:</strong> ${escapeHtml(item.rule.carriers?.carrier_name || 'Unknown Carrier')}</p>
+              <p><strong>Link:</strong> ${item.rule.start_url ? `<a href="${escapeHtml(item.rule.start_url)}" target="_blank" rel="noopener noreferrer">Open Link</a>` : '—'}</p>
+            </div>
+          `).join('')}
+        </div>
+      `
+      : '';
+
+    const manualHtml = manualItems.length
+      ? `
+        <div class="pending-section">
+          <h3>Manual Actions</h3>
+          ${manualItems.map(item => `
+            <div class="pending-item">
+              <div class="pending-top">
+                <strong>${escapeHtml(item.agent.full_name || item.agent.email || 'Agent')}</strong>
+                ${makeMethodBadge('manual')}
+              </div>
+              <p><strong>Carrier:</strong> ${escapeHtml(item.rule.carriers?.carrier_name || 'Unknown Carrier')}</p>
+              <p><strong>Instructions:</strong> ${escapeHtml(item.rule.instructions || '—')}</p>
+            </div>
+          `).join('')}
+        </div>
+      `
+      : '';
+
+    pendingBatchWrap.innerHTML = `${emailHtml}${linkHtml}${manualHtml}`;
+  }
+
+  function buildBatchKey(agentId, rule) {
+    return `${agentId}__${rule.destination_group || rule.id}__${Date.now()}`;
+  }
+
+  function fillTemplate(template, agent, carrierNames) {
+    const namesList = carrierNames.map(name => `- ${name}`).join('%0D%0A');
+    return String(template || '')
+      .replaceAll('{{agent_name}}', agent.full_name || '')
+      .replaceAll('{{agent_email}}', agent.email || '')
+      .replaceAll('{{agent_id}}', agent.agent_id || '')
+      .replaceAll('{{carrier_names}}', carrierNames.join(', '))
+      .replaceAll('{{carrier_names_list}}', namesList);
+  }
+
+  async function saveContractingRequests() {
+    const { selectedAgents, selectedRules } = buildBatchSummary();
+
+    if (!currentAdminId) {
+      setStartMessage('Could not determine current admin session.', 'error');
+      return;
+    }
+
+    if (!selectedAgents.length) {
+      setStartMessage('Select at least one agent first.', 'error');
+      return;
+    }
+
+    if (!selectedRules.length) {
+      setStartMessage('Add at least one carrier to the batch.', 'error');
+      return;
+    }
+
+    const payload = [];
+
+    selectedAgents.forEach(agent => {
+      selectedRules.forEach(rule => {
+        const carrierName = rule.carriers?.carrier_name || 'Unknown Carrier';
+        const subject = fillTemplate(rule.email_subject_template, agent, [carrierName]);
+        const body = fillTemplate(rule.email_body_template, agent, [carrierName]);
+
+        payload.push({
+          agent_id: agent.id,
+          carrier_id: rule.carrier_id,
+          rule_id: rule.id,
+          requested_by: currentAdminId,
+          status: 'draft',
+          batch_key: buildBatchKey(agent.id, rule),
+          start_method_snapshot: rule.start_method,
+          destination_group_snapshot: rule.destination_group || null,
+          start_url_snapshot: rule.start_url || null,
+          email_to_snapshot: rule.email_to || [],
+          email_cc_snapshot: rule.email_cc || [],
+          email_bcc_snapshot: rule.email_bcc || [],
+          email_subject_snapshot: subject || null,
+          email_body_snapshot: body || null,
+          notes: rule.instructions || null
+        });
+      });
+    });
+
+    const { error } = await supabase
+      .from('carrier_contracting_requests')
+      .insert(payload);
+
+    if (error) {
+      console.error('Error saving contracting requests:', error);
+      setStartMessage(error.message || 'Could not save contracting requests.', 'error');
+      return;
+    }
+
+    setStartMessage('Contracting requests saved successfully.', 'success');
+    pendingSelections = [];
+    renderCarrierRules();
+    renderPendingBatch();
+    await loadContractingRequests();
+  }
+
+  function launchContractingActions() {
+    const { selectedAgents, selectedRules, emailGroups, linkItems } = buildBatchSummary();
+
+    if (!selectedAgents.length || !selectedRules.length) {
+      setStartMessage('Select agents and add carriers first.', 'error');
+      return;
+    }
+
+    linkItems.forEach(item => {
+      if (item.rule.start_url) {
+        window.open(item.rule.start_url, '_blank', 'noopener,noreferrer');
+      }
+    });
+
+    emailGroups.forEach(group => {
+      const carrierNames = group.rules.map(rule => rule.carriers?.carrier_name || 'Unknown Carrier');
+      const firstRule = group.rules[0];
+
+      const subject = fillTemplate(firstRule.email_subject_template, group.agent, carrierNames);
+      const body = fillTemplate(firstRule.email_body_template, group.agent, carrierNames);
+
+      const to = encodeURIComponent((group.email_to || []).join(','));
+      const cc = encodeURIComponent((group.email_cc || []).join(','));
+      const bcc = encodeURIComponent((group.email_bcc || []).join(','));
+
+      const mailto = `mailto:${to}?subject=${encodeURIComponent(subject || '')}&body=${body || ''}${cc ? `&cc=${cc}` : ''}${bcc ? `&bcc=${bcc}` : ''}`;
+      window.open(mailto, '_blank');
+    });
+
+    setStartMessage('Launched available link and email actions.', 'success');
+  }
+
+  async function loadContractingRequests() {
+    contractingRequestsTbody.innerHTML = '<tr><td colspan="7" class="empty-row">Loading...</td></tr>';
+
+    const { data, error } = await supabase
+      .from('carrier_contracting_requests')
+      .select(`
+        id,
+        created_at,
+        status,
+        start_method_snapshot,
+        destination_group_snapshot,
+        requested_by,
+        agents:agent_id (
+          full_name,
+          email
+        ),
+        carriers:carrier_id (
+          carrier_name
+        ),
+        requested_by_agent:requested_by (
+          full_name,
+          email
+        )
+      `)
+      .order('created_at', { ascending: false })
+      .limit(25);
+
+    if (error) {
+      console.error('Error loading contracting requests:', error);
+      contractingRequestsTbody.innerHTML = '<tr><td colspan="7" class="empty-row">Could not load requests.</td></tr>';
+      return;
+    }
+
+    const rows = data || [];
+
+    if (!rows.length) {
+      contractingRequestsTbody.innerHTML = '<tr><td colspan="7" class="empty-row">No contracting requests found.</td></tr>';
+      return;
+    }
+
+    contractingRequestsTbody.innerHTML = rows.map(row => `
+      <tr>
+        <td>${formatDate(row.created_at)}</td>
+        <td>${escapeHtml(row.agents?.full_name || row.agents?.email || '—')}</td>
+        <td>${escapeHtml(row.carriers?.carrier_name || '—')}</td>
+        <td>${makeBadge(row.status)}</td>
+        <td>${makeMethodBadge(row.start_method_snapshot || 'manual')}</td>
+        <td>${escapeHtml(row.destination_group_snapshot || '—')}</td>
+        <td>${escapeHtml(row.requested_by_agent?.full_name || row.requested_by_agent?.email || '—')}</td>
+      </tr>
+    `).join('');
   }
 
   async function loadAgentCarriers() {
@@ -228,15 +763,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       return `
         <tr data-row-id="${row.id}">
-          <td>${agentName}</td>
-          <td>${carrierName}</td>
+          <td>${escapeHtml(agentName)}</td>
+          <td>${escapeHtml(carrierName)}</td>
           <td>${makeBadge(row.status)}</td>
           <td>${makeBoolPill(row.is_contracted)}</td>
           <td>${makeBoolPill(row.is_appointed)}</td>
           <td>${makeInlineChips(row.states)}</td>
           <td>${makeInlineChips(row.product_types)}</td>
-          <td>${row.writing_number || '—'}</td>
-          <td>${row.npn || '—'}</td>
+          <td>${escapeHtml(row.writing_number || '—')}</td>
+          <td>${escapeHtml(row.npn || '—')}</td>
           <td>${formatDate(row.effective_date)}</td>
           <td>${formatDate(row.terminated_date)}</td>
           <td>
@@ -332,6 +867,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
   }
 
+  function wireTabs() {
+    tabButtons.forEach(button => {
+      button.addEventListener('click', () => {
+        const target = button.dataset.tab;
+        tabButtons.forEach(btn => btn.classList.remove('active'));
+        tabPanels.forEach(panel => panel.classList.remove('active'));
+
+        button.classList.add('active');
+        document.getElementById(target)?.classList.add('active');
+      });
+    });
+  }
+
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     setMessage('');
@@ -405,8 +953,48 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   searchInput.addEventListener('input', applySearch);
 
+  startCarrierSearch.addEventListener('input', renderCarrierRules);
+
+  startAgentSelect.addEventListener('change', () => {
+    renderSelectedAgentReadiness();
+    renderPendingBatch();
+  });
+
+  buildContractingBatchBtn.addEventListener('click', () => {
+    const selectedAgents = getSelectedStartAgents();
+    if (!selectedAgents.length) {
+      setStartMessage('Select at least one agent first.', 'error');
+      return;
+    }
+    setStartMessage('Batch ready. Add carriers below.', 'success');
+    renderPendingBatch();
+  });
+
+  clearContractingBatchBtn.addEventListener('click', () => {
+    pendingSelections = [];
+    setSelectedValues(startAgentSelect, []);
+    renderCarrierRules();
+    renderSelectedAgentReadiness();
+    renderPendingBatch();
+    setStartMessage('', '');
+  });
+
+  createContractingRequestsBtn.addEventListener('click', async () => {
+    await saveContractingRequests();
+  });
+
+  launchContractingActionsBtn.addEventListener('click', () => {
+    launchContractingActions();
+  });
+
+  wireTabs();
+  await loadCurrentAdmin();
   await loadAgents();
   await loadCarriers();
+  await loadContractingRules();
+  renderSelectedAgentReadiness();
+  renderPendingBatch();
   resetForm();
   await loadAgentCarriers();
+  await loadContractingRequests();
 });
