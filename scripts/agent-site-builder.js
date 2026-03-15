@@ -2160,8 +2160,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                             <p class="builder-note">
                               These controls style the quote form text inside the quote section. They do not edit the actual form fields.
                             </p>
-          
-                            <div class="rt-toolbar quote-style-toolbar" data-toolbar-for="${section.id}-quote-body">
+                    
+                            <div class="rt-toolbar license-style-toolbar" data-toolbar-for="${section.id}-quote-body">
                               <input
                                 type="color"
                                 class="quote-body-highlight-picker"
@@ -2169,7 +2169,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                                 value="${escapeHtml(style.quote_body_highlight || "#fff3a3")}"
                                 title="Highlight Color"
                               />
-          
+                    
                               <button
                                 type="button"
                                 class="quote-style-btn ${style.quote_body_font_style === "italic" ? "active" : ""}"
@@ -2180,7 +2180,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                               >
                                 <i class="fa-solid fa-italic"></i>
                               </button>
-          
+                    
                               <button
                                 type="button"
                                 class="quote-style-btn ${style.quote_body_text_decoration === "underline" ? "active" : ""}"
@@ -2191,7 +2191,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                               >
                                 <i class="fa-solid fa-underline"></i>
                               </button>
-          
+                    
                               <div class="toolbar-color-wrap">
                                 <button type="button" class="rt-color-btn" title="Text Color">
                                   <span class="toolbar-a-icon" style="--toolbar-color:${escapeHtml(style.quote_body_color || "#000000")}">A</span>
@@ -2204,7 +2204,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                                   title="Text Color"
                                 />
                               </div>
-          
+                    
                               <input
                                 type="number"
                                 class="quote-body-font-size"
@@ -2215,7 +2215,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                                 value="${parseInt(style.quote_body_font_size || "16px", 10) || 16}"
                                 title="Text Size"
                               />
-          
+                    
                               <button
                                 type="button"
                                 class="quote-style-btn quote-style-clear-btn"
