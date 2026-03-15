@@ -28,7 +28,7 @@ function getBearerToken(event) {
    --------------------------- */
 
 function monthIndexUTC(d) {
-  return d.getUTCFullYear() * 12 + d.getUTCMonth(); // 0-based month
+  return d.getUTCFullYear() * 12 + d.getUTCMonth();
 }
 
 function getPayDate(event) {
@@ -41,7 +41,6 @@ function getPayDate(event) {
   const today = new Date();
   const thisMonth5 = new Date(today.getFullYear(), today.getMonth(), 5);
 
-  // if we already passed the 5th, default to NEXT month’s 5th
   if (today > thisMonth5) {
     return new Date(today.getFullYear(), today.getMonth() + 1, 5);
   }
@@ -52,7 +51,7 @@ function getMonthBounds(payDate) {
   const year  = payDate.getFullYear();
   const month = payDate.getMonth();
   const start = new Date(Date.UTC(year, month, 1));
-  const end   = new Date(Date.UTC(year, month + 1, 1)); // EXCLUSIVE
+  const end   = new Date(Date.UTC(year, month + 1, 1));
   return { start, end };
 }
 
@@ -102,7 +101,7 @@ function isPayMonthAllowed(exclusiveMonths, payDate) {
   const months = normalizeExclusiveMonths(exclusiveMonths);
   if (!months || !months.length) return true;
 
-  const payMonthNumber = payDate.getMonth() + 1; // 1..12
+  const payMonthNumber = payDate.getMonth() + 1;
   return months.includes(payMonthNumber);
 }
 
@@ -142,7 +141,6 @@ function getTermNumberByMonths(policyIssuedAt, payMonthStartUTC, termLengthMonth
   const termLen = Number(termLengthMonths || 0);
   if (termLen <= 0) return 1;
 
-  // term 1 = months 0..termLen-1, term 2 = termLen..2*termLen-1, etc.
   return Math.floor(monthsElapsed / termLen) + 1;
 }
 
@@ -151,9 +149,6 @@ function getTermNumberByMonths(policyIssuedAt, payMonthStartUTC, termLengthMonth
    --------------------------- */
 
 function getBaseRenewalRate(schedule, renewalIndex) {
-  // renewalIndex means:
-  // - 12-month world => policyYear (2+)
-  // - term world     => termNumber (2+)
   if (!renewalIndex || renewalIndex < 1) return 0;
 
   let rule = schedule.renewal_trail_rule;
@@ -188,26 +183,20 @@ function getBaseRenewalRate(schedule, renewalIndex) {
    PREMIUM BASIS HELPERS
    --------------------------- */
 
-// Returns premium for ONE term (not annual), then monthly payout spreads over term months.
-// For 12-month world, term premium == annual premium.
 function resolveTermPremium({ policy, termRow, termLengthMonths }) {
   const termLen = Number(termLengthMonths || 12);
 
-  // 1) If policy_terms has term_premium, prefer it
   if (termRow) {
     const tp = Number(termRow.term_premium || 0);
     if (tp > 0) return tp;
 
-    // If only annualized_premium exists, convert to term premium
     const ap = Number(termRow.annualized_premium || 0);
     if (ap > 0) return ap * (termLen / 12);
   }
 
-  // 2) policies.premium_annual (annual) -> convert to term premium if termLen != 12
   const pa = Number(policy.premium_annual || 0);
   if (pa > 0) return pa * (termLen / 12);
 
-  // 3) policies.premium_modal (monthly) -> term premium = modal * termLen
   const pm = Number(policy.premium_modal || 0);
   if (pm > 0) return pm * termLen;
 
@@ -216,6 +205,140 @@ function resolveTermPremium({ policy, termRow, termLengthMonths }) {
 
 function round2(n) {
   return Math.round((Number(n) || 0) * 100) / 100;
+}
+
+/* ---------------------------
+   LICENSE / OVERRIDE HELPERS
+   --------------------------- */
+
+function normalizeText(v) {
+  return String(v || '').trim().toLowerCase();
+}
+
+function normalizePolicyType(v) {
+  return String(v || '').trim().toLowerCase();
+}
+
+function normalizeState(v) {
+  return String(v || '').trim().toUpperCase();
+}
+
+function normalizeLoaText(v) {
+  return String(v || '')
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function getIssueYMD(policyIssuedAt) {
+  const d = new Date(policyIssuedAt);
+  if (isNaN(d.getTime())) return null;
+  return d.toISOString().slice(0, 10);
+}
+
+function getMatchingScheduleForPolicy(policy, level, allSchedules) {
+  if (!policy || !policy.issued_at) return null;
+
+  const issuedYMD = getIssueYMD(policy.issued_at);
+  const carrier = normalizeText(policy.carrier_name);
+  const line = normalizeText(policy.product_line);
+  const type = normalizePolicyType(policy.policy_type);
+  const lvl = normalizeText(level || 'agent');
+
+  const matches = (allSchedules || []).filter(s => {
+    const sameCarrier = normalizeText(s.carrier_name) === carrier;
+    const sameLine = normalizeText(s.product_line) === line;
+    const sameType = normalizePolicyType(s.policy_type) === type;
+    const sameLevel = normalizeText(s.agent_level || 'agent') === lvl;
+
+    const startsOk = !s.effective_from || s.effective_from <= issuedYMD;
+    const endsOk = !s.effective_to || s.effective_to >= issuedYMD;
+
+    return sameCarrier && sameLine && sameType && sameLevel && startsOk && endsOk;
+  });
+
+  if (!matches.length) return null;
+
+  matches.sort((a, b) => {
+    const aDate = a.effective_from || '0000-00-00';
+    const bDate = b.effective_from || '0000-00-00';
+    return bDate.localeCompare(aDate);
+  });
+
+  return matches[0];
+}
+
+function licenseRowQualifiesForPolicy(licenseRow, state, requiredLoas, issueYMD) {
+  if (!licenseRow) return false;
+  if (licenseRow.active !== true) return false;
+
+  const licState = normalizeState(licenseRow.state);
+  if (!licState || licState !== normalizeState(state)) return false;
+
+  if (licenseRow.date_issue_orig && issueYMD < licenseRow.date_issue_orig) return false;
+  if (licenseRow.date_expire && issueYMD > licenseRow.date_expire) return false;
+
+  if (!requiredLoas.length) return false;
+
+  const loaNames = Array.isArray(licenseRow.loa_names) ? licenseRow.loa_names : [];
+  const normalizedNames = loaNames.map(normalizeLoaText);
+
+  return requiredLoas.every(req => {
+    const target = normalizeLoaText(req);
+    return normalizedNames.some(name =>
+      name === target ||
+      name.includes(target) ||
+      target.includes(name)
+    );
+  });
+}
+
+function agentQualifiesForPolicy(agent, policy, policyState, allSchedules, licensesByExternalAgentId) {
+  if (!agent) return false;
+  if (agent.is_active === false) return false;
+  if (!policy?.issued_at) return false;
+  if (!policyState) return false;
+
+  const externalAgentId = agent.agent_id;
+  if (!externalAgentId) return false;
+
+  const schedule = getMatchingScheduleForPolicy(policy, agent.level || 'agent', allSchedules);
+  const requiredLoasRaw = Array.isArray(schedule?.required_loas) ? schedule.required_loas : [];
+  const requiredLoas = requiredLoasRaw.map(normalizeLoaText).filter(Boolean);
+
+  if (!requiredLoas.length) return false;
+
+  const issueYMD = getIssueYMD(policy.issued_at);
+  if (!issueYMD) return false;
+
+  const licenseRows = licensesByExternalAgentId.get(externalAgentId) || [];
+
+  return licenseRows.some(row =>
+    licenseRowQualifiesForPolicy(row, policyState, requiredLoas, issueYMD)
+  );
+}
+
+function findNearestEligibleUplineFromAgent(startRecruiterId, policy, policyState, allSchedules, agentsById, licensesByExternalAgentId) {
+  const visited = new Set();
+  let currentId = startRecruiterId;
+
+  while (currentId && !visited.has(currentId)) {
+    visited.add(currentId);
+
+    const currentAgent = agentsById.get(currentId);
+    if (!currentAgent) return null;
+
+    if (agentQualifiesForPolicy(currentAgent, policy, policyState, allSchedules, licensesByExternalAgentId)) {
+      return currentAgent;
+    }
+
+    currentId = currentAgent.recruiter_id || null;
+  }
+
+  return null;
 }
 
 /* ---------------------------
@@ -228,7 +351,6 @@ export async function handler(event) {
   }
 
   try {
-    // ---- session ----
     const token = getBearerToken(event);
     if (!token) return { statusCode: 401, body: JSON.stringify({ error: 'Missing Authorization Bearer token' }) };
 
@@ -237,7 +359,6 @@ export async function handler(event) {
 
     const viewerId = userData.user.id;
 
-    // ---- viewer agent row (admin gate) ----
     const { data: viewerAgentRow, error: viewerAgentErr } = await supabase
       .from('agents')
       .select('id, is_admin')
@@ -250,7 +371,6 @@ export async function handler(event) {
 
     const isAdmin = viewerAgentRow.is_admin === true;
 
-    // ---- target agent ----
     const qs = event.queryStringParameters || {};
     const requestedAgentId = qs.agent_id ? String(qs.agent_id) : null;
     const targetAgentId = (isAdmin && requestedAgentId) ? requestedAgentId : viewerId;
@@ -259,7 +379,6 @@ export async function handler(event) {
       return { statusCode: 403, body: JSON.stringify({ error: 'Not allowed to preview other agents' }) };
     }
 
-    // ---- dates (match run) ----
     const payDate     = getPayDate(event);
     const payDateStr  = payDate.toISOString().slice(0, 10);
     const payMonthKey = payDateStr.slice(0, 7);
@@ -268,7 +387,6 @@ export async function handler(event) {
     const monthStartIso = monthStart.toISOString();
     const monthEndIso   = monthEnd.toISOString();
 
-    // 28-day wait based on issued_at (match run)
     const cutoff = new Date(payDate);
     cutoff.setDate(cutoff.getDate() - 28);
     const cutoffIso = cutoff.toISOString();
@@ -284,7 +402,6 @@ export async function handler(event) {
       cutoffIso
     );
 
-    // ---- caches (match run) ----
     const agentCache = new Map();
     const schedCache = new Map();
     const policyCache = new Map();
@@ -295,7 +412,7 @@ export async function handler(event) {
 
       const { data, error } = await supabase
         .from('agents')
-        .select('id, full_name, level, recruiter_id, is_active')
+        .select('id, full_name, level, recruiter_id, is_active, agent_id')
         .eq('id', agentId)
         .single();
 
@@ -315,6 +432,7 @@ export async function handler(event) {
         policy.product_line || '',
         policy.policy_type || '',
         level || 'agent',
+        policy.issued_at || ''
       ].join('|');
 
       if (schedCache.has(key)) return schedCache.get(key);
@@ -322,23 +440,35 @@ export async function handler(event) {
       const { data, error } = await supabase
         .from('commission_schedules')
         .select(
+          'carrier_name, product_line, policy_type, agent_level, effective_from, effective_to, required_loas, ' +
           'base_commission_rate, advance_rate, renewal_commission_rate, ' +
           'renewal_start_year, renewal_end_year, renewal_trail_rule, term_length_months, exclusive_months'
         )
         .eq('carrier_name', policy.carrier_name)
         .eq('product_line', policy.product_line)
         .eq('policy_type', policy.policy_type)
-        .eq('agent_level', level || 'agent')
-        .single();
+        .eq('agent_level', level || 'agent');
 
-      if (error || !data) {
+      if (error || !data || !data.length) {
         console.warn('[previewMonthlyPayThru] No schedule for', key, error);
         schedCache.set(key, null);
         return null;
       }
 
-      schedCache.set(key, data);
-      return data;
+      const matched = getMatchingScheduleForPolicy(
+        { ...policy, issued_at: policy.issued_at },
+        level || 'agent',
+        data
+      );
+
+      if (!matched) {
+        console.warn('[previewMonthlyPayThru] No effective-dated schedule match for', key);
+        schedCache.set(key, null);
+        return null;
+      }
+
+      schedCache.set(key, matched);
+      return matched;
     }
 
     async function getPolicyBasic(policyId) {
@@ -347,7 +477,7 @@ export async function handler(event) {
 
       const { data, error } = await supabase
         .from('policies')
-        .select('id, carrier_name, product_line, policy_type')
+        .select('id, carrier_name, product_line, policy_type, issued_at, contact_id')
         .eq('id', policyId)
         .single();
 
@@ -377,10 +507,9 @@ export async function handler(event) {
       return normalizeExclusiveMonths(schedule?.exclusive_months);
     }
 
-    // ---- Build policy list (preview for target agent only) ----
     const { data: policies, error: polErr } = await supabase
       .from('policies')
-      .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, premium_modal, issued_at, as_earned, status')
+      .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, premium_modal, issued_at, as_earned, status, contact_id')
       .eq('agent_id', targetAgentId)
       .in('status', ['issued', 'in_force', 'renewed', 'reinstated'])
       .not('issued_at', 'is', null)
@@ -405,7 +534,6 @@ export async function handler(event) {
       };
     }
 
-    // ---- policy_terms map for this pay month (match run) ----
     async function loadMonthlyTermRowMap(policyIds) {
       if (!policyIds.length) return new Map();
 
@@ -438,7 +566,53 @@ export async function handler(event) {
 
     const termRowMap = await loadMonthlyTermRowMap(policies.map(p => p.id));
 
-    // ---- existing paythru THIS pay_month (match run) ----
+    const contactIds = [...new Set(policies.map(p => p.contact_id).filter(Boolean))];
+    const contactStateMap = new Map();
+    if (contactIds.length) {
+      const { data: contactRows, error: contactErr } = await supabase
+        .from('contacts')
+        .select('id, state')
+        .in('id', contactIds);
+
+      if (contactErr) {
+        return { statusCode: 500, body: JSON.stringify({ error: 'Failed to load contact states', details: contactErr }) };
+      }
+
+      (contactRows || []).forEach(c => {
+        contactStateMap.set(c.id, normalizeState(c.state));
+      });
+    }
+
+    const { data: allAgentRows, error: allAgentErr } = await supabase
+      .from('agents')
+      .select('id, full_name, level, recruiter_id, is_active, agent_id');
+
+    if (allAgentErr) {
+      return { statusCode: 500, body: JSON.stringify({ error: 'Failed to load agents', details: allAgentErr }) };
+    }
+
+    const agentsById = new Map((allAgentRows || []).map(a => [a.id, a]));
+    const externalAgentIds = [...new Set((allAgentRows || []).map(a => a.agent_id).filter(Boolean))];
+
+    const licensesByExternalAgentId = new Map();
+    if (externalAgentIds.length) {
+      const { data: licenseRows, error: licenseErr } = await supabase
+        .from('agent_nipr_licenses')
+        .select('agent_id, state, active, date_issue_orig, date_expire, loa_names')
+        .eq('active', true)
+        .in('agent_id', externalAgentIds);
+
+      if (licenseErr) {
+        return { statusCode: 500, body: JSON.stringify({ error: 'Failed to load licenses', details: licenseErr }) };
+      }
+
+      for (const row of (licenseRows || [])) {
+        const key = row.agent_id;
+        if (!licensesByExternalAgentId.has(key)) licensesByExternalAgentId.set(key, []);
+        licensesByExternalAgentId.get(key).push(row);
+      }
+    }
+
     const { data: existingPayThru, error: existingErr } = await supabase
       .from('commission_ledger')
       .select('policy_id, agent_id, meta')
@@ -456,7 +630,6 @@ export async function handler(event) {
       if (row.policy_id && row.agent_id) alreadyPaidThisMonth.add(`${row.policy_id}:${row.agent_id}:${idx}`);
     });
 
-    // ---- prior paythru count map (match run) ----
     const { data: payThruPrior, error: priorErr } = await supabase
       .from('commission_ledger')
       .select('policy_id, agent_id, meta')
@@ -474,7 +647,6 @@ export async function handler(event) {
       payThruCountMap.set(key, (payThruCountMap.get(key) || 0) + 1);
     });
 
-    // ---- simulate new ledger rows (same math as runMonthlyPayThru) ----
     const simulatedRows = [];
     let simulatedNewGross = 0;
 
@@ -483,9 +655,9 @@ export async function handler(event) {
       if (!policy.issued_at) continue;
 
       const policyAsEarned = policy.as_earned === true;
+      const policyState = contactStateMap.get(policy.contact_id);
+      if (!policyState) continue;
 
-      // build chain (match run) — for preview we still compute upline splits,
-      // but then we will filter to only rows that belong to targetAgentId
       const chain = [];
       let current = await getAgent(policy.agent_id);
       const visitedAgents = new Set();
@@ -497,27 +669,51 @@ export async function handler(event) {
         if (visitedAgents.has(current.id)) break;
         visitedAgents.add(current.id);
 
-        const level    = current.level || 'agent';
+        if (depth === 0) {
+          const level = current.level || 'agent';
+          const schedule = await getSchedule(policy, level);
+          if (!schedule) break;
+
+          const baseRate = Number(schedule.base_commission_rate || 0);
+          const advRate  = Number(schedule.advance_rate || 0);
+
+          const t = schedule.term_length_months;
+          writingTermLenMonths = (t == null ? 12 : Number(t || 12));
+          if (!writingTermLenMonths || writingTermLenMonths <= 0) writingTermLenMonths = 12;
+
+          globalAdvanceRate = policyAsEarned ? 0 : advRate;
+
+          chain.push({ agent: current, schedule, baseRate });
+
+          if (!current.recruiter_id) break;
+          current = await getAgent(current.recruiter_id);
+          continue;
+        }
+
+        const eligibleAgent = findNearestEligibleUplineFromAgent(
+          current.id,
+          policy,
+          policyState,
+          allAgentRows || [],
+          agentsById,
+          licensesByExternalAgentId
+        );
+
+        if (!eligibleAgent) break;
+
+        if (visitedAgents.has(eligibleAgent.id)) break;
+        visitedAgents.add(eligibleAgent.id);
+
+        const level = eligibleAgent.level || 'agent';
         const schedule = await getSchedule(policy, level);
         if (!schedule) break;
 
         const baseRate = Number(schedule.base_commission_rate || 0);
-        const advRate  = Number(schedule.advance_rate || 0);
 
-        if (depth === 0) {
-          const t = schedule.term_length_months;
-          writingTermLenMonths = (t == null ? 12 : Number(t || 12));
-          if (!writingTermLenMonths || writingTermLenMonths <= 0) writingTermLenMonths = 12;
-        }
+        chain.push({ agent: eligibleAgent, schedule, baseRate });
 
-        if (globalAdvanceRate == null) {
-          globalAdvanceRate = policyAsEarned ? 0 : advRate;
-        }
-
-        chain.push({ agent: current, schedule, baseRate });
-
-        if (!current.recruiter_id) break;
-        current = await getAgent(current.recruiter_id);
+        if (!eligibleAgent.recruiter_id) break;
+        current = await getAgent(eligibleAgent.recruiter_id);
       }
 
       if (!chain.length || globalAdvanceRate == null) continue;
@@ -570,7 +766,6 @@ export async function handler(event) {
 
         if (priorCount >= cycleMonths) continue;
 
-        // advance logic only applies in 12-month world AND cycle 1
         let monthsAdvanced = 0;
         if (!isTermWorld && cycleIndex === 1) {
           monthsAdvanced = policyAsEarned ? 0 : Math.floor((globalAdvanceRate || 0) * 12);
@@ -592,7 +787,6 @@ export async function handler(event) {
         const monthly = round2(cycleCommission / divisorMonths);
         if (monthly <= 0) continue;
 
-        // increment simulated count map (so multiple policies don’t break caps)
         payThruCountMap.set(key, priorCount + 1);
 
         const exclusiveMonths = normalizeExclusiveMonths(node.schedule?.exclusive_months);
@@ -622,7 +816,6 @@ export async function handler(event) {
           }
         };
 
-        // Only include rows that would pay the TARGET agent in this preview
         if (row.agent_id === targetAgentId) {
           simulatedRows.push(row);
           simulatedNewGross += monthly;
@@ -636,8 +829,6 @@ export async function handler(event) {
       isPayMonthAllowed(normalizeExclusiveMonths(row?.meta?.exclusive_months), payDate)
     );
 
-    // ---- existing unpaid rows for target agent (<= payMonthKey) ----
-    // ✅ now includes policy_id so we can filter out rows whose policies are cancelled/lapsed/etc.
     const { data: unpaidExistingRaw, error: unpaidErr } = await supabase
       .from('commission_ledger')
       .select('id, agent_id, amount, policy_id, meta')
@@ -645,40 +836,39 @@ export async function handler(event) {
       .eq('is_settled', false)
       .eq('agent_id', targetAgentId)
       .lte('meta->>pay_month', payMonthKey);
-    
+
     if (unpaidErr) {
       return { statusCode: 500, body: JSON.stringify({ error: 'Failed to load unpaid paythru rows', details: unpaidErr }) };
     }
-    
+
     const unpaidExistingAll = unpaidExistingRaw || [];
-    
-    // ✅ Filter unpaid ledger rows to ONLY those whose policy is still in eligible status
+
     const unpaidPolicyIds = Array.from(
       new Set(unpaidExistingAll.map(r => r.policy_id).filter(Boolean))
     );
-    
+
     let eligiblePolicyIdSet = new Set();
-    
+
     if (unpaidPolicyIds.length > 0) {
       const { data: polStatusRows, error: polStatusErr } = await supabase
         .from('policies')
         .select('id, status')
         .in('id', unpaidPolicyIds);
-    
+
       if (polStatusErr) {
         return {
           statusCode: 500,
           body: JSON.stringify({ error: 'Failed to load policy statuses for unpaid paythru rows', details: polStatusErr })
         };
       }
-    
+
       for (const p of (polStatusRows || [])) {
         if (ELIGIBLE_POLICY_STATUSES.includes(p.status)) {
           eligiblePolicyIdSet.add(p.id);
         }
       }
     }
-    
+
     const unpaidExistingEligibleStatus = unpaidExistingAll.filter(r => {
       if (!r.policy_id) return false;
       return eligiblePolicyIdSet.has(r.policy_id);
@@ -691,10 +881,9 @@ export async function handler(event) {
         unpaidExisting.push(row);
       }
     }
-    
+
     const filteredOutUnpaidCount = unpaidExistingAll.length - unpaidExisting.length;
-    
-    // ---- threshold accrual = (eligible unpaid existing) + (simulated new allowed this month) ----
+
     let grossTowardThreshold = 0;
     for (const row of unpaidExisting) grossTowardThreshold += Number(row.amount || 0);
     for (const row of payableSimulatedRows) grossTowardThreshold += Number(row.amount || 0);
@@ -702,7 +891,6 @@ export async function handler(event) {
 
     const threshold = 100;
 
-    // ---- if below threshold, match run behavior (no payout) ----
     if (grossTowardThreshold < threshold) {
       return {
         statusCode: 200,
@@ -724,7 +912,6 @@ export async function handler(event) {
       };
     }
 
-    // ---- debt tiers for target agent (match run) ----
     const { data: debtRow, error: debtErr } = await supabase
       .from('agent_total_debt')
       .select('agent_id, lead_debt_total, chargeback_total, total_debt')
