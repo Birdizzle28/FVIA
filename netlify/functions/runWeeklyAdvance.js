@@ -155,38 +155,9 @@ function normalizeLoaText(v) {
     .trim();
 }
 
-function getLagWeeksForPolicy(policy, scheduleRows) {
-  if (!policy || !policy.issued_at) return 0;
-
-  const issuedYMD = getLocalYMD(new Date(policy.issued_at), PAY_TZ);
-
-  const carrier = normalizeText(policy.carrier_name);
-  const line = normalizeText(policy.product_line);
-  const type = normalizePolicyType(policy.policy_type);
-
-  const matches = (scheduleRows || []).filter(s => {
-    const sameCarrier = normalizeText(s.carrier_name) === carrier;
-    const sameLine = normalizeText(s.product_line) === line;
-
-    const schedType = normalizePolicyType(s.policy_type);
-    const sameType = schedType === type;
-
-    const startsOk = !s.effective_from || s.effective_from <= issuedYMD;
-    const endsOk = !s.effective_to || s.effective_to >= issuedYMD;
-
-    return sameCarrier && sameLine && sameType && startsOk && endsOk;
-  });
-
-  if (!matches.length) return 0;
-
-  matches.sort((a, b) => {
-    const aDate = a.effective_from || '0000-00-00';
-    const bDate = b.effective_from || '0000-00-00';
-    return bDate.localeCompare(aDate);
-  });
-
-  const lag = Number(matches[0].lag_time_weeks || 0);
-  return Number.isFinite(lag) && lag > 0 ? lag : 0;
+function normalizeCommissionItemType(v) {
+  const x = String(v || '').trim().toLowerCase();
+  return x === 'attachment' ? 'attachment' : 'policy';
 }
 
 function computePayFridayForIssuedYMDWithLag(issuedYMD, lagWeeks = 0) {
@@ -195,18 +166,21 @@ function computePayFridayForIssuedYMDWithLag(issuedYMD, lagWeeks = 0) {
 }
 
 /**
- * NEW: find the exact commission schedule row for a policy as of issue date.
- * This is now also the source of truth for required_loas.
+ * Generic schedule matcher for either a base policy or an attachment.
+ * Attachment matching also requires parent_policy_type.
  */
-function getMatchingScheduleForPolicy(policy, scheduleRows) {
-  if (!policy || !policy.issued_at) return null;
+function getMatchingScheduleForItem(item, scheduleRows, options = {}) {
+  if (!item || !item.issued_at) return null;
 
-  const issuedYMD = getLocalYMD(new Date(policy.issued_at), PAY_TZ);
-  const carrier = normalizeText(policy.carrier_name);
-  const line = normalizeText(policy.product_line);
-  const type = normalizePolicyType(policy.policy_type);
+  const issuedYMD = getLocalYMD(new Date(item.issued_at), PAY_TZ);
+  const carrier = normalizeText(item.carrier_name);
+  const line = normalizeText(item.product_line);
+  const type = normalizePolicyType(item.policy_type);
+  const itemType = normalizeCommissionItemType(options.commission_item_type || 'policy');
+  const parentPolicyType = normalizePolicyType(options.parent_policy_type);
 
   const matches = (scheduleRows || []).filter(s => {
+    const sameItemType = normalizeCommissionItemType(s.commission_item_type) === itemType;
     const sameCarrier = normalizeText(s.carrier_name) === carrier;
     const sameLine = normalizeText(s.product_line) === line;
     const sameType = normalizePolicyType(s.policy_type) === type;
@@ -214,7 +188,16 @@ function getMatchingScheduleForPolicy(policy, scheduleRows) {
     const startsOk = !s.effective_from || s.effective_from <= issuedYMD;
     const endsOk = !s.effective_to || s.effective_to >= issuedYMD;
 
-    return sameCarrier && sameLine && sameType && startsOk && endsOk;
+    if (!sameItemType || !sameCarrier || !sameLine || !sameType || !startsOk || !endsOk) {
+      return false;
+    }
+
+    if (itemType === 'attachment') {
+      const schedParentType = normalizePolicyType(s.parent_policy_type);
+      return schedParentType === parentPolicyType;
+    }
+
+    return true;
   });
 
   if (!matches.length) return null;
@@ -228,9 +211,16 @@ function getMatchingScheduleForPolicy(policy, scheduleRows) {
   return matches[0];
 }
 
+function getLagWeeksForItem(item, scheduleRows, options = {}) {
+  const sched = getMatchingScheduleForItem(item, scheduleRows, options);
+  if (!sched) return 0;
+
+  const lag = Number(sched.lag_time_weeks || 0);
+  return Number.isFinite(lag) && lag > 0 ? lag : 0;
+}
+
 /**
- * NEW: Does this license row satisfy the policy at issue time?
- * Rule used here: agent must satisfy ALL required_loas.
+ * Does this license row satisfy required LOAs at issue time?
  */
 function licenseRowQualifiesForPolicy(licenseRow, state, requiredLoas, issueYMD) {
   if (!licenseRow) return false;
@@ -258,19 +248,19 @@ function licenseRowQualifiesForPolicy(licenseRow, state, requiredLoas, issueYMD)
 }
 
 /**
- * NEW: Determine whether an agent is eligible for override on this policy.
- * Uses commission_schedules.required_loas as the source of truth.
+ * Determine whether an agent is eligible for override on this item.
+ * Uses commission_schedules.required_loas as source of truth.
  */
-function agentQualifiesForPolicy(agent, policy, policyState, scheduleRows, licensesByExternalAgentId) {
+function agentQualifiesForItem(agent, item, itemState, scheduleRows, licensesByExternalAgentId, options = {}) {
   if (!agent) return false;
   if (agent.is_active === false) return false;
-  if (!policy?.issued_at) return false;
-  if (!policyState) return false;
+  if (!item?.issued_at) return false;
+  if (!itemState) return false;
 
   const externalAgentId = agent.agent_id;
   if (!externalAgentId) return false;
 
-  const schedule = getMatchingScheduleForPolicy(policy, scheduleRows);
+  const schedule = getMatchingScheduleForItem(item, scheduleRows, options);
   const requiredLoasRaw = Array.isArray(schedule?.required_loas) ? schedule.required_loas : [];
   const requiredLoas = requiredLoasRaw
     .map(normalizeLoaText)
@@ -278,19 +268,19 @@ function agentQualifiesForPolicy(agent, policy, policyState, scheduleRows, licen
 
   if (!requiredLoas.length) return false;
 
-  const issueYMD = getLocalYMD(new Date(policy.issued_at), PAY_TZ);
+  const issueYMD = getLocalYMD(new Date(item.issued_at), PAY_TZ);
   const licenseRows = licensesByExternalAgentId.get(externalAgentId) || [];
 
   return licenseRows.some(row =>
-    licenseRowQualifiesForPolicy(row, policyState, requiredLoas, issueYMD)
+    licenseRowQualifiesForPolicy(row, itemState, requiredLoas, issueYMD)
   );
 }
 
 /**
- * NEW: Walk up the chain starting from the CURRENT override recipient.
+ * Walk up the chain starting from the CURRENT override recipient.
  * If they don't qualify, keep going up recruiter_id until someone does.
  */
-function findNearestEligibleUplineFromAgent(startAgentId, policy, policyState, scheduleRows, agentsById, licensesByExternalAgentId) {
+function findNearestEligibleUplineFromAgent(startAgentId, item, itemState, scheduleRows, agentsById, licensesByExternalAgentId, options = {}) {
   const visited = new Set();
   let currentId = startAgentId;
 
@@ -300,7 +290,7 @@ function findNearestEligibleUplineFromAgent(startAgentId, policy, policyState, s
     const currentAgent = agentsById.get(currentId);
     if (!currentAgent) return null;
 
-    if (agentQualifiesForPolicy(currentAgent, policy, policyState, scheduleRows, licensesByExternalAgentId)) {
+    if (agentQualifiesForItem(currentAgent, item, itemState, scheduleRows, licensesByExternalAgentId, options)) {
       return currentAgent.id;
     }
 
@@ -432,7 +422,7 @@ export async function handler(event) {
       '(end exclusive)'
     );
 
-    // Pull policies in window
+    // Pull parent policies in window
     const { data: policyRows, error: polErr } = await supabase
       .from('policies')
       .select('id, as_earned, issued_at, carrier_name, product_line, policy_type, agent_id, contact_id')
@@ -448,14 +438,40 @@ export async function handler(event) {
       };
     }
 
-    const carrierNames = [...new Set((policyRows || []).map(p => p.carrier_name).filter(Boolean))];
+    // Pull active attachments in same issue window
+    const { data: attachmentRowsRaw, error: attErr } = await supabase
+      .from('policy_attachments')
+      .select('id, policy_id, carrier_name, product_line, policy_type, issued_at, status')
+      .eq('status', 'active')
+      .gte('issued_at', startIso)
+      .lt('issued_at', endIso);
+
+    if (attErr) {
+      console.error('[runWeeklyAdvance] Error loading eligible attachments:', attErr);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({ error: 'Failed to load eligible attachments', details: attErr }),
+      };
+    }
+
+    const attachmentRows = attachmentRowsRaw || [];
+    const policyRowsSafe = policyRows || [];
+
+    const allCarrierNames = [
+      ...new Set([
+        ...policyRowsSafe.map(p => p.carrier_name).filter(Boolean),
+        ...attachmentRows.map(a => a.carrier_name).filter(Boolean),
+      ]),
+    ];
 
     let scheduleRows = [];
-    if (carrierNames.length) {
+    if (allCarrierNames.length) {
       const { data: schedData, error: schedErr } = await supabase
         .from('commission_schedules')
-        .select('carrier_name, product_line, policy_type, effective_from, effective_to, lag_time_weeks, required_loas')
-        .in('carrier_name', carrierNames);
+        .select(
+          'carrier_name, product_line, policy_type, commission_item_type, parent_policy_type, effective_from, effective_to, lag_time_weeks, required_loas'
+        )
+        .in('carrier_name', allCarrierNames);
 
       if (schedErr) {
         console.error('[runWeeklyAdvance] Error loading commission schedules for lag lookup:', schedErr);
@@ -468,80 +484,168 @@ export async function handler(event) {
       scheduleRows = schedData || [];
     }
 
-    const allPolicyIds = (policyRows || []).map(p => p.id);
-    if (allPolicyIds.length === 0) {
+    const allPolicyIds = policyRowsSafe.map(p => p.id);
+
+    if (allPolicyIds.length === 0 && attachmentRows.length === 0) {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: 'No policies eligible for weekly advances in this issued_at window.',
+          message: 'No policies or attachments eligible for weekly advances in this issued_at window.',
           pay_date: payDateStr,
           window_start: startIso,
           window_end_exclusive: endIso,
           eligible_policy_count: 0,
+          eligible_attachment_count: 0,
         }),
       };
     }
 
-    const asEarnedCount = (policyRows || []).filter(p => p.as_earned === true).length;
+    const asEarnedCount = policyRowsSafe.filter(p => p.as_earned === true).length;
 
-    const duePolicyRows = (policyRows || [])
+    const duePolicyRows = policyRowsSafe
       .filter(p => p.as_earned !== true)
       .filter(p => {
         if (!p.issued_at) return false;
 
         const issuedYMD = getLocalYMD(new Date(p.issued_at), PAY_TZ);
-        const lagWeeks = getLagWeeksForPolicy(p, scheduleRows);
+        const lagWeeks = getLagWeeksForItem(p, scheduleRows, {
+          commission_item_type: 'policy',
+          parent_policy_type: null,
+        });
         const computedPay = computePayFridayForIssuedYMDWithLag(issuedYMD, lagWeeks);
 
         return computedPay === payDateStr;
       });
 
+    // Need parent policy type to match attachment schedules correctly
+    const parentPolicyIdsForAttachments = [...new Set(attachmentRows.map(a => a.policy_id).filter(Boolean))];
+    const missingParentPolicyIds = parentPolicyIdsForAttachments.filter(id => !policyRowsSafe.some(p => p.id === id));
+
+    let parentPoliciesOutsideWindow = [];
+    if (missingParentPolicyIds.length) {
+      const { data: parentData, error: parentErr } = await supabase
+        .from('policies')
+        .select('id, as_earned, issued_at, carrier_name, product_line, policy_type, agent_id, contact_id')
+        .in('id', missingParentPolicyIds);
+
+      if (parentErr) {
+        console.error('[runWeeklyAdvance] Error loading parent policies for attachments:', parentErr);
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ error: 'Failed to load parent policies for attachments', details: parentErr }),
+        };
+      }
+
+      parentPoliciesOutsideWindow = parentData || [];
+    }
+
+    const allKnownPolicies = [...policyRowsSafe, ...parentPoliciesOutsideWindow];
+    const policyMapAll = new Map(allKnownPolicies.map(p => [p.id, p]));
+
+    const dueAttachmentRows = attachmentRows.filter(att => {
+      if (!att.issued_at) return false;
+
+      const parentPolicy = policyMapAll.get(att.policy_id);
+      if (!parentPolicy?.policy_type) return false;
+
+      const issuedYMD = getLocalYMD(new Date(att.issued_at), PAY_TZ);
+      const lagWeeks = getLagWeeksForItem(att, scheduleRows, {
+        commission_item_type: 'attachment',
+        parent_policy_type: parentPolicy.policy_type,
+      });
+      const computedPay = computePayFridayForIssuedYMDWithLag(issuedYMD, lagWeeks);
+
+      return computedPay === payDateStr;
+    });
+
     const eligiblePolicyIds = duePolicyRows.map(p => p.id);
+    const eligibleAttachmentIds = dueAttachmentRows.map(a => a.id);
 
     console.log(
       '[runWeeklyAdvance] scanned policies in window =',
-      (policyRows || []).length,
+      policyRowsSafe.length,
+      'scanned attachments in window =',
+      attachmentRows.length,
       'as-earned excluded =',
       asEarnedCount,
-      'due this pay_date =',
+      'due policies this pay_date =',
       eligiblePolicyIds.length,
+      'due attachments this pay_date =',
+      eligibleAttachmentIds.length,
       'schedules loaded =',
       scheduleRows.length
     );
 
-    if (eligiblePolicyIds.length === 0) {
+    if (eligiblePolicyIds.length === 0 && eligibleAttachmentIds.length === 0) {
       return {
         statusCode: 200,
         body: JSON.stringify({
-          message: 'No non-as-earned policies are due to be paid on this pay_date based on the Sun–Tue / Wed–Sat rule.',
+          message: 'No non-as-earned policies or active attachments are due to be paid on this pay_date based on the Sun–Tue / Wed–Sat rule.',
           pay_date: payDateStr,
           window_start: startIso,
           window_end_exclusive: endIso,
           excluded_as_earned_policies: asEarnedCount,
           due_policies_for_pay_date: 0,
-          scanned_policies_in_window: (policyRows || []).length,
+          due_attachments_for_pay_date: 0,
+          scanned_policies_in_window: policyRowsSafe.length,
+          scanned_attachments_in_window: attachmentRows.length,
         }),
       };
     }
 
-    // Load ledger rows
-    const { data: ledgerRowsRaw, error: ledgerErr } = await supabase
-      .from('commission_ledger')
-      .select('id, policy_id, agent_id, amount, entry_type, is_settled')
-      .in('entry_type', ['advance', 'override'])
-      .or('is_settled.is.null,is_settled.eq.false')
-      .in('policy_id', eligiblePolicyIds);
+    // Load ledger rows for due base policies only
+    let policyLedgerRows = [];
+    if (eligiblePolicyIds.length) {
+      const { data, error } = await supabase
+        .from('commission_ledger')
+        .select('id, policy_id, policy_attachment_id, agent_id, amount, entry_type, is_settled')
+        .in('entry_type', ['advance', 'override'])
+        .or('is_settled.is.null,is_settled.eq.false')
+        .in('policy_id', eligiblePolicyIds)
+        .is('policy_attachment_id', null);
 
-    if (ledgerErr) {
-      console.error('[runWeeklyAdvance] Error loading ledger rows:', ledgerErr);
-      return {
-        statusCode: 500,
-        body: JSON.stringify({ error: 'Failed to load ledger rows', details: ledgerErr }),
-      };
+      if (error) {
+        console.error('[runWeeklyAdvance] Error loading policy ledger rows:', error);
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ error: 'Failed to load policy ledger rows', details: error }),
+        };
+      }
+
+      policyLedgerRows = data || [];
     }
 
-    let ledgerRows = ledgerRowsRaw || [];
-    console.log('[runWeeklyAdvance] eligible ledger rows (issued_at-based) =', ledgerRows.length);
+    // Load ledger rows for due attachments
+    let attachmentLedgerRows = [];
+    if (eligibleAttachmentIds.length) {
+      const { data, error } = await supabase
+        .from('commission_ledger')
+        .select('id, policy_id, policy_attachment_id, agent_id, amount, entry_type, is_settled')
+        .in('entry_type', ['advance', 'override'])
+        .or('is_settled.is.null,is_settled.eq.false')
+        .in('policy_attachment_id', eligibleAttachmentIds);
+
+      if (error) {
+        console.error('[runWeeklyAdvance] Error loading attachment ledger rows:', error);
+        return {
+          statusCode: 500,
+          body: JSON.stringify({ error: 'Failed to load attachment ledger rows', details: error }),
+        };
+      }
+
+      attachmentLedgerRows = data || [];
+    }
+
+    let ledgerRows = [...policyLedgerRows, ...attachmentLedgerRows];
+
+    console.log(
+      '[runWeeklyAdvance] eligible ledger rows =',
+      ledgerRows.length,
+      'policy rows =',
+      policyLedgerRows.length,
+      'attachment rows =',
+      attachmentLedgerRows.length
+    );
 
     if (ledgerRows.length === 0) {
       return {
@@ -552,6 +656,7 @@ export async function handler(event) {
           window_start: startIso,
           window_end_exclusive: endIso,
           eligible_policy_count: eligiblePolicyIds.length,
+          eligible_attachment_count: eligibleAttachmentIds.length,
           excluded_as_earned_policies: asEarnedCount,
         }),
       };
@@ -561,9 +666,13 @@ export async function handler(event) {
     // Override license / state / active validation
     // =========================
 
-    const policyMap = new Map(duePolicyRows.map(p => [p.id, p]));
+    const duePolicyMap = new Map(duePolicyRows.map(p => [p.id, p]));
+    const dueAttachmentMap = new Map(dueAttachmentRows.map(a => [a.id, a]));
 
-    const contactIds = [...new Set(duePolicyRows.map(p => p.contact_id).filter(Boolean))];
+    const contactIds = [...new Set(
+      allKnownPolicies.map(p => p.contact_id).filter(Boolean)
+    )];
+
     let contactStateMap = new Map();
 
     if (contactIds.length) {
@@ -641,17 +750,60 @@ export async function handler(event) {
         continue;
       }
 
-      const policy = policyMap.get(row.policy_id);
-      if (!policy) {
-        skippedOverrideRows.push({
-          ledger_id: row.id,
-          policy_id: row.policy_id,
-          reason: 'missing_policy_context'
-        });
-        continue;
+      const isAttachment = !!row.policy_attachment_id;
+
+      let item = null;
+      let itemOptions = { commission_item_type: 'policy', parent_policy_type: null };
+      let parentPolicy = null;
+
+      if (isAttachment) {
+        const attachment = dueAttachmentMap.get(row.policy_attachment_id);
+        if (!attachment) {
+          skippedOverrideRows.push({
+            ledger_id: row.id,
+            policy_id: row.policy_id,
+            policy_attachment_id: row.policy_attachment_id,
+            reason: 'missing_attachment_context'
+          });
+          continue;
+        }
+
+        parentPolicy = policyMapAll.get(attachment.policy_id);
+        if (!parentPolicy) {
+          skippedOverrideRows.push({
+            ledger_id: row.id,
+            policy_id: row.policy_id,
+            policy_attachment_id: row.policy_attachment_id,
+            reason: 'missing_parent_policy_context'
+          });
+          continue;
+        }
+
+        item = attachment;
+        itemOptions = {
+          commission_item_type: 'attachment',
+          parent_policy_type: parentPolicy.policy_type,
+        };
+      } else {
+        const policy = duePolicyMap.get(row.policy_id);
+        if (!policy) {
+          skippedOverrideRows.push({
+            ledger_id: row.id,
+            policy_id: row.policy_id,
+            reason: 'missing_policy_context'
+          });
+          continue;
+        }
+
+        parentPolicy = policy;
+        item = policy;
+        itemOptions = {
+          commission_item_type: 'policy',
+          parent_policy_type: null,
+        };
       }
 
-      const matchingSchedule = getMatchingScheduleForPolicy(policy, scheduleRows);
+      const matchingSchedule = getMatchingScheduleForItem(item, scheduleRows, itemOptions);
       const requiredLoas = Array.isArray(matchingSchedule?.required_loas)
         ? matchingSchedule.required_loas.filter(Boolean)
         : [];
@@ -660,17 +812,22 @@ export async function handler(event) {
         skippedOverrideRows.push({
           ledger_id: row.id,
           policy_id: row.policy_id,
+          policy_attachment_id: row.policy_attachment_id || null,
           original_agent_id: row.agent_id,
+          commission_item_type: itemOptions.commission_item_type,
+          parent_policy_type: itemOptions.parent_policy_type,
           reason: 'missing_schedule_or_required_loas'
         });
         continue;
       }
 
-      const policyState = contactStateMap.get(policy.contact_id);
-      if (!policyState) {
+      const itemState = contactStateMap.get(parentPolicy.contact_id);
+      if (!itemState) {
         skippedOverrideRows.push({
           ledger_id: row.id,
           policy_id: row.policy_id,
+          policy_attachment_id: row.policy_attachment_id || null,
+          commission_item_type: itemOptions.commission_item_type,
           reason: 'missing_policy_state'
         });
         continue;
@@ -678,19 +835,23 @@ export async function handler(event) {
 
       const resolvedAgentId = findNearestEligibleUplineFromAgent(
         row.agent_id,
-        policy,
-        policyState,
+        item,
+        itemState,
         scheduleRows,
         agentsById,
-        licensesByExternalAgentId
+        licensesByExternalAgentId,
+        itemOptions
       );
 
       if (!resolvedAgentId) {
         skippedOverrideRows.push({
           ledger_id: row.id,
           policy_id: row.policy_id,
+          policy_attachment_id: row.policy_attachment_id || null,
           original_agent_id: row.agent_id,
           required_loas: requiredLoas,
+          commission_item_type: itemOptions.commission_item_type,
+          parent_policy_type: itemOptions.parent_policy_type,
           reason: 'no_eligible_upline_found'
         });
         continue;
@@ -717,9 +878,12 @@ export async function handler(event) {
         reroutedOverrideRows.push({
           ledger_id: row.id,
           policy_id: row.policy_id,
+          policy_attachment_id: row.policy_attachment_id || null,
           from_agent_id: row.agent_id,
           to_agent_id: resolvedAgentId,
-          required_loas: requiredLoas
+          required_loas: requiredLoas,
+          commission_item_type: itemOptions.commission_item_type,
+          parent_policy_type: itemOptions.parent_policy_type
         });
 
         row.agent_id = resolvedAgentId;
@@ -746,6 +910,7 @@ export async function handler(event) {
           window_start: startIso,
           window_end_exclusive: endIso,
           eligible_policy_count: eligiblePolicyIds.length,
+          eligible_attachment_count: eligibleAttachmentIds.length,
           excluded_as_earned_policies: asEarnedCount,
           skipped_override_rows: skippedOverrideRows
         }),
@@ -937,7 +1102,7 @@ export async function handler(event) {
       statusCode: 200,
       body: JSON.stringify(
         {
-          message: 'Weekly advance run completed (issued_at-window) with tiered debt withholding + repayment records.',
+          message: 'Weekly advance run completed (issued_at-window) with policy + attachment support and tiered debt withholding + repayment records.',
           pay_date: payDateStr,
           window_start: startIso,
           window_end_exclusive: endIso,
@@ -948,6 +1113,7 @@ export async function handler(event) {
           agent_payouts: payoutSummary,
           ledger_row_count: ledgerRows.length,
           eligible_policy_count: eligiblePolicyIds.length,
+          eligible_attachment_count: eligibleAttachmentIds.length,
           excluded_as_earned_policies: asEarnedCount,
           rerouted_override_rows: reroutedOverrideRows,
           skipped_override_rows: skippedOverrideRows
