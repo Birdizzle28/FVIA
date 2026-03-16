@@ -15,11 +15,9 @@
     <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
-    <!-- Lock visual display until we confirm admin in script at bottom -->
     <style>
       html { visibility: visible; }
 
-      /* minimal, non-invasive helpers (no touching your existing CSS files) */
       .two-col { display:grid; grid-template-columns: 1fr 1.2fr; gap:16px; }
       @media (max-width: 980px){ .two-col{ grid-template-columns:1fr; } }
 
@@ -35,7 +33,7 @@
       .row .tight { flex: 0 0 auto; }
       .mini { font-size: 12px; opacity: 0.8; }
       .table-wrap { overflow:auto; max-height: 420px; border:1px solid rgba(0,0,0,0.08); border-radius:10px; }
-      table { width:100%; border-collapse: collapse; min-width: 820px; }
+      table { width:100%; border-collapse: collapse; min-width: 980px; }
       th, td { padding: 10px; border-bottom: 1px solid rgba(0,0,0,0.08); vertical-align: top; }
       th { position: sticky; top: 0; background: #fff; z-index: 1; text-align:left; }
       .btn { cursor:pointer; }
@@ -76,6 +74,24 @@
       .status.ok { color: #1f7a1f; }
       .status.err { color: #b00020; }
       .clickable { cursor:pointer; }
+
+      .attachment-card {
+        border: 1px solid rgba(0,0,0,0.10);
+        border-radius: 12px;
+        padding: 12px;
+        margin-top: 12px;
+        background: rgba(53,52,104,0.03);
+      }
+      .attachment-head {
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        gap:10px;
+        margin-bottom: 8px;
+      }
+      .attachment-title {
+        font-weight: 700;
+      }
     </style>
 
     <noscript>
@@ -85,7 +101,6 @@
 
   <body id="dashboardbody">
 
-    <!-- Header -->
     <header class="index-grid-header">
       <div id="logofvcontainer">
         <div id="logodiv">
@@ -106,7 +121,6 @@
       </div>
     </header>
 
-    <!-- Mobile Menu -->
     <div id="mobile-menu">
       <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
 
@@ -132,7 +146,6 @@
 
     <main class="auth-container">
 
-      <!-- Admin page navigation -->
       <nav id="admin-page-nav">
         <button id="nav-all" data-href="admin-all-leads.html">All Leads</button>
         <button id="nav-requests" data-href="admin-lead-requests.html">Lead Requests</button>
@@ -152,10 +165,8 @@
         <button id="tab-schedules" type="button">Commission Schedules</button>
       </div>
 
-      <!-- =============== TAB 1: CARRIERS =============== -->
       <section id="panel-carriers" class="admin-section">
         <div class="two-col">
-          <!-- Add Carrier -->
           <div class="cardlike">
             <h3 style="margin-top:0;">Add New Carrier</h3>
 
@@ -193,7 +204,6 @@
             </div>
           </div>
 
-          <!-- Carrier List -->
           <div class="cardlike">
             <div style="display:flex; justify-content:space-between; align-items:end; gap:10px; flex-wrap:wrap;">
               <div>
@@ -218,7 +228,6 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <!-- filled by JS -->
                 </tbody>
               </table>
             </div>
@@ -230,12 +239,10 @@
         </div>
       </section>
 
-      <!-- =============== TAB 2: SCHEDULES =============== -->
       <section id="panel-schedules" class="admin-section" style="display:none;">
         <div class="two-col">
-          <!-- Create schedule batch -->
           <div class="cardlike">
-            <h3 style="margin-top:0;">Create Commission Schedule (5 rows)</h3>
+            <h3 style="margin-top:0;">Create Commission Schedule (5 rows + optional attachments)</h3>
 
             <div class="row">
               <label>
@@ -250,7 +257,7 @@
 
             <div class="row" style="margin-top:10px;">
               <label>
-                <div class="mini">Policy Type (optional)</div>
+                <div class="mini">Policy Type</div>
                 <input id="sched-policy-type" type="text" placeholder="e.g., Auto, Homeowners, Term" />
               </label>
               <label>
@@ -322,9 +329,7 @@
               Example: Year 2+ at 0.068 → start_year=2, end_year=null, rate=0.068
             </div>
 
-            <div id="bands-container" style="margin-top:10px;">
-              <!-- band rows injected -->
-            </div>
+            <div id="bands-container" style="margin-top:10px;"></div>
 
             <div class="band-actions">
               <button id="add-band-btn" class="btn btn-muted" type="button">
@@ -335,6 +340,20 @@
               </button>
             </div>
 
+            <hr style="margin:14px 0;" />
+
+            <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; flex-wrap:wrap;">
+              <div>
+                <h4 style="margin:0;">Optional Attachments</h4>
+                <div class="mini">Each attachment creates its own 5 rows using the same carrier/product/effective settings and matching agent levels.</div>
+              </div>
+              <button id="add-attachment-btn" class="btn btn-muted tight" type="button">
+                <i class="fa-solid fa-paperclip"></i> Add Attachment
+              </button>
+            </div>
+
+            <div id="attachments-container" style="margin-top:10px;"></div>
+
             <div style="margin-top:10px;">
               <label style="display:block;">
                 <div class="mini">Notes (optional)</div>
@@ -344,13 +363,12 @@
 
             <div class="row" style="margin-top:12px;">
               <button id="create-schedule-btn" class="btn btn-primary tight" type="button">
-                <i class="fa-solid fa-floppy-disk"></i> Create 5 Rows
+                <i class="fa-solid fa-floppy-disk"></i> Create Rows
               </button>
               <span id="sched-create-msg" class="status"></span>
             </div>
           </div>
 
-          <!-- List / filters -->
           <div class="cardlike">
             <div style="display:flex; justify-content:space-between; align-items:end; gap:10px; flex-wrap:wrap;">
               <div>
@@ -379,6 +397,18 @@
 
             <div class="row" style="margin-top:10px;">
               <label>
+                <div class="mini">Item Type</div>
+                <select id="filter-item-type">
+                  <option value="">All</option>
+                  <option value="policy">policy</option>
+                  <option value="attachment">attachment</option>
+                </select>
+              </label>
+              <label>
+                <div class="mini">Parent Policy Type</div>
+                <input id="filter-parent-policy-type" type="text" placeholder="e.g., UL" />
+              </label>
+              <label>
                 <div class="mini">Agent Level</div>
                 <select id="filter-agent-level">
                   <option value="">All</option>
@@ -389,7 +419,9 @@
                   <option value="area_manager">area_manager</option>
                 </select>
               </label>
+            </div>
 
+            <div class="row" style="margin-top:10px;">
               <label class="tight" style="flex:0 0 auto; display:flex; align-items:center; gap:8px;">
                 <input id="filter-active-only" type="checkbox" />
                 <span class="mini" style="margin-top:18px;">Active only</span>
@@ -408,7 +440,9 @@
                 <thead>
                   <tr>
                     <th>Carrier</th>
+                    <th>Item Type</th>
                     <th>Product Line</th>
+                    <th>Parent Policy Type</th>
                     <th>Policy Type</th>
                     <th>Level</th>
                     <th>Base</th>
@@ -422,9 +456,7 @@
                     <th style="width:180px;">Actions</th>
                   </tr>
                 </thead>
-                <tbody>
-                  <!-- filled by JS -->
-                </tbody>
+                <tbody></tbody>
               </table>
             </div>
 
@@ -433,7 +465,6 @@
         </div>
       </section>
 
-      <!-- Edit Carrier Modal -->
       <div id="edit-carrier-modal" class="overlay" aria-hidden="true">
         <div class="panel">
           <div class="head">
@@ -476,7 +507,6 @@
         </div>
       </div>
 
-      <!-- Edit Schedule Modal -->
       <div id="edit-schedule-modal" class="overlay" aria-hidden="true">
         <div class="panel">
           <div class="head">
@@ -490,6 +520,13 @@
             <label>
               <div class="mini">Carrier Name</div>
               <input id="edit-sched-carrier-name" type="text" disabled />
+            </label>
+            <label>
+              <div class="mini">Item Type</div>
+              <select id="edit-sched-item-type">
+                <option value="policy">policy</option>
+                <option value="attachment">attachment</option>
+              </select>
             </label>
             <label>
               <div class="mini">Agent Level</div>
@@ -507,6 +544,10 @@
             <label>
               <div class="mini">Product Line</div>
               <input id="edit-sched-product-line" type="text" />
+            </label>
+            <label>
+              <div class="mini">Parent Policy Type</div>
+              <input id="edit-sched-parent-policy-type" type="text" />
             </label>
             <label>
               <div class="mini">Policy Type</div>
@@ -589,7 +630,6 @@
         </div>
       </div>
 
-      <!-- Preview JSON Modal -->
       <div id="json-preview-modal" class="overlay" aria-hidden="true">
         <div class="panel">
           <div class="head">
@@ -602,7 +642,6 @@
 
     </main>
 
-    <!-- Footer -->
     <footer class="index-grid-footer">
       <img id="footerlogo" src="Pics/img17.png">
       <hr class="footerhr">
@@ -634,13 +673,11 @@
       <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
     </footer>
 
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="scripts/supabase-client.js"></script>
     <script src="scripts/general.js"></script>
     <script src="scripts/admin-carriers.js"></script>
 
-    <!-- Admin-only gate -->
     <script>
       (async () => {
         const supabase = window.supabaseClient;
