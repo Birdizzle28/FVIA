@@ -1,10 +1,4 @@
 console.log("[admin-carriers] loaded from file");
-/* scripts/admin-carriers.js
-   Works with your admin-carriers.html as provided.
-   Requires:
-     - window.supabaseClient (from scripts/supabase-client.js)
-     - general.js can handle menu/nav; this file includes a small fallback for admin-page-nav buttons
-*/
 
 (() => {
   "use strict";
@@ -17,11 +11,8 @@ console.log("[admin-carriers] loaded from file");
     { level: "agent", mult: 0.70 },
   ];
 
-  // ---------- DOM helpers ----------
   const $ = (sel) => document.querySelector(sel);
-  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
 
-  // ---------- App state ----------
   let supabase;
   let sessionUserId = null;
 
@@ -29,37 +20,30 @@ console.log("[admin-carriers] loaded from file");
   const carrierById = new Map();
 
   let schedules = [];
-
-  // used for "click carrier -> filter schedules"
   let selectedCarrierId = "";
 
-  // ---------- Elements ----------
   const els = {
-    // tabs/panels
     tabCarriers: $("#tab-carriers"),
     tabSchedules: $("#tab-schedules"),
     panelCarriers: $("#panel-carriers"),
     panelSchedules: $("#panel-schedules"),
 
-    // carriers form
     carrierName: $("#carrier-name"),
-    carrierLogo: $("#carrier-logo"), // optional manual URL input if present
+    carrierLogo: $("#carrier-logo"),
     carrierUrl: $("#carrier-url"),
     carrierNotes: $("#carrier-notes"),
     addCarrierBtn: $("#add-carrier-btn"),
     carrierAddMsg: $("#carrier-add-msg"),
     carrierLogoFile: $("#carrier-logo-file"),
 
-    // carriers list
     carrierSearch: $("#carrier-search"),
     carriersTableBody: $("#carriers-table tbody"),
 
-    // carrier edit modal
     editCarrierModal: $("#edit-carrier-modal"),
     editCarrierId: $("#edit-carrier-id"),
     editCarrierName: $("#edit-carrier-name"),
     editCarrierUrl: $("#edit-carrier-url"),
-    editCarrierLogo: $("#edit-carrier-logo"), // optional manual URL input if present
+    editCarrierLogo: $("#edit-carrier-logo"),
     editCarrierNotes: $("#edit-carrier-notes"),
     saveCarrierBtn: $("#save-carrier-btn"),
     cancelCarrierBtn: $("#cancel-carrier-btn"),
@@ -67,7 +51,6 @@ console.log("[admin-carriers] loaded from file");
     editCarrierMsg: $("#edit-carrier-msg"),
     editCarrierLogoFile: $("#edit-carrier-logo-file"),
 
-    // schedule create form
     schedCarrier: $("#sched-carrier"),
     schedProductLine: $("#sched-product-line"),
     schedPolicyType: $("#sched-policy-type"),
@@ -83,7 +66,6 @@ console.log("[admin-carriers] loaded from file");
     createScheduleBtn: $("#create-schedule-btn"),
     schedCreateMsg: $("#sched-create-msg"),
 
-    // bands builder
     bandsContainer: $("#bands-container"),
     addBandBtn: $("#add-band-btn"),
     previewJsonBtn: $("#preview-json-btn"),
@@ -91,11 +73,15 @@ console.log("[admin-carriers] loaded from file");
     jsonPreview: $("#json-preview"),
     closeJsonPreview: $("#close-json-preview"),
 
-    // schedules list/filters
+    attachmentsContainer: $("#attachments-container"),
+    addAttachmentBtn: $("#add-attachment-btn"),
+
     refreshSchedulesBtn: $("#refresh-schedules-btn"),
     filterCarrier: $("#filter-carrier"),
     filterProductLine: $("#filter-product-line"),
     filterPolicyType: $("#filter-policy-type"),
+    filterItemType: $("#filter-item-type"),
+    filterParentPolicyType: $("#filter-parent-policy-type"),
     filterAgentLevel: $("#filter-agent-level"),
     filterActiveOnly: $("#filter-active-only"),
     applyScheduleFilters: $("#apply-schedule-filters"),
@@ -103,12 +89,13 @@ console.log("[admin-carriers] loaded from file");
     schedulesTableBody: $("#schedules-table tbody"),
     schedulesMsg: $("#schedules-msg"),
 
-    // schedule edit modal
     editScheduleModal: $("#edit-schedule-modal"),
     editSchedId: $("#edit-sched-id"),
     editSchedCarrierName: $("#edit-sched-carrier-name"),
+    editSchedItemType: $("#edit-sched-item-type"),
     editSchedAgentLevel: $("#edit-sched-agent-level"),
     editSchedProductLine: $("#edit-sched-product-line"),
+    editSchedParentPolicyType: $("#edit-sched-parent-policy-type"),
     editSchedPolicyType: $("#edit-sched-policy-type"),
     editSchedBase: $("#edit-sched-base"),
     editSchedAdvance: $("#edit-sched-advance"),
@@ -126,7 +113,6 @@ console.log("[admin-carriers] loaded from file");
     editSchedMsg: $("#edit-sched-msg"),
   };
 
-  // ---------- General helpers ----------
   function setStatus(el, msg, type = "") {
     if (!el) return;
     el.textContent = msg || "";
@@ -266,7 +252,6 @@ console.log("[admin-carriers] loaded from file");
     return data?.publicUrl || null;
   }
 
-  // ---------- Nav fallback (admin page buttons) ----------
   function wireAdminPageNavFallback() {
     const nav = $("#admin-page-nav");
     if (!nav) return;
@@ -284,26 +269,20 @@ console.log("[admin-carriers] loaded from file");
   }
 
   function showTab(name) {
-    const carriersPanel = els.panelCarriers;
-    const schedulesPanel = els.panelSchedules;
-
     if (name === "carriers") {
       els.tabCarriers?.classList.add("active");
       els.tabSchedules?.classList.remove("active");
-
-      if (carriersPanel) carriersPanel.style.display = "block";
-      if (schedulesPanel) schedulesPanel.style.display = "none";
+      if (els.panelCarriers) els.panelCarriers.style.display = "block";
+      if (els.panelSchedules) els.panelSchedules.style.display = "none";
       return;
     }
 
     els.tabSchedules?.classList.add("active");
     els.tabCarriers?.classList.remove("active");
-
-    if (schedulesPanel) schedulesPanel.style.display = "block";
-    if (carriersPanel) carriersPanel.style.display = "none";
+    if (els.panelSchedules) els.panelSchedules.style.display = "block";
+    if (els.panelCarriers) els.panelCarriers.style.display = "none";
   }
 
-  // ---------- Carriers ----------
   async function loadCarriers() {
     const { data, error } = await supabase
       .from("carriers")
@@ -526,7 +505,6 @@ console.log("[admin-carriers] loaded from file");
     }
   }
 
-  // ---------- Renewal bands UI ----------
   function bandRowTemplate({ rate = "", start_year = "2", end_year = "" } = {}) {
     return `
       <div class="band-row" data-band>
@@ -560,9 +538,9 @@ console.log("[admin-carriers] loaded from file");
     els.bandsContainer.insertAdjacentHTML("beforeend", bandRowTemplate(band));
   }
 
-  function readBands() {
-    if (!els.bandsContainer) return [];
-    const bandEls = Array.from(els.bandsContainer.querySelectorAll("[data-band]"));
+  function readBandsFromContainer(containerEl) {
+    if (!containerEl) return [];
+    const bandEls = Array.from(containerEl.querySelectorAll("[data-band]"));
     const bands = [];
 
     for (const el of bandEls) {
@@ -592,6 +570,10 @@ console.log("[admin-carriers] loaded from file");
     return bands;
   }
 
+  function readBands() {
+    return readBandsFromContainer(els.bandsContainer);
+  }
+
   function buildRenewalTrailRuleJSON() {
     const bands = readBands();
     return { bands };
@@ -608,7 +590,113 @@ console.log("[admin-carriers] loaded from file");
       .join(" | ");
   }
 
-  // ---------- Commission schedules ----------
+  function attachmentCardTemplate(index) {
+    return `
+      <div class="attachment-card" data-attachment-card>
+        <div class="attachment-head">
+          <div class="attachment-title">Attachment <span data-attachment-number>${index}</span></div>
+          <button class="btn btn-danger tight" data-remove-attachment type="button">
+            <i class="fa-solid fa-trash"></i> Remove
+          </button>
+        </div>
+
+        <div class="row">
+          <label>
+            <div class="mini">Attachment Policy Type</div>
+            <input data-attachment-policy-type type="text" placeholder="e.g., Term Rider" />
+          </label>
+          <label>
+            <div class="mini">FVG Base Commission Rate</div>
+            <input data-attachment-fvg-rate type="number" step="0.0001" placeholder="e.g., 0.0550" />
+          </label>
+          <label>
+            <div class="mini">Advance Rate</div>
+            <input data-attachment-advance-rate type="number" step="0.0001" placeholder="e.g., 0.5500" />
+          </label>
+        </div>
+
+        <div style="margin-top:10px;">
+          <div class="mini">Attachment Renewal Trail Rule (Bands)</div>
+          <div data-attachment-bands style="margin-top:8px;"></div>
+          <div class="band-actions">
+            <button class="btn btn-muted" data-add-attachment-band type="button">
+              <i class="fa-solid fa-plus"></i> Add Band
+            </button>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  function renumberAttachmentCards() {
+    const cards = Array.from(els.attachmentsContainer?.querySelectorAll("[data-attachment-card]") || []);
+    cards.forEach((card, idx) => {
+      const num = card.querySelector("[data-attachment-number]");
+      if (num) num.textContent = String(idx + 1);
+    });
+  }
+
+  function addAttachmentCard(prefill = {}) {
+    if (!els.attachmentsContainer) return;
+
+    const nextIndex = (els.attachmentsContainer.querySelectorAll("[data-attachment-card]").length || 0) + 1;
+    els.attachmentsContainer.insertAdjacentHTML("beforeend", attachmentCardTemplate(nextIndex));
+
+    const card = els.attachmentsContainer.lastElementChild;
+    if (!card) return;
+
+    const policyTypeInput = card.querySelector("[data-attachment-policy-type]");
+    const fvgRateInput = card.querySelector("[data-attachment-fvg-rate]");
+    const advanceRateInput = card.querySelector("[data-attachment-advance-rate]");
+    const bandsWrap = card.querySelector("[data-attachment-bands]");
+
+    if (policyTypeInput) policyTypeInput.value = prefill.policy_type || "";
+    if (fvgRateInput) fvgRateInput.value = prefill.fvg_rate ?? "";
+    if (advanceRateInput) advanceRateInput.value = prefill.advance_rate ?? "";
+
+    if (bandsWrap) {
+      bandsWrap.insertAdjacentHTML(
+        "beforeend",
+        bandRowTemplate(prefill.band || { rate: "", start_year: 2, end_year: "" })
+      );
+    }
+
+    renumberAttachmentCards();
+  }
+
+  function readAttachmentConfigs() {
+    const cards = Array.from(els.attachmentsContainer?.querySelectorAll("[data-attachment-card]") || []);
+    const results = [];
+
+    for (const card of cards) {
+      const attachmentPolicyType = toNullableStr(card.querySelector("[data-attachment-policy-type]")?.value);
+      const fvgRate = parseNullableNum(card.querySelector("[data-attachment-fvg-rate]")?.value);
+      const advanceRate = parseNullableNum(card.querySelector("[data-attachment-advance-rate]")?.value);
+      const bandsWrap = card.querySelector("[data-attachment-bands]");
+
+      if (!attachmentPolicyType) {
+        throw new Error("Each attachment needs an Attachment Policy Type.");
+      }
+      if (!Number.isFinite(fvgRate) || fvgRate == null || fvgRate <= 0) {
+        throw new Error(`Attachment "${attachmentPolicyType}" needs a positive FVG base commission rate.`);
+      }
+      if (!Number.isFinite(advanceRate) || advanceRate == null || advanceRate < 0) {
+        throw new Error(`Attachment "${attachmentPolicyType}" needs a valid advance rate.`);
+      }
+
+      const renewal_trail_rule = { bands: readBandsFromContainer(bandsWrap) };
+
+      results.push({
+        policy_type: attachmentPolicyType,
+        fvg_rate: fvgRate,
+        advance_rate: advanceRate,
+        renewal_trail_rule,
+      });
+    }
+
+    return results;
+  }
+
   function getCarrierFromSelect(selectEl) {
     const id = selectEl?.value || "";
     if (!id) return null;
@@ -630,7 +718,11 @@ console.log("[admin-carriers] loaded from file");
       return;
     }
 
-    const policy_type = toNullableStr(els.schedPolicyType?.value);
+    const mainPolicyType = toNullableStr(els.schedPolicyType?.value);
+    if (!mainPolicyType) {
+      setStatus(els.schedCreateMsg, "Policy type is required.", "err");
+      return;
+    }
 
     const term_length_months = parseNullableInt(els.schedTermLength?.value);
     if (term_length_months != null && (term_length_months < 1 || term_length_months > 24)) {
@@ -685,42 +777,73 @@ console.log("[admin-carriers] loaded from file");
       return;
     }
 
-    const rows = LEVEL_MULTIPLIERS.map(({ level, mult }) => {
-      const base_commission_rate = round4(fvgRate * mult);
+    let attachments = [];
+    try {
+      attachments = readAttachmentConfigs();
+    } catch (err) {
+      setStatus(els.schedCreateMsg, err.message || "Invalid attachments.", "err");
+      return;
+    }
 
-      const renewal_trail_rule = {
-        bands: (baseRule.bands || []).map((b) => ({
-          ...b,
-          rate: round4(Number(b.rate) * mult),
-        })),
-      };
+    const sharedFields = {
+      carrier_id: carrier.id,
+      carrier_name: carrier.carrier_name,
+      product_line,
+      effective_from,
+      effective_to,
+      lag_time_weeks,
+      exclusive_months,
+      required_loas,
+      created_by: sessionUserId,
+      notes: toNullableStr(els.schedNotes?.value),
+      term_length_months,
+    };
 
-      return {
-        carrier_id: carrier.id,
-        carrier_name: carrier.carrier_name,
-        product_line,
-        policy_type,
+    const rows = [];
+
+    for (const { level, mult } of LEVEL_MULTIPLIERS) {
+      rows.push({
+        ...sharedFields,
+        commission_item_type: "policy",
+        parent_policy_type: null,
+        policy_type: mainPolicyType,
         agent_level: level,
-        base_commission_rate,
+        base_commission_rate: round4(fvgRate * mult),
         advance_rate: round4(advance_rate),
-        effective_from,
-        effective_to,
-        lag_time_weeks,
-        exclusive_months,
-        required_loas,
-        created_by: sessionUserId,
-        notes: toNullableStr(els.schedNotes?.value),
-        renewal_trail_rule,
-        term_length_months,
-      };
-    });
+        renewal_trail_rule: {
+          bands: (baseRule.bands || []).map((b) => ({
+            ...b,
+            rate: round4(Number(b.rate) * mult),
+          })),
+        },
+      });
+
+      for (const attachment of attachments) {
+        rows.push({
+          ...sharedFields,
+          commission_item_type: "attachment",
+          parent_policy_type: mainPolicyType,
+          policy_type: attachment.policy_type,
+          agent_level: level,
+          base_commission_rate: round4(Number(attachment.fvg_rate) * mult),
+          advance_rate: round4(attachment.advance_rate),
+          renewal_trail_rule: {
+            bands: (attachment.renewal_trail_rule?.bands || []).map((b) => ({
+              ...b,
+              rate: round4(Number(b.rate) * mult),
+            })),
+          },
+        });
+      }
+    }
 
     els.createScheduleBtn.disabled = true;
     try {
       const { error } = await supabase.from("commission_schedules").insert(rows);
       if (error) throw error;
 
-      setStatus(els.schedCreateMsg, "Created 5 rows.", "ok");
+      const totalCreated = rows.length;
+      setStatus(els.schedCreateMsg, `Created ${totalCreated} row(s).`, "ok");
 
       if (els.schedProductLine) els.schedProductLine.value = "";
       if (els.schedPolicyType) els.schedPolicyType.value = "";
@@ -735,6 +858,8 @@ console.log("[admin-carriers] loaded from file");
 
       if (els.bandsContainer) els.bandsContainer.innerHTML = "";
       addBand({ rate: "", start_year: 2, end_year: "" });
+
+      if (els.attachmentsContainer) els.attachmentsContainer.innerHTML = "";
 
       selectedCarrierId = carrier.id;
       if (els.filterCarrier) els.filterCarrier.value = carrier.id;
@@ -753,6 +878,8 @@ console.log("[admin-carriers] loaded from file");
       carrier_id: els.filterCarrier?.value || "",
       product_line: (els.filterProductLine?.value || "").trim(),
       policy_type: (els.filterPolicyType?.value || "").trim(),
+      commission_item_type: (els.filterItemType?.value || "").trim(),
+      parent_policy_type: (els.filterParentPolicyType?.value || "").trim(),
       agent_level: els.filterAgentLevel?.value || "",
       activeOnly: !!els.filterActiveOnly?.checked,
     };
@@ -764,9 +891,11 @@ console.log("[admin-carriers] loaded from file");
     let q = supabase
       .from("commission_schedules")
       .select(
-        "id, carrier_id, carrier_name, product_line, policy_type, agent_level, base_commission_rate, advance_rate, effective_from, effective_to, lag_time_weeks, exclusive_months, required_loas, renewal_trail_rule, term_length_months, notes, created_at"
+        "id, carrier_id, carrier_name, commission_item_type, parent_policy_type, product_line, policy_type, agent_level, base_commission_rate, advance_rate, effective_from, effective_to, lag_time_weeks, exclusive_months, required_loas, renewal_trail_rule, term_length_months, notes, created_at"
       )
       .order("carrier_name", { ascending: true })
+      .order("commission_item_type", { ascending: true })
+      .order("parent_policy_type", { ascending: true })
       .order("product_line", { ascending: true })
       .order("policy_type", { ascending: true })
       .order("agent_level", { ascending: true })
@@ -775,8 +904,10 @@ console.log("[admin-carriers] loaded from file");
 
     if (filters.carrier_id) q = q.eq("carrier_id", filters.carrier_id);
     if (filters.agent_level) q = q.eq("agent_level", filters.agent_level);
+    if (filters.commission_item_type) q = q.eq("commission_item_type", filters.commission_item_type);
     if (filters.product_line) q = q.ilike("product_line", `%${filters.product_line}%`);
     if (filters.policy_type) q = q.ilike("policy_type", `%${filters.policy_type}%`);
+    if (filters.parent_policy_type) q = q.ilike("parent_policy_type", `%${filters.parent_policy_type}%`);
 
     if (filters.activeOnly) {
       const t = todayISO();
@@ -795,7 +926,7 @@ console.log("[admin-carriers] loaded from file");
 
     if (!schedules.length) {
       els.schedulesTableBody.innerHTML = `
-        <tr><td colspan="13" class="mini">No schedules found for the current filters.</td></tr>
+        <tr><td colspan="15" class="mini">No schedules found for the current filters.</td></tr>
       `;
       return;
     }
@@ -815,7 +946,9 @@ console.log("[admin-carriers] loaded from file");
         return `
           <tr data-sched-id="${esc(s.id)}">
             <td>${esc(s.carrier_name)}</td>
+            <td><span class="pill">${esc(s.commission_item_type || "policy")}</span></td>
             <td>${esc(s.product_line)}</td>
+            <td>${esc(s.parent_policy_type ?? "")}</td>
             <td>${esc(s.policy_type ?? "")}</td>
             <td><span class="pill">${esc(s.agent_level)}</span></td>
             <td>${esc(s.base_commission_rate)}</td>
@@ -866,18 +999,21 @@ console.log("[admin-carriers] loaded from file");
     if (els.filterCarrier) els.filterCarrier.value = selectedCarrierId || "";
     if (els.filterProductLine) els.filterProductLine.value = "";
     if (els.filterPolicyType) els.filterPolicyType.value = "";
+    if (els.filterItemType) els.filterItemType.value = "";
+    if (els.filterParentPolicyType) els.filterParentPolicyType.value = "";
     if (els.filterAgentLevel) els.filterAgentLevel.value = "";
     if (els.filterActiveOnly) els.filterActiveOnly.checked = false;
   }
 
-  // ---------- Edit schedule modal ----------
   function openEditSchedule(row) {
     setStatus(els.editSchedMsg, "", "");
 
     els.editSchedId.value = row.id;
     els.editSchedCarrierName.value = row.carrier_name || "";
+    els.editSchedItemType.value = row.commission_item_type || "policy";
     els.editSchedAgentLevel.value = row.agent_level || "agent";
     els.editSchedProductLine.value = row.product_line || "";
+    els.editSchedParentPolicyType.value = row.parent_policy_type || "";
     els.editSchedPolicyType.value = row.policy_type || "";
     els.editSchedBase.value = row.base_commission_rate ?? "";
     els.editSchedAdvance.value = row.advance_rate ?? "";
@@ -892,6 +1028,7 @@ console.log("[admin-carriers] loaded from file");
     const rule = row.renewal_trail_rule || { bands: [] };
     els.editSchedRenewalJson.value = JSON.stringify(rule, null, 2);
 
+    toggleEditParentPolicyType();
     openOverlay(els.editScheduleModal);
   }
 
@@ -929,10 +1066,21 @@ console.log("[admin-carriers] loaded from file");
     return obj;
   }
 
+  function toggleEditParentPolicyType() {
+    const isAttachment = (els.editSchedItemType?.value || "policy") === "attachment";
+    if (!els.editSchedParentPolicyType) return;
+
+    els.editSchedParentPolicyType.disabled = !isAttachment;
+    if (!isAttachment) {
+      els.editSchedParentPolicyType.value = "";
+    }
+  }
+
   async function saveScheduleRow() {
     setStatus(els.editSchedMsg, "", "");
 
     const id = els.editSchedId.value;
+    const commission_item_type = (els.editSchedItemType.value || "policy").trim();
     const product_line = (els.editSchedProductLine.value || "").trim();
     if (!product_line) {
       setStatus(els.editSchedMsg, "Product line is required.", "err");
@@ -940,6 +1088,19 @@ console.log("[admin-carriers] loaded from file");
     }
 
     const policy_type = toNullableStr(els.editSchedPolicyType.value);
+    if (!policy_type) {
+      setStatus(els.editSchedMsg, "Policy type is required.", "err");
+      return;
+    }
+
+    let parent_policy_type = toNullableStr(els.editSchedParentPolicyType.value);
+    if (commission_item_type === "attachment" && !parent_policy_type) {
+      setStatus(els.editSchedMsg, "Parent Policy Type is required for attachments.", "err");
+      return;
+    }
+    if (commission_item_type !== "attachment") {
+      parent_policy_type = null;
+    }
 
     const base = parseNullableNum(els.editSchedBase.value);
     const adv = parseNullableNum(els.editSchedAdvance.value);
@@ -992,6 +1153,8 @@ console.log("[admin-carriers] loaded from file");
     }
 
     const payload = {
+      commission_item_type,
+      parent_policy_type,
       product_line,
       policy_type,
       base_commission_rate: round4(base),
@@ -1022,7 +1185,7 @@ console.log("[admin-carriers] loaded from file");
 
   async function deleteScheduleRow(row) {
     const ok = confirm(
-      `Delete this schedule row?\n\n${row.carrier_name} • ${row.product_line} • ${row.policy_type || "(no policy type)"} • ${row.agent_level}`
+      `Delete this schedule row?\n\n${row.carrier_name} • ${row.commission_item_type || "policy"} • ${row.parent_policy_type || "(no parent)"} • ${row.policy_type || "(no policy type)"} • ${row.agent_level}`
     );
     if (!ok) return;
 
@@ -1037,7 +1200,6 @@ console.log("[admin-carriers] loaded from file");
     }
   }
 
-  // ---------- JSON preview ----------
   function previewRenewalJSON() {
     try {
       const obj = buildRenewalTrailRuleJSON();
@@ -1048,22 +1210,17 @@ console.log("[admin-carriers] loaded from file");
     }
   }
 
-  // ---------- Wiring ----------
   function wireEvents() {
-    // tabs
     els.tabCarriers?.addEventListener("click", () => showTab("carriers"));
     els.tabSchedules?.addEventListener("click", async () => {
       showTab("schedules");
       await refreshSchedules();
     });
 
-    // carrier search
     els.carrierSearch?.addEventListener("input", renderCarriersTable);
 
-    // add carrier
     els.addCarrierBtn?.addEventListener("click", addCarrier);
 
-    // carrier edit modal
     els.saveCarrierBtn?.addEventListener("click", saveCarrier);
     els.cancelCarrierBtn?.addEventListener("click", () => closeOverlay(els.editCarrierModal));
     els.closeEditCarrier?.addEventListener("click", () => closeOverlay(els.editCarrierModal));
@@ -1071,7 +1228,6 @@ console.log("[admin-carriers] loaded from file");
       if (e.target === els.editCarrierModal) closeOverlay(els.editCarrierModal);
     });
 
-    // bands
     els.addBandBtn?.addEventListener("click", () => addBand({ rate: "", start_year: 2, end_year: "" }));
     els.bandsContainer?.addEventListener("click", (e) => {
       const btn = e.target.closest("[data-remove-band]");
@@ -1082,16 +1238,48 @@ console.log("[admin-carriers] loaded from file");
       ensureAtLeastOneBand();
     });
 
+    els.addAttachmentBtn?.addEventListener("click", () => addAttachmentCard());
+
+    els.attachmentsContainer?.addEventListener("click", (e) => {
+      const removeAttachmentBtn = e.target.closest("[data-remove-attachment]");
+      if (removeAttachmentBtn) {
+        const card = removeAttachmentBtn.closest("[data-attachment-card]");
+        card?.remove();
+        renumberAttachmentCards();
+        return;
+      }
+
+      const addBandBtn = e.target.closest("[data-add-attachment-band]");
+      if (addBandBtn) {
+        const card = addBandBtn.closest("[data-attachment-card]");
+        const wrap = card?.querySelector("[data-attachment-bands]");
+        if (wrap) {
+          wrap.insertAdjacentHTML("beforeend", bandRowTemplate({ rate: "", start_year: 2, end_year: "" }));
+        }
+        return;
+      }
+
+      const removeBandBtn = e.target.closest("[data-remove-band]");
+      if (removeBandBtn) {
+        const row = removeBandBtn.closest("[data-band]");
+        const card = removeBandBtn.closest("[data-attachment-card]");
+        const wrap = card?.querySelector("[data-attachment-bands]");
+        row?.remove();
+
+        if (wrap && wrap.querySelectorAll("[data-band]").length === 0) {
+          wrap.insertAdjacentHTML("beforeend", bandRowTemplate({ rate: "", start_year: 2, end_year: "" }));
+        }
+      }
+    });
+
     els.previewJsonBtn?.addEventListener("click", previewRenewalJSON);
     els.closeJsonPreview?.addEventListener("click", () => closeOverlay(els.jsonPreviewModal));
     els.jsonPreviewModal?.addEventListener("click", (e) => {
       if (e.target === els.jsonPreviewModal) closeOverlay(els.jsonPreviewModal);
     });
 
-    // create schedule batch
     els.createScheduleBtn?.addEventListener("click", createScheduleBatch);
 
-    // schedules filters
     els.refreshSchedulesBtn?.addEventListener("click", refreshSchedules);
     els.applyScheduleFilters?.addEventListener("click", refreshSchedules);
     els.resetScheduleFilters?.addEventListener("click", async () => {
@@ -1099,7 +1287,8 @@ console.log("[admin-carriers] loaded from file");
       await refreshSchedules();
     });
 
-    // edit schedule modal
+    els.editSchedItemType?.addEventListener("change", toggleEditParentPolicyType);
+
     els.saveSchedBtn?.addEventListener("click", saveScheduleRow);
     els.cancelSchedBtn?.addEventListener("click", () => closeOverlay(els.editScheduleModal));
     els.closeEditSchedule?.addEventListener("click", () => closeOverlay(els.editScheduleModal));
@@ -1107,13 +1296,11 @@ console.log("[admin-carriers] loaded from file");
       if (e.target === els.editScheduleModal) closeOverlay(els.editScheduleModal);
     });
 
-    // helpful defaults
     if (els.schedEffectiveFrom && !els.schedEffectiveFrom.value) {
       els.schedEffectiveFrom.value = todayISO();
     }
   }
 
-  // ---------- Init ----------
   async function init() {
     wireAdminPageNavFallback();
 
