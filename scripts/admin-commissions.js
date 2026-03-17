@@ -8,16 +8,22 @@ let policyContactChoices = null;
 let policyCarrierChoices = null;
 let policyProductLineChoices = null;
 let policyPolicyTypeChoices = null;
-let _carrierScheduleMap = null; // { lines: string[], typesByLine: Map(line->Set(types)) }
+let _carrierScheduleMap = null;
 let commissionAgentsLoaded = false;
 let policyAgentChoices = null;
 let policyLeadsChoices = null;
 let adjustmentAgentChoices = null;
 let policyEditAgentChoices = null;
 let _policiesCache = [];
-let _policiesFp = null; // flatpickr instance
+let _policiesFp = null;
 let _ledgerCache = [];
-let _ledgerFp = null; // flatpickr instance for Debits/Credits
+let _ledgerFp = null;
+
+let _commissionAgentsMap = new Map();
+let _eligiblePolicyAttachmentSchedules = [];
+let _policyAttachmentRowChoices = [];
+let policyAttachmentModalChoices = null;
+let _activeAttachmentModalSchedules = [];
 
 /* ---------- Helpers ---------- */
 
@@ -27,6 +33,231 @@ function closeModal(el) { if (el) el.style.display = 'none'; }
 function safeNum(v) {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
+}
+
+function round2(n) {
+  return Math.round((Number(n) || 0) * 100) / 100;
+}
+
+function destroyChoicesInstance(inst) {
+  try { inst?.destroy(); } catch (_) {}
+}
+
+function ensureChoicesForSelect(selectEl, existingInstance, opts = {}) {
+  if (!window.Choices || !selectEl) return existingInstance;
+
+  destroyChoicesInstance(existingInstance);
+
+  try {
+    return new Choices(selectEl, {
+      searchEnabled: true,
+      shouldSort: false,
+      itemSelectText: '',
+      ...opts
+    });
+  } catch (_) {
+    return existingInstance;
+  }
+}
+
+function getAgentLevel(agentId) {
+  return _commissionAgentsMap.get(agentId)?.level || null;
+}
+
+function getCarrierNameFromPolicyModal() {
+  const carrierSel = document.getElementById('policy-carrier');
+  return carrierSel?.options?.[carrierSel.selectedIndex]?.text?.trim() || '';
+}
+
+function getAttachmentScheduleLabel(s) {
+  const parts = [];
+  if (s.policy_type) parts.push(s.policy_type);
+  if (s.product_line) parts.push(s.product_line);
+  return parts.join(' • ') || 'Attachment';
+}
+
+function resetPolicyAttachmentUI() {
+  const wrap = document.getElementById('policy-attachments-wrap');
+  const list = document.getElementById('policy-attachments-list');
+
+  _eligiblePolicyAttachmentSchedules = [];
+  _policyAttachmentRowChoices.forEach(inst => destroyChoicesInstance(inst));
+  _policyAttachmentRowChoices = [];
+
+  if (list) list.innerHTML = '';
+  if (wrap) wrap.style.display = 'none';
+}
+
+function buildUniqueAttachmentSchedules(rows) {
+  const map = new Map();
+
+  (rows || []).forEach(r => {
+    const key = `${r.policy_type || ''}`;
+    const existing = map.get(key);
+
+    if (!existing) {
+      map.set(key, r);
+      return;
+    }
+
+    const existingDate = existing.effective_from || '0000-00-00';
+    const rowDate = r.effective_from || '0000-00-00';
+    if (rowDate > existingDate) {
+      map.set(key, r);
+    }
+  });
+
+  return Array.from(map.values()).sort((a, b) => {
+    const aa = a.policy_type || '';
+    const bb = b.policy_type || '';
+    return aa.localeCompare(bb);
+  });
+}
+
+async function fetchEligibleAttachmentSchedulesForPolicyContext({
+  agentId,
+  carrierName,
+  productLine,
+  parentPolicyType
+}) {
+  const agentLevel = getAgentLevel(agentId);
+  if (!agentLevel || !carrierName || !productLine || !parentPolicyType) return [];
+
+  const { data, error } = await sb
+    .from('commission_schedules')
+    .select(`
+      id,
+      carrier_name,
+      product_line,
+      policy_type,
+      parent_policy_type,
+      agent_level,
+      commission_item_type,
+      effective_from,
+      effective_to
+    `)
+    .eq('commission_item_type', 'attachment')
+    .eq('carrier_name', carrierName)
+    .eq('product_line', productLine)
+    .eq('parent_policy_type', parentPolicyType)
+    .eq('agent_level', agentLevel)
+    .order('effective_from', { ascending: false });
+
+  if (error) {
+    console.error('Error loading eligible attachment schedules:', error);
+    return [];
+  }
+
+  return buildUniqueAttachmentSchedules(data || []);
+}
+
+function addPolicyAttachmentRow(prefill = {}) {
+  const list = document.getElementById('policy-attachments-list');
+  if (!list || !_eligiblePolicyAttachmentSchedules.length) return;
+
+  const row = document.createElement('div');
+  row.className = 'policy-attachment-row';
+  row.style.display = 'grid';
+  row.style.gridTemplateColumns = '1.4fr 1fr auto';
+  row.style.gap = '8px';
+  row.style.alignItems = 'end';
+  row.style.marginBottom = '8px';
+
+  const optionsHtml = [
+    `<option value="">Select attachment…</option>`,
+    ..._eligiblePolicyAttachmentSchedules.map(s => `
+      <option value="${s.id}">
+        ${getAttachmentScheduleLabel(s)}
+      </option>
+    `)
+  ].join('');
+
+  row.innerHTML = `
+    <label style="margin:0;">
+      Attachment Type
+      <select class="policy-attachment-type-select">${optionsHtml}</select>
+    </label>
+
+    <label style="margin:0;">
+      Annual Premium
+      <input class="policy-attachment-annual-premium" type="number" min="0" step="0.01" placeholder="0.00">
+    </label>
+
+    <button type="button" class="policy-attachment-remove"
+            style="padding:8px 10px; border-radius:8px;">
+      Remove
+    </button>
+  `;
+
+  list.appendChild(row);
+
+  const selectEl = row.querySelector('.policy-attachment-type-select');
+  const choicesInst = ensureChoicesForSelect(selectEl, null);
+  _policyAttachmentRowChoices.push(choicesInst);
+
+  if (prefill.scheduleId) {
+    selectEl.value = prefill.scheduleId;
+    if (choicesInst) choicesInst.setChoiceByValue(prefill.scheduleId);
+  }
+  if (prefill.premiumAnnual != null) {
+    row.querySelector('.policy-attachment-annual-premium').value = prefill.premiumAnnual;
+  }
+}
+
+function collectPolicyAttachmentRows() {
+  const rows = Array.from(document.querySelectorAll('#policy-attachments-list .policy-attachment-row'));
+  const out = [];
+
+  for (const row of rows) {
+    const scheduleId = row.querySelector('.policy-attachment-type-select')?.value || '';
+    const annualPremium = Number(row.querySelector('.policy-attachment-annual-premium')?.value || 0);
+
+    if (!scheduleId && !annualPremium) continue;
+
+    if (!scheduleId || !(annualPremium > 0)) {
+      throw new Error('Each attachment row needs an attachment type and annual premium.');
+    }
+
+    const schedule = _eligiblePolicyAttachmentSchedules.find(s => String(s.id) === String(scheduleId));
+    if (!schedule) {
+      throw new Error('One of the selected attachment schedules could not be found.');
+    }
+
+    out.push({
+      schedule,
+      premium_annual: annualPremium,
+      premium_modal: annualPremium / 12
+    });
+  }
+
+  return out;
+}
+
+async function refreshPolicyAttachmentOptions() {
+  const agentId = document.getElementById('policy-agent')?.value || '';
+  const carrierName = getCarrierNameFromPolicyModal();
+  const productLine = document.getElementById('policy-product-line')?.value || '';
+  const parentPolicyType = document.getElementById('policy-policy-type')?.value || '';
+
+  resetPolicyAttachmentUI();
+
+  if (!agentId || !carrierName || !productLine || !parentPolicyType) return;
+
+  const schedules = await fetchEligibleAttachmentSchedulesForPolicyContext({
+    agentId,
+    carrierName,
+    productLine,
+    parentPolicyType
+  });
+
+  _eligiblePolicyAttachmentSchedules = schedules;
+
+  if (!schedules.length) return;
+
+  const wrap = document.getElementById('policy-attachments-wrap');
+  if (wrap) wrap.style.display = 'block';
+
+  addPolicyAttachmentRow();
 }
 
 function renderAdjustmentsList(rows) {
@@ -64,14 +295,13 @@ function renderAdjustmentsList(rows) {
 function applyAdjustmentFilters() {
   const q = (document.getElementById('debit-credit-search')?.value || '').trim().toLowerCase();
 
-  // date range from flatpickr (2 dates) OR empty
   let start = null;
   let end = null;
 
   if (_ledgerFp && Array.isArray(_ledgerFp.selectedDates)) {
     if (_ledgerFp.selectedDates[0]) start = new Date(_ledgerFp.selectedDates[0]);
     if (_ledgerFp.selectedDates[1]) end = new Date(_ledgerFp.selectedDates[1]);
-    if (end) end.setHours(23, 59, 59, 999); // include whole end day
+    if (end) end.setHours(23, 59, 59, 999);
   }
 
   const filtered = (_ledgerCache || []).filter(r => {
@@ -87,7 +317,6 @@ function applyAdjustmentFilters() {
 
     if (!matchesText) return false;
 
-    // Date filter on period_start
     if (!start && !end) return true;
 
     const raw = r.period_start;
@@ -112,7 +341,7 @@ async function loadAgentsForCommissions(force = false) {
 
   const { data, error } = await sb
     .from('agents')
-    .select('id, full_name')
+    .select('id, full_name, level')
     .eq('is_active', true)
     .order('full_name', { ascending: true });
 
@@ -121,10 +350,13 @@ async function loadAgentsForCommissions(force = false) {
     return;
   }
 
+  _commissionAgentsMap = new Map();
+  (data || []).forEach(a => _commissionAgentsMap.set(a.id, a));
+
   const selects = [
     document.getElementById('policy-agent'),
     document.getElementById('adjustment-agent'),
-    document.getElementById('policy-edit-agent'), // ✅ ADD THIS
+    document.getElementById('policy-edit-agent'),
   ];
 
   selects.forEach(sel => {
@@ -140,10 +372,9 @@ async function loadAgentsForCommissions(force = false) {
     });
   });
 
-  // choices instances
   policyAgentChoices = ensureChoicesForSelect(document.getElementById('policy-agent'), policyAgentChoices);
   adjustmentAgentChoices = ensureChoicesForSelect(document.getElementById('adjustment-agent'), adjustmentAgentChoices);
-  policyEditAgentChoices = ensureChoicesForSelect(document.getElementById('policy-edit-agent'), policyEditAgentChoices); // ✅ ADD THIS
+  policyEditAgentChoices = ensureChoicesForSelect(document.getElementById('policy-edit-agent'), policyEditAgentChoices);
 
   commissionAgentsLoaded = true;
 }
@@ -161,7 +392,6 @@ async function loadContactsForPolicy(agentId = null) {
     .order('created_at', { ascending: false })
     .limit(200);
 
-  // admin.js filters by owning_agent_id
   if (agentId) query = query.eq('owning_agent_id', agentId);
 
   const { data, error } = await query;
@@ -277,7 +507,8 @@ async function loadProductLinesAndTypesForCarrier(carrierId) {
   const { data, error } = await sb
     .from('commission_schedules')
     .select('product_line, policy_type')
-    .eq('carrier_id', carrierId);
+    .eq('carrier_id', carrierId)
+    .eq('commission_item_type', 'policy');
 
   if (error) {
     console.error('Error loading commission_schedules for carrier:', error);
@@ -416,12 +647,19 @@ function renderPoliciesList(rows) {
           <div>$${prem} • ${st} • Issue: ${dt}</div>
         </div>
     
-        <div style="flex:0 0 auto; display:flex; gap:8px; align-items:center;">
+        <div style="flex:0 0 auto; display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
           <button type="button"
             class="policy-edit-btn"
             data-policy-id="${p.id}"
             style="padding:6px 10px; border-radius:8px;">
             Edit
+          </button>
+
+          <button type="button"
+            class="policy-add-attachment-btn"
+            data-policy-id="${p.id}"
+            style="padding:6px 10px; border-radius:8px;">
+            Add attachment
           </button>
     
           <button type="button"
@@ -439,17 +677,15 @@ function renderPoliciesList(rows) {
 function applyPolicyFilters() {
   const q = (document.getElementById('policy-search')?.value || '').trim().toLowerCase();
 
-  // date range from flatpickr (2 dates) OR empty
   let start = null;
   let end = null;
   if (_policiesFp && Array.isArray(_policiesFp.selectedDates)) {
     if (_policiesFp.selectedDates[0]) start = new Date(_policiesFp.selectedDates[0]);
     if (_policiesFp.selectedDates[1]) end = new Date(_policiesFp.selectedDates[1]);
-    if (end) end.setHours(23, 59, 59, 999); // include whole end day
+    if (end) end.setHours(23, 59, 59, 999);
   }
 
   const filtered = (_policiesCache || []).filter(p => {
-    // search fields
     const agentName = (p.agent_name || '').toLowerCase();
     const policyNum = (p.policy_number || '').toLowerCase();
     const carrier = (p.carrier_name || '').toLowerCase();
@@ -466,7 +702,6 @@ function applyPolicyFilters() {
 
     if (!matchesText) return false;
 
-    // date filter: submitted_at (preferred), fallback created_at
     if (!start && !end) return true;
 
     const raw = p.submitted_at || p.created_at;
@@ -490,7 +725,6 @@ async function loadPoliciesIntoList() {
 
   list.innerHTML = `<div style="padding:10px;">Loading…</div>`;
 
-  // 1) get policies WITHOUT embedded join
   const { data: policies, error } = await sb
     .from('policies')
     .select(`
@@ -516,8 +750,6 @@ async function loadPoliciesIntoList() {
   }
 
   const rows = policies || [];
-
-  // 2) fetch agent names for the agent_ids we see
   const agentIds = [...new Set(rows.map(r => r.agent_id).filter(Boolean))];
 
   let agentNameMap = {};
@@ -534,13 +766,12 @@ async function loadPoliciesIntoList() {
     }
   }
 
-  // 3) attach agent name to each row (no FK needed)
   _policiesCache = rows.map(p => ({
     ...p,
     agent_name: agentNameMap[p.agent_id] || '—'
   }));
 
-  applyPolicyFilters(); // this will call renderPoliciesList(filtered)
+  applyPolicyFilters();
 }
 
 async function loadLeadsForSelectedContact(contactId) {
@@ -548,7 +779,6 @@ async function loadLeadsForSelectedContact(contactId) {
   const sel = document.getElementById('policy-leads');
   if (!wrap || !sel) return;
 
-  // Always reset first
   wrap.style.display = 'none';
   sel.innerHTML = '';
   destroyChoicesInstance(policyLeadsChoices);
@@ -571,10 +801,8 @@ async function loadLeadsForSelectedContact(contactId) {
   const rows = data || [];
   if (!rows.length) return;
 
-  // Show wrap only if leads exist
   wrap.style.display = 'block';
 
-  // Add placeholder option (Choices handles it fine for multi)
   rows.forEach(l => {
     const opt = document.createElement('option');
     opt.value = l.id;
@@ -603,7 +831,6 @@ async function loadAdjustmentsIntoList() {
 
   container.innerHTML = `<div style="padding:10px;">Loading…</div>`;
 
-  // 1) Pull ledger rows
   const { data: rows, error } = await sb
     .from('commission_ledger')
     .select('id, agent_id, amount, category, entry_type, is_settled, policy_id, period_start')
@@ -622,11 +849,9 @@ async function loadAdjustmentsIntoList() {
     return;
   }
 
-  // 2) Lookup IDs
   const agentIds = [...new Set(rows.map(r => r.agent_id).filter(Boolean))];
   const policyIds = [...new Set(rows.map(r => r.policy_id).filter(Boolean))];
 
-  // 3) Agents map
   let agentNameMap = {};
   if (agentIds.length) {
     const { data: agents, error: aErr } = await sb
@@ -638,7 +863,6 @@ async function loadAdjustmentsIntoList() {
     else (agents || []).forEach(a => { agentNameMap[a.id] = a.full_name || a.id; });
   }
 
-  // 4) Policies map
   let policyNumMap = {};
   if (policyIds.length) {
     const { data: policies, error: pErr } = await sb
@@ -650,7 +874,6 @@ async function loadAdjustmentsIntoList() {
     else (policies || []).forEach(p => { policyNumMap[p.id] = p.policy_number || p.id; });
   }
 
-  // 5) Cache enriched rows
   _ledgerCache = rows.map(r => ({
     ...r,
     agent_name: agentNameMap[r.agent_id] || '—',
@@ -660,7 +883,7 @@ async function loadAdjustmentsIntoList() {
   applyAdjustmentFilters();
 }
 
-/* ---------- Payout batches (Pay/Edit/Delete) ---------- */
+/* ---------- Payout batches ---------- */
 
 async function loadPayoutBatchesIntoList() {
   const list = document.getElementById("batch-list");
@@ -684,7 +907,6 @@ async function loadPayoutBatchesIntoList() {
   
   const fmtDateOnly = (v) => {
     if (!v) return "—";
-    // v is YYYY-MM-DD (date)
     return String(v).slice(0, 10);
   };
 
@@ -713,7 +935,6 @@ async function loadPayoutBatchesIntoList() {
 
   let rows = batches || [];
 
-  // ✅ Filter: pending / sent / both
   if (activeFilter !== "both") {
     rows = rows.filter(b => String(b.status || "pending").toLowerCase() === activeFilter);
   }
@@ -754,7 +975,6 @@ async function loadPayoutBatchesIntoList() {
         <div><span style="opacity:.75;">Status:</span> <span class="status-text">${currentStatus}</span></div>
       </div>
 
-      <!-- ✅ Edit area now changes STATUS, not total_net -->
       <div class="edit-wrap" style="margin-top:8px; display:none; gap:8px; align-items:center; flex-wrap:wrap;">
         <label style="font-size:12px; opacity:.8;">Status:</label>
         <select class="edit-status"
@@ -780,7 +1000,7 @@ async function loadPayoutBatchesIntoList() {
     btnPay.textContent = isSent ? "Paid" : "Pay";
     btnPay.style.padding = "6px 12px";
     btnPay.style.borderRadius = "8px";
-    btnPay.disabled = isSent; // ✅ #2 disable if sent
+    btnPay.disabled = isSent;
 
     const btnEdit = document.createElement("button");
     btnEdit.type = "button";
@@ -810,7 +1030,6 @@ async function loadPayoutBatchesIntoList() {
     const editMsg = left.querySelector(".edit-msg");
     const statusText = left.querySelector(".status-text");
 
-    // set default selection
     editStatus.value = currentStatus;
 
     btnEdit.addEventListener("click", () => {
@@ -857,7 +1076,6 @@ async function loadPayoutBatchesIntoList() {
         return;
       }
 
-      // update local
       b.status = nextStatus;
       statusText.textContent = nextStatus;
 
@@ -872,7 +1090,6 @@ async function loadPayoutBatchesIntoList() {
         editMsg.textContent = "";
       }, 600);
 
-      // ✅ if filter would hide it now, refresh list
       if (activeFilter !== "both" && nextStatus !== activeFilter) {
         await loadPayoutBatchesIntoList();
       }
@@ -907,7 +1124,6 @@ async function loadPayoutBatchesIntoList() {
     });
 
     btnPay.addEventListener("click", async () => {
-      // ✅ #2 hard block even if somehow clicked
       const statusNow = String(b.status || "pending").toLowerCase();
       if (statusNow === "sent") {
         alert("This batch is already marked as sent/paid.");
@@ -948,10 +1164,7 @@ async function loadPayoutBatchesIntoList() {
         } else {
           alert(payload?.message || "Batch sent successfully.");
 
-          // OPTIONAL: if your function does NOT update status automatically,
-          // we can set status=sent here after success:
           await sb.from("payout_batches").update({ status: "sent" }).eq("id", b.id);
-
           await loadPayoutBatchesIntoList();
         }
       } catch (e) {
@@ -965,7 +1178,7 @@ async function loadPayoutBatchesIntoList() {
   }
 }
 
-/* ---------- Adjustment helpers (policy/lead selects) ---------- */
+/* ---------- Adjustment helpers ---------- */
 
 function syncAdjustmentCategoryUI() {
   const cat = document.getElementById('adjustment-category')?.value || '';
@@ -1098,7 +1311,7 @@ async function loadLeadsForLeadDebt(agentId) {
   }
 }
 
-/* ---------- Run payouts (admin.js behavior) ---------- */
+/* ---------- Run payouts ---------- */
 
 function wirePayoutBatchFilters() {
   const filter = document.getElementById("batch-status-filter");
@@ -1161,7 +1374,6 @@ async function wireRunPayoutsButton() {
     const d = new Date(today);
     const fifthThisMonth = new Date(d.getFullYear(), d.getMonth(), 5);
   
-    // if we already passed the 5th, use next month’s 5th
     if (d > fifthThisMonth) {
       return new Date(d.getFullYear(), d.getMonth() + 1, 5);
     }
@@ -1235,17 +1447,14 @@ async function openEditPolicyModal(policyId) {
     return;
   }
 
-  // fill fields
   document.getElementById('policy-edit-id').value = p.id;
 
-  // agent dropdown (load agents first so option exists)
   await loadAgentsForCommissions();
 
   const agentSel = document.getElementById('policy-edit-agent');
   if (agentSel) {
     const agentId = p.agent_id || '';
-  
-    agentSel.value = agentId; // always set the real select
+    agentSel.value = agentId;
 
     if (window.Choices && policyEditAgentChoices) {
       policyEditAgentChoices.setChoiceByValue(agentId);
@@ -1254,22 +1463,189 @@ async function openEditPolicyModal(policyId) {
 
   document.getElementById('policy-edit-number').value = p.policy_number || '';
   document.getElementById('policy-edit-annual-premium').value = Number(p.premium_annual || 0);
-
   document.getElementById('policy-edit-carrier').value = p.carrier_name || '';
   document.getElementById('policy-edit-product-line').value = p.product_line || '';
   document.getElementById('policy-edit-policy-type').value = p.policy_type || '';
-
   document.getElementById('policy-edit-as-earned').value = p.as_earned ? 'true' : 'false';
   document.getElementById('policy-edit-status').value = p.status || 'pending';
 
-  // dates: make them YYYY-MM-DD for <input type="date">
   const toYMD = (iso) => iso ? String(iso).slice(0, 10) : '';
   document.getElementById('policy-edit-submitted-date').value = toYMD(p.submitted_at);
-  // optional:
   const issuedEl = document.getElementById('policy-edit-issued-date');
   if (issuedEl) issuedEl.value = toYMD(p.issued_at);
 
   openModal(modal);
+}
+
+/* ---------- Add attachment later ---------- */
+
+async function openPolicyAttachmentModal(policyId) {
+  const modal = document.getElementById('policy-attachment-modal');
+  const errEl = document.getElementById('policy-attachment-error');
+  const contextEl = document.getElementById('policy-attachment-context');
+  const sel = document.getElementById('policy-attachment-type');
+  const premiumEl = document.getElementById('policy-attachment-annual-premium');
+  const issuedEl = document.getElementById('policy-attachment-issued-date');
+
+  if (errEl) errEl.textContent = '';
+  if (premiumEl) premiumEl.value = '';
+  if (issuedEl) issuedEl.value = ymdToday();
+  destroyChoicesInstance(policyAttachmentModalChoices);
+  policyAttachmentModalChoices = null;
+  _activeAttachmentModalSchedules = [];
+
+  const { data: policy, error } = await sb
+    .from('policies')
+    .select('id, agent_id, policy_number, carrier_name, product_line, policy_type, issued_at')
+    .eq('id', policyId)
+    .single();
+
+  if (error || !policy) {
+    if (errEl) errEl.textContent = error?.message || 'Could not load policy.';
+    return;
+  }
+
+  document.getElementById('policy-attachment-policy-id').value = policy.id;
+
+  if (contextEl) {
+    contextEl.innerHTML = `
+      <div><strong>Policy #:</strong> ${policy.policy_number || '—'}</div>
+      <div><strong>Carrier:</strong> ${policy.carrier_name || '—'}</div>
+      <div><strong>Product Line:</strong> ${policy.product_line || '—'}</div>
+      <div><strong>Policy Type:</strong> ${policy.policy_type || '—'}</div>
+    `;
+  }
+
+  const schedules = await fetchEligibleAttachmentSchedulesForPolicyContext({
+    agentId: policy.agent_id,
+    carrierName: policy.carrier_name,
+    productLine: policy.product_line,
+    parentPolicyType: policy.policy_type
+  });
+
+  _activeAttachmentModalSchedules = schedules;
+
+  sel.innerHTML = '';
+  if (!schedules.length) {
+    sel.innerHTML = '<option value="">No attachment schedules found</option>';
+    sel.disabled = true;
+    if (errEl) errEl.textContent = 'No matching attachment schedules were found for this policy and agent level.';
+  } else {
+    sel.disabled = false;
+    sel.innerHTML = '<option value="">Select attachment…</option>';
+    schedules.forEach(s => {
+      const opt = document.createElement('option');
+      opt.value = s.id;
+      opt.textContent = getAttachmentScheduleLabel(s);
+      sel.appendChild(opt);
+    });
+  }
+
+  policyAttachmentModalChoices = ensureChoicesForSelect(sel, policyAttachmentModalChoices);
+  openModal(modal);
+}
+
+function wirePolicyAttachmentButtons() {
+  const list = document.getElementById('policy-list');
+  if (!list) return;
+
+  list.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.policy-add-attachment-btn');
+    if (!btn) return;
+
+    const policyId = btn.dataset.policyId;
+    if (!policyId) return;
+
+    await openPolicyAttachmentModal(policyId);
+  });
+}
+
+function wirePolicyAttachmentModalButtons() {
+  document.getElementById('policy-attachment-cancel')?.addEventListener('click', () => {
+    closeModal(document.getElementById('policy-attachment-modal'));
+  });
+
+  document.getElementById('policy-attachment-modal')?.addEventListener('click', (e) => {
+    if (e.target.id === 'policy-attachment-modal') closeModal(e.currentTarget);
+  });
+}
+
+function wirePolicyAttachmentSubmit() {
+  document.getElementById('policy-attachment-form')?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const errEl = document.getElementById('policy-attachment-error');
+    if (errEl) errEl.textContent = '';
+
+    try {
+      const policyId = document.getElementById('policy-attachment-policy-id')?.value || '';
+      const scheduleId = document.getElementById('policy-attachment-type')?.value || '';
+      const annualPremium = Number(document.getElementById('policy-attachment-annual-premium')?.value || 0);
+      const issuedRaw = document.getElementById('policy-attachment-issued-date')?.value || '';
+
+      if (!policyId || !scheduleId || !(annualPremium > 0) || !issuedRaw) {
+        if (errEl) errEl.textContent = 'Please complete all required fields.';
+        return;
+      }
+
+      const schedule = _activeAttachmentModalSchedules.find(s => String(s.id) === String(scheduleId));
+      if (!schedule) {
+        if (errEl) errEl.textContent = 'Could not find the selected attachment schedule.';
+        return;
+      }
+
+      const { data: policy, error: polErr } = await sb
+        .from('policies')
+        .select('id, policy_number, carrier_name, product_line, policy_type')
+        .eq('id', policyId)
+        .single();
+
+      if (polErr || !policy) {
+        if (errEl) errEl.textContent = polErr?.message || 'Could not load policy.';
+        return;
+      }
+
+      const issued_at = new Date(issuedRaw).toISOString();
+
+      const payload = {
+        policy_id: policy.id,
+        attachment_name: schedule.policy_type,
+        attachment_type: schedule.policy_type,
+        carrier_name: policy.carrier_name,
+        product_line: policy.product_line,
+        policy_type: schedule.policy_type,
+        policy_number: policy.policy_number,
+        status: 'active',
+        issued_at,
+        effective_at: issued_at,
+        premium_annual: annualPremium,
+        premium_modal: annualPremium / 12,
+        commissionable_premium_annual: annualPremium,
+        commissionable_premium_modal: annualPremium / 12,
+        metadata: {
+          attachment_schedule_id: schedule.id,
+          parent_policy_type: policy.policy_type,
+          created_from: 'admin_commissions_attachment_modal',
+          created_by: userId || null
+        }
+      };
+
+      const { error: insErr } = await sb
+        .from('policy_attachments')
+        .insert([payload]);
+
+      if (insErr) {
+        if (errEl) errEl.textContent = insErr.message || 'Could not save attachment.';
+        return;
+      }
+
+      closeModal(document.getElementById('policy-attachment-modal'));
+      alert('Attachment added.');
+    } catch (ex) {
+      console.error('policy attachment submit error', ex);
+      if (errEl) errEl.textContent = 'Could not save attachment.';
+    }
+  });
 }
 
 /* ---------- Wire modal open/close ---------- */
@@ -1333,7 +1709,6 @@ function wirePolicyEditSubmit() {
       submitted_at,
       status,
       as_earned,
-      // only include issued_at if you actually have that input
       ...(issued_raw ? { issued_at } : {})
     };
 
@@ -1368,7 +1743,6 @@ function wireModalButtons() {
     await loadContactsForPolicy(agentId);
     await loadCarriersForPolicy();
 
-    // Reset product dropdowns like admin.js
     const lineSel = document.getElementById('policy-product-line');
     const typeSel = document.getElementById('policy-policy-type');
 
@@ -1380,22 +1754,21 @@ function wireModalButtons() {
       if (policyPolicyTypeChoices) { policyPolicyTypeChoices.destroy(); policyPolicyTypeChoices = null; }
     } catch (_) {}
 
-    // Reset new contact area
     const newWrap = document.getElementById('policy-new-contact-wrap');
     if (newWrap) newWrap.style.display = 'none';
-    // Reset leads UI every time modal opens
+
     const leadsWrap = document.getElementById('policy-leads-wrap');
     const leadsSel = document.getElementById('policy-leads');
     if (leadsWrap) leadsWrap.style.display = 'none';
     if (leadsSel) leadsSel.innerHTML = '';
     destroyChoicesInstance(policyLeadsChoices);
     policyLeadsChoices = null;
-    
-    // Default As Earned = false
+
+    resetPolicyAttachmentUI();
+
     const ae = document.getElementById('policy-as-earned');
     if (ae) ae.value = 'false';
     
-    // Default Submitted Date = today (local)
     const sd = document.getElementById('policy-submitted-date');
     if (sd) {
       const today = new Date();
@@ -1404,10 +1777,10 @@ function wireModalButtons() {
       const dd = String(today.getDate()).padStart(2, '0');
       sd.value = `${yyyy}-${mm}-${dd}`;
     }
-    // Default Issued Date = blank (optional)
+
     const idt = document.getElementById('policy-issued-date');
     if (idt) idt.value = '';
-    
+
     openModal(policyModal);
   });
 
@@ -1464,8 +1837,6 @@ function wirePolicyContactNewToggle() {
     const v = policyContactSel.value;
   
     newContactWrap.style.display = (v === '__new__') ? 'block' : 'none';
-  
-    // Load leads only when an existing contact is selected
     await loadLeadsForSelectedContact(v);
   });
 }
@@ -1474,7 +1845,6 @@ function wirePolicyDependencies() {
   document.getElementById('policy-agent')?.addEventListener('change', async (e) => {
     await loadContactsForPolicy(e.target.value || null);
   
-    // reset leads UI on agent change
     const leadsWrap = document.getElementById('policy-leads-wrap');
     const leadsSel = document.getElementById('policy-leads');
     if (leadsWrap) leadsWrap.style.display = 'none';
@@ -1482,19 +1852,47 @@ function wirePolicyDependencies() {
     destroyChoicesInstance(policyLeadsChoices);
     policyLeadsChoices = null;
   
-    // if a contact is already selected (not __new__), reload leads for it
     const contactId = document.getElementById('policy-contact')?.value || '';
     if (contactId && contactId !== '__new__') {
       await loadLeadsForSelectedContact(contactId);
     }
+
+    await refreshPolicyAttachmentOptions();
   });
 
-  document.getElementById('policy-carrier')?.addEventListener('change', (e) => {
-    loadProductLinesAndTypesForCarrier(e.target.value || null);
+  document.getElementById('policy-carrier')?.addEventListener('change', async (e) => {
+    await loadProductLinesAndTypesForCarrier(e.target.value || null);
+    resetPolicyAttachmentUI();
   });
 
-  document.getElementById('policy-product-line')?.addEventListener('change', () => {
+  document.getElementById('policy-product-line')?.addEventListener('change', async () => {
     hydratePolicyTypesForSelectedLine();
+    resetPolicyAttachmentUI();
+  });
+
+  document.getElementById('policy-policy-type')?.addEventListener('change', async () => {
+    await refreshPolicyAttachmentOptions();
+  });
+
+  document.getElementById('add-policy-attachment-row')?.addEventListener('click', () => {
+    addPolicyAttachmentRow();
+  });
+
+  document.getElementById('policy-attachments-list')?.addEventListener('click', (e) => {
+    const btn = e.target.closest('.policy-attachment-remove');
+    if (!btn) return;
+
+    const row = btn.closest('.policy-attachment-row');
+    const selectEl = row?.querySelector('.policy-attachment-type-select');
+    if (selectEl) {
+      const idx = Array.from(document.querySelectorAll('.policy-attachment-type-select')).indexOf(selectEl);
+      if (idx > -1 && _policyAttachmentRowChoices[idx]) {
+        destroyChoicesInstance(_policyAttachmentRowChoices[idx]);
+        _policyAttachmentRowChoices.splice(idx, 1);
+      }
+    }
+
+    row?.remove();
   });
 }
 
@@ -1515,13 +1913,12 @@ function wireAdjustmentDependencies() {
   });
 }
 
-/* ---------- Policy submit (FIXED to match admin.js policies table) ---------- */
+/* ---------- Policy submit ---------- */
 
 async function attachLeadsToPolicy({ policyId, leadIds, submitted_at_iso, policy_number, created_by }) {
   const ids = Array.isArray(leadIds) ? leadIds.filter(Boolean) : [];
   if (!policyId || !ids.length) return;
 
-  // 1) Insert junction rows (ignore duplicates safely)
   const rows = ids.map(lead_id => ({
     policy_id: policyId,
     lead_id,
@@ -1532,14 +1929,10 @@ async function attachLeadsToPolicy({ policyId, leadIds, submitted_at_iso, policy
     .from('policy_leads')
     .insert(rows);
 
-  // If duplicates happen, the unique index may throw. If you want "ignore duplicates",
-  // tell me and I’ll switch to an RPC for upsert/ignore.
   if (linkErr) {
     console.error('policy_leads insert error:', linkErr);
-    // don't return; still try to close leads
   }
 
-  // 2) Update leads closed fields
   const { error: leadUpErr } = await sb
     .from('leads')
     .update({
@@ -1553,10 +1946,8 @@ async function attachLeadsToPolicy({ policyId, leadIds, submitted_at_iso, policy
     console.error('leads close update error:', leadUpErr);
   }
 
-  // 3) Optionally set primary lead on policies (first selected)
   const primaryLeadId = ids[0] || null;
   if (primaryLeadId) {
-    // If you renamed the column, change 'lead_id' to 'primary_lead_id'
     const { error: polUpErr } = await sb
       .from('policies')
       .update({ lead_id: primaryLeadId })
@@ -1600,6 +1991,14 @@ function wirePolicySubmit() {
       
       if (!agent_id || !carrier_name || !product_line || !policy_type || !policy_number || !(premium_annual > 0) || !submitted_at) {
         if (errEl) errEl.textContent = 'Please complete all required fields.';
+        return;
+      }
+
+      let attachmentRows = [];
+      try {
+        attachmentRows = collectPolicyAttachmentRows();
+      } catch (attachErr) {
+        if (errEl) errEl.textContent = attachErr.message || 'Invalid attachment rows.';
         return;
       }
 
@@ -1653,7 +2052,6 @@ function wirePolicySubmit() {
         return;
       }
 
-      // ✅ MATCH admin.js schema: agent_id + issued_at
       const { data: newPolicy, error: pErr } = await sb
         .from('policies')
         .insert([{
@@ -1678,8 +2076,42 @@ function wirePolicySubmit() {
         if (errEl) errEl.textContent = 'Could not save policy.';
         return;
       }
+
+      if (attachmentRows.length) {
+        const policyAttachmentsPayload = attachmentRows.map(a => ({
+          policy_id: newPolicy.id,
+          attachment_name: a.schedule.policy_type,
+          attachment_type: a.schedule.policy_type,
+          carrier_name,
+          product_line,
+          policy_type: a.schedule.policy_type,
+          policy_number,
+          status: 'active',
+          issued_at,
+          effective_at: issued_at,
+          premium_annual: a.premium_annual,
+          premium_modal: a.premium_modal,
+          commissionable_premium_annual: a.premium_annual,
+          commissionable_premium_modal: a.premium_modal,
+          metadata: {
+            attachment_schedule_id: a.schedule.id,
+            parent_policy_type: policy_type,
+            created_from: 'admin_commissions_policy_modal',
+            created_by: userId || null
+          }
+        }));
+
+        const { error: paErr } = await sb
+          .from('policy_attachments')
+          .insert(policyAttachmentsPayload);
+
+        if (paErr) {
+          console.error('Create policy attachments error', paErr);
+          if (errEl) errEl.textContent = 'Policy saved, but attachments could not be saved.';
+          return;
+        }
+      }
       
-      // collect selected lead ids (if any)
       const leadsSelEl = document.getElementById('policy-leads');
       const selectedLeadIds = (window.Choices && policyLeadsChoices)
         ? (policyLeadsChoices.getValue(true) || [])
@@ -1687,7 +2119,6 @@ function wirePolicySubmit() {
       
       const leadIds = Array.isArray(selectedLeadIds) ? selectedLeadIds.filter(Boolean) : [];
       
-      // attach leads + close them as WON (matches your DB constraint)
       await attachLeadsToPolicy({
         policyId: newPolicy.id,
         leadIds,
@@ -1696,20 +2127,21 @@ function wirePolicySubmit() {
         created_by: userId
       });
 
-      // admin.js runs the commission flow right after policy create
       if (typeof window.runPolicyCommissionFlow === 'function') {
         await window.runPolicyCommissionFlow(newPolicy.id);
       } else if (typeof runPolicyCommissionFlow === 'function') {
         await runPolicyCommissionFlow(newPolicy.id);
       }
 
-      alert('Policy created + commissions processed.');
+      alert('Policy created.');
 
       closeModal(document.getElementById('policy-modal'));
       document.getElementById('policy-form')?.reset();
 
       const wrap = document.getElementById('policy-new-contact-wrap');
       if (wrap) wrap.style.display = 'none';
+
+      resetPolicyAttachmentUI();
 
       await loadPoliciesIntoList();
     } catch (ex) {
@@ -1720,7 +2152,7 @@ function wirePolicySubmit() {
   });
 }
 
-/* ---------- Adjustment submit (your version matches admin.js) ---------- */
+/* ---------- Adjustment submit ---------- */
 
 function wireAdjustmentSubmit() {
   document.getElementById('adjustment-form')?.addEventListener('submit', async (e) => {
@@ -1872,28 +2304,8 @@ function wireAdjustmentSubmit() {
   });
 }
 
-function destroyChoicesInstance(inst) {
-  try { inst?.destroy(); } catch (_) {}
-}
-
-function ensureChoicesForSelect(selectEl, existingInstance, opts = {}) {
-  if (!window.Choices || !selectEl) return existingInstance;
-
-  destroyChoicesInstance(existingInstance);
-
-  try {
-    return new Choices(selectEl, {
-      searchEnabled: true,
-      shouldSort: false,
-      itemSelectText: '',
-      ...opts
-    });
-  } catch (_) {
-    return existingInstance;
-  }
-}
-
 /* ---------- Init ---------- */
+
 function ymdToday(){
   const d = new Date();
   const y = d.getFullYear();
@@ -2007,6 +2419,9 @@ document.addEventListener('DOMContentLoaded', async () => {
   wireAdjustmentSubmit();
   wirePolicyEditButtons();
   wirePolicyEditSubmit();
+  wirePolicyAttachmentButtons();
+  wirePolicyAttachmentModalButtons();
+  wirePolicyAttachmentSubmit();
   await loadAgentsForCommissions();
   await loadCarriersForPolicy();
   wireAdjustmentListFilters();
