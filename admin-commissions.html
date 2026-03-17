@@ -17,7 +17,6 @@
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
 
-    <!-- Lock visual display until we confirm admin in script at bottom -->
     <style>
       html { visibility: hidden; }
     </style>
@@ -29,7 +28,6 @@
 
   <body id="dashboardbody">
 
-    <!-- Header -->
     <header class="index-grid-header">
       <div id="logofvcontainer">
         <div id="logodiv">
@@ -50,7 +48,6 @@
       </div>
     </header>
 
-    <!-- Mobile Menu -->
     <div id="mobile-menu">
       <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
 
@@ -71,14 +68,11 @@
       <a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
       <a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
       <a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
-
-      <!-- Admin hub link (you can point this to your main admin landing page if you want) -->
       <a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
     </div>
 
     <main class="auth-container">
 
-      <!-- Mini admin nav for this dedicated page -->
       <nav id="admin-page-nav">
         <button type="button" id="nav-all" data-href="admin-all-leads.html">All Leads</button>
         <button type="button" id="nav-requests" data-href="admin-lead-requests.html">Lead Requests</button>
@@ -88,12 +82,10 @@
         <button type="button" id="nav-content" data-href="admin-content.html">Content</button>
       </nav>
 
-      <!-- Commissions Section ONLY -->
       <section id="admin-commissions-section" class="admin-section" style="display:block;">
         <h3>Commissions</h3>
 
         <div class="comm-grid">
-          <!-- Left: Policies -->
           <div class="card">
             <h3>Policies</h3>
             <p>Add new policies and view recent ones.</p>
@@ -126,12 +118,9 @@
             <small style="display:block; margin-top:6px; opacity:.7;">
               Filters update as you type. Date range filters by <strong>Submitted Date</strong>.
             </small>
-            <div id="policy-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
-              <!-- policies load here -->
-            </div>
+            <div id="policy-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;"></div>
           </div>
 
-          <!-- Middle: Debits / Credits -->
           <div class="card">
             <h3>Debits &amp; Credits</h3>
             <p>Add chargebacks, lead debt, or credits to agents.</p>
@@ -160,12 +149,9 @@
                 Clear
               </button>
             </div>
-            <div id="debit-credit-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
-              <!-- adjustments load here -->
-            </div>
+            <div id="debit-credit-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;"></div>
           </div>
 
-          <!-- Right: Payout controls + batches -->
           <div class="payout-run-controls">
             <button id="run-payouts-btn" type="button">Run Scheduled Payouts</button>
             <small id="run-payouts-status" style="display:block;margin-top:4px;"></small>
@@ -182,9 +168,7 @@
                 <option value="sent">Sent only</option>
               </select>
             </div>
-            <div id="batch-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;">
-              <!-- payout batches load here -->
-            </div>
+            <div id="batch-list" class="scroll-container" style="max-height:260px; overflow-y:auto; margin-top:8px;"></div>
           </div>
         </div>
       </section>
@@ -223,7 +207,6 @@
               <label>ZIP <input id="policy-contact-zip" type="text" maxlength="10"></label>
             </div>
             
-            <!-- Lead dropdown (only shows when: existing contact selected AND matching leads exist) -->
             <div id="policy-leads-wrap" style="display:none;">
               <label>
                 Lead (optional)
@@ -254,6 +237,25 @@
                 <option value="">Select carrier first…</option>
               </select>
             </label>
+
+            <!-- NEW: auto-shown only if matching attachment schedules exist -->
+            <div id="policy-attachments-wrap"
+                 style="display:none; margin-bottom:12px; padding:10px; border:1px solid #ddd; border-radius:8px;">
+              <div style="display:flex; justify-content:space-between; align-items:center; gap:10px; margin-bottom:8px;">
+                <div>
+                  <strong>Attachments</strong>
+                  <div style="font-size:11px; color:#666;">
+                    Matching attachment schedules were found for this policy. You can add multiple.
+                  </div>
+                </div>
+                <button type="button" id="add-policy-attachment-row"
+                        style="padding:6px 10px; border-radius:8px;">
+                  Add Attachment
+                </button>
+              </div>
+
+              <div id="policy-attachments-list"></div>
+            </div>
 
             <label>
               Policy #
@@ -427,6 +429,44 @@
           </form>
         </div>
       </div>
+
+      <!-- NEW: Add Attachment Later Modal -->
+      <div id="policy-attachment-modal" class="modal-backdrop" style="display:none;">
+        <div class="modal">
+          <h3>Add Attachment</h3>
+
+          <form id="policy-attachment-form">
+            <input id="policy-attachment-policy-id" type="hidden">
+
+            <div id="policy-attachment-context"
+                 style="margin-bottom:10px; padding:10px; border:1px solid #ddd; border-radius:8px; font-size:13px;"></div>
+
+            <label>
+              Attachment Type
+              <select id="policy-attachment-type" required>
+                <option value="">Loading…</option>
+              </select>
+            </label>
+
+            <label>
+              Annual Premium
+              <input id="policy-attachment-annual-premium" type="number" min="0" step="0.01" required>
+            </label>
+
+            <label>
+              Issued Date
+              <input id="policy-attachment-issued-date" type="date" required>
+            </label>
+
+            <div class="modal-actions">
+              <button type="button" id="policy-attachment-cancel">Cancel</button>
+              <button type="submit">Save Attachment</button>
+            </div>
+
+            <p id="policy-attachment-error" class="modal-error"></p>
+          </form>
+        </div>
+      </div>
       
       <!-- Add Debit / Credit Modal -->
       <div id="adjustment-modal" class="modal-backdrop" style="display:none;">
@@ -500,7 +540,7 @@
           </form>
         </div>
       </div>
-      <!-- Helpful Admin Links -->
+
       <div id="admin-links">
         <h4>Helpful Links</h4>
       
@@ -530,7 +570,6 @@
 
     </main>
 
-    <!-- Footer -->
     <footer class="index-grid-footer">
       <img id="footerlogo" src="Pics/img17.png">
       <hr class="footerhr">
@@ -562,7 +601,6 @@
       <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
     </footer>
 
-    <!-- Scripts -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="scripts/supabase-client.js"></script>
 
@@ -572,7 +610,6 @@
     <script src="scripts/general.js"></script>
     <script src="scripts/admin-commissions.js"></script>
 
-    <!-- Admin-only gate using shared window.supabaseClient -->
     <script>
       (async () => {
         const supabase = window.supabaseClient;
@@ -598,7 +635,6 @@
       })();
     </script>
     <script>
-      // Admin mini-nav: buttons with data-href should navigate
       document.addEventListener('DOMContentLoaded', () => {
         const nav = document.getElementById('admin-page-nav');
         if (!nav) return;
