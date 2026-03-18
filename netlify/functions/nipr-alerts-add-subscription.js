@@ -15,15 +15,15 @@ function getEnvConfig(envName = "beta") {
 
   if (env === "prod") {
     return {
-      username: process.env.NIPR_PROD_USERNAME,
-      password: process.env.NIPR_PROD_PASSWORD,
+      username: process.env.NETLIFY_PROD_USERNAME,
+      password: process.env.NETLIFY_PROD_PASSWORD,
       url: "https://pdb-alerts-industry-services.api.nipr.com/pdb-alerts-industry-services/services/industry-ws",
     };
   }
 
   return {
-    username: process.env.NIPR_BETA_USERNAME,
-    password: process.env.NIPR_BETA_PASSWORD,
+    username: process.env.NETLIFY_BETA_USERNAME,
+    password: process.env.NETLIFY_BETA_PASSWORD,
     url: "https://pdb-alerts-industry-services.api.beta.nipr.com/pdb-alerts-industry-services/services/industry-ws",
   };
 }
@@ -38,16 +38,6 @@ function buildAddSubscriptionEnvelope({
   const alertTypeXml = alertTypes
     .map((type) => `<ind:alertTypeList>${escapeXml(type)}</ind:alertTypeList>`)
     .join("");
-
-  let stateListXml = "";
-
-  if (allStates) {
-    stateListXml = `<ind:allStates>true</ind:allStates>`;
-  } else if (residentStateOnly) {
-    stateListXml = `<ind:residentStateOnly>true</ind:residentStateOnly>`;
-  } else {
-    stateListXml = `<ind:allStates>false</ind:allStates>`;
-  }
 
   return `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope
@@ -66,10 +56,13 @@ function buildAddSubscriptionEnvelope({
         </ind:affiliationList>
 
         <ind:stateList>
-          ${stateListXml}
+          <ind:allStates>${allStates ? "true" : "false"}</ind:allStates>
+          <ind:residentStateOnly>${residentStateOnly ? "true" : "false"}</ind:residentStateOnly>
         </ind:stateList>
 
-        ${alertTypeXml}
+        <ind:alertTypeList>
+          ${alertTypeXml}
+        </ind:alertTypeList>
       </ind:subscriptionInputData>
     </ind:addSubscription>
   </soapenv:Body>
@@ -136,6 +129,7 @@ export async function handler(event) {
       headers: {
         Authorization: `Basic ${auth}`,
         "Content-Type": "text/xml; charset=utf-8",
+        SOAPAction: "addSubscription",
         Accept: "text/xml, application/xml",
       },
       body: xmlBody,
