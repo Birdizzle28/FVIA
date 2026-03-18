@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="manifest" href="/manifest.json" />
+    <title>Carriers | Family Values Group</title>
+
+    <link rel="stylesheet" href="styles/agentstyle.css" />
+    <link rel="stylesheet" href="styles/carriers.css" />
+    <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <style>
+      html {
+        visibility: hidden;
+      }
+    </style>
+
+    <noscript>
+      <meta http-equiv="refresh" content="0; url=login.html" />
+    </noscript>
+  </head>
+
+  <body id="dashboardbody">
+    <!-- Header -->
+    <header class="index-grid-header">
+      <div id="logofvcontainer">
+        <div id="logodiv">
+          <a href="./index.html">
+            <img id="headerlogo" src="./Pics/img17.png" alt="FVIA Logo" />
+          </a>
+        </div>
+        <div id="fvdiv">
+          <p><strong>Family Values Group</strong></p>
+        </div>
+      </div>
+
+      <div id="navcontainer">
+        <nav class="header-flex-container">
+          <a id="notifications-tab" href="notifications.html">
+            <i class="fa-solid fa-bell"></i>
+          </a>
+          <a id="profile-tab" href="profile.html">
+            <i class="fa-solid fa-user"></i>
+          </a>
+          <div id="menu-toggle" aria-label="Open menu" role="button" tabindex="0">
+            <i class="fa-solid fa-bars"></i>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <!-- Mobile Menu -->
+    <div id="mobile-menu">
+      <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
+
+      <button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
+        <i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
+        <i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
+      </button>
+
+      <div id="toolkit-submenu" class="submenu" hidden>
+        <a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
+        <a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
+        <a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
+        <a href="calculator.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
+        <a href="marketing.html"><i class="fa-solid fa-handshake"></i><span>Marketing</span></a>
+        <a href="carriers.html" class="active-link"><i class="fa-solid fa-building"></i><span>Carriers</span></a>
+      </div>
+
+      <a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
+      <a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
+      <a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
+      <a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
+      <a href="admin.html" id="mobile-admin-link"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
+    </div>
+
+    <main class="auth-container carriers-page">
+      <!-- Top Hero -->
+      <section id="carriers-hero" class="carriers-card">
+        <div class="hero-copy">
+          <p class="eyebrow">Carrier Directory</p>
+          <h1>Find carriers, check eligibility, and request contracting</h1>
+          <p class="hero-text">
+            Browse available carriers, filter by appetite, review products, riders, discounts, and important files,
+            and see whether you are already contracted or eligible to apply.
+          </p>
+
+          <div class="hero-actions">
+            <button id="show-all-carriers-btn" class="primary-btn" type="button">
+              <i class="fa-solid fa-building"></i>
+              <span>Show All Carriers</span>
+            </button>
+
+            <button id="open-appetite-search-btn" class="secondary-btn" type="button">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <span>Search by Appetite</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="hero-summary">
+          <div class="summary-box">
+            <span class="summary-label">Contracted</span>
+            <strong id="contracted-count">0</strong>
+          </div>
+          <div class="summary-box">
+            <span class="summary-label">Eligible</span>
+            <strong id="eligible-count">0</strong>
+          </div>
+          <div class="summary-box">
+            <span class="summary-label">Ineligible</span>
+            <strong id="ineligible-count">0</strong>
+          </div>
+        </div>
+      </section>
+
+      <!-- Search / Filter Bar -->
+      <section id="carriers-toolbar" class="carriers-card">
+        <div class="toolbar-grid">
+          <div class="toolbar-group search-group">
+            <label for="carrier-search">Search carriers</label>
+            <div class="search-input-wrap">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input
+                id="carrier-search"
+                type="text"
+                placeholder="Search by carrier, product, state, or appetite..."
+                autocomplete="off"
+              />
+            </div>
+          </div>
+
+          <div class="toolbar-group">
+            <label for="carrier-state-filter">State</label>
+            <select id="carrier-state-filter">
+              <option value="">All States</option>
+            </select>
+          </div>
+
+          <div class="toolbar-group">
+            <label for="carrier-line-filter">Line</label>
+            <select id="carrier-line-filter">
+              <option value="">All Lines</option>
+              <option value="life">Life</option>
+              <option value="health">Health</option>
+              <option value="property">Property</option>
+              <option value="casualty">Casualty</option>
+              <option value="medicare">Medicare</option>
+            </select>
+          </div>
+
+          <div class="toolbar-group">
+            <label for="carrier-status-filter">Status</label>
+            <select id="carrier-status-filter">
+              <option value="">All Statuses</option>
+              <option value="contracted">Contracted</option>
+              <option value="eligible">Eligible</option>
+              <option value="ineligible">Ineligible</option>
+            </select>
+          </div>
+
+          <div class="toolbar-group toolbar-buttons">
+            <button id="apply-carrier-filters" class="primary-btn" type="button">Apply Filters</button>
+            <button id="reset-carrier-filters" class="ghost-btn" type="button">Reset</button>
+          </div>
+        </div>
+
+        <div id="active-filter-chips" class="chip-row"></div>
+      </section>
+
+      <!-- Main Layout -->
+      <section id="carriers-layout">
+        <!-- Carrier Rail -->
+        <aside id="carrier-rail" class="carriers-card">
+          <div class="rail-header">
+            <h2>Carriers</h2>
+            <div class="rail-actions">
+              <button id="rail-grid-view-btn" class="icon-btn active" type="button" title="Grid View">
+                <i class="fa-solid fa-table-cells-large"></i>
+              </button>
+              <button id="rail-list-view-btn" class="icon-btn" type="button" title="List View">
+                <i class="fa-solid fa-list"></i>
+              </button>
+            </div>
+          </div>
+
+          <div id="carrier-rail-status" class="small-status-text">Loading carriers...</div>
+
+          <div id="carrier-tile-list" class="carrier-tile-list">
+            <!-- JS injects carrier tiles here -->
+          </div>
+
+          <div id="carrier-rail-empty" class="empty-state" hidden>
+            <i class="fa-solid fa-circle-exclamation"></i>
+            <p>No carriers matched your filters.</p>
+          </div>
+        </aside>
+
+        <!-- Carrier Detail -->
+        <section id="carrier-detail" class="carriers-card">
+          <!-- Empty state before selection -->
+          <div id="carrier-detail-empty" class="detail-empty">
+            <div class="detail-empty-icon">
+              <i class="fa-solid fa-building-shield"></i>
+            </div>
+            <h2>Select a carrier</h2>
+            <p>
+              Pick a carrier from the left to view products, appetite, riders, discounts, files, and your contracting
+              status.
+            </p>
+          </div>
+
+          <!-- Active carrier view -->
+          <div id="carrier-detail-content" hidden>
+            <!-- Header -->
+            <section id="carrier-header">
+              <div class="carrier-header-main">
+                <div class="carrier-logo-wrap">
+                  <img id="carrier-detail-logo" src="" alt="Carrier Logo" />
+                </div>
+
+                <div class="carrier-header-copy">
+                  <div class="carrier-title-row">
+                    <h2 id="carrier-detail-name">Carrier Name</h2>
+                    <div id="carrier-top-chips" class="chip-row">
+                      <span id="chip-contracted" class="status-chip neutral">Not Checked</span>
+                      <span id="chip-eligible" class="status-chip neutral">Eligibility Unknown</span>
+                    </div>
+                  </div>
+
+                  <p id="carrier-detail-summary" class="carrier-summary-text"></p>
+
+                  <div id="carrier-detail-links" class="inline-link-row">
+                    <a id="carrier-site-link" href="#" target="_blank" rel="noopener noreferrer">
+                      <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                      <span>Carrier Website</span>
+                    </a>
+
+                    <button id="request-contracting-btn" class="primary-btn" type="button">
+                      <i class="fa-solid fa-file-signature"></i>
+                      <span>Request Contracting</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <div id="carrier-header-meta" class="meta-grid">
+                <div class="meta-box">
+                  <span class="meta-label">Support Phone</span>
+                  <p id="carrier-support-phone">—</p>
+                </div>
+                <div class="meta-box">
+                  <span class="meta-label">Support Email</span>
+                  <p id="carrier-support-email">—</p>
+                </div>
+                <div class="meta-box">
+                  <span class="meta-label">Support Link</span>
+                  <p id="carrier-support-url">—</p>
+                </div>
+                <div class="meta-box">
+                  <span class="meta-label">Contracting Notes</span>
+                  <p id="carrier-contracting-notes">—</p>
+                </div>
+              </div>
+            </section>
+
+            <!-- Eligibility -->
+            <section id="carrier-eligibility-section" class="detail-section">
+              <div class="section-heading-row">
+                <h3>Eligibility</h3>
+                <button id="refresh-eligibility-btn" class="ghost-btn" type="button">
+                  <i class="fa-solid fa-rotate-right"></i>
+                  <span>Refresh</span>
+                </button>
+              </div>
+
+              <div id="eligibility-summary-banner" class="banner neutral">
+                Eligibility has not been checked yet.
+              </div>
+
+              <div class="eligibility-grid">
+                <div class="eligibility-card">
+                  <h4>Your Licenses</h4>
+                  <ul id="eligibility-agent-list" class="bullet-list"></ul>
+                </div>
+
+                <div class="eligibility-card">
+                  <h4>Upline Chain</h4>
+                  <ul id="eligibility-upline-list" class="bullet-list"></ul>
+                </div>
+
+                <div class="eligibility-card">
+                  <h4>Missing / Blocking Items</h4>
+                  <ul id="eligibility-missing-list" class="bullet-list"></ul>
+                </div>
+              </div>
+            </section>
+
+            <!-- Appetite -->
+            <section id="carrier-appetite-section" class="detail-section">
+              <div class="section-heading-row">
+                <h3>Appetite</h3>
+                <button id="run-appetite-match-btn" class="ghost-btn" type="button">
+                  <i class="fa-solid fa-filter-circle-dollar"></i>
+                  <span>Match This Carrier</span>
+                </button>
+              </div>
+
+              <div id="carrier-appetite-list" class="stack-list">
+                <!-- appetite cards injected -->
+              </div>
+
+              <div id="carrier-appetite-empty" class="sub-empty-state" hidden>
+                No appetite notes have been added for this carrier yet.
+              </div>
+            </section>
+
+            <!-- Products -->
+            <section id="carrier-products-section" class="detail-section">
+              <div class="section-heading-row">
+                <h3>Products</h3>
+              </div>
+
+              <div id="carrier-products-list" class="product-accordion-list">
+                <!-- products injected -->
+              </div>
+
+              <div id="carrier-products-empty" class="sub-empty-state" hidden>
+                No products have been added for this carrier yet.
+              </div>
+            </section>
+
+            <!-- Files -->
+            <section id="carrier-files-section" class="detail-section">
+              <div class="section-heading-row">
+                <h3>Important Files</h3>
+              </div>
+
+              <div id="carrier-files-list" class="files-grid">
+                <!-- files injected -->
+              </div>
+
+              <div id="carrier-files-empty" class="sub-empty-state" hidden>
+                No files have been uploaded for this carrier yet.
+              </div>
+            </section>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <!-- Appetite Search Modal -->
+    <div id="appetite-modal" class="modal-overlay" hidden>
+      <div class="modal-card large-modal" role="dialog" aria-modal="true" aria-labelledby="appetite-modal-title">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Carrier Appetite Search</p>
+            <h2 id="appetite-modal-title">Search by Appetite</h2>
+          </div>
+          <button id="close-appetite-modal" class="icon-btn" type="button" aria-label="Close">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="modal-form-grid">
+            <div class="form-group">
+              <label for="appetite-state">State</label>
+              <select id="appetite-state">
+                <option value="">Select State</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="appetite-line">Line</label>
+              <select id="appetite-line">
+                <option value="">Select Line</option>
+                <option value="life">Life</option>
+                <option value="health">Health</option>
+                <option value="property">Property</option>
+                <option value="casualty">Casualty</option>
+                <option value="medicare">Medicare</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="appetite-product">Product</label>
+              <select id="appetite-product">
+                <option value="">Select Product</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label for="appetite-keywords">Keywords</label>
+              <input id="appetite-keywords" type="text" placeholder="Final expense, standard auto, owner-occupied..." />
+            </div>
+          </div>
+
+          <div class="modal-actions">
+            <button id="run-appetite-search-btn" class="primary-btn" type="button">Search</button>
+            <button id="reset-appetite-search-btn" class="ghost-btn" type="button">Reset</button>
+          </div>
+
+          <div id="appetite-search-results" class="search-results-list">
+            <!-- appetite result cards -->
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contracting Request Modal -->
+    <div id="contracting-modal" class="modal-overlay" hidden>
+      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="contracting-modal-title">
+        <div class="modal-header">
+          <div>
+            <p class="eyebrow">Contracting</p>
+            <h2 id="contracting-modal-title">Request Contracting</h2>
+          </div>
+          <button id="close-contracting-modal" class="icon-btn" type="button" aria-label="Close">
+            <i class="fa-solid fa-xmark"></i>
+          </button>
+        </div>
+
+        <div class="modal-body">
+          <div class="request-summary-box">
+            <p><strong>Carrier:</strong> <span id="request-carrier-name">—</span></p>
+            <p><strong>Eligibility:</strong> <span id="request-eligibility-text">—</span></p>
+          </div>
+
+          <form id="contracting-request-form">
+            <div class="form-group">
+              <label for="request-states">Requested States</label>
+              <select id="request-states" multiple></select>
+            </div>
+
+            <div class="form-group">
+              <label for="request-products">Requested Products</label>
+              <select id="request-products" multiple></select>
+            </div>
+
+            <div class="form-group">
+              <label for="request-notes">Notes</label>
+              <textarea
+                id="request-notes"
+                rows="5"
+                placeholder="Add any notes for admin or contracting..."
+              ></textarea>
+            </div>
+
+            <div id="contracting-form-message" class="form-message"></div>
+
+            <div class="modal-actions">
+              <button id="submit-contracting-request" class="primary-btn" type="submit">
+                Submit Request
+              </button>
+              <button id="cancel-contracting-request" class="ghost-btn" type="button">
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+
+    <!-- Global Toast -->
+    <div id="carrier-toast" class="carrier-toast" hidden></div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="scripts/supabase-client.js"></script>
+    <script src="scripts/general.js"></script>
+    <script src="scripts/carriers.js"></script>
+
+    <!-- Page gate -->
+    <script>
+      (async () => {
+        const supabase = window.supabaseClient;
+        if (!supabase) {
+          console.warn("Supabase client missing on carriers.html");
+          return;
+        }
+
+        const { data: { session } = {} } = await supabase.auth.getSession();
+
+        if (!session) {
+          location.replace("login.html");
+          return;
+        }
+
+        document.documentElement.style.visibility = "visible";
+      })();
+    </script>
+  </body>
+</html>
