@@ -39,7 +39,7 @@ function buildAddSubscriptionEnvelope({
     .map((type) => `<ind:alertTypeList>${escapeXml(type)}</ind:alertTypeList>`)
     .join("");
 
-  return `<?xml version="1.0" encoding="UTF-8"?>
+return `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope
   xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
   xmlns:ind="https://pdb-services.nipr.com/pdb-alerts-industry-services/industry-ws">
@@ -47,8 +47,8 @@ function buildAddSubscriptionEnvelope({
   <soapenv:Body>
     <ind:addSubscription>
       <ind:subscriptionInputData>
-        <ind:subscriptionName>${escapeXml(subscriptionName)}</ind:subscriptionName>
-        <ind:email>${escapeXml(email)}</ind:email>
+        <ind:subscriptionName>Agents</ind:subscriptionName>
+        <ind:email>YOUR_EMAIL_HERE</ind:email>
 
         <ind:affiliationList>
           <ind:None>false</ind:None>
@@ -56,12 +56,14 @@ function buildAddSubscriptionEnvelope({
         </ind:affiliationList>
 
         <ind:stateList>
-          <ind:allStates>${allStates ? "true" : "false"}</ind:allStates>
-          <ind:residentStateOnly>${residentStateOnly ? "true" : "false"}</ind:residentStateOnly>
+          <ind:allStates>true</ind:allStates>
         </ind:stateList>
 
         <ind:alertTypeList>
-          ${alertTypeXml}
+          <ind:alertTypeList>LICENSING</ind:alertTypeList>
+          <ind:alertTypeList>APPOINTMENTS</ind:alertTypeList>
+          <ind:alertTypeList>RIRS</ind:alertTypeList>
+          <ind:alertTypeList>DEMOGRAPHICS</ind:alertTypeList>
         </ind:alertTypeList>
       </ind:subscriptionInputData>
     </ind:addSubscription>
