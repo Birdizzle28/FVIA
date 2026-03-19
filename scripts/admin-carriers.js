@@ -61,8 +61,6 @@ console.log("[admin-carriers] loaded from file");
     addFileBtn: $("#add-file"),
     filesContainer: $("#files-container"),
     saveContentBtn: $("#save-content"),
-    productTemplate: $("#product-template"),
-    fileTemplate: $("#file-template"),
 
     schedCarrier: $("#sched-carrier"),
     schedProductLine: $("#sched-product-line"),
@@ -240,6 +238,11 @@ console.log("[admin-carriers] loaded from file");
     return loas.join(", ");
   }
 
+  function isValidHexColor(v) {
+    if (!v) return true;
+    return /^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(String(v).trim());
+  }
+
   async function uploadCarrierLogoFile(file, carrierName) {
     if (!file) return null;
 
@@ -250,6 +253,33 @@ console.log("[admin-carriers] loaded from file");
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
     const path = `${safeName}/${crypto.randomUUID()}.${ext}`;
+
+    const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: file.type || undefined
+    });
+    if (upErr) throw upErr;
+
+    const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
+    return data?.publicUrl || null;
+  }
+
+  async function uploadCarrierFile(file, carrierName, title = "file") {
+    if (!file) return null;
+
+    const BUCKET = "carrier-files";
+    const ext = (file.name.split(".").pop() || "dat").toLowerCase();
+    const safeCarrier = String(carrierName || "carrier")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+    const safeTitle = String(title || "file")
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/(^-|-$)/g, "");
+
+    const path = `${safeCarrier}/${safeTitle}-${crypto.randomUUID()}.${ext}`;
 
     const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, {
       cacheControl: "3600",
@@ -292,10 +322,145 @@ console.log("[admin-carriers] loaded from file");
     if (els.panelSchedules) els.panelSchedules.style.display = isSchedules ? "block" : "none";
   }
 
+  function injectCarrierExtraFields() {
+    const addNotesLabel = els.carrierNotes?.closest("label");
+    if (addNotesLabel && !$("#carrier-short-description")) {
+      addNotesLabel.insertAdjacentHTML(
+        "afterend",
+        `
+        <div class="row" style="margin-top:10px;">
+          <label>
+            <div class="mini">Short Description (optional)</div>
+            <textarea id="carrier-short-description" rows="2" placeholder="Short carrier summary..."></textarea>
+          </label>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <label>
+            <div class="mini">Brand Color (optional)</div>
+            <input id="carrier-brand-color" type="text" placeholder="#353468" />
+          </label>
+          <label>
+            <div class="mini">Sort Order (optional)</div>
+            <input id="carrier-sort-order" type="number" min="0" step="1" placeholder="0" />
+          </label>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <label>
+            <div class="mini">Support Phone (optional)</div>
+            <input id="carrier-support-phone" type="text" placeholder="(629) 243-7980" />
+          </label>
+          <label>
+            <div class="mini">Support Email (optional)</div>
+            <input id="carrier-support-email" type="text" placeholder="support@carrier.com" />
+          </label>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <label>
+            <div class="mini">Support URL (optional)</div>
+            <input id="carrier-support-url" type="text" placeholder="https://..." />
+          </label>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <label style="flex:1 1 100%;">
+            <div class="mini">Contracting Notes (optional)</div>
+            <textarea id="carrier-contracting-notes" rows="3" placeholder="Anything special for contracting..."></textarea>
+          </label>
+        </div>
+        `
+      );
+    }
+
+    const editNotesLabel = els.editCarrierNotes?.closest("label");
+    if (editNotesLabel && !$("#edit-carrier-short-description")) {
+      editNotesLabel.insertAdjacentHTML(
+        "afterend",
+        `
+        <div class="row" style="margin-top:10px;">
+          <label style="flex:1 1 100%;">
+            <div class="mini">Short Description (optional)</div>
+            <textarea id="edit-carrier-short-description" rows="2"></textarea>
+          </label>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <label>
+            <div class="mini">Brand Color (optional)</div>
+            <input id="edit-carrier-brand-color" type="text" placeholder="#353468" />
+          </label>
+          <label>
+            <div class="mini">Sort Order (optional)</div>
+            <input id="edit-carrier-sort-order" type="number" min="0" step="1" />
+          </label>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <label>
+            <div class="mini">Support Phone (optional)</div>
+            <input id="edit-carrier-support-phone" type="text" />
+          </label>
+          <label>
+            <div class="mini">Support Email (optional)</div>
+            <input id="edit-carrier-support-email" type="text" />
+          </label>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <label>
+            <div class="mini">Support URL (optional)</div>
+            <input id="edit-carrier-support-url" type="text" />
+          </label>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <label style="flex:1 1 100%;">
+            <div class="mini">Contracting Notes (optional)</div>
+            <textarea id="edit-carrier-contracting-notes" rows="3"></textarea>
+          </label>
+        </div>
+        `
+      );
+    }
+
+    els.carrierShortDescription = $("#carrier-short-description");
+    els.carrierBrandColor = $("#carrier-brand-color");
+    els.carrierSortOrder = $("#carrier-sort-order");
+    els.carrierSupportPhone = $("#carrier-support-phone");
+    els.carrierSupportEmail = $("#carrier-support-email");
+    els.carrierSupportUrl = $("#carrier-support-url");
+    els.carrierContractingNotes = $("#carrier-contracting-notes");
+
+    els.editCarrierShortDescription = $("#edit-carrier-short-description");
+    els.editCarrierBrandColor = $("#edit-carrier-brand-color");
+    els.editCarrierSortOrder = $("#edit-carrier-sort-order");
+    els.editCarrierSupportPhone = $("#edit-carrier-support-phone");
+    els.editCarrierSupportEmail = $("#edit-carrier-support-email");
+    els.editCarrierSupportUrl = $("#edit-carrier-support-url");
+    els.editCarrierContractingNotes = $("#edit-carrier-contracting-notes");
+  }
+
   async function loadCarriers() {
     const { data, error } = await supabase
       .from("carriers")
-      .select("id, carrier_name, carrier_logo, carrier_url, notes, created_at")
+      .select(`
+        id,
+        carrier_name,
+        carrier_logo,
+        carrier_url,
+        notes,
+        short_description,
+        sort_order,
+        brand_color,
+        contracting_notes,
+        support_phone,
+        support_email,
+        support_url,
+        created_at
+      `)
+      .order("sort_order", { ascending: true })
       .order("carrier_name", { ascending: true });
 
     if (error) throw error;
@@ -317,7 +482,9 @@ console.log("[admin-carriers] loaded from file");
       : carriers.filter((c) =>
           (c.carrier_name || "").toLowerCase().includes(q) ||
           (c.carrier_url || "").toLowerCase().includes(q) ||
-          (c.notes || "").toLowerCase().includes(q)
+          (c.notes || "").toLowerCase().includes(q) ||
+          (c.short_description || "").toLowerCase().includes(q) ||
+          (c.contracting_notes || "").toLowerCase().includes(q)
         );
 
     els.carriersTableBody.innerHTML = filtered
@@ -328,12 +495,17 @@ console.log("[admin-carriers] loaded from file");
         const url = c.carrier_url
           ? `<a href="${esc(c.carrier_url)}" target="_blank" rel="noopener">${esc(c.carrier_url)}</a>`
           : "";
-        const notes = c.notes ? esc(c.notes) : "";
+        const notes = [
+          c.notes ? esc(c.notes) : "",
+          c.short_description ? `<div class="mini">${esc(c.short_description)}</div>` : "",
+          c.brand_color ? `<div class="mini">Color: ${esc(c.brand_color)}</div>` : ""
+        ].filter(Boolean).join("");
 
         return `
           <tr data-carrier-id="${esc(c.id)}">
             <td class="clickable" title="Click to use this carrier">
               <strong>${esc(c.carrier_name)}</strong>
+              ${c.sort_order != null ? `<div class="mini">Sort: ${esc(c.sort_order)}</div>` : ""}
             </td>
             <td>${url}</td>
             <td>${logo}</td>
@@ -402,28 +574,45 @@ console.log("[admin-carriers] loaded from file");
       return;
     }
 
-    const carrier_url = toNullableStr(els.carrierUrl?.value);
-    const notes = toNullableStr(els.carrierNotes?.value);
-    const file = els.carrierLogoFile?.files?.[0] || null;
+    const brand_color = toNullableStr(els.carrierBrandColor?.value);
+    if (!isValidHexColor(brand_color)) {
+      setStatus(els.carrierAddMsg, "Brand color must look like #353468.", "err");
+      return;
+    }
 
+    const payload = {
+      carrier_name,
+      carrier_url: toNullableStr(els.carrierUrl?.value),
+      notes: toNullableStr(els.carrierNotes?.value),
+      short_description: toNullableStr(els.carrierShortDescription?.value),
+      sort_order: parseNullableInt(els.carrierSortOrder?.value) ?? 0,
+      brand_color,
+      contracting_notes: toNullableStr(els.carrierContractingNotes?.value),
+      support_phone: toNullableStr(els.carrierSupportPhone?.value),
+      support_email: toNullableStr(els.carrierSupportEmail?.value),
+      support_url: toNullableStr(els.carrierSupportUrl?.value)
+    };
+
+    const file = els.carrierLogoFile?.files?.[0] || null;
     els.addCarrierBtn.disabled = true;
 
     try {
-      let carrier_logo = null;
-      if (file) {
-        carrier_logo = await uploadCarrierLogoFile(file, carrier_name);
-      }
+      payload.carrier_logo = file ? await uploadCarrierLogoFile(file, carrier_name) : null;
 
-      const { error } = await supabase
-        .from("carriers")
-        .insert([{ carrier_name, carrier_logo, carrier_url, notes }]);
-
+      const { error } = await supabase.from("carriers").insert([payload]);
       if (error) throw error;
 
       if (els.carrierName) els.carrierName.value = "";
       if (els.carrierLogoFile) els.carrierLogoFile.value = "";
       if (els.carrierUrl) els.carrierUrl.value = "";
       if (els.carrierNotes) els.carrierNotes.value = "";
+      if (els.carrierShortDescription) els.carrierShortDescription.value = "";
+      if (els.carrierBrandColor) els.carrierBrandColor.value = "";
+      if (els.carrierSortOrder) els.carrierSortOrder.value = "";
+      if (els.carrierContractingNotes) els.carrierContractingNotes.value = "";
+      if (els.carrierSupportPhone) els.carrierSupportPhone.value = "";
+      if (els.carrierSupportEmail) els.carrierSupportEmail.value = "";
+      if (els.carrierSupportUrl) els.carrierSupportUrl.value = "";
 
       setStatus(els.carrierAddMsg, "Carrier added.", "ok");
       await loadCarriers();
@@ -441,6 +630,13 @@ console.log("[admin-carriers] loaded from file");
     els.editCarrierName.value = carrier.carrier_name || "";
     els.editCarrierUrl.value = carrier.carrier_url || "";
     els.editCarrierNotes.value = carrier.notes || "";
+    if (els.editCarrierShortDescription) els.editCarrierShortDescription.value = carrier.short_description || "";
+    if (els.editCarrierBrandColor) els.editCarrierBrandColor.value = carrier.brand_color || "";
+    if (els.editCarrierSortOrder) els.editCarrierSortOrder.value = carrier.sort_order ?? 0;
+    if (els.editCarrierContractingNotes) els.editCarrierContractingNotes.value = carrier.contracting_notes || "";
+    if (els.editCarrierSupportPhone) els.editCarrierSupportPhone.value = carrier.support_phone || "";
+    if (els.editCarrierSupportEmail) els.editCarrierSupportEmail.value = carrier.support_email || "";
+    if (els.editCarrierSupportUrl) els.editCarrierSupportUrl.value = carrier.support_url || "";
     if (els.editCarrierLogoFile) els.editCarrierLogoFile.value = "";
 
     openOverlay(els.editCarrierModal);
@@ -457,19 +653,35 @@ console.log("[admin-carriers] loaded from file");
       return;
     }
 
-    const carrier_url = toNullableStr(els.editCarrierUrl.value);
-    const notes = toNullableStr(els.editCarrierNotes.value);
-    const file = els.editCarrierLogoFile?.files?.[0] || null;
+    const brand_color = toNullableStr(els.editCarrierBrandColor?.value);
+    if (!isValidHexColor(brand_color)) {
+      setStatus(els.editCarrierMsg, "Brand color must look like #353468.", "err");
+      return;
+    }
 
     els.saveCarrierBtn.disabled = true;
 
     try {
       let carrier_logo = carrierById.get(id)?.carrier_logo || null;
+      const file = els.editCarrierLogoFile?.files?.[0] || null;
       if (file) {
         carrier_logo = await uploadCarrierLogoFile(file, carrier_name);
       }
 
-      const payload = { carrier_name, carrier_url, carrier_logo, notes };
+      const payload = {
+        carrier_name,
+        carrier_logo,
+        carrier_url: toNullableStr(els.editCarrierUrl.value),
+        notes: toNullableStr(els.editCarrierNotes.value),
+        short_description: toNullableStr(els.editCarrierShortDescription?.value),
+        sort_order: parseNullableInt(els.editCarrierSortOrder?.value) ?? 0,
+        brand_color,
+        contracting_notes: toNullableStr(els.editCarrierContractingNotes?.value),
+        support_phone: toNullableStr(els.editCarrierSupportPhone?.value),
+        support_email: toNullableStr(els.editCarrierSupportEmail?.value),
+        support_url: toNullableStr(els.editCarrierSupportUrl?.value)
+      };
+
       const { error } = await supabase.from("carriers").update(payload).eq("id", id);
       if (error) throw error;
 
@@ -1202,25 +1414,55 @@ console.log("[admin-carriers] loaded from file");
     if (els.filesContainer) els.filesContainer.innerHTML = "";
   }
 
-  function createLineInput({ cls, placeholder, value = "" }) {
-    return `<div class="row" style="margin-top:8px;">
-      <input class="${cls}" type="text" placeholder="${esc(placeholder)}" value="${esc(value)}" />
-      <button type="button" class="btn btn-danger tight remove-line">X</button>
-    </div>`;
-  }
-
-  function buildProductCard(product = {}) {
-    const template = els.productTemplate?.innerHTML || "";
-    if (!template) return null;
-
-    const wrap = document.createElement("div");
-    wrap.innerHTML = template.trim();
-    const card = wrap.firstElementChild;
-    if (!card) return null;
-
+  function createProductCard(product = {}) {
+    const card = document.createElement("div");
+    card.className = "attachment-card product-card";
     card.dataset.productId = product.id || "";
-    card.querySelector(".product-name").value = product.plan_title || "";
-    card.querySelector(".product-description").value = product.description || "";
+    card.dataset.open = "false";
+
+    card.innerHTML = `
+      <div class="attachment-head product-toggle" style="cursor:pointer;">
+        <div class="attachment-title">
+          <span class="product-chevron" style="display:inline-block; width:18px;">▶</span>
+          <span class="product-title-text">${esc(product.plan_title || "New Product")}</span>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center;">
+          <button type="button" class="btn btn-danger remove-product">Remove</button>
+        </div>
+      </div>
+
+      <div class="product-body" style="display:none;">
+        <div class="row" style="margin-top:8px;">
+          <label>
+            <div class="mini">Product Name</div>
+            <input class="product-name" type="text" placeholder="Product Name (e.g. Term Life)" value="${esc(product.plan_title || "")}" />
+          </label>
+        </div>
+
+        <div class="row" style="margin-top:10px;">
+          <label style="flex:1 1 100%;">
+            <div class="mini">Product Description</div>
+            <textarea class="product-description" rows="3" placeholder="Product description...">${esc(product.description || "")}</textarea>
+          </label>
+        </div>
+
+        <div style="margin-top:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="mini">Riders / Endorsements</div>
+            <button type="button" class="btn btn-muted add-rider">+ Rider</button>
+          </div>
+          <div class="riders"></div>
+        </div>
+
+        <div style="margin-top:10px;">
+          <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div class="mini">Discounts</div>
+            <button type="button" class="btn btn-muted add-discount">+ Discount</button>
+          </div>
+          <div class="discounts"></div>
+        </div>
+      </div>
+    `;
 
     const ridersWrap = card.querySelector(".riders");
     const discountsWrap = card.querySelector(".discounts");
@@ -1240,7 +1482,26 @@ console.log("[admin-carriers] loaded from file");
       addDiscountRow(discountsWrap);
     }
 
+    updateProductCardTitle(card);
     return card;
+  }
+
+  function updateProductCardTitle(card) {
+    if (!card) return;
+    const input = card.querySelector(".product-name");
+    const textEl = card.querySelector(".product-title-text");
+    if (textEl) {
+      textEl.textContent = (input?.value || "").trim() || "New Product";
+    }
+  }
+
+  function setProductCardOpen(card, isOpen) {
+    if (!card) return;
+    card.dataset.open = isOpen ? "true" : "false";
+    const body = card.querySelector(".product-body");
+    const chevron = card.querySelector(".product-chevron");
+    if (body) body.style.display = isOpen ? "block" : "none";
+    if (chevron) chevron.textContent = isOpen ? "▼" : "▶";
   }
 
   function addRiderRow(container, rider = {}) {
@@ -1272,33 +1533,64 @@ console.log("[admin-carriers] loaded from file");
   }
 
   function addProductCard(product = {}) {
-    const card = buildProductCard(product);
-    if (!card || !els.productsContainer) return;
+    if (!els.productsContainer) return;
+    const card = createProductCard(product);
     els.productsContainer.appendChild(card);
+    setProductCardOpen(card, false);
   }
 
-  function buildFileCard(file = {}) {
-    const template = els.fileTemplate?.innerHTML || "";
-    if (!template) return null;
-
-    const wrap = document.createElement("div");
-    wrap.innerHTML = template.trim();
-    const card = wrap.firstElementChild;
-    if (!card) return null;
-
+  function createFileCard(file = {}) {
+    const card = document.createElement("div");
+    card.className = "attachment-card file-card";
     card.dataset.fileId = file.id || "";
-    const fileName = card.querySelector(".file-name");
-    const fileUrl = card.querySelector(".file-url");
+    card.innerHTML = `
+      <div class="row">
+        <label>
+          <div class="mini">File Name</div>
+          <input class="file-name" type="text" placeholder="File Name" value="${esc(file.title || "")}" />
+        </label>
+        <label>
+          <div class="mini">File URL (optional if uploading)</div>
+          <input class="file-url" type="text" placeholder="https://..." value="${esc(file.file_url || "")}" />
+        </label>
+      </div>
 
-    if (fileName) fileName.value = file.title || "";
-    if (fileUrl) fileUrl.value = file.file_url || "";
+      <div class="row" style="margin-top:8px;">
+        <label>
+          <div class="mini">Upload File From Device (optional)</div>
+          <input class="file-upload" type="file" />
+        </label>
+        <label>
+          <div class="mini">Description (optional)</div>
+          <input class="file-description" type="text" placeholder="What is this file?" value="${esc(file.description || "")}" />
+        </label>
+        <label>
+          <div class="mini">Category (optional)</div>
+          <select class="file-category">
+            <option value="other">other</option>
+            <option value="underwriting_guide">underwriting_guide</option>
+            <option value="brochure">brochure</option>
+            <option value="application">application</option>
+            <option value="rate_sheet">rate_sheet</option>
+            <option value="training">training</option>
+            <option value="script">script</option>
+            <option value="contracting">contracting</option>
+            <option value="compliance">compliance</option>
+          </select>
+        </label>
+        <button type="button" class="btn btn-danger tight remove-file">X</button>
+      </div>
+      <div class="mini" style="margin-top:6px;">You can either paste a URL, upload a file from this device, or do both.</div>
+    `;
 
+    const categorySelect = card.querySelector(".file-category");
+    if (categorySelect) categorySelect.value = file.category || "other";
     return card;
   }
 
   function addFileCard(file = {}) {
-    const card = buildFileCard(file);
-    if (!card || !els.filesContainer) return;
+    if (!els.filesContainer) return;
+    const card = createFileCard(file);
     els.filesContainer.appendChild(card);
   }
 
@@ -1315,15 +1607,12 @@ console.log("[admin-carriers] loaded from file");
     clearContentEditor();
 
     try {
-      const [
-        appetiteResp,
-        productsResp,
-        filesResp
-      ] = await Promise.all([
+      const [appetiteResp, productsResp, filesResp] = await Promise.all([
         supabase
           .from("carrier_appetites")
           .select("id, title, description, carrier_id")
           .eq("carrier_id", carrierId)
+          .order("sort_order", { ascending: true })
           .order("created_at", { ascending: true }),
         supabase
           .from("carrier_products")
@@ -1465,13 +1754,18 @@ console.log("[admin-carriers] loaded from file");
         carrier_id: carrierId,
         title: toNullableStr(card.querySelector(".file-name")?.value),
         file_url: toNullableStr(card.querySelector(".file-url")?.value),
+        file_upload: card.querySelector(".file-upload")?.files?.[0] || null,
+        description: toNullableStr(card.querySelector(".file-description")?.value),
+        category: card.querySelector(".file-category")?.value || "other",
         sort_order: index
       }))
-      .filter((f) => f.title || f.file_url);
+      .filter((f) => f.title || f.file_url || f.file_upload);
 
     for (const [i, f] of files.entries()) {
       if (!f.title) throw new Error(`File ${i + 1} needs a name.`);
-      if (!f.file_url) throw new Error(`File ${i + 1} needs a URL.`);
+      if (!f.file_url && !f.file_upload) {
+        throw new Error(`File ${i + 1} needs a pasted URL or an uploaded file.`);
+      }
     }
 
     return { carrierId, appetiteText, products, files };
@@ -1490,6 +1784,7 @@ console.log("[admin-carriers] loaded from file");
     }
 
     const { carrierId, appetiteText, products, files } = payload;
+    const carrier = carrierById.get(carrierId);
 
     els.saveContentBtn.disabled = true;
 
@@ -1617,19 +1912,31 @@ console.log("[admin-carriers] loaded from file");
       }
 
       if (files.length) {
-        const fileRows = files.map((f, idx) => ({
-          carrier_id: carrierId,
-          carrier_product_id: null,
-          title: f.title,
-          description: null,
-          file_url: f.file_url,
-          file_type: null,
-          category: "other",
-          sort_order: idx,
-          is_active: true,
-          visible_to_agents: true,
-          visible_to_admins: true
-        }));
+        const fileRows = [];
+        for (const [idx, f] of files.entries()) {
+          let fileUrl = f.file_url || null;
+          if (f.file_upload) {
+            fileUrl = await uploadCarrierFile(
+              f.file_upload,
+              carrier?.carrier_name || "carrier",
+              f.title || `file-${idx + 1}`
+            );
+          }
+
+          fileRows.push({
+            carrier_id: carrierId,
+            carrier_product_id: null,
+            title: f.title,
+            description: f.description,
+            file_url: fileUrl,
+            file_type: f.file_upload?.type || null,
+            category: f.category || "other",
+            sort_order: idx,
+            is_active: true,
+            visible_to_agents: true,
+            visible_to_admins: true
+          });
+        }
 
         const { error: insFilesErr } = await supabase
           .from("carrier_files")
@@ -1651,6 +1958,13 @@ console.log("[admin-carriers] loaded from file");
     els.productsContainer?.addEventListener("click", (e) => {
       const productCard = e.target.closest(".product-card");
 
+      if (e.target.closest(".product-toggle")) {
+        if (e.target.closest(".remove-product")) return;
+        const isOpen = productCard?.dataset.open === "true";
+        setProductCardOpen(productCard, !isOpen);
+        return;
+      }
+
       if (e.target.closest(".remove-product")) {
         e.preventDefault();
         productCard?.remove();
@@ -1660,12 +1974,14 @@ console.log("[admin-carriers] loaded from file");
       if (e.target.closest(".add-rider")) {
         e.preventDefault();
         addRiderRow(productCard?.querySelector(".riders"));
+        setProductCardOpen(productCard, true);
         return;
       }
 
       if (e.target.closest(".add-discount")) {
         e.preventDefault();
         addDiscountRow(productCard?.querySelector(".discounts"));
+        setProductCardOpen(productCard, true);
         return;
       }
 
@@ -1684,6 +2000,14 @@ console.log("[admin-carriers] loaded from file");
         if (productCard && productCard.querySelectorAll(".discount-row").length === 0) {
           addDiscountRow(productCard.querySelector(".discounts"));
         }
+      }
+    });
+
+    els.productsContainer?.addEventListener("input", (e) => {
+      const card = e.target.closest(".product-card");
+      if (!card) return;
+      if (e.target.classList.contains("product-name")) {
+        updateProductCardTitle(card);
       }
     });
 
@@ -1809,6 +2133,8 @@ console.log("[admin-carriers] loaded from file");
       console.error("supabaseClient not found on window.");
       return;
     }
+
+    injectCarrierExtraFields();
 
     const {
       data: { session } = {}
