@@ -822,113 +822,155 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   function renderProducts(products) {
     els.productsList.innerHTML = "";
-
+  
     if (!products.length) {
       els.productsEmpty.hidden = false;
       return;
     }
-
+  
     els.productsEmpty.hidden = true;
-
-    products.forEach(cp => {
+  
+    products.forEach((cp, index) => {
       const product = cp.products || state.productMap.get(cp.product_id) || {};
       const prosCons = state.prosConsByCarrierProduct.get(cp.id) || null;
       const riders = state.ridersByCarrierProduct.get(cp.id) || [];
       const discounts = state.discountsByCarrierProduct.get(cp.id) || [];
-
+  
       const productCard = document.createElement("article");
-      productCard.className = "product-card";
-
+      productCard.className = "product-card collapsible-card";
+      productCard.dataset.open = "false";
+  
       const pros = Array.isArray(prosCons?.pros) ? prosCons.pros : [];
       const cons = Array.isArray(prosCons?.cons) ? prosCons.cons : [];
       const bestFor = Array.isArray(prosCons?.best_for) ? prosCons.best_for : [];
       const avoidIf = Array.isArray(prosCons?.avoid_if) ? prosCons.avoid_if : [];
-
+  
       productCard.innerHTML = `
-        <div class="product-top">
+        <button type="button" class="collapse-header product-collapse-header">
           <div class="product-top-left">
             <h4>${escapeHtml(cp.plan_title || product.label || "Product")}</h4>
             <span class="product-line">${escapeHtml(product.label || product.slug || "Product")} • ${escapeHtml(product.line || "Line")}</span>
           </div>
-          <div class="product-note-row">
-            ${cp.requires_contract ? `<span class="note-pill">Contracting Required</span>` : ""}
-            ${cp.requires_appointment ? `<span class="note-pill">Appointment Required</span>` : ""}
-            ${Array.isArray(cp.availability_states) && cp.availability_states.length ? `<span class="note-pill">${escapeHtml(cp.availability_states.join(", "))}</span>` : ""}
+  
+          <div class="collapse-header-right">
+            <div class="product-note-row">
+              ${cp.requires_contract ? `<span class="note-pill">Contracting Required</span>` : ""}
+              ${cp.requires_appointment ? `<span class="note-pill">Appointment Required</span>` : ""}
+              ${Array.isArray(cp.availability_states) && cp.availability_states.length ? `<span class="note-pill">${escapeHtml(cp.availability_states.join(", "))}</span>` : ""}
+            </div>
+            <span class="collapse-chevron">▸</span>
           </div>
-        </div>
-
-        <div class="product-content">
-          <p>${escapeHtml(cp.description || cp.summary || "No product description added yet.")}</p>
-
-          <div class="product-grid">
-            <div class="product-subcard">
-              <h5>Overview</h5>
-              <ul>
-                ${renderListItems([
-                  cp.summary ? `Summary: ${cp.summary}` : null,
-                  bestFor.length ? `Best for: ${bestFor.join("; ")}` : null,
-                  avoidIf.length ? `Avoid if: ${avoidIf.join("; ")}` : null,
-                  pros.length ? `Pros: ${pros.join("; ")}` : null,
-                  cons.length ? `Cons: ${cons.join("; ")}` : null,
-                  cp.notes ? `Notes: ${cp.notes}` : null,
-                  cp.application_url ? `Application: ${cp.application_url}` : null
-                ])}
-              </ul>
-            </div>
-
-            <div class="product-subcard">
-              <h5>Riders / Endorsements</h5>
-              <ul>
-                ${renderListItems(riders.length ? riders.map(r => `${r.rider_name}${r.description ? ` — ${r.description}` : ""}`) : ["No riders added yet."])}
-              </ul>
-            </div>
-
-            <div class="product-subcard">
-              <h5>Discounts</h5>
-              <ul>
-                ${renderListItems(discounts.length ? discounts.map(d => `${d.discount_name}${d.description ? ` — ${d.description}` : ""}`) : ["No discounts added yet."])}
-              </ul>
+        </button>
+  
+        <div class="collapse-body" hidden>
+          <div class="product-content">
+            <p>${escapeHtml(cp.description || cp.summary || "No product description added yet.")}</p>
+  
+            <div class="product-grid">
+              <div class="product-subcard">
+                <h5>Overview</h5>
+                <ul>
+                  ${renderListItems([
+                    cp.summary ? `Summary: ${cp.summary}` : null,
+                    bestFor.length ? `Best for: ${bestFor.join("; ")}` : null,
+                    avoidIf.length ? `Avoid if: ${avoidIf.join("; ")}` : null,
+                    pros.length ? `Pros: ${pros.join("; ")}` : null,
+                    cons.length ? `Cons: ${cons.join("; ")}` : null,
+                    cp.notes ? `Notes: ${cp.notes}` : null,
+                    cp.application_url ? `Application: ${cp.application_url}` : null
+                  ])}
+                </ul>
+              </div>
+  
+              <div class="product-subcard">
+                <h5>Riders / Endorsements</h5>
+                <ul>
+                  ${renderListItems(
+                    riders.length
+                      ? riders.map(r => `${r.rider_name}${r.description ? ` — ${r.description}` : ""}`)
+                      : ["No riders added yet."]
+                  )}
+                </ul>
+              </div>
+  
+              <div class="product-subcard">
+                <h5>Discounts</h5>
+                <ul>
+                  ${renderListItems(
+                    discounts.length
+                      ? discounts.map(d => `${d.discount_name}${d.description ? ` — ${d.description}` : ""}`)
+                      : ["No discounts added yet."]
+                  )}
+                </ul>
+              </div>
             </div>
           </div>
         </div>
       `;
-
+  
+      const header = productCard.querySelector(".collapse-header");
+      const body = productCard.querySelector(".collapse-body");
+      const chevron = productCard.querySelector(".collapse-chevron");
+  
+      header.addEventListener("click", () => {
+        const isOpen = productCard.dataset.open === "true";
+        productCard.dataset.open = isOpen ? "false" : "true";
+        body.hidden = isOpen;
+        chevron.textContent = isOpen ? "▸" : "▾";
+      });
+  
       els.productsList.appendChild(productCard);
     });
   }
 
   function renderFiles(files) {
     els.filesList.innerHTML = "";
-
+  
     if (!files.length) {
       els.filesEmpty.hidden = false;
       return;
     }
-
+  
     els.filesEmpty.hidden = true;
-
+  
     files.forEach(file => {
       const card = document.createElement("article");
-      card.className = "file-card";
-
+      card.className = "file-card collapsible-card";
+      card.dataset.open = "false";
+  
       const category = file.category || "other";
-
+  
       card.innerHTML = `
-        <div class="file-top">
-          <div>
+        <button type="button" class="collapse-header file-collapse-header">
+          <div class="file-top-left">
             <h4>${escapeHtml(file.title || "Untitled File")}</h4>
-            <p>${escapeHtml(file.description || "No description added.")}</p>
+            <span class="file-category">${escapeHtml(category.replaceAll("_", " "))}</span>
           </div>
-          <span class="file-category">${escapeHtml(category.replaceAll("_", " "))}</span>
-        </div>
-        <div class="file-actions">
-          <a class="file-link-btn" href="${escapeHtmlAttr(file.file_url)}" target="_blank" rel="noopener noreferrer">
-            <i class="fa-solid fa-file-arrow-down"></i>
-            <span>Open File</span>
-          </a>
+          <span class="collapse-chevron">▸</span>
+        </button>
+  
+        <div class="collapse-body" hidden>
+          <p>${escapeHtml(file.description || "No description added.")}</p>
+          <div class="file-actions">
+            <a class="file-link-btn" href="${escapeHtmlAttr(file.file_url)}" target="_blank" rel="noopener noreferrer">
+              <i class="fa-solid fa-file-arrow-down"></i>
+              <span>Open File</span>
+            </a>
+          </div>
         </div>
       `;
-
+  
+      const header = card.querySelector(".collapse-header");
+      const body = card.querySelector(".collapse-body");
+      const chevron = card.querySelector(".collapse-chevron");
+  
+      header.addEventListener("click", () => {
+        const isOpen = card.dataset.open === "true";
+        card.dataset.open = isOpen ? "false" : "true";
+        body.hidden = isOpen;
+        chevron.textContent = isOpen ? "▸" : "▾";
+      });
+  
       els.filesList.appendChild(card);
     });
   }
