@@ -162,6 +162,7 @@
 
       <div class="tabs">
         <button id="tab-carriers" class="active" type="button">Carriers</button>
+        <button id="tab-content" type="button">Carrier Content</button>
         <button id="tab-schedules" type="button">Commission Schedules</button>
       </div>
 
@@ -237,6 +238,72 @@
             </div>
           </div>
         </div>
+      </section>
+
+      <section id="panel-content" class="admin-section" style="display:none;">
+
+        <div class="two-col">
+      
+          <!-- LEFT: SELECT CARRIER -->
+          <div class="cardlike">
+            <h3>Select Carrier</h3>
+      
+            <label>
+              <div class="mini">Carrier</div>
+              <select id="content-carrier"></select>
+            </label>
+      
+            <button id="load-carrier-content" class="btn btn-primary" style="margin-top:10px;">
+              Load Content
+            </button>
+      
+            <div id="content-status" class="status"></div>
+          </div>
+      
+          <!-- RIGHT: EDITOR -->
+          <div class="cardlike">
+      
+            <h3>Carrier Content Editor</h3>
+      
+            <!-- APPETITE -->
+            <div style="margin-top:10px;">
+              <h4>Appetite</h4>
+              <textarea id="content-appetite" rows="4" placeholder="What this carrier likes..."></textarea>
+            </div>
+      
+            <hr>
+      
+            <!-- PRODUCTS -->
+            <div>
+              <div style="display:flex; justify-content:space-between;">
+                <h4>Products</h4>
+                <button id="add-product" class="btn btn-muted">+ Add Product</button>
+              </div>
+      
+              <div id="products-container"></div>
+            </div>
+      
+            <hr>
+      
+            <!-- FILES -->
+            <div>
+              <div style="display:flex; justify-content:space-between;">
+                <h4>Important Files</h4>
+                <button id="add-file" class="btn btn-muted">+ Add File</button>
+              </div>
+      
+              <div id="files-container"></div>
+            </div>
+      
+            <div style="margin-top:15px;">
+              <button id="save-content" class="btn btn-primary">
+                Save Everything
+              </button>
+            </div>
+      
+          </div>
+        </div>
+      
       </section>
 
       <section id="panel-schedules" class="admin-section" style="display:none;">
@@ -673,6 +740,48 @@
       <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
     </footer>
 
+    
+    <!-- EXISTING MODALS ABOVE -->
+
+    <!-- ✅ ADD TEMPLATES RIGHT HERE -->
+    <script type="text/template" id="product-template">
+      <div class="attachment-card product-card">
+    
+        <div class="attachment-head">
+          <input class="product-name" placeholder="Product Name (e.g. Term Life)" />
+          <button class="btn btn-danger remove-product">Remove</button>
+        </div>
+    
+        <textarea class="product-description" placeholder="Product description..."></textarea>
+    
+        <div>
+          <div style="display:flex; justify-content:space-between;">
+            <div class="mini">Riders / Endorsements</div>
+            <button class="btn btn-muted add-rider">+ Rider</button>
+          </div>
+          <div class="riders"></div>
+        </div>
+    
+        <div style="margin-top:10px;">
+          <div style="display:flex; justify-content:space-between;">
+            <div class="mini">Discounts</div>
+            <button class="btn btn-muted add-discount">+ Discount</button>
+          </div>
+          <div class="discounts"></div>
+        </div>
+    
+      </div>
+    </script>
+    
+    <script type="text/template" id="file-template">
+      <div class="attachment-card file-card">
+        <div class="row">
+          <input class="file-name" placeholder="File Name" />
+          <input class="file-url" placeholder="File URL" />
+          <button class="btn btn-danger remove-file">X</button>
+        </div>
+      </div>
+    </script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
     <script src="scripts/supabase-client.js"></script>
     <script src="scripts/general.js"></script>
