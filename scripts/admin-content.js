@@ -1317,6 +1317,31 @@ async function loadMyTasks() {
 /* =========================
    Pre-approve agent + Waitlist
 ========================= */
+
+async function postJson(url, payload) {
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+
+  const text = await res.text();
+  let json = null;
+
+  try {
+    json = JSON.parse(text);
+  } catch {
+    json = { raw: text };
+  }
+
+  return {
+    ok: res.ok,
+    status: res.status,
+    json,
+    text
+  };
+}
+
 function wireAgentForm() {
   const form = document.getElementById('agent-form');
   const msg = document.getElementById('agent-msg');
@@ -1389,36 +1414,72 @@ function wireAgentForm() {
     // Refresh waitlist UI
     try { await loadWaitlist(); } catch (_) {}
 
-    // 3) NIPR sync + parse
+    // 3) Add as PDB Alerts target + NIPR sync + parse
     try {
-      const syncRes = await fetch('/.netlify/functions/nipr-sync-agent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agent_id: npn })
-      });
+      if (msg) msg.textContent = '✅ Added to pre-approval waitlist. Adding PDB Alerts target and syncing NIPR…';
 
-      if (!syncRes.ok) {
-        const txt = await syncRes.text();
-        console.error('NIPR sync error:', txt);
-        if (msg) msg.textContent = '⚠️ On waitlist, but NIPR sync failed. Check logs.';
+      const [targetRes, syncRes] = await Promise.allSettled([
+        postJson('/.netlify/functions/nipr-alerts-add-targets', {
+          env: 'prod',
+          subscriptionName: 'Agents',
+          npns: [npn]
+        }),
+        postJson('/.netlify/functions/nipr-sync-agent', {
+          agent_id: npn
+        })
+      ]);
+
+      // ---- target result ----
+      let targetOk = false;
+      if (targetRes.status === 'fulfilled') {
+        targetOk = !!targetRes.value.ok;
+        if (!targetOk) {
+          console.error('PDB add target error:', targetRes.value.text || targetRes.value.json);
+        }
+      } else {
+        console.error('PDB add target crash:', targetRes.reason);
+      }
+
+      // ---- sync result ----
+      if (syncRes.status !== 'fulfilled' || !syncRes.value.ok) {
+        const syncErr =
+          syncRes.status === 'fulfilled'
+            ? (syncRes.value.text || JSON.stringify(syncRes.value.json))
+            : String(syncRes.reason);
+
+        console.error('NIPR sync error:', syncErr);
+
+        if (msg) {
+          msg.textContent = targetOk
+            ? '⚠️ Added to PDB Alerts target list, but NIPR sync failed. Check logs.'
+            : '⚠️ Added to waitlist, but both PDB target add and/or NIPR sync failed. Check logs.';
+        }
         return;
       }
 
-      const parseRes = await fetch('/.netlify/functions/nipr-parse-agent', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ agent_id: npn })
+      const parseRes = await postJson('/.netlify/functions/nipr-parse-agent', {
+        agent_id: npn
       });
 
       if (!parseRes.ok) {
-        const txt = await parseRes.text();
-        console.error('NIPR parse error:', txt);
-        if (msg) msg.textContent = '⚠️ On waitlist & synced, but parse failed. Check logs.';
+        console.error('NIPR parse error:', parseRes.text || parseRes.json);
+
+        if (msg) {
+          msg.textContent = targetOk
+            ? '⚠️ Added to PDB Alerts target list and synced, but parse failed. Check logs.'
+            : '⚠️ Synced successfully, but PDB target add and/or parse failed. Check logs.';
+        }
         return;
       }
+
+      if (msg) {
+        msg.textContent = targetOk
+          ? '✅ Added to waitlist, added to PDB Alerts target list, and synced NIPR.'
+          : '⚠️ NIPR synced and parsed, but PDB Alerts target add failed. Check logs.';
+      }
     } catch (err) {
-      console.error('Error calling NIPR functions:', err);
-      if (msg) msg.textContent = '⚠️ On waitlist, but there was an error syncing NIPR data.';
+      console.error('Error calling PDB/NIPR functions:', err);
+      if (msg) msg.textContent = '⚠️ On waitlist, but there was an error during PDB/NIPR setup.';
       return;
     }
 
