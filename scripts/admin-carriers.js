@@ -8,7 +8,7 @@ console.log("[admin-carriers] loaded from file");
     { level: "mga", mult: 0.85 },
     { level: "manager", mult: 0.80 },
     { level: "mit", mult: 0.75 },
-    { level: "agent", mult: 0.70 },
+    { level: "agent", mult: 0.70 }
   ];
 
   const $ = (sel) => document.querySelector(sel);
@@ -24,12 +24,14 @@ console.log("[admin-carriers] loaded from file");
 
   const els = {
     tabCarriers: $("#tab-carriers"),
+    tabContent: $("#tab-content"),
     tabSchedules: $("#tab-schedules"),
+
     panelCarriers: $("#panel-carriers"),
+    panelContent: $("#panel-content"),
     panelSchedules: $("#panel-schedules"),
 
     carrierName: $("#carrier-name"),
-    carrierLogo: $("#carrier-logo"),
     carrierUrl: $("#carrier-url"),
     carrierNotes: $("#carrier-notes"),
     addCarrierBtn: $("#add-carrier-btn"),
@@ -43,13 +45,24 @@ console.log("[admin-carriers] loaded from file");
     editCarrierId: $("#edit-carrier-id"),
     editCarrierName: $("#edit-carrier-name"),
     editCarrierUrl: $("#edit-carrier-url"),
-    editCarrierLogo: $("#edit-carrier-logo"),
     editCarrierNotes: $("#edit-carrier-notes"),
     saveCarrierBtn: $("#save-carrier-btn"),
     cancelCarrierBtn: $("#cancel-carrier-btn"),
     closeEditCarrier: $("#close-edit-carrier"),
     editCarrierMsg: $("#edit-carrier-msg"),
     editCarrierLogoFile: $("#edit-carrier-logo-file"),
+
+    contentCarrier: $("#content-carrier"),
+    loadCarrierContentBtn: $("#load-carrier-content"),
+    contentStatus: $("#content-status"),
+    contentAppetite: $("#content-appetite"),
+    addProductBtn: $("#add-product"),
+    productsContainer: $("#products-container"),
+    addFileBtn: $("#add-file"),
+    filesContainer: $("#files-container"),
+    saveContentBtn: $("#save-content"),
+    productTemplate: $("#product-template"),
+    fileTemplate: $("#file-template"),
 
     schedCarrier: $("#sched-carrier"),
     schedProductLine: $("#sched-product-line"),
@@ -110,7 +123,7 @@ console.log("[admin-carriers] loaded from file");
     saveSchedBtn: $("#save-sched-btn"),
     cancelSchedBtn: $("#cancel-sched-btn"),
     closeEditSchedule: $("#close-edit-schedule"),
-    editSchedMsg: $("#edit-sched-msg"),
+    editSchedMsg: $("#edit-sched-msg")
   };
 
   function setStatus(el, msg, type = "") {
@@ -231,21 +244,18 @@ console.log("[admin-carriers] loaded from file");
     if (!file) return null;
 
     const BUCKET = "carrier-logos";
-
     const ext = (file.name.split(".").pop() || "png").toLowerCase();
     const safeName = String(carrierName || "carrier")
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/(^-|-$)/g, "");
-
     const path = `${safeName}/${crypto.randomUUID()}.${ext}`;
 
     const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, {
       cacheControl: "3600",
       upsert: false,
-      contentType: file.type || undefined,
+      contentType: file.type || undefined
     });
-
     if (upErr) throw upErr;
 
     const { data } = supabase.storage.from(BUCKET).getPublicUrl(path);
@@ -269,18 +279,17 @@ console.log("[admin-carriers] loaded from file");
   }
 
   function showTab(name) {
-    if (name === "carriers") {
-      els.tabCarriers?.classList.add("active");
-      els.tabSchedules?.classList.remove("active");
-      if (els.panelCarriers) els.panelCarriers.style.display = "block";
-      if (els.panelSchedules) els.panelSchedules.style.display = "none";
-      return;
-    }
+    const isCarriers = name === "carriers";
+    const isContent = name === "content";
+    const isSchedules = name === "schedules";
 
-    els.tabSchedules?.classList.add("active");
-    els.tabCarriers?.classList.remove("active");
-    if (els.panelSchedules) els.panelSchedules.style.display = "block";
-    if (els.panelCarriers) els.panelCarriers.style.display = "none";
+    els.tabCarriers?.classList.toggle("active", isCarriers);
+    els.tabContent?.classList.toggle("active", isContent);
+    els.tabSchedules?.classList.toggle("active", isSchedules);
+
+    if (els.panelCarriers) els.panelCarriers.style.display = isCarriers ? "block" : "none";
+    if (els.panelContent) els.panelContent.style.display = isContent ? "block" : "none";
+    if (els.panelSchedules) els.panelSchedules.style.display = isSchedules ? "block" : "none";
   }
 
   async function loadCarriers() {
@@ -323,7 +332,7 @@ console.log("[admin-carriers] loaded from file");
 
         return `
           <tr data-carrier-id="${esc(c.id)}">
-            <td class="clickable" title="Click to filter schedules">
+            <td class="clickable" title="Click to use this carrier">
               <strong>${esc(c.carrier_name)}</strong>
             </td>
             <td>${url}</td>
@@ -338,7 +347,7 @@ console.log("[admin-carriers] loaded from file");
       })
       .join("");
 
-    els.carriersTableBody.onclick = (e) => {
+    els.carriersTableBody.onclick = async (e) => {
       const tr = e.target.closest("tr[data-carrier-id]");
       if (!tr) return;
 
@@ -357,28 +366,30 @@ console.log("[admin-carriers] loaded from file");
       selectedCarrierId = id;
       if (els.filterCarrier) els.filterCarrier.value = id;
       if (els.schedCarrier) els.schedCarrier.value = id;
-      showTab("schedules");
-      refreshSchedules();
+      if (els.contentCarrier) els.contentCarrier.value = id;
+      showTab("content");
+      await loadCarrierContent();
     };
   }
 
   function populateCarrierSelects() {
-    if (els.schedCarrier) {
-      els.schedCarrier.innerHTML = carriers
-        .map((c) => `<option value="${esc(c.id)}">${esc(c.carrier_name)}</option>`)
-        .join("");
+    const carrierOptions = carriers
+      .map((c) => `<option value="${esc(c.id)}">${esc(c.carrier_name)}</option>`)
+      .join("");
 
+    if (els.schedCarrier) {
+      els.schedCarrier.innerHTML = carrierOptions;
       if (selectedCarrierId) els.schedCarrier.value = selectedCarrierId;
     }
 
     if (els.filterCarrier) {
-      els.filterCarrier.innerHTML =
-        `<option value="">All</option>` +
-        carriers
-          .map((c) => `<option value="${esc(c.id)}">${esc(c.carrier_name)}</option>`)
-          .join("");
-
+      els.filterCarrier.innerHTML = `<option value="">All</option>${carrierOptions}`;
       if (selectedCarrierId) els.filterCarrier.value = selectedCarrierId;
+    }
+
+    if (els.contentCarrier) {
+      els.contentCarrier.innerHTML = `<option value="">Select Carrier</option>${carrierOptions}`;
+      if (selectedCarrierId) els.contentCarrier.value = selectedCarrierId;
     }
   }
 
@@ -393,14 +404,12 @@ console.log("[admin-carriers] loaded from file");
 
     const carrier_url = toNullableStr(els.carrierUrl?.value);
     const notes = toNullableStr(els.carrierNotes?.value);
-    const manualLogoUrl = toNullableStr(els.carrierLogo?.value);
     const file = els.carrierLogoFile?.files?.[0] || null;
 
     els.addCarrierBtn.disabled = true;
 
     try {
-      let carrier_logo = manualLogoUrl;
-
+      let carrier_logo = null;
       if (file) {
         carrier_logo = await uploadCarrierLogoFile(file, carrier_name);
       }
@@ -412,7 +421,6 @@ console.log("[admin-carriers] loaded from file");
       if (error) throw error;
 
       if (els.carrierName) els.carrierName.value = "";
-      if (els.carrierLogo) els.carrierLogo.value = "";
       if (els.carrierLogoFile) els.carrierLogoFile.value = "";
       if (els.carrierUrl) els.carrierUrl.value = "";
       if (els.carrierNotes) els.carrierNotes.value = "";
@@ -432,7 +440,6 @@ console.log("[admin-carriers] loaded from file");
     els.editCarrierId.value = carrier.id;
     els.editCarrierName.value = carrier.carrier_name || "";
     els.editCarrierUrl.value = carrier.carrier_url || "";
-    if (els.editCarrierLogo) els.editCarrierLogo.value = carrier.carrier_logo || "";
     els.editCarrierNotes.value = carrier.notes || "";
     if (els.editCarrierLogoFile) els.editCarrierLogoFile.value = "";
 
@@ -452,28 +459,17 @@ console.log("[admin-carriers] loaded from file");
 
     const carrier_url = toNullableStr(els.editCarrierUrl.value);
     const notes = toNullableStr(els.editCarrierNotes.value);
-    const manualLogoUrl = toNullableStr(els.editCarrierLogo?.value);
     const file = els.editCarrierLogoFile?.files?.[0] || null;
 
     els.saveCarrierBtn.disabled = true;
 
     try {
-      let carrier_logo = manualLogoUrl;
-
+      let carrier_logo = carrierById.get(id)?.carrier_logo || null;
       if (file) {
         carrier_logo = await uploadCarrierLogoFile(file, carrier_name);
-      } else if (!els.editCarrierLogo) {
-        const existing = carrierById.get(id);
-        carrier_logo = existing?.carrier_logo || null;
       }
 
-      const payload = {
-        carrier_name,
-        carrier_url,
-        carrier_logo,
-        notes,
-      };
-
+      const payload = { carrier_name, carrier_url, carrier_logo, notes };
       const { error } = await supabase.from("carriers").update(payload).eq("id", id);
       if (error) throw error;
 
@@ -488,7 +484,7 @@ console.log("[admin-carriers] loaded from file");
 
   async function deleteCarrier(carrier) {
     const ok = confirm(
-      `Delete carrier "${carrier.carrier_name}"?\n\nThis will ALSO delete its commission schedules (cascade).`
+      `Delete carrier "${carrier.carrier_name}"?\n\nThis will ALSO delete its commission schedules and any related carrier content rows.`
     );
     if (!ok) return;
 
@@ -498,6 +494,7 @@ console.log("[admin-carriers] loaded from file");
 
       if (selectedCarrierId === carrier.id) selectedCarrierId = "";
       await loadCarriers();
+      clearContentEditor();
       setStatus(els.carrierAddMsg, `Deleted ${carrier.carrier_name}.`, "ok");
       await refreshSchedules();
     } catch (err) {
@@ -518,7 +515,7 @@ console.log("[admin-carriers] loaded from file");
         </label>
         <label>
           <div class="mini">End Year (blank = open)</div>
-          <input data-end type="number" min="1" step="1" placeholder="" value="${esc(end_year)}" />
+          <input data-end type="number" min="1" step="1" value="${esc(end_year)}" />
         </label>
         <button class="btn btn-danger tight" data-remove-band type="button" title="Remove band">
           <i class="fa-solid fa-xmark"></i>
@@ -562,7 +559,7 @@ console.log("[admin-carriers] loaded from file");
       bands.push({
         rate: round4(rate),
         start_year: start,
-        end_year: endRaw === "" ? null : end,
+        end_year: endRaw === "" ? null : end
       });
     }
 
@@ -690,7 +687,7 @@ console.log("[admin-carriers] loaded from file");
         policy_type: attachmentPolicyType,
         fvg_rate: fvgRate,
         advance_rate: advanceRate,
-        renewal_trail_rule,
+        renewal_trail_rule
       });
     }
 
@@ -732,21 +729,13 @@ console.log("[admin-carriers] loaded from file");
 
     const fvgRate = parseNullableNum(els.schedFvgRate?.value);
     if (!Number.isFinite(fvgRate) || fvgRate == null || fvgRate <= 0) {
-      setStatus(
-        els.schedCreateMsg,
-        "FVG base commission rate must be a positive decimal (e.g., 0.1000).",
-        "err"
-      );
+      setStatus(els.schedCreateMsg, "FVG base commission rate must be a positive decimal (e.g., 0.1000).", "err");
       return;
     }
 
     const advance_rate = parseNullableNum(els.schedAdvanceRate?.value);
     if (!Number.isFinite(advance_rate) || advance_rate == null || advance_rate < 0) {
-      setStatus(
-        els.schedCreateMsg,
-        "Advance rate must be a valid decimal (e.g., 0.7500).",
-        "err"
-      );
+      setStatus(els.schedCreateMsg, "Advance rate must be a valid decimal (e.g., 0.7500).", "err");
       return;
     }
 
@@ -796,7 +785,7 @@ console.log("[admin-carriers] loaded from file");
       required_loas,
       created_by: sessionUserId,
       notes: toNullableStr(els.schedNotes?.value),
-      term_length_months,
+      term_length_months
     };
 
     const rows = [];
@@ -813,9 +802,9 @@ console.log("[admin-carriers] loaded from file");
         renewal_trail_rule: {
           bands: (baseRule.bands || []).map((b) => ({
             ...b,
-            rate: round4(Number(b.rate) * mult),
-          })),
-        },
+            rate: round4(Number(b.rate) * mult)
+          }))
+        }
       });
 
       for (const attachment of attachments) {
@@ -830,9 +819,9 @@ console.log("[admin-carriers] loaded from file");
           renewal_trail_rule: {
             bands: (attachment.renewal_trail_rule?.bands || []).map((b) => ({
               ...b,
-              rate: round4(Number(b.rate) * mult),
-            })),
-          },
+              rate: round4(Number(b.rate) * mult)
+            }))
+          }
         });
       }
     }
@@ -842,8 +831,7 @@ console.log("[admin-carriers] loaded from file");
       const { error } = await supabase.from("commission_schedules").insert(rows);
       if (error) throw error;
 
-      const totalCreated = rows.length;
-      setStatus(els.schedCreateMsg, `Created ${totalCreated} row(s).`, "ok");
+      setStatus(els.schedCreateMsg, `Created ${rows.length} row(s).`, "ok");
 
       if (els.schedProductLine) els.schedProductLine.value = "";
       if (els.schedPolicyType) els.schedPolicyType.value = "";
@@ -881,7 +869,7 @@ console.log("[admin-carriers] loaded from file");
       commission_item_type: (els.filterItemType?.value || "").trim(),
       parent_policy_type: (els.filterParentPolicyType?.value || "").trim(),
       agent_level: els.filterAgentLevel?.value || "",
-      activeOnly: !!els.filterActiveOnly?.checked,
+      activeOnly: !!els.filterActiveOnly?.checked
     };
   }
 
@@ -925,9 +913,8 @@ console.log("[admin-carriers] loaded from file");
     if (!els.schedulesTableBody) return;
 
     if (!schedules.length) {
-      els.schedulesTableBody.innerHTML = `
-        <tr><td colspan="15" class="mini">No schedules found for the current filters.</td></tr>
-      `;
+      els.schedulesTableBody.innerHTML =
+        `<tr><td colspan="15" class="mini">No schedules found for the current filters.</td></tr>`;
       return;
     }
 
@@ -1043,7 +1030,6 @@ console.log("[admin-carriers] loaded from file");
     if (!obj || typeof obj !== "object") {
       throw new Error("Renewal JSON must be an object.");
     }
-
     if (!Array.isArray(obj.bands)) {
       throw new Error('Renewal JSON must contain a "bands" array.');
     }
@@ -1166,7 +1152,7 @@ console.log("[admin-carriers] loaded from file");
       exclusive_months,
       required_loas,
       renewal_trail_rule,
-      notes: toNullableStr(els.editSchedNotes.value),
+      notes: toNullableStr(els.editSchedNotes.value)
     };
 
     els.saveSchedBtn.disabled = true;
@@ -1210,8 +1196,515 @@ console.log("[admin-carriers] loaded from file");
     }
   }
 
+  function clearContentEditor() {
+    if (els.contentAppetite) els.contentAppetite.value = "";
+    if (els.productsContainer) els.productsContainer.innerHTML = "";
+    if (els.filesContainer) els.filesContainer.innerHTML = "";
+  }
+
+  function createLineInput({ cls, placeholder, value = "" }) {
+    return `<div class="row" style="margin-top:8px;">
+      <input class="${cls}" type="text" placeholder="${esc(placeholder)}" value="${esc(value)}" />
+      <button type="button" class="btn btn-danger tight remove-line">X</button>
+    </div>`;
+  }
+
+  function buildProductCard(product = {}) {
+    const template = els.productTemplate?.innerHTML || "";
+    if (!template) return null;
+
+    const wrap = document.createElement("div");
+    wrap.innerHTML = template.trim();
+    const card = wrap.firstElementChild;
+    if (!card) return null;
+
+    card.dataset.productId = product.id || "";
+    card.querySelector(".product-name").value = product.plan_title || "";
+    card.querySelector(".product-description").value = product.description || "";
+
+    const ridersWrap = card.querySelector(".riders");
+    const discountsWrap = card.querySelector(".discounts");
+
+    const riders = Array.isArray(product.riders) ? product.riders : [];
+    const discounts = Array.isArray(product.discounts) ? product.discounts : [];
+
+    if (riders.length) {
+      riders.forEach((r) => addRiderRow(ridersWrap, r));
+    } else {
+      addRiderRow(ridersWrap);
+    }
+
+    if (discounts.length) {
+      discounts.forEach((d) => addDiscountRow(discountsWrap, d));
+    } else {
+      addDiscountRow(discountsWrap);
+    }
+
+    return card;
+  }
+
+  function addRiderRow(container, rider = {}) {
+    if (!container) return;
+    const row = document.createElement("div");
+    row.className = "row rider-row";
+    row.style.marginTop = "8px";
+    row.dataset.riderId = rider.id || "";
+    row.innerHTML = `
+      <input class="rider-name" type="text" placeholder="Rider Name" value="${esc(rider.rider_name || "")}" />
+      <input class="rider-description" type="text" placeholder="Rider Description" value="${esc(rider.description || "")}" />
+      <button type="button" class="btn btn-danger tight remove-rider">X</button>
+    `;
+    container.appendChild(row);
+  }
+
+  function addDiscountRow(container, discount = {}) {
+    if (!container) return;
+    const row = document.createElement("div");
+    row.className = "row discount-row";
+    row.style.marginTop = "8px";
+    row.dataset.discountId = discount.id || "";
+    row.innerHTML = `
+      <input class="discount-name" type="text" placeholder="Discount Name" value="${esc(discount.discount_name || "")}" />
+      <input class="discount-description" type="text" placeholder="Discount Description" value="${esc(discount.description || "")}" />
+      <button type="button" class="btn btn-danger tight remove-discount">X</button>
+    `;
+    container.appendChild(row);
+  }
+
+  function addProductCard(product = {}) {
+    const card = buildProductCard(product);
+    if (!card || !els.productsContainer) return;
+    els.productsContainer.appendChild(card);
+  }
+
+  function buildFileCard(file = {}) {
+    const template = els.fileTemplate?.innerHTML || "";
+    if (!template) return null;
+
+    const wrap = document.createElement("div");
+    wrap.innerHTML = template.trim();
+    const card = wrap.firstElementChild;
+    if (!card) return null;
+
+    card.dataset.fileId = file.id || "";
+    const fileName = card.querySelector(".file-name");
+    const fileUrl = card.querySelector(".file-url");
+
+    if (fileName) fileName.value = file.title || "";
+    if (fileUrl) fileUrl.value = file.file_url || "";
+
+    return card;
+  }
+
+  function addFileCard(file = {}) {
+    const card = buildFileCard(file);
+    if (!card || !els.filesContainer) return;
+    els.filesContainer.appendChild(card);
+  }
+
+  async function loadCarrierContent() {
+    setStatus(els.contentStatus, "", "");
+
+    const carrierId = els.contentCarrier?.value || selectedCarrierId || "";
+    if (!carrierId) {
+      setStatus(els.contentStatus, "Choose a carrier first.", "err");
+      return;
+    }
+
+    selectedCarrierId = carrierId;
+    clearContentEditor();
+
+    try {
+      const [
+        appetiteResp,
+        productsResp,
+        filesResp
+      ] = await Promise.all([
+        supabase
+          .from("carrier_appetites")
+          .select("id, title, description, carrier_id")
+          .eq("carrier_id", carrierId)
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("carrier_products")
+          .select("id, carrier_id, product_id, plan_title, summary, description, notes, application_url, requires_appointment, requires_contract, sort_order")
+          .eq("carrier_id", carrierId)
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: true }),
+        supabase
+          .from("carrier_files")
+          .select("id, carrier_id, title, file_url, description, category, sort_order")
+          .eq("carrier_id", carrierId)
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: true })
+      ]);
+
+      if (appetiteResp.error) throw appetiteResp.error;
+      if (productsResp.error) throw productsResp.error;
+      if (filesResp.error) throw filesResp.error;
+
+      const appetiteRows = appetiteResp.data || [];
+      const productRows = productsResp.data || [];
+      const fileRows = filesResp.data || [];
+
+      const productIds = productRows.map((p) => p.id);
+      let riders = [];
+      let discounts = [];
+
+      if (productIds.length) {
+        const [ridersResp, discountsResp] = await Promise.all([
+          supabase
+            .from("carrier_product_riders")
+            .select("id, carrier_product_id, rider_name, description, sort_order")
+            .in("carrier_product_id", productIds)
+            .order("sort_order", { ascending: true })
+            .order("created_at", { ascending: true }),
+          supabase
+            .from("carrier_product_discounts")
+            .select("id, carrier_product_id, discount_name, description, sort_order")
+            .in("carrier_product_id", productIds)
+            .order("sort_order", { ascending: true })
+            .order("created_at", { ascending: true })
+        ]);
+
+        if (ridersResp.error) throw ridersResp.error;
+        if (discountsResp.error) throw discountsResp.error;
+
+        riders = ridersResp.data || [];
+        discounts = discountsResp.data || [];
+      }
+
+      if (els.contentAppetite) {
+        const appetiteText = appetiteRows
+          .map((row) => row.description || "")
+          .filter(Boolean)
+          .join("\n\n");
+        els.contentAppetite.value = appetiteText;
+      }
+
+      const ridersByProduct = new Map();
+      riders.forEach((r) => {
+        if (!ridersByProduct.has(r.carrier_product_id)) ridersByProduct.set(r.carrier_product_id, []);
+        ridersByProduct.get(r.carrier_product_id).push(r);
+      });
+
+      const discountsByProduct = new Map();
+      discounts.forEach((d) => {
+        if (!discountsByProduct.has(d.carrier_product_id)) discountsByProduct.set(d.carrier_product_id, []);
+        discountsByProduct.get(d.carrier_product_id).push(d);
+      });
+
+      productRows.forEach((p) => {
+        addProductCard({
+          ...p,
+          riders: ridersByProduct.get(p.id) || [],
+          discounts: discountsByProduct.get(p.id) || []
+        });
+      });
+
+      fileRows.forEach((f) => addFileCard(f));
+
+      if (!productRows.length) addProductCard();
+      if (!fileRows.length) addFileCard();
+
+      setStatus(els.contentStatus, "Carrier content loaded.", "ok");
+    } catch (err) {
+      console.error(err);
+      setStatus(els.contentStatus, err.message || "Failed to load carrier content.", "err");
+    }
+  }
+
+  function readContentEditor() {
+    const carrierId = els.contentCarrier?.value || selectedCarrierId || "";
+    if (!carrierId) {
+      throw new Error("Choose a carrier first.");
+    }
+
+    const appetiteText = toNullableStr(els.contentAppetite?.value);
+
+    const productCards = Array.from(els.productsContainer?.querySelectorAll(".product-card") || []);
+    const products = productCards.map((card, index) => {
+      const plan_title = toNullableStr(card.querySelector(".product-name")?.value);
+      const description = toNullableStr(card.querySelector(".product-description")?.value);
+
+      if (!plan_title) {
+        throw new Error(`Product ${index + 1} needs a name.`);
+      }
+
+      const riders = Array.from(card.querySelectorAll(".rider-row"))
+        .map((row) => ({
+          id: row.dataset.riderId || null,
+          rider_name: toNullableStr(row.querySelector(".rider-name")?.value),
+          description: toNullableStr(row.querySelector(".rider-description")?.value)
+        }))
+        .filter((r) => r.rider_name);
+
+      const discounts = Array.from(card.querySelectorAll(".discount-row"))
+        .map((row) => ({
+          id: row.dataset.discountId || null,
+          discount_name: toNullableStr(row.querySelector(".discount-name")?.value),
+          description: toNullableStr(row.querySelector(".discount-description")?.value)
+        }))
+        .filter((d) => d.discount_name);
+
+      return {
+        id: card.dataset.productId || null,
+        carrier_id: carrierId,
+        plan_title,
+        description,
+        riders,
+        discounts,
+        sort_order: index
+      };
+    });
+
+    const fileCards = Array.from(els.filesContainer?.querySelectorAll(".file-card") || []);
+    const files = fileCards
+      .map((card, index) => ({
+        id: card.dataset.fileId || null,
+        carrier_id: carrierId,
+        title: toNullableStr(card.querySelector(".file-name")?.value),
+        file_url: toNullableStr(card.querySelector(".file-url")?.value),
+        sort_order: index
+      }))
+      .filter((f) => f.title || f.file_url);
+
+    for (const [i, f] of files.entries()) {
+      if (!f.title) throw new Error(`File ${i + 1} needs a name.`);
+      if (!f.file_url) throw new Error(`File ${i + 1} needs a URL.`);
+    }
+
+    return { carrierId, appetiteText, products, files };
+  }
+
+  async function saveCarrierContent() {
+    setStatus(els.contentStatus, "", "");
+    if (!els.saveContentBtn) return;
+
+    let payload;
+    try {
+      payload = readContentEditor();
+    } catch (err) {
+      setStatus(els.contentStatus, err.message || "Invalid content.", "err");
+      return;
+    }
+
+    const { carrierId, appetiteText, products, files } = payload;
+
+    els.saveContentBtn.disabled = true;
+
+    try {
+      const existingProductsResp = await supabase
+        .from("carrier_products")
+        .select("id")
+        .eq("carrier_id", carrierId);
+
+      if (existingProductsResp.error) throw existingProductsResp.error;
+
+      const existingProductIds = (existingProductsResp.data || []).map((p) => p.id);
+
+      if (existingProductIds.length) {
+        const { error: delRidersErr } = await supabase
+          .from("carrier_product_riders")
+          .delete()
+          .in("carrier_product_id", existingProductIds);
+        if (delRidersErr) throw delRidersErr;
+
+        const { error: delDiscountsErr } = await supabase
+          .from("carrier_product_discounts")
+          .delete()
+          .in("carrier_product_id", existingProductIds);
+        if (delDiscountsErr) throw delDiscountsErr;
+      }
+
+      const { error: delProductsErr } = await supabase
+        .from("carrier_products")
+        .delete()
+        .eq("carrier_id", carrierId);
+      if (delProductsErr) throw delProductsErr;
+
+      const { error: delAppetiteErr } = await supabase
+        .from("carrier_appetites")
+        .delete()
+        .eq("carrier_id", carrierId);
+      if (delAppetiteErr) throw delAppetiteErr;
+
+      const { error: delFilesErr } = await supabase
+        .from("carrier_files")
+        .delete()
+        .eq("carrier_id", carrierId);
+      if (delFilesErr) throw delFilesErr;
+
+      if (appetiteText) {
+        const appetiteChunks = appetiteText
+          .split(/\n{2,}/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+
+        const appetiteRows = appetiteChunks.map((text, idx) => ({
+          carrier_id: carrierId,
+          title: appetiteChunks.length === 1 ? "General Appetite" : `Appetite ${idx + 1}`,
+          description: text,
+          sort_order: idx,
+          priority: 0,
+          is_active: true
+        }));
+
+        if (appetiteRows.length) {
+          const { error: insAppErr } = await supabase
+            .from("carrier_appetites")
+            .insert(appetiteRows);
+          if (insAppErr) throw insAppErr;
+        }
+      }
+
+      const insertedProducts = [];
+      for (const p of products) {
+        const productPayload = {
+          carrier_id: carrierId,
+          product_id: null,
+          plan_title: p.plan_title,
+          summary: null,
+          description: p.description,
+          notes: null,
+          application_url: null,
+          requires_appointment: false,
+          requires_contract: true,
+          sort_order: p.sort_order,
+          is_active: true
+        };
+
+        const { data: inserted, error: insProdErr } = await supabase
+          .from("carrier_products")
+          .insert(productPayload)
+          .select("id, plan_title")
+          .single();
+
+        if (insProdErr) throw insProdErr;
+        insertedProducts.push({ ...inserted, riders: p.riders, discounts: p.discounts });
+      }
+
+      for (const p of insertedProducts) {
+        const riderRows = (p.riders || []).map((r, idx) => ({
+          carrier_product_id: p.id,
+          rider_name: r.rider_name,
+          description: r.description,
+          sort_order: idx,
+          is_active: true
+        }));
+
+        if (riderRows.length) {
+          const { error: insRidersErr } = await supabase
+            .from("carrier_product_riders")
+            .insert(riderRows);
+          if (insRidersErr) throw insRidersErr;
+        }
+
+        const discountRows = (p.discounts || []).map((d, idx) => ({
+          carrier_product_id: p.id,
+          discount_name: d.discount_name,
+          description: d.description,
+          sort_order: idx,
+          is_active: true
+        }));
+
+        if (discountRows.length) {
+          const { error: insDiscErr } = await supabase
+            .from("carrier_product_discounts")
+            .insert(discountRows);
+          if (insDiscErr) throw insDiscErr;
+        }
+      }
+
+      if (files.length) {
+        const fileRows = files.map((f, idx) => ({
+          carrier_id: carrierId,
+          carrier_product_id: null,
+          title: f.title,
+          description: null,
+          file_url: f.file_url,
+          file_type: null,
+          category: "other",
+          sort_order: idx,
+          is_active: true,
+          visible_to_agents: true,
+          visible_to_admins: true
+        }));
+
+        const { error: insFilesErr } = await supabase
+          .from("carrier_files")
+          .insert(fileRows);
+        if (insFilesErr) throw insFilesErr;
+      }
+
+      setStatus(els.contentStatus, "Carrier content saved.", "ok");
+      await loadCarrierContent();
+    } catch (err) {
+      console.error(err);
+      setStatus(els.contentStatus, err.message || "Failed to save carrier content.", "err");
+    } finally {
+      els.saveContentBtn.disabled = false;
+    }
+  }
+
+  function wireContentDelegation() {
+    els.productsContainer?.addEventListener("click", (e) => {
+      const productCard = e.target.closest(".product-card");
+
+      if (e.target.closest(".remove-product")) {
+        e.preventDefault();
+        productCard?.remove();
+        return;
+      }
+
+      if (e.target.closest(".add-rider")) {
+        e.preventDefault();
+        addRiderRow(productCard?.querySelector(".riders"));
+        return;
+      }
+
+      if (e.target.closest(".add-discount")) {
+        e.preventDefault();
+        addDiscountRow(productCard?.querySelector(".discounts"));
+        return;
+      }
+
+      if (e.target.closest(".remove-rider")) {
+        e.preventDefault();
+        e.target.closest(".rider-row")?.remove();
+        if (productCard && productCard.querySelectorAll(".rider-row").length === 0) {
+          addRiderRow(productCard.querySelector(".riders"));
+        }
+        return;
+      }
+
+      if (e.target.closest(".remove-discount")) {
+        e.preventDefault();
+        e.target.closest(".discount-row")?.remove();
+        if (productCard && productCard.querySelectorAll(".discount-row").length === 0) {
+          addDiscountRow(productCard.querySelector(".discounts"));
+        }
+      }
+    });
+
+    els.filesContainer?.addEventListener("click", (e) => {
+      if (e.target.closest(".remove-file")) {
+        e.preventDefault();
+        e.target.closest(".file-card")?.remove();
+      }
+    });
+  }
+
   function wireEvents() {
     els.tabCarriers?.addEventListener("click", () => showTab("carriers"));
+
+    els.tabContent?.addEventListener("click", async () => {
+      showTab("content");
+      if (selectedCarrierId && els.contentCarrier) {
+        els.contentCarrier.value = selectedCarrierId;
+      }
+    });
+
     els.tabSchedules?.addEventListener("click", async () => {
       showTab("schedules");
       await refreshSchedules();
@@ -1227,6 +1720,11 @@ console.log("[admin-carriers] loaded from file");
     els.editCarrierModal?.addEventListener("click", (e) => {
       if (e.target === els.editCarrierModal) closeOverlay(els.editCarrierModal);
     });
+
+    els.loadCarrierContentBtn?.addEventListener("click", loadCarrierContent);
+    els.addProductBtn?.addEventListener("click", () => addProductCard());
+    els.addFileBtn?.addEventListener("click", () => addFileCard());
+    els.saveContentBtn?.addEventListener("click", saveCarrierContent);
 
     els.addBandBtn?.addEventListener("click", () => addBand({ rate: "", start_year: 2, end_year: "" }));
     els.bandsContainer?.addEventListener("click", (e) => {
@@ -1296,6 +1794,8 @@ console.log("[admin-carriers] loaded from file");
       if (e.target === els.editScheduleModal) closeOverlay(els.editScheduleModal);
     });
 
+    wireContentDelegation();
+
     if (els.schedEffectiveFrom && !els.schedEffectiveFrom.value) {
       els.schedEffectiveFrom.value = todayISO();
     }
@@ -1311,7 +1811,7 @@ console.log("[admin-carriers] loaded from file");
     }
 
     const {
-      data: { session } = {},
+      data: { session } = {}
     } = await supabase.auth.getSession();
 
     sessionUserId = session?.user?.id || null;
@@ -1319,7 +1819,6 @@ console.log("[admin-carriers] loaded from file");
     await loadCarriers();
 
     addBand({ rate: "", start_year: 2, end_year: "" });
-
     wireEvents();
     showTab("carriers");
   }
@@ -1329,6 +1828,7 @@ console.log("[admin-carriers] loaded from file");
       console.error(err);
       setStatus(els.carrierAddMsg, err.message || "Init failed.", "err");
       setStatus(els.schedulesMsg, err.message || "Init failed.", "err");
+      setStatus(els.contentStatus, err.message || "Init failed.", "err");
     });
   }
 
