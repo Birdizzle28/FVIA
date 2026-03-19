@@ -202,20 +202,21 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   async function loadReferenceData() {
-    await Promise.all([
-      loadCarriers(),
-      loadProducts(),
-      loadCarrierProducts(),
-      loadAgentCarriers(),
-      loadProsCons(),
-      loadAppetites(),
-      loadFiles(),
-      loadRiders(),
-      loadDiscounts(),
-      loadEligibilityRules(),
-      loadUplineChain(),
-      loadNiprLicenses()
-    ]);
+    await loadCarriers();
+    await loadProducts();
+    await loadCarrierProducts();
+    await loadAgentCarriers();
+  
+    await loadAppetites();
+    await loadFiles();
+    await loadEligibilityRules();
+  
+    await loadProsCons();
+    await loadRiders();
+    await loadDiscounts();
+  
+    await loadUplineChain();
+    await loadNiprLicenses();
   }
 
   async function loadCarriers() {
