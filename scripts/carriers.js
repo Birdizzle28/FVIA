@@ -131,11 +131,9 @@ document.addEventListener("DOMContentLoaded", async () => {
     health: ["health", "accident and health", "accident & health", "sickness", "medical"],
     property: ["property"],
     casualty: ["casualty"],
-    medicare: ["medicare", "medicare supplement", "med supp", "medsup"],
     pnc: ["property", "casualty", "property and casualty", "property & casualty", "p&c"]
   };
 
-  wireMenu();
   wireToolbar();
   wireRailControls();
   wireModals();
