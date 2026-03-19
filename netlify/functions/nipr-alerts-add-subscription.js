@@ -32,14 +32,13 @@ function buildAddSubscriptionEnvelope({
   subscriptionName,
   email,
   allStates = true,
-  residentStateOnly = false,
   alertTypes = ["LICENSING", "APPOINTMENTS", "RIRS", "DEMOGRAPHICS"],
 }) {
   const alertTypeXml = alertTypes
     .map((type) => `<ind:alertTypeList>${escapeXml(type)}</ind:alertTypeList>`)
     .join("");
 
-return `<?xml version="1.0" encoding="UTF-8"?>
+  return `<?xml version="1.0" encoding="UTF-8"?>
 <soapenv:Envelope
   xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/"
   xmlns:ind="https://pdb-services.nipr.com/pdb-alerts-industry-services/industry-ws">
@@ -47,23 +46,17 @@ return `<?xml version="1.0" encoding="UTF-8"?>
   <soapenv:Body>
     <ind:addSubscription>
       <ind:subscriptionInputData>
-        <ind:subscriptionName>Agents</ind:subscriptionName>
-        <ind:email>YOUR_EMAIL_HERE</ind:email>
-
+        <ind:subscriptionName>${escapeXml(subscriptionName)}</ind:subscriptionName>
+        <ind:email>${escapeXml(email)}</ind:email>
         <ind:affiliationList>
           <ind:None>false</ind:None>
           <ind:All>false</ind:All>
         </ind:affiliationList>
-
         <ind:stateList>
-          <ind:allStates>true</ind:allStates>
+          <ind:allStates>${allStates ? "true" : "false"}</ind:allStates>
         </ind:stateList>
-
         <ind:alertTypeList>
-          <ind:alertTypeList>LICENSING</ind:alertTypeList>
-          <ind:alertTypeList>APPOINTMENTS</ind:alertTypeList>
-          <ind:alertTypeList>RIRS</ind:alertTypeList>
-          <ind:alertTypeList>DEMOGRAPHICS</ind:alertTypeList>
+          ${alertTypeXml}
         </ind:alertTypeList>
       </ind:subscriptionInputData>
     </ind:addSubscription>
@@ -87,7 +80,6 @@ export async function handler(event) {
       subscriptionName,
       email,
       allStates = true,
-      residentStateOnly = false,
       alertTypes = ["LICENSING", "APPOINTMENTS", "RIRS", "DEMOGRAPHICS"],
     } = body;
 
@@ -111,7 +103,7 @@ export async function handler(event) {
       return {
         statusCode: 500,
         body: JSON.stringify({
-          error: `Missing Netlify credentials for env "${env}"`,
+          error: `Missing NIPR credentials for env "${env}"`,
         }),
       };
     }
@@ -120,7 +112,6 @@ export async function handler(event) {
       subscriptionName,
       email,
       allStates,
-      residentStateOnly,
       alertTypes,
     });
 
@@ -131,7 +122,6 @@ export async function handler(event) {
       headers: {
         Authorization: `Basic ${auth}`,
         "Content-Type": "text/xml; charset=utf-8",
-        SOAPAction: "addSubscription",
         Accept: "text/xml, application/xml",
       },
       body: xmlBody,
@@ -153,7 +143,6 @@ export async function handler(event) {
           subscriptionName,
           email,
           allStates,
-          residentStateOnly,
           alertTypes,
         },
         raw_response: responseText,
