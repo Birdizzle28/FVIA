@@ -36,3 +36,9 @@
   from = "/a/*"
   to = "/a.html"
   status = 200
+
+[functions]
+  directory = "netlify/functions"
+
+[functions."nipr-alerts-cron"]
+  schedule = "@daily"
