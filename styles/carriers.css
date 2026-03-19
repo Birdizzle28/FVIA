@@ -1052,3 +1052,66 @@
     border-radius: 20px;
   }
 }
+
+.collapsible-card {
+  overflow: hidden;
+}
+
+.collapse-header {
+  width: 100%;
+  border: none;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.9rem;
+  font-family: "Bellota Text", cursive;
+}
+
+.collapse-header-right {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.collapse-body {
+  margin-top: 0.9rem;
+}
+
+.collapse-chevron {
+  font-size: 1.1rem;
+  line-height: 1;
+  color: #353468;
+  flex: 0 0 auto;
+  margin-top: 0.2rem;
+}
+
+.file-collapse-header .file-top-left,
+.product-collapse-header .product-top-left {
+  min-width: 0;
+}
+
+.file-collapse-header h4,
+.product-collapse-header h4 {
+  margin: 0;
+  color: #353468;
+}
+
+.file-collapse-header {
+  align-items: center;
+}
+
+.file-top-left {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.file-card p {
+  margin: 0 0 0.8rem;
+  color: #57576c;
+  line-height: 1.6;
+}
