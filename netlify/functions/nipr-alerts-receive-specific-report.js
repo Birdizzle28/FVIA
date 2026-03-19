@@ -41,6 +41,32 @@ function buildReceiveSpecificReportEnvelope({ reportDate }) {
 </soapenv:Envelope>`;
 }
 
+function extractXmlParts(raw = "") {
+  const xmlParts = raw.match(/<\?xml[\s\S]*?<\/[^>]+>|<soap:Envelope[\s\S]*?<\/soap:Envelope>|<[^>]+ReportProcessResult[\s\S]*?<\/[^>]+ReportProcessResult>/g) || [];
+
+  if (xmlParts.length > 0) {
+    return xmlParts;
+  }
+
+  const fallback = raw
+    .split(/--uuid:[^\r\n-]+(?:--)?/)
+    .map((part) => part.trim())
+    .filter(Boolean)
+    .map((part) => {
+      const start = part.indexOf("<");
+      return start >= 0 ? part.slice(start).trim() : "";
+    })
+    .filter((part) => part.startsWith("<"));
+
+  return fallback;
+}
+
+function getTagValue(xml = "", tagName = "") {
+  const regex = new RegExp(`<${tagName}[^>]*>([\\s\\S]*?)<\\/${tagName}>`, "i");
+  const match = xml.match(regex);
+  return match ? match[1].trim() : null;
+}
+
 export async function handler(event) {
   if (event.httpMethod !== "POST") {
     return {
@@ -85,6 +111,36 @@ export async function handler(event) {
     });
 
     const responseText = await res.text();
+    const xmlParts = extractXmlParts(responseText);
+
+    const soapXml =
+      xmlParts.find((part) => part.includes("<soap:Envelope")) || null;
+
+    const attachmentXml =
+      xmlParts.find(
+        (part) =>
+          part.includes("ReportProcessResult") ||
+          part.includes("LicensingReportProcessResult") ||
+          part.includes("DemographicsReportProcessResult") ||
+          part.includes("AppointmentsReportProcessResult") ||
+          part.includes("RIRSReportProcessResult")
+      ) || null;
+
+    const messageDocumentCount = attachmentXml
+      ? getTagValue(attachmentXml, "MessageDocumentCount")
+      : null;
+
+    const statusCodeValue = attachmentXml
+      ? getTagValue(attachmentXml, "StatusCode")
+      : null;
+
+    const successCode = attachmentXml
+      ? getTagValue(attachmentXml, "SuccessCode")
+      : null;
+
+    const typeCode = attachmentXml
+      ? getTagValue(attachmentXml, "TypeCode")
+      : null;
 
     return {
       statusCode: res.ok ? 200 : res.status,
@@ -97,6 +153,16 @@ export async function handler(event) {
         endpoint: url,
         status: res.status,
         request: { reportDate },
+        parsed: {
+          messageDocumentCount,
+          statusCode: statusCodeValue,
+          successCode,
+          typeCode,
+          hasSoapEnvelope: !!soapXml,
+          hasAttachmentXml: !!attachmentXml,
+        },
+        soap_xml: soapXml,
+        attachment_xml: attachmentXml,
         raw_response: responseText,
       }),
     };
