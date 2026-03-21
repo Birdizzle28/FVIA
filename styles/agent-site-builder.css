@@ -1473,3 +1473,10 @@ body {
   text-align: center;
   font-weight: 700;
 }
+
+.quote-style-btn.active,
+.quote-style-clear-btn.active {
+  background: #ed9ea5 !important;
+  color: #222 !important;
+  border-color: #ed9ea5 !important;
+}
