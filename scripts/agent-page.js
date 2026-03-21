@@ -545,6 +545,8 @@ document.addEventListener("DOMContentLoaded", async () => {
         licenses: [
           "agent-details",
           "agent-licenses-section",
+          "agent-licenses-shell",
+          "agent-licenses-heading-wrap",
           "agent-licenses-heading",
           "agent-licenses-subheading",
           "agent-licenses-list"
@@ -856,9 +858,14 @@ document.addEventListener("DOMContentLoaded", async () => {
           bodyEl.style.display = isMeaningfulHtml(bodyHtml) ? "" : "none";
         }
     
-        setHrefIfExists("agent-call-cta", document.getElementById("agent-call")?.href || "");
-        setHrefIfExists("agent-text-cta", document.getElementById("agent-text")?.href || "");
-        setHrefIfExists("agent-email-cta", document.getElementById("agent-email")?.href || "");
+        if (window.FVG_AGENT_PAGE_AGENT?.phone) {
+          setHrefIfExists("agent-call-cta", `tel:${window.FVG_AGENT_PAGE_AGENT.phone}`);
+          setHrefIfExists("agent-text-cta", `sms:${window.FVG_AGENT_PAGE_AGENT.phone}`);
+        }
+        
+        if (window.FVG_AGENT_PAGE_AGENT?.email) {
+          setHrefIfExists("agent-email-cta", `mailto:${window.FVG_AGENT_PAGE_AGENT.email}`);
+        }
       }
     }
 
