@@ -143,6 +143,86 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   };
 
+  const ABOUT_SECTION_RULES = {
+    hero: {
+      showHeading: true,
+      showSubheading: true,
+      showBody: true,
+      showButtonText: false,
+      showButtonLink: false,
+      showImageUrl: false,
+      showImageUpload: true,
+      showHeadingSize: true,
+      showColorPreset: true
+    },
+    summary: {
+      showHeading: true,
+      showSubheading: true,
+      showBody: true,
+      showButtonText: false,
+      showButtonLink: false,
+      showImageUrl: false,
+      showImageUpload: false,
+      showHeadingSize: false,
+      showColorPreset: false
+    },
+    story: {
+      showHeading: true,
+      showSubheading: true,
+      showBody: true,
+      showButtonText: false,
+      showButtonLink: false,
+      showImageUrl: false,
+      showImageUpload: false,
+      showHeadingSize: false,
+      showColorPreset: false
+    },
+    approach: {
+      showHeading: true,
+      showSubheading: true,
+      showBody: true,
+      showButtonText: false,
+      showButtonLink: false,
+      showImageUrl: false,
+      showImageUpload: false,
+      showHeadingSize: false,
+      showColorPreset: false
+    },
+    who_i_help: {
+      showHeading: true,
+      showSubheading: true,
+      showBody: true,
+      showButtonText: false,
+      showButtonLink: false,
+      showImageUrl: false,
+      showImageUpload: false,
+      showHeadingSize: false,
+      showColorPreset: false
+    },
+    licenses: {
+      showHeading: true,
+      showSubheading: true,
+      showBody: true,
+      showButtonText: false,
+      showButtonLink: false,
+      showImageUrl: false,
+      showImageUpload: false,
+      showHeadingSize: false,
+      showColorPreset: false
+    },
+    cta: {
+      showHeading: true,
+      showSubheading: true,
+      showBody: true,
+      showButtonText: false,
+      showButtonLink: false,
+      showImageUrl: false,
+      showImageUpload: false,
+      showHeadingSize: false,
+      showColorPreset: false
+    }
+  };
+
   if (!targetAgentId) {
     editorFields.innerHTML = "<p>Missing agent_id in URL.</p>";
     return;
