@@ -159,7 +159,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     else if (size === "lg") fontSize = "2.4rem";
     else fontSize = "2rem";
   
-    if (pageKey === "home" && sectionKey === "hero") {
+    if ((pageKey === "home" || pageKey === "about") && sectionKey === "hero") {
       const headingEl = document.getElementById("agent-name");
       const inlineHeadingEl = document.getElementById("agent-name-inline");
   
@@ -511,11 +511,37 @@ document.addEventListener("DOMContentLoaded", async () => {
         quote: ["agent-quote", "quote-container"]
       },
       about: {
-        hero: ["agent-hero"],
-        summary: ["agent-about-summary-section", "agent-about-summary"],
-        story: ["agent-story-section", "agent-story"],
-        approach: ["agent-approach-section", "agent-approach"],
-        who_i_help: ["agent-who-i-help-section", "agent-who-i-help"],
+        hero: [
+          "agent-hero",
+          "agent-photo",
+          "agent-name",
+          "agent-hero-subheading",
+          "agent-bio"
+        ],
+        summary: [
+          "agent-about-summary-section",
+          "agent-about-summary-heading",
+          "agent-about-summary-subheading",
+          "agent-about-summary"
+        ],
+        story: [
+          "agent-story-section",
+          "agent-story-heading",
+          "agent-story-subheading",
+          "agent-story"
+        ],
+        approach: [
+          "agent-approach-section",
+          "agent-approach-heading",
+          "agent-approach-subheading",
+          "agent-approach"
+        ],
+        who_i_help: [
+          "agent-who-i-help-section",
+          "agent-who-i-help-heading",
+          "agent-who-i-help-subheading",
+          "agent-who-i-help"
+        ],
         licenses: [
           "agent-details",
           "agent-licenses-section",
@@ -523,7 +549,15 @@ document.addEventListener("DOMContentLoaded", async () => {
           "agent-licenses-subheading",
           "agent-licenses-list"
         ],
-        cta: ["agent-about-cta", "agent-about-cta-text"]
+        cta: [
+          "agent-about-cta",
+          "agent-about-cta-heading",
+          "agent-about-cta-subheading",
+          "agent-about-cta-text",
+          "agent-call-cta",
+          "agent-text-cta",
+          "agent-email-cta"
+        ]
       },
       careers: {
         intro: ["agent-careers-title", "agent-careers-intro", "agent-careers-region"],
@@ -652,20 +686,176 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     
     if (pageKey === "about") {
+      if (sectionKey === "hero") {
+        const headingEl = document.getElementById("agent-name");
+        const subheadingEl = document.getElementById("agent-hero-subheading");
+        const bodyEl = document.getElementById("agent-bio");
+    
+        const fallbackName = `${window.FVG_AGENT_PAGE_AGENT?.first_name || ""} ${window.FVG_AGENT_PAGE_AGENT?.last_name || ""}`.trim();
+        const fallbackBio = window.FVG_AGENT_PAGE_AGENT?.bio || "";
+    
+        const headingHtml = content.heading || fallbackName;
+        const subheadingHtml = content.subheading || "";
+        const bodyHtml = content.body || fallbackBio;
+    
+        if (headingEl) {
+          headingEl.innerHTML = headingHtml;
+          headingEl.style.display = isMeaningfulHtml(headingHtml) ? "" : "none";
+        }
+    
+        if (subheadingEl) {
+          subheadingEl.innerHTML = subheadingHtml;
+          subheadingEl.style.display = isMeaningfulHtml(subheadingHtml) ? "" : "none";
+        }
+    
+        if (bodyEl) {
+          bodyEl.innerHTML = bodyHtml;
+          bodyEl.style.display = isMeaningfulHtml(bodyHtml) ? "" : "none";
+        }
+      }
+    
       if (sectionKey === "summary") {
-        setHtmlIfExists("agent-about-summary", content.body || "");
+        const headingHtml = content.heading || "About Me";
+        const subheadingHtml = content.subheading || "";
+        const bodyHtml = content.body || "";
+    
+        const headingEl = document.getElementById("agent-about-summary-heading");
+        const subheadingEl = document.getElementById("agent-about-summary-subheading");
+        const bodyEl = document.getElementById("agent-about-summary");
+    
+        if (headingEl) {
+          headingEl.innerHTML = headingHtml;
+          headingEl.style.display = isMeaningfulHtml(headingHtml) ? "" : "none";
+        }
+    
+        if (subheadingEl) {
+          subheadingEl.innerHTML = subheadingHtml;
+          subheadingEl.style.display = isMeaningfulHtml(subheadingHtml) ? "" : "none";
+        }
+    
+        if (bodyEl) {
+          bodyEl.innerHTML = bodyHtml;
+          bodyEl.style.display = isMeaningfulHtml(bodyHtml) ? "" : "none";
+        }
       }
+    
       if (sectionKey === "story") {
-        setHtmlIfExists("agent-story", content.body || "");
+        const headingHtml = content.heading || "My Story";
+        const subheadingHtml = content.subheading || "";
+        const bodyHtml = content.body || "";
+    
+        const headingEl = document.getElementById("agent-story-heading");
+        const subheadingEl = document.getElementById("agent-story-subheading");
+        const bodyEl = document.getElementById("agent-story");
+    
+        if (headingEl) {
+          headingEl.innerHTML = headingHtml;
+          headingEl.style.display = isMeaningfulHtml(headingHtml) ? "" : "none";
+        }
+    
+        if (subheadingEl) {
+          subheadingEl.innerHTML = subheadingHtml;
+          subheadingEl.style.display = isMeaningfulHtml(subheadingHtml) ? "" : "none";
+        }
+    
+        if (bodyEl) {
+          bodyEl.innerHTML = bodyHtml;
+          bodyEl.style.display = isMeaningfulHtml(bodyHtml) ? "" : "none";
+        }
       }
+    
       if (sectionKey === "approach") {
-        setHtmlIfExists("agent-approach", content.body || "");
+        const headingHtml = content.heading || "My Approach";
+        const subheadingHtml = content.subheading || "";
+        const bodyHtml = content.body || "";
+    
+        const headingEl = document.getElementById("agent-approach-heading");
+        const subheadingEl = document.getElementById("agent-approach-subheading");
+        const bodyEl = document.getElementById("agent-approach");
+    
+        if (headingEl) {
+          headingEl.innerHTML = headingHtml;
+          headingEl.style.display = isMeaningfulHtml(headingHtml) ? "" : "none";
+        }
+    
+        if (subheadingEl) {
+          subheadingEl.innerHTML = subheadingHtml;
+          subheadingEl.style.display = isMeaningfulHtml(subheadingHtml) ? "" : "none";
+        }
+    
+        if (bodyEl) {
+          bodyEl.innerHTML = bodyHtml;
+          bodyEl.style.display = isMeaningfulHtml(bodyHtml) ? "" : "none";
+        }
       }
+    
       if (sectionKey === "who_i_help") {
-        setHtmlIfExists("agent-who-i-help", content.body || "");
+        const headingHtml = content.heading || "Who I Help";
+        const subheadingHtml = content.subheading || "";
+        const bodyHtml = content.body || "";
+    
+        const headingEl = document.getElementById("agent-who-i-help-heading");
+        const subheadingEl = document.getElementById("agent-who-i-help-subheading");
+        const bodyEl = document.getElementById("agent-who-i-help");
+    
+        if (headingEl) {
+          headingEl.innerHTML = headingHtml;
+          headingEl.style.display = isMeaningfulHtml(headingHtml) ? "" : "none";
+        }
+    
+        if (subheadingEl) {
+          subheadingEl.innerHTML = subheadingHtml;
+          subheadingEl.style.display = isMeaningfulHtml(subheadingHtml) ? "" : "none";
+        }
+    
+        if (bodyEl) {
+          bodyEl.innerHTML = bodyHtml;
+          bodyEl.style.display = isMeaningfulHtml(bodyHtml) ? "" : "none";
+        }
       }
+    
+      if (sectionKey === "licenses") {
+        const headingHtml = content.heading || "Active Licenses";
+        const subheadingHtml = content.subheading || "";
+    
+        const headingEl = document.getElementById("agent-licenses-heading");
+        const subheadingEl = document.getElementById("agent-licenses-subheading");
+    
+        if (headingEl) {
+          headingEl.innerHTML = headingHtml;
+          headingEl.style.display = isMeaningfulHtml(headingHtml) ? "" : "none";
+        }
+    
+        if (subheadingEl) {
+          subheadingEl.innerHTML = subheadingHtml;
+          subheadingEl.style.display = isMeaningfulHtml(subheadingHtml) ? "" : "none";
+        }
+      }
+    
       if (sectionKey === "cta") {
-        setHtmlIfExists("agent-about-cta-text", content.body || "");
+        const headingHtml = content.heading || "Ready to Talk?";
+        const subheadingHtml = content.subheading || "";
+        const bodyHtml = content.body || "";
+    
+        const headingEl = document.getElementById("agent-about-cta-heading");
+        const subheadingEl = document.getElementById("agent-about-cta-subheading");
+        const bodyEl = document.getElementById("agent-about-cta-text");
+    
+        if (headingEl) {
+          headingEl.innerHTML = headingHtml;
+          headingEl.style.display = isMeaningfulHtml(headingHtml) ? "" : "none";
+        }
+    
+        if (subheadingEl) {
+          subheadingEl.innerHTML = subheadingHtml;
+          subheadingEl.style.display = isMeaningfulHtml(subheadingHtml) ? "" : "none";
+        }
+    
+        if (bodyEl) {
+          bodyEl.innerHTML = bodyHtml;
+          bodyEl.style.display = isMeaningfulHtml(bodyHtml) ? "" : "none";
+        }
+    
         setHrefIfExists("agent-call-cta", document.getElementById("agent-call")?.href || "");
         setHrefIfExists("agent-text-cta", document.getElementById("agent-text")?.href || "");
         setHrefIfExists("agent-email-cta", document.getElementById("agent-email")?.href || "");
