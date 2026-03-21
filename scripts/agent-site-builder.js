@@ -1968,8 +1968,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       const wrap = document.createElement("div");
       wrap.className = "builder-section-card collapsed";
   
-      const homeRules = pageKey === "home"
-        ? (HOME_SECTION_RULES[section.section_key] || null)
+      const pageRules =
+        pageKey === "home"
+          ? HOME_SECTION_RULES
+          : pageKey === "about"
+            ? ABOUT_SECTION_RULES
+            : null;
+      
+      const homeRules = pageRules
+        ? (pageRules[section.section_key] || null)
         : null;
   
       const isLicensesSection = pageKey === "home" && section.section_key === "licenses";
