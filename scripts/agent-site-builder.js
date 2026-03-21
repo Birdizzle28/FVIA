@@ -2164,7 +2164,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                             <div class="rt-toolbar license-style-toolbar" data-toolbar-for="${section.id}-quote-body">
                               <input
                                 type="color"
-                                class="quote-body-highlight-picker"
+                                class="license-body-highlight-picker quote-body-highlight-picker"
                                 data-section-id="${section.id}"
                                 value="${escapeHtml(style.quote_body_highlight || "#fff3a3")}"
                                 title="Highlight Color"
@@ -2207,7 +2207,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                             
                               <input
                                 type="number"
-                                class="quote-body-font-size"
+                                class="license-body-font-size quote-body-font-size"
                                 data-section-id="${section.id}"
                                 min="8"
                                 max="300"
@@ -2218,7 +2218,7 @@ document.addEventListener("DOMContentLoaded", async () => {
                             
                               <button
                                 type="button"
-                                class="license-style-btn license-style-clear-btn"
+                                class="license-style-btn license-style-clear-btn quote-style-clear-btn"
                                 data-section-id="${section.id}"
                                 title="Clear Formatting"
                               >
