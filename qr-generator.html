@@ -1,0 +1,484 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>QR Code Generator | Family Values Group</title>
+
+  <link href="https://fonts.googleapis.com/css?family=Bellota+Text:400,700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+  <style>
+    :root{
+      --pink:#ed9ea5;
+      --dark:#353468;
+      --gray:#545454;
+      --light:#f8f8fb;
+      --white:#ffffff;
+      --border:#e7e7ef;
+      --shadow:0 12px 30px rgba(0,0,0,0.08);
+    }
+
+    *{
+      box-sizing:border-box;
+    }
+
+    body{
+      margin:0;
+      font-family:"Bellota Text", system-ui, sans-serif;
+      background:
+        radial-gradient(circle at top left, rgba(237,158,165,.18), transparent 30%),
+        radial-gradient(circle at top right, rgba(53,52,104,.12), transparent 30%),
+        var(--light);
+      color:#222;
+    }
+
+    header{
+      background:var(--gray);
+      color:var(--white);
+      padding:16px 20px;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:16px;
+      position:sticky;
+      top:0;
+      z-index:50;
+      box-shadow:0 4px 14px rgba(0,0,0,0.12);
+    }
+
+    .brand{
+      display:flex;
+      align-items:center;
+      gap:12px;
+    }
+
+    .brand img{
+      width:52px;
+      height:52px;
+      object-fit:contain;
+      border-radius:12px;
+      background:#fff;
+      padding:4px;
+    }
+
+    .brand h1{
+      margin:0;
+      font-size:1.1rem;
+      line-height:1.1;
+    }
+
+    .brand p{
+      margin:2px 0 0;
+      font-size:.85rem;
+      opacity:.9;
+    }
+
+    main{
+      max-width:1200px;
+      margin:0 auto;
+      padding:28px 18px 48px;
+    }
+
+    .page-title{
+      margin-bottom:20px;
+    }
+
+    .page-title h2{
+      margin:0 0 8px;
+      color:var(--dark);
+      font-size:2rem;
+    }
+
+    .page-title p{
+      margin:0;
+      color:#555;
+      line-height:1.45;
+    }
+
+    .layout{
+      display:grid;
+      grid-template-columns: minmax(320px, 480px) minmax(320px, 1fr);
+      gap:24px;
+      align-items:start;
+    }
+
+    .panel{
+      background:var(--white);
+      border:1px solid var(--border);
+      border-radius:22px;
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+
+    .panel-head{
+      padding:18px 20px;
+      background:linear-gradient(135deg, rgba(53,52,104,.98), rgba(84,84,84,.98));
+      color:#fff;
+    }
+
+    .panel-head h3{
+      margin:0 0 4px;
+      font-size:1.15rem;
+    }
+
+    .panel-head p{
+      margin:0;
+      font-size:.92rem;
+      opacity:.92;
+    }
+
+    .panel-body{
+      padding:20px;
+    }
+
+    .field-grid{
+      display:grid;
+      gap:14px;
+    }
+
+    .two-up{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+    }
+
+    label{
+      display:block;
+      margin-bottom:6px;
+      font-size:.92rem;
+      font-weight:700;
+      color:var(--dark);
+    }
+
+    input,
+    select,
+    textarea{
+      width:100%;
+      border:1px solid #d9d9e6;
+      background:#fff;
+      border-radius:14px;
+      padding:12px 14px;
+      font:inherit;
+      outline:none;
+      transition:border-color .2s, box-shadow .2s;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus{
+      border-color:var(--pink);
+      box-shadow:0 0 0 4px rgba(237,158,165,.18);
+    }
+
+    .checkbox-row{
+      display:flex;
+      align-items:center;
+      gap:10px;
+      flex-wrap:wrap;
+      padding:10px 12px;
+      border:1px solid #ddd;
+      border-radius:14px;
+      background:#fafafd;
+    }
+
+    .checkbox-row input{
+      width:auto;
+      transform:scale(1.15);
+    }
+
+    .inline-btns{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      margin-top:8px;
+    }
+
+    button{
+      border:none;
+      cursor:pointer;
+      border-radius:14px;
+      padding:12px 16px;
+      font:inherit;
+      font-weight:700;
+      transition:transform .15s ease, opacity .15s ease, box-shadow .2s ease;
+    }
+
+    button:hover{
+      transform:translateY(-1px);
+    }
+
+    .btn-primary{
+      background:var(--dark);
+      color:#fff;
+      box-shadow:0 8px 20px rgba(53,52,104,.22);
+    }
+
+    .btn-secondary{
+      background:var(--pink);
+      color:#222;
+      box-shadow:0 8px 20px rgba(237,158,165,.24);
+    }
+
+    .btn-light{
+      background:#ececf4;
+      color:#222;
+    }
+
+    .helper{
+      font-size:.84rem;
+      color:#666;
+      margin-top:6px;
+      line-height:1.4;
+    }
+
+    .output-wrap{
+      display:grid;
+      gap:18px;
+    }
+
+    .qr-stage{
+      min-height:520px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:20px;
+      background:
+        linear-gradient(180deg, rgba(237,158,165,.12), rgba(53,52,104,.05)),
+        #fbfbfe;
+    }
+
+    .qr-frame{
+      background:#fff;
+      border:3px solid var(--dark);
+      border-radius:24px;
+      padding:20px 20px 18px;
+      width:min(100%, 460px);
+      box-shadow:0 20px 40px rgba(0,0,0,0.12);
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      gap:14px;
+      text-align:center;
+    }
+
+    .qr-frame-title{
+      color:var(--dark);
+      font-weight:700;
+      font-size:1.1rem;
+      line-height:1.25;
+    }
+
+    .qr-box{
+      width:100%;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      min-height:280px;
+      padding:8px;
+      background:#fff;
+      border-radius:18px;
+    }
+
+    .preview-meta{
+      display:grid;
+      gap:12px;
+      padding:18px 20px 20px;
+      border-top:1px solid var(--border);
+    }
+
+    .meta-card{
+      background:#f7f7fc;
+      border:1px solid #e8e8f0;
+      border-radius:16px;
+      padding:14px;
+    }
+
+    .meta-card strong{
+      display:block;
+      margin-bottom:6px;
+      color:var(--dark);
+    }
+
+    .meta-url{
+      font-size:.9rem;
+      color:#444;
+      word-break:break-word;
+      line-height:1.4;
+    }
+
+    .status{
+      margin-top:8px;
+      min-height:22px;
+      font-size:.92rem;
+      color:var(--dark);
+      font-weight:700;
+    }
+
+    footer{
+      text-align:center;
+      color:#666;
+      padding:24px 16px 40px;
+      font-size:.9rem;
+    }
+
+    @media (max-width: 900px){
+      .layout{
+        grid-template-columns:1fr;
+      }
+
+      .two-up{
+        grid-template-columns:1fr;
+      }
+
+      .qr-stage{
+        min-height:unset;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <img src="/Pics/img6.png" alt="Family Values Group Logo" onerror="this.style.display='none'">
+      <div>
+        <h1>Family Values Group</h1>
+        <p>Branded QR Code Generator</p>
+      </div>
+    </div>
+    <i class="fa-solid fa-qrcode" aria-hidden="true"></i>
+  </header>
+
+  <main>
+    <section class="page-title">
+      <h2>Create an Agent QR Code</h2>
+      <p>
+        Build a branded, scan-safe QR code for an agent webpage, digital business card, flyer, or printed card.
+      </p>
+    </section>
+
+    <section class="layout">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>QR Settings</h3>
+          <p>Use a direct URL or build one from first name, last name, and NPN.</p>
+        </div>
+
+        <div class="panel-body">
+          <div class="field-grid">
+            <div>
+              <label for="qr-url">Direct URL</label>
+              <input id="qr-url" type="url" placeholder="https://familyvaluesgroup.com/a/john-smith-12345678" />
+              <div class="helper">If this has a value, it takes priority over the slug builder below.</div>
+            </div>
+
+            <div class="two-up">
+              <div>
+                <label for="first-name">First Name</label>
+                <input id="first-name" type="text" placeholder="John" />
+              </div>
+              <div>
+                <label for="last-name">Last Name</label>
+                <input id="last-name" type="text" placeholder="Smith" />
+              </div>
+            </div>
+
+            <div class="two-up">
+              <div>
+                <label for="npn">NPN</label>
+                <input id="npn" type="text" placeholder="12345678" />
+              </div>
+              <div>
+                <label for="base-url">Base Agent URL</label>
+                <input id="base-url" type="text" value="https://familyvaluesgroup.com/a/" />
+              </div>
+            </div>
+
+            <div class="inline-btns">
+              <button id="build-url-btn" class="btn-light" type="button">Build Agent URL</button>
+              <button id="copy-url-btn" class="btn-light" type="button">Copy URL</button>
+            </div>
+
+            <div>
+              <label for="frame-text">Frame Text</label>
+              <input id="frame-text" type="text" value="Scan to Save My Contact" />
+            </div>
+
+            <div>
+              <label for="logo-url">Center Logo URL</label>
+              <input id="logo-url" type="text" value="/Pics/img6.png" placeholder="/Pics/img6.png" />
+              <div class="helper">Leave blank if you want no logo overlay.</div>
+            </div>
+
+            <div class="two-up">
+              <div>
+                <label for="qr-size">QR Size</label>
+                <select id="qr-size">
+                  <option value="220">220 px</option>
+                  <option value="260">260 px</option>
+                  <option value="300" selected>300 px</option>
+                  <option value="340">340 px</option>
+                  <option value="400">400 px</option>
+                </select>
+              </div>
+
+              <div>
+                <label for="download-name">Download Name</label>
+                <input id="download-name" type="text" value="agent-qr" />
+              </div>
+            </div>
+
+            <div class="checkbox-row">
+              <input id="safe-mode" type="checkbox" checked />
+              <label for="safe-mode" style="margin:0;">Scan-safe mode</label>
+              <span class="helper" style="margin:0;">
+                Uses stronger error correction and a larger quiet zone.
+              </span>
+            </div>
+
+            <div class="inline-btns">
+              <button id="generate-qr-btn" class="btn-primary" type="button">Generate QR</button>
+              <button id="download-qr-btn" class="btn-secondary" type="button">Download PNG</button>
+              <button id="reset-form-btn" class="btn-light" type="button">Reset</button>
+            </div>
+
+            <div id="status-message" class="status"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Live Preview</h3>
+          <p>This is the framed version you can use on cards, flyers, or agent pages.</p>
+        </div>
+
+        <div class="output-wrap">
+          <div class="qr-stage">
+            <div id="qr-code-frame" class="qr-frame">
+              <div id="qr-frame-title" class="qr-frame-title">Scan to Save My Contact</div>
+              <div class="qr-box">
+                <div id="qr-code-inner"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="preview-meta">
+            <div class="meta-card">
+              <strong>Final URL</strong>
+              <div id="final-url-display" class="meta-url">No URL generated yet.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    © 2026 Family Values Group
+  </footer>
+
+  <script src="https://unpkg.com/qr-code-styling/lib/qr-code-styling.js"></script>
+  <script src="/scripts/qr-generator.js"></script>
+</body>
+</html>
