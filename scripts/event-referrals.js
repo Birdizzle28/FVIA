@@ -53,10 +53,15 @@ async function initSession() {
 
 function setPublicMode() {
   document.getElementById("public-login-link").style.display = "block";
+  document.getElementById("navcontainer")?.classList.add("hidden");
+  document.getElementById("mobile-menu")?.classList.add("hidden");
 }
 
 function enableAgentMode() {
   document.getElementById("mode-switch-wrap").style.display = "flex";
+  document.getElementById("public-login-link").style.display = "none";
+  document.getElementById("navcontainer")?.classList.remove("hidden");
+  document.getElementById("mobile-menu")?.classList.add("hidden");
 }
 
 function initUI() {
