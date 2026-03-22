@@ -11,6 +11,39 @@ let agentMap = new Map();
 
 let attendingAgentsChoices = null;
 let eventSearchChoices = null;
+let eventProspectsChannel = null;
+
+function unsubscribeFromEventProspects() {
+  if (eventProspectsChannel) {
+    sb.removeChannel(eventProspectsChannel);
+    eventProspectsChannel = null;
+  }
+}
+
+function subscribeToEventProspects(eventId) {
+  unsubscribeFromEventProspects();
+
+  if (!eventId) return;
+
+  eventProspectsChannel = sb
+    .channel(`event-prospects-${eventId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "event_prospects",
+        filter: `event_id=eq.${eventId}`
+      },
+      async () => {
+        await loadEventWorkspace();
+        await loadTodaysEvents();
+      }
+    )
+    .subscribe((status) => {
+      console.log("Realtime event_prospects status:", status);
+    });
+}
 
 document.addEventListener("DOMContentLoaded", async () => {
   document.documentElement.style.visibility = "visible";
@@ -135,6 +168,7 @@ function initUI() {
   document.getElementById("back-to-agent-start-from-create")?.addEventListener("click", () => showAgentScreen("start"));
   document.getElementById("back-to-agent-start-from-search")?.addEventListener("click", () => showAgentScreen("start"));
   document.getElementById("back-to-agent-start-from-workspace")?.addEventListener("click", () => {
+    unsubscribeFromEventProspects();
     currentEventId = null;
     prospectsCache = [];
     allProspectsCache = [];
@@ -345,6 +379,10 @@ async function submitProspect(e) {
       setFormMessage("prospect-form-message", "Submitted successfully!", false);
       e.target.reset();
       await loadTodaysEvents();
+      
+      if (currentEventId && currentEventId === eventId) {
+        await loadEventWorkspace();
+      }
     }
   } catch (err) {
     console.error("submitProspect failed:", err);
@@ -525,6 +563,7 @@ function openSelectedEvent() {
 
 async function loadEventWorkspace() {
   if (!currentEventId) return;
+  subscribeToEventProspects(currentEventId);
 
   try {
     clearWorkspaceMessage();
