@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png" />
+    <link rel="manifest" href="/site.webmanifest" />
+    <link rel="manifest" href="/manifest.json" />
+
+    <title>Event Referrals | Family Values Group</title>
+
+    <link rel="stylesheet" href="styles/agentstyle.css" />
+    <link rel="stylesheet" href="styles/event-referrals.css" />
+    <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/choices.js/public/assets/styles/choices.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css" />
+
+    <style>
+      html {
+        visibility: hidden;
+      }
+    </style>
+  </head>
+
+  <body id="dashboardbody" class="event-referrals-page">
+    <header class="index-grid-header">
+      <div id="logofvcontainer">
+        <div id="logodiv">
+          <a href="../index.html">
+            <img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" />
+          </a>
+        </div>
+        <div id="fvdiv">
+          <p><strong>Family Values Group</strong></p>
+        </div>
+      </div>
+
+      <div id="navcontainer" class="agent-only-header">
+        <nav class="header-flex-container">
+          <a id="notifications-tab" href="notifications.html" aria-label="Notifications">
+            <i class="fa-solid fa-bell"></i>
+          </a>
+          <a id="profile-tab" href="profile.html" aria-label="Profile">
+            <i class="fa-solid fa-user"></i>
+          </a>
+          <div id="menu-toggle" aria-label="Menu">
+            <i class="fa-solid fa-bars"></i>
+          </div>
+        </nav>
+      </div>
+
+      <div id="public-login-link" class="public-login-link" style="display: none;">
+        <a href="login.html">Agent Login</a>
+      </div>
+    </header>
+
+    <div id="mobile-menu">
+      <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
+
+      <button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
+        <i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
+        <i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
+      </button>
+
+      <div id="toolkit-submenu" class="submenu" hidden>
+        <a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
+        <a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
+        <a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
+        <a href="calculator.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
+        <a href="marketing.html"><i class="fa-solid fa-handshake"></i><span>Marketing</span></a>
+      </div>
+
+      <a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
+      <a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
+      <a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
+      <a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
+      <a href="admin.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
+    </div>
+
+    <main class="auth-container event-main">
+      <section class="event-page-shell">
+        <div class="event-page-head">
+          <div>
+            <p class="eyebrow">Vendor Events</p>
+            <h1>Event Referrals</h1>
+            <p class="page-subtext">
+              Collect event prospects fast, keep TCPA language visible, and let participating agents split leads before finalizing.
+            </p>
+          </div>
+        </div>
+
+        <div id="mode-switch-wrap" class="mode-switch-wrap" style="display: none;">
+          <button id="mode-prospect-btn" class="mode-switch-btn active" type="button">Prospects</button>
+          <button id="mode-agent-btn" class="mode-switch-btn" type="button">Agents</button>
+        </div>
+
+        <section id="prospect-mode" class="mode-panel">
+          <div class="event-card prospect-card">
+            <div class="card-head">
+              <div>
+                <h2>Get a Quote</h2>
+                <p>Fill this out at the event and one of our agents will follow up.</p>
+              </div>
+            </div>
+
+            <form id="prospect-form" class="event-form-grid">
+              <div class="form-row form-row-full">
+                <label for="prospect-event-id">Event</label>
+                <select id="prospect-event-id" required>
+                  <option value="">Loading today’s events...</option>
+                </select>
+              </div>
+
+              <div class="form-row">
+                <label for="prospect-first-name">First Name</label>
+                <input id="prospect-first-name" type="text" required />
+              </div>
+
+              <div class="form-row">
+                <label for="prospect-last-name">Last Name</label>
+                <input id="prospect-last-name" type="text" required />
+              </div>
+
+              <div class="form-row">
+                <label for="prospect-age">Age</label>
+                <input id="prospect-age" type="number" min="0" max="130" />
+              </div>
+
+              <div class="form-row">
+                <label for="prospect-phone">Phone Number</label>
+                <input id="prospect-phone" type="tel" required />
+              </div>
+
+              <div class="form-row">
+                <label for="prospect-email">Email <span class="optional">(Optional)</span></label>
+                <input id="prospect-email" type="email" />
+              </div>
+
+              <div class="form-row form-row-full">
+                <label for="prospect-looking-for">Looking For</label>
+                <select id="prospect-looking-for" required>
+                  <option value="">Select one</option>
+                  <option value="Life Insurance">Life Insurance</option>
+                  <option value="Health Insurance">Health Insurance</option>
+                  <option value="Auto Insurance">Auto Insurance</option>
+                  <option value="Home Insurance">Home Insurance</option>
+                  <option value="Business Insurance">Business Insurance</option>
+                  <option value="Pet Insurance">Pet Insurance</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div class="form-row form-row-full tcpa-block">
+                <p id="prospect-tcpa-text" class="tcpa-text">
+                  By submitting this form, you agree to be contacted by Family Values Group / Family Values Insurance Agency by call, text message, and/or email regarding insurance products and services, including through automated technology at the phone number you provided. Consent is not a condition of purchase. Message and data rates may apply.
+                </p>
+
+                <label class="checkbox-line">
+                  <input id="prospect-tcpa-consent" type="checkbox" required />
+                  <span>I agree to the consent language above.</span>
+                </label>
+              </div>
+
+              <div class="form-row form-row-full">
+                <button id="prospect-submit-btn" class="primary-btn" type="submit">Submit</button>
+              </div>
+
+              <div id="prospect-form-message" class="form-message form-row-full"></div>
+            </form>
+          </div>
+        </section>
+
+        <section id="agent-mode" class="mode-panel" style="display: none;">
+          <div id="agent-start-screen" class="event-card">
+            <div class="card-head">
+              <div>
+                <h2>Agent Event Manager</h2>
+                <p>Create a new event or search an event you’re assigned to.</p>
+              </div>
+            </div>
+
+            <div class="choice-grid">
+              <button id="show-create-event-btn" class="choice-card" type="button">
+                <i class="fa-solid fa-calendar-plus"></i>
+                <span>Create New Event</span>
+              </button>
+
+              <button id="show-search-event-btn" class="choice-card" type="button">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <span>Search Existing Event</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="agent-create-screen" class="event-card" style="display: none;">
+            <div class="card-head">
+              <div>
+                <h2>Create Event</h2>
+                <p>Set up the event and choose who can participate.</p>
+              </div>
+              <button id="back-to-agent-start-from-create" class="ghost-btn" type="button">Back</button>
+            </div>
+
+            <form id="create-event-form" class="event-form-grid">
+              <div class="form-row form-row-full">
+                <label for="create-event-name">Event Name</label>
+                <input id="create-event-name" type="text" required />
+              </div>
+
+              <div class="form-row form-row-full">
+                <label for="create-attending-agents">Attending Agents</label>
+                <select id="create-attending-agents" multiple></select>
+              </div>
+
+              <div class="form-row form-row-full">
+                <label for="create-event-address">Address</label>
+                <input id="create-event-address" type="text" />
+              </div>
+
+              <div class="form-row">
+                <label for="create-event-city">City</label>
+                <input id="create-event-city" type="text" />
+              </div>
+
+              <div class="form-row">
+                <label for="create-event-state">State</label>
+                <input id="create-event-state" type="text" maxlength="2" />
+              </div>
+
+              <div class="form-row">
+                <label for="create-event-zip">Zipcode</label>
+                <input id="create-event-zip" type="text" />
+              </div>
+
+              <div class="form-row">
+                <label for="create-event-date">Date</label>
+                <input id="create-event-date" type="text" required />
+              </div>
+
+              <div class="form-row">
+                <label for="create-event-time">Time</label>
+                <input id="create-event-time" type="text" />
+              </div>
+
+              <div class="form-row form-row-full">
+                <button id="create-event-submit-btn" class="primary-btn" type="submit">Create Event</button>
+              </div>
+
+              <div id="create-event-message" class="form-message form-row-full"></div>
+            </form>
+          </div>
+
+          <div id="agent-search-screen" class="event-card" style="display: none;">
+            <div class="card-head">
+              <div>
+                <h2>Search Event</h2>
+                <p>Choose from events you’re assigned to. Admins can see all events.</p>
+              </div>
+              <button id="back-to-agent-start-from-search" class="ghost-btn" type="button">Back</button>
+            </div>
+
+            <div class="event-form-grid">
+              <div class="form-row form-row-full">
+                <label for="agent-event-search">Event</label>
+                <select id="agent-event-search">
+                  <option value="">Loading events...</option>
+                </select>
+              </div>
+
+              <div class="form-row form-row-full">
+                <button id="open-selected-event-btn" class="primary-btn" type="button">Open Event</button>
+              </div>
+
+              <div id="agent-search-message" class="form-message form-row-full"></div>
+            </div>
+          </div>
+
+          <div id="agent-event-workspace" class="event-card" style="display: none;">
+            <div class="card-head workspace-head">
+              <div>
+                <h2 id="workspace-event-name">Event</h2>
+                <p id="workspace-event-meta">Event ID:</p>
+              </div>
+
+              <div class="workspace-actions-top">
+                <button id="back-to-agent-start-from-workspace" class="ghost-btn" type="button">Exit Event</button>
+              </div>
+            </div>
+
+            <div class="workspace-toolbar">
+              <div class="toolbar-left">
+                <button id="randomize-allocations-btn" class="secondary-btn" type="button">
+                  Randomize Allocations
+                </button>
+
+                <button id="refresh-event-btn" class="ghost-btn" type="button">
+                  Refresh
+                </button>
+              </div>
+
+              <div class="toolbar-right">
+                <button id="agree-allocation-btn" class="primary-btn" type="button">
+                  I Agree to This Split
+                </button>
+
+                <button id="opt-out-allocation-btn" class="ghost-btn danger-ghost" type="button">
+                  Opt Out
+                </button>
+
+                <button id="finalize-event-btn" class="primary-btn success-btn" type="button">
+                  Finalize Event
+                </button>
+              </div>
+            </div>
+
+            <div class="workspace-summary-grid">
+              <div class="summary-card">
+                <label for="event-prospect-search">Search Leads</label>
+                <input id="event-prospect-search" type="text" placeholder="Search by name, phone, email..." />
+              </div>
+
+              <div class="summary-card">
+                <strong>Agreement Status</strong>
+                <div id="allocation-agreement-status">Waiting for agent review...</div>
+              </div>
+
+              <div class="summary-card">
+                <strong>Total Prospects</strong>
+                <div id="workspace-total-prospects">0</div>
+              </div>
+            </div>
+
+            <div class="allocation-counter-card">
+              <div class="counter-card-head">
+                <h3>Lead Allocation Counter</h3>
+                <p>Current split before final submission.</p>
+              </div>
+              <div id="allocation-counter-list" class="allocation-counter-list"></div>
+            </div>
+
+            <div id="workspace-message" class="form-message"></div>
+
+            <div id="event-prospects-list" class="event-prospects-list">
+              <div class="empty-state">No prospects loaded yet.</div>
+            </div>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>© Family Values Group</p>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/choices.js/public/assets/scripts/choices.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="scripts/supabaseClient.js"></script>
+    <script src="scripts/event-referrals.js"></script>
+  </body>
+</html>
