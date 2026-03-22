@@ -49,6 +49,44 @@ async function initSession() {
   isAdmin = profile.is_admin || false;
 
   enableAgentMode();
+  await loadAgentsForEventForm();
+}
+
+async function loadAgentsForEventForm() {
+  const select = document.getElementById("create-attending-agents");
+  if (!select) return;
+
+  let query = sb.from("agents").select("id, first_name, last_name");
+
+  const { data, error } = await query.order("first_name", { ascending: true });
+
+  if (error) {
+    console.error("Error loading agents:", error);
+    return;
+  }
+
+  agentsCache = data || [];
+
+  select.innerHTML = "";
+
+  agentsCache.forEach(agent => {
+    const option = document.createElement("option");
+    option.value = agent.id;
+    option.textContent = `${agent.first_name || ""} ${agent.last_name || ""}`.trim() || agent.id;
+    select.appendChild(option);
+  });
+
+  if (attendingAgentsChoices) {
+    attendingAgentsChoices.destroy();
+  }
+
+  attendingAgentsChoices = new Choices(select, {
+    removeItemButton: true,
+    searchEnabled: true,
+    shouldSort: false,
+    placeholder: true,
+    placeholderValue: "Select attending agents"
+  });
 }
 
 function setPublicMode() {
@@ -87,6 +125,33 @@ function initUI() {
   document.getElementById("event-prospect-search").addEventListener("input", filterProspects);
 
   initPickers();
+  wireMobileMenu();
+}
+
+function wireMobileMenu() {
+  const toggle = document.getElementById("menu-toggle");
+  const menu = document.getElementById("mobile-menu");
+  const toolkitToggle = document.getElementById("toolkit-toggle");
+  const toolkitSubmenu = document.getElementById("toolkit-submenu");
+
+  if (toggle && menu) {
+    toggle.addEventListener("click", () => {
+      menu.classList.toggle("hidden");
+    });
+  }
+
+  if (toolkitToggle && toolkitSubmenu) {
+    toolkitToggle.addEventListener("click", () => {
+      const isHidden = toolkitSubmenu.hasAttribute("hidden");
+      if (isHidden) {
+        toolkitSubmenu.removeAttribute("hidden");
+        toolkitToggle.setAttribute("aria-expanded", "true");
+      } else {
+        toolkitSubmenu.setAttribute("hidden", "");
+        toolkitToggle.setAttribute("aria-expanded", "false");
+      }
+    });
+  }
 }
 
 function switchMode(mode) {
@@ -155,27 +220,57 @@ async function submitProspect(e) {
 async function createEvent(e) {
   e.preventDefault();
 
-  const name = document.getElementById("create-event-name").value;
-  const date = document.getElementById("create-event-date").value;
+  const attendingAgentIds = attendingAgentsChoices
+    ? attendingAgentsChoices.getValue(true)
+    : [];
+
+  const payload = {
+    event_name: document.getElementById("create-event-name").value.trim(),
+    address: document.getElementById("create-event-address").value.trim() || null,
+    city: document.getElementById("create-event-city").value.trim() || null,
+    state: document.getElementById("create-event-state").value.trim() || null,
+    zip: document.getElementById("create-event-zip").value.trim() || null,
+    event_date: document.getElementById("create-event-date").value.trim(),
+    event_time: document.getElementById("create-event-time").value.trim() || null,
+    created_by: me.id,
+    status: "open"
+  };
 
   const { data: event, error } = await sb
     .from("events")
-    .insert({
-      event_name: name,
-      event_date: date,
-      created_by: me.id
-    })
+    .insert(payload)
     .select()
     .single();
 
   if (error) {
-    setFormMessage("create-event-message", "Error creating event", true);
+    console.error(error);
+    setFormMessage("create-event-message", "Error creating event.", true);
     return;
   }
 
+  const uniqueAgentIds = [...new Set([me.id, ...attendingAgentIds])];
+
+  const eventAgentRows = uniqueAgentIds.map((agentId, index) => ({
+    event_id: event.id,
+    agent_id: agentId,
+    role: agentId === me.id && index === 0 ? "owner" : "participant",
+    is_active: true
+  }));
+
+  const { error: eventAgentsError } = await sb
+    .from("event_agents")
+    .insert(eventAgentRows);
+
+  if (eventAgentsError) {
+    console.error(eventAgentsError);
+    setFormMessage("create-event-message", "Event was created, but attending agents failed to save.", true);
+    return;
+  }
+
+  setFormMessage("create-event-message", "Event created successfully.", false);
   currentEventId = event.id;
   showAgentScreen("workspace");
-  loadEventWorkspace();
+  await loadEventWorkspace();
 }
 
 async function loadAgentEvents() {
