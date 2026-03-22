@@ -35,7 +35,7 @@ body.event-referrals-page {
 .event-page-head {
   background: linear-gradient(135deg, rgba(53, 52, 104, 0.96), rgba(84, 84, 84, 0.96));
   border-radius: 24px;
-  padding: 1.5rem;
+  padding: 1.5rem 1.5rem;
   color: #fff;
   box-shadow: 0 18px 40px rgba(53, 52, 104, 0.18);
 }
@@ -180,7 +180,7 @@ body.event-referrals-page {
   font-size: 1rem;
   font-family: inherit;
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
 .form-row textarea,
@@ -305,40 +305,29 @@ body.event-referrals-page {
   flex-wrap: wrap;
 }
 
-/* TOP TOOLBAR */
 .workspace-toolbar {
   display: flex;
-  align-items: flex-end;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 1rem;
-  flex-wrap: nowrap;
+  flex-wrap: wrap;
   margin-bottom: 1rem;
 }
 
 .toolbar-left,
 .toolbar-right {
   display: flex;
-  align-items: flex-end;
   gap: 0.75rem;
-  flex-wrap: nowrap;
-  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
-.toolbar-left {
-  flex: 1 1 auto;
-}
-
-.toolbar-right {
-  flex: 0 0 auto;
-}
-
-/* SEARCH LEADS stays above lead viewer */
 .workspace-summary-grid {
   display: grid;
-  grid-template-columns: minmax(260px, 420px);
+  grid-template-columns: 1fr 1fr;
   gap: 1rem;
-  margin-top: 0;
-  margin-bottom: 1rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0;
 }
 
 .summary-card,
@@ -368,7 +357,6 @@ body.event-referrals-page {
   word-break: break-word;
 }
 
-/* BOTTOM BIG SUMMARY STRIP */
 .allocation-counter-card {
   padding: 1rem;
   margin-top: 1rem;
@@ -640,20 +628,6 @@ body.event-referrals-page {
   background: #fff;
 }
 
-#workspace-agent-adder {
-  display: flex;
-  align-items: flex-end;
-  gap: 0.75rem;
-  flex-wrap: nowrap;
-  flex: 1 1 auto;
-  min-width: 0;
-}
-
-#workspace-agent-adder > div {
-  flex: 1 1 280px;
-  min-width: 220px;
-}
-
 #workspace-agent-adder .choices__inner {
   min-height: 50px !important;
 }
@@ -661,31 +635,15 @@ body.event-referrals-page {
 #workspace-bottom-agree-wrap {
   display: flex;
   justify-content: center;
-  margin-top: 1.25rem;
-  margin-bottom: 1.25rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
 }
 
 #workspace-bottom-agree-wrap .primary-btn,
 #workspace-bottom-agree-wrap .secondary-btn,
 #workspace-bottom-agree-wrap .ghost-btn {
   width: auto;
-  min-width: 240px;
-  padding-left: 1.5rem;
-  padding-right: 1.5rem;
-}
-
-/* BOTTOM BIG DIV */
-#workspace-bottom-summary {
-  display: grid;
-  grid-template-columns: 1.2fr 0.7fr 1.5fr;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-#workspace-bottom-summary .summary-card,
-#workspace-bottom-summary .allocation-counter-card {
-  margin: 0;
-  height: 100%;
+  min-width: 220px;
 }
 
 #event-prospects-pagination {
@@ -757,13 +715,13 @@ body.event-referrals-page {
   .prospect-summary {
     grid-template-columns: minmax(0, 1.7fr) minmax(130px, 0.9fr) minmax(180px, 1fr) auto;
   }
-
-  #workspace-bottom-summary {
-    grid-template-columns: 1fr;
-  }
 }
 
 @media (max-width: 1100px) {
+  .workspace-summary-grid {
+    grid-template-columns: 1fr;
+  }
+
   .prospect-summary {
     grid-template-columns: 1fr;
     align-items: flex-start;
@@ -771,25 +729,6 @@ body.event-referrals-page {
 
   .prospect-toggle-icon {
     justify-self: start;
-  }
-}
-
-@media (max-width: 900px) {
-  .workspace-toolbar,
-  .toolbar-left,
-  .toolbar-right,
-  #workspace-agent-adder {
-    flex-wrap: wrap;
-  }
-
-  .toolbar-left > *,
-  .toolbar-right > *,
-  #workspace-agent-adder > * {
-    flex: 1 1 100%;
-  }
-
-  .workspace-summary-grid {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -811,6 +750,19 @@ body.event-referrals-page {
 
   .mode-switch-btn {
     flex: 1 1 50%;
+  }
+
+  .workspace-toolbar,
+  .toolbar-left,
+  .toolbar-right,
+  .workspace-actions-top {
+    width: 100%;
+  }
+
+  .toolbar-left > *,
+  .toolbar-right > *,
+  .workspace-actions-top > * {
+    flex: 1 1 100%;
   }
 
   .card-head {
