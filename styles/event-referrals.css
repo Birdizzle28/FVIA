@@ -4,6 +4,32 @@ body {
   padding: 0;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+.event-card,
+.event-form-grid,
+.form-row,
+.summary-card,
+.prospect-detail-block,
+.choices,
+.choices__inner {
+  min-width: 0;
+}
+
+.form-row input,
+.form-row select,
+.form-row textarea,
+.summary-card input,
+.prospect-detail-block input,
+.prospect-detail-block select,
+.prospect-detail-block textarea {
+  max-width: 100%;
+}
+
 body.event-referrals-page {
   background:
     radial-gradient(circle at top left, rgba(237, 158, 165, 0.12), transparent 28%),
