@@ -10,6 +10,10 @@ let attendingAgentsChoices = null;
 let eventSearchChoices = null;
 
 document.addEventListener("DOMContentLoaded", async () => {
+  window.addEventListener("load", () => {
+    document.documentElement.style.visibility = "visible";
+  });
+  
   sb = window.supabaseClient;
 
   if (!sb) {
