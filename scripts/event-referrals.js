@@ -3,6 +3,9 @@ let me = null;
 let isAdmin = false;
 let currentEventId = null;
 
+const BLOCKED_AGENT_ID = "906a707c-69bb-4e6e-be1d-1415f45561c4";
+const PAGE_SIZE = 10;
+
 let agentsCache = [];
 let prospectsCache = [];
 let allProspectsCache = [];
@@ -11,39 +14,10 @@ let agentMap = new Map();
 
 let attendingAgentsChoices = null;
 let eventSearchChoices = null;
+let workspaceAddAgentsChoices = null;
 let eventProspectsChannel = null;
 
-function unsubscribeFromEventProspects() {
-  if (eventProspectsChannel) {
-    sb.removeChannel(eventProspectsChannel);
-    eventProspectsChannel = null;
-  }
-}
-
-function subscribeToEventProspects(eventId) {
-  unsubscribeFromEventProspects();
-
-  if (!eventId) return;
-
-  eventProspectsChannel = sb
-    .channel(`event-prospects-${eventId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "event_prospects",
-        filter: `event_id=eq.${eventId}`
-      },
-      async () => {
-        await loadEventWorkspace();
-        await loadTodaysEvents();
-      }
-    )
-    .subscribe((status) => {
-      console.log("Realtime event_prospects status:", status);
-    });
-}
+let currentPage = 1;
 
 document.addEventListener("DOMContentLoaded", async () => {
   document.documentElement.style.visibility = "visible";
@@ -56,6 +30,7 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   initUI();
+  setupWorkspaceLayout();
   await initSession();
   await loadTodaysEvents();
 });
@@ -96,16 +71,14 @@ async function initSession() {
           profile = data;
           break;
         }
-        if (error) {
-          profileError = error;
-        }
+        if (error) profileError = error;
       } catch (err) {
         profileError = err;
       }
     }
 
     if (!profile) {
-      console.warn("No matching agent profile found. Falling back to public mode.", profileError);
+      console.warn("No matching agent profile found.", profileError);
       setPublicMode();
       return;
     }
@@ -132,11 +105,21 @@ function setPublicMode() {
   const nav = document.getElementById("navcontainer");
   const menu = document.getElementById("mobile-menu");
   const switchWrap = document.getElementById("mode-switch-wrap");
+  const hero = document.querySelector(".event-page-head");
+  const pageTitle = document.querySelector(".event-page-shell");
 
   if (loginLink) loginLink.style.display = "block";
   if (nav) nav.classList.add("hidden");
-  if (menu) menu.classList.add("hidden");
+  if (menu) {
+    menu.classList.add("hidden");
+    menu.style.display = "none";
+  }
   if (switchWrap) switchWrap.style.display = "none";
+  if (hero) hero.style.display = "none";
+
+  if (pageTitle) {
+    pageTitle.style.gap = "0";
+  }
 
   switchMode("prospect");
 }
@@ -146,11 +129,16 @@ function enableAgentMode() {
   const nav = document.getElementById("navcontainer");
   const menu = document.getElementById("mobile-menu");
   const switchWrap = document.getElementById("mode-switch-wrap");
+  const hero = document.querySelector(".event-page-head");
 
   if (loginLink) loginLink.style.display = "none";
   if (nav) nav.classList.remove("hidden");
-  if (menu) menu.classList.add("hidden");
+  if (menu) {
+    menu.classList.add("hidden");
+    menu.style.display = "none";
+  }
   if (switchWrap) switchWrap.style.display = "flex";
+  if (hero) hero.style.display = "block";
 }
 
 function initUI() {
@@ -161,8 +149,8 @@ function initUI() {
 
   document.getElementById("show-create-event-btn")?.addEventListener("click", () => showAgentScreen("create"));
   document.getElementById("show-search-event-btn")?.addEventListener("click", async () => {
-    await loadAgentEvents();
     showAgentScreen("search");
+    await loadAgentEvents();
   });
 
   document.getElementById("back-to-agent-start-from-create")?.addEventListener("click", () => showAgentScreen("start"));
@@ -172,6 +160,8 @@ function initUI() {
     currentEventId = null;
     prospectsCache = [];
     allProspectsCache = [];
+    eventAgentsCache = [];
+    currentPage = 1;
     showAgentScreen("start");
   });
 
@@ -179,15 +169,88 @@ function initUI() {
   document.getElementById("open-selected-event-btn")?.addEventListener("click", openSelectedEvent);
 
   document.getElementById("randomize-allocations-btn")?.addEventListener("click", randomizeAllocations);
-  document.getElementById("agree-allocation-btn")?.addEventListener("click", agreeAllocation);
-  document.getElementById("opt-out-allocation-btn")?.addEventListener("click", optOutAllocation);
-  document.getElementById("refresh-event-btn")?.addEventListener("click", loadEventWorkspace);
-  document.getElementById("finalize-event-btn")?.addEventListener("click", finalizeEvent);
+  document.getElementById("agree-allocation-btn")?.addEventListener("click", handleAgreementButtonClick);
 
   document.getElementById("event-prospect-search")?.addEventListener("input", filterProspects);
 
+  bindInputFormatting();
   wireMobileMenu();
   initPickers();
+}
+
+function setupWorkspaceLayout() {
+  const refreshBtn = document.getElementById("refresh-event-btn");
+  const finalizeBtn = document.getElementById("finalize-event-btn");
+  const optOutBtn = document.getElementById("opt-out-allocation-btn");
+  const agreeBtn = document.getElementById("agree-allocation-btn");
+
+  if (refreshBtn) refreshBtn.style.display = "none";
+  if (finalizeBtn) finalizeBtn.style.display = "none";
+  if (optOutBtn) optOutBtn.style.display = "none";
+
+  const toolbarRight = document.querySelector(".toolbar-right");
+  if (toolbarRight) {
+    toolbarRight.style.display = "flex";
+    toolbarRight.style.flexWrap = "wrap";
+    toolbarRight.style.gap = "0.75rem";
+  }
+
+  const prospectsList = document.getElementById("event-prospects-list");
+  const summaryGrid = document.querySelector(".workspace-summary-grid");
+  const counterCard = document.querySelector(".allocation-counter-card");
+  const agreeBottomWrapId = "workspace-bottom-agree-wrap";
+  let bottomWrap = document.getElementById(agreeBottomWrapId);
+
+  if (!bottomWrap && prospectsList) {
+    bottomWrap = document.createElement("div");
+    bottomWrap.id = agreeBottomWrapId;
+    bottomWrap.style.display = "flex";
+    bottomWrap.style.justifyContent = "center";
+    bottomWrap.style.marginTop = "1rem";
+    bottomWrap.style.marginBottom = "1rem";
+    prospectsList.insertAdjacentElement("afterend", bottomWrap);
+  }
+
+  if (agreeBtn && bottomWrap) {
+    agreeBtn.style.width = "auto";
+    agreeBtn.style.minWidth = "220px";
+    bottomWrap.appendChild(agreeBtn);
+  }
+
+  if (prospectsList && summaryGrid && counterCard) {
+    const parent = prospectsList.parentElement;
+    parent.appendChild(summaryGrid);
+    parent.appendChild(counterCard);
+  }
+
+  injectWorkspaceAgentAdder();
+}
+
+function injectWorkspaceAgentAdder() {
+  const workspace = document.getElementById("agent-event-workspace");
+  const toolbarLeft = document.querySelector(".toolbar-left");
+  if (!workspace || !toolbarLeft) return;
+  if (document.getElementById("workspace-agent-adder")) return;
+
+  const wrap = document.createElement("div");
+  wrap.id = "workspace-agent-adder";
+  wrap.style.display = "flex";
+  wrap.style.alignItems = "center";
+  wrap.style.gap = "0.75rem";
+  wrap.style.flexWrap = "wrap";
+  wrap.style.width = "100%";
+  wrap.style.marginTop = "0.75rem";
+
+  wrap.innerHTML = `
+    <div style="min-width:260px;flex:1 1 320px;">
+      <select id="workspace-add-agents" multiple></select>
+    </div>
+    <button id="workspace-add-agents-btn" class="secondary-btn" type="button">Add Agents</button>
+  `;
+
+  toolbarLeft.appendChild(wrap);
+
+  document.getElementById("workspace-add-agents-btn")?.addEventListener("click", addAgentsToCurrentEvent);
 }
 
 function switchMode(mode) {
@@ -227,13 +290,33 @@ function wireMobileMenu() {
   const toolkitSubmenu = document.getElementById("toolkit-submenu");
 
   if (toggle && menu) {
-    toggle.addEventListener("click", () => {
-      menu.classList.toggle("hidden");
+    toggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const isHidden = menu.classList.contains("hidden");
+      if (isHidden) {
+        menu.classList.remove("hidden");
+        menu.style.display = "block";
+      } else {
+        menu.classList.add("hidden");
+        menu.style.display = "none";
+      }
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!menu.contains(e.target) && !toggle.contains(e.target)) {
+        menu.classList.add("hidden");
+        menu.style.display = "none";
+      }
     });
   }
 
   if (toolkitToggle && toolkitSubmenu) {
-    toolkitToggle.addEventListener("click", () => {
+    toolkitToggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
       const isHidden = toolkitSubmenu.hasAttribute("hidden");
       if (isHidden) {
         toolkitSubmenu.removeAttribute("hidden");
@@ -256,6 +339,62 @@ function initPickers() {
       time_24hr: false
     });
   }
+}
+
+function bindInputFormatting() {
+  document.addEventListener("input", (e) => {
+    const target = e.target;
+    if (!target) return;
+
+    if (
+      target.id === "prospect-phone" ||
+      target.dataset.field === "phone"
+    ) {
+      target.value = formatPhone(target.value);
+    }
+
+    if (
+      target.id === "prospect-email" ||
+      target.dataset.field === "email"
+    ) {
+      target.value = normalizeEmail(target.value);
+    }
+  });
+
+  document.addEventListener("change", (e) => {
+    const target = e.target;
+    if (!target) return;
+
+    if (
+      target.id === "prospect-phone" ||
+      target.dataset.field === "phone"
+    ) {
+      target.value = formatPhone(target.value);
+    }
+
+    if (
+      target.id === "prospect-email" ||
+      target.dataset.field === "email"
+    ) {
+      target.value = normalizeEmail(target.value);
+    }
+  });
+}
+
+function formatPhone(value = "") {
+  const digits = String(value).replace(/\D/g, "").slice(0, 10);
+  const a = digits.slice(0, 3);
+  const b = digits.slice(3, 6);
+  const c = digits.slice(6, 10);
+
+  if (!a) return "";
+  if (digits.length < 4) return `(${a}`;
+  if (digits.length < 7) return `(${a}) ${b}`;
+  return `(${a}) ${b}-${c}`;
+}
+
+function normalizeEmail(value = "") {
+  return String(value).replace(/\s+/g, "").toLowerCase();
 }
 
 async function loadTodaysEvents() {
@@ -291,6 +430,7 @@ async function loadAgentsForEventForm() {
     const { data, error } = await sb
       .from("agents")
       .select("id, first_name, last_name")
+      .neq("id", BLOCKED_AGENT_ID)
       .order("first_name", { ascending: true });
 
     if (error) {
@@ -331,6 +471,81 @@ async function loadAgentsForEventForm() {
   }
 }
 
+async function loadAvailableAgentsForCurrentEvent() {
+  const select = document.getElementById("workspace-add-agents");
+  if (!select || !currentEventId) return;
+
+  const currentIds = new Set(
+    (eventAgentsCache || [])
+      .map((ea) => ea.agent_id)
+      .filter((id) => id && id !== BLOCKED_AGENT_ID)
+  );
+
+  select.innerHTML = "";
+
+  const available = agentsCache.filter((agent) => !currentIds.has(agent.id));
+
+  available.forEach((agent) => {
+    const fullName = `${agent.first_name || ""} ${agent.last_name || ""}`.trim() || agent.id;
+    const option = document.createElement("option");
+    option.value = agent.id;
+    option.textContent = fullName;
+    select.appendChild(option);
+  });
+
+  if (workspaceAddAgentsChoices) {
+    workspaceAddAgentsChoices.destroy();
+  }
+
+  if (window.Choices) {
+    workspaceAddAgentsChoices = new Choices(select, {
+      removeItemButton: true,
+      searchEnabled: true,
+      shouldSort: false,
+      placeholder: true,
+      placeholderValue: available.length ? "Add more agents to this event" : "No more agents available"
+    });
+  }
+}
+
+async function addAgentsToCurrentEvent() {
+  if (!currentEventId) return;
+
+  const selectedIds = workspaceAddAgentsChoices
+    ? workspaceAddAgentsChoices.getValue(true)
+    : Array.from(document.getElementById("workspace-add-agents")?.selectedOptions || []).map((o) => o.value);
+
+  const cleanIds = [...new Set((selectedIds || []).filter((id) => id && id !== BLOCKED_AGENT_ID))];
+
+  if (!cleanIds.length) {
+    setWorkspaceMessage("Select at least one agent to add.", true);
+    return;
+  }
+
+  try {
+    const rows = cleanIds.map((agentId) => ({
+      event_id: currentEventId,
+      agent_id: agentId,
+      role: "participant",
+      is_active: true
+    }));
+
+    const { error } = await sb.from("event_agents").insert(rows);
+
+    if (error) {
+      console.error("addAgentsToCurrentEvent error:", error);
+      setWorkspaceMessage("Could not add agents to this event.", true);
+      return;
+    }
+
+    setWorkspaceMessage("Agents added to the event.", false);
+    await loadEventWorkspace();
+  } catch (err) {
+    console.error("addAgentsToCurrentEvent failed:", err);
+    setWorkspaceMessage("Could not add agents to this event.", true);
+  }
+}
+
 async function submitProspect(e) {
   e.preventDefault();
 
@@ -341,8 +556,8 @@ async function submitProspect(e) {
   const firstName = document.getElementById("prospect-first-name")?.value.trim();
   const lastName = document.getElementById("prospect-last-name")?.value.trim();
   const ageRaw = document.getElementById("prospect-age")?.value.trim();
-  const phone = document.getElementById("prospect-phone")?.value.trim();
-  const email = document.getElementById("prospect-email")?.value.trim();
+  const phone = formatPhone(document.getElementById("prospect-phone")?.value.trim());
+  const email = normalizeEmail(document.getElementById("prospect-email")?.value.trim());
   const lookingFor = document.getElementById("prospect-looking-for")?.value;
   const tcpaText = document.getElementById("prospect-tcpa-text")?.innerText?.trim() || "";
 
@@ -379,7 +594,7 @@ async function submitProspect(e) {
       setFormMessage("prospect-form-message", "Submitted successfully!", false);
       e.target.reset();
       await loadTodaysEvents();
-      
+
       if (currentEventId && currentEventId === eventId) {
         await loadEventWorkspace();
       }
@@ -434,7 +649,13 @@ async function createEvent(e) {
       return;
     }
 
-    const uniqueAgentIds = [...new Set([me.id, ...attendingAgentIds.filter(Boolean)])];
+    const uniqueAgentIds = [
+      ...new Set(
+        [me.id, ...attendingAgentIds]
+          .filter(Boolean)
+          .filter((id) => id !== BLOCKED_AGENT_ID)
+      )
+    ];
 
     const eventAgentRows = uniqueAgentIds.map((agentId) => ({
       event_id: event.id,
@@ -454,6 +675,7 @@ async function createEvent(e) {
 
     setFormMessage("create-event-message", "Event created successfully.", false);
     currentEventId = event.id;
+    currentPage = 1;
 
     await loadTodaysEvents();
     await loadAgentEvents();
@@ -472,6 +694,8 @@ async function loadAgentEvents() {
   if (!select) return;
 
   try {
+    setFormMessage("agent-search-message", "", false);
+
     let data = [];
     let error = null;
 
@@ -480,6 +704,7 @@ async function loadAgentEvents() {
         .from("events")
         .select("id, event_name, city, state, event_date, event_time, status")
         .order("event_date", { ascending: false });
+
       data = res.data || [];
       error = res.error;
     } else {
@@ -500,6 +725,7 @@ async function loadAgentEvents() {
             .select("id, event_name, city, state, event_date, event_time, status")
             .in("id", eventIds)
             .order("event_date", { ascending: false });
+
           data = res.data || [];
           error = res.error;
         } else {
@@ -514,7 +740,17 @@ async function loadAgentEvents() {
       return;
     }
 
-    select.innerHTML = '<option value="">Select an event</option>';
+    if (eventSearchChoices) {
+      eventSearchChoices.destroy();
+      eventSearchChoices = null;
+    }
+
+    select.innerHTML = "";
+
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = data.length ? "Select an event" : "No events available";
+    select.appendChild(placeholder);
 
     data.forEach((event) => {
       const option = document.createElement("option");
@@ -523,17 +759,18 @@ async function loadAgentEvents() {
       select.appendChild(option);
     });
 
-    if (eventSearchChoices) {
-      eventSearchChoices.destroy();
-    }
-
     if (window.Choices) {
       eventSearchChoices = new Choices(select, {
         searchEnabled: true,
         shouldSort: false,
         placeholder: true,
-        placeholderValue: "Search assigned events"
+        placeholderValue: "Search assigned events",
+        itemSelectText: ""
       });
+    }
+
+    if (!data.length) {
+      setFormMessage("agent-search-message", "No assigned events found yet.", false);
     }
   } catch (err) {
     console.error("loadAgentEvents failed:", err);
@@ -557,12 +794,44 @@ function openSelectedEvent() {
   }
 
   currentEventId = value;
+  currentPage = 1;
   showAgentScreen("workspace");
   loadEventWorkspace();
 }
 
+function unsubscribeFromEventProspects() {
+  if (eventProspectsChannel) {
+    sb.removeChannel(eventProspectsChannel);
+    eventProspectsChannel = null;
+  }
+}
+
+function subscribeToEventProspects(eventId) {
+  unsubscribeFromEventProspects();
+
+  if (!eventId) return;
+
+  eventProspectsChannel = sb
+    .channel(`event-prospects-${eventId}`)
+    .on(
+      "postgres_changes",
+      {
+        event: "*",
+        schema: "public",
+        table: "event_prospects",
+        filter: `event_id=eq.${eventId}`
+      },
+      async () => {
+        await loadEventWorkspace();
+        await loadTodaysEvents();
+      }
+    )
+    .subscribe();
+}
+
 async function loadEventWorkspace() {
   if (!currentEventId) return;
+
   subscribeToEventProspects(currentEventId);
 
   try {
@@ -594,7 +863,7 @@ async function loadEventWorkspace() {
       console.error("loadEventWorkspace event_agents error:", eventAgentsError);
     }
 
-    eventAgentsCache = eventAgents || [];
+    eventAgentsCache = (eventAgents || []).filter((ea) => ea.agent_id !== BLOCKED_AGENT_ID);
 
     const { data: prospects, error: prospectsError } = await sb
       .from("event_prospects")
@@ -612,6 +881,7 @@ async function loadEventWorkspace() {
     allProspectsCache = prospects || [];
     prospectsCache = [...allProspectsCache];
 
+    await loadAvailableAgentsForCurrentEvent();
     renderProspects();
     updateCounters();
     updateAgreementStatus();
@@ -629,11 +899,18 @@ function renderProspects() {
 
   if (!prospectsCache.length) {
     container.innerHTML = `<div class="empty-state">No prospects found.</div>`;
+    renderPagination();
     document.getElementById("workspace-total-prospects").textContent = "0";
     return;
   }
 
-  prospectsCache.forEach((prospect) => {
+  const totalPages = Math.max(1, Math.ceil(prospectsCache.length / PAGE_SIZE));
+  if (currentPage > totalPages) currentPage = totalPages;
+
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const pageItems = prospectsCache.slice(start, start + PAGE_SIZE);
+
+  pageItems.forEach((prospect) => {
     const assignedName = getAgentName(prospect.assigned_to) || "Unassigned";
     const notesValue = prospect.notes || "";
 
@@ -654,7 +931,10 @@ function renderProspects() {
         </div>
 
         <div class="prospect-assignee">
-          Assigned: ${escapeHtml(assignedName)}
+          <label style="display:block;font-size:.82rem;margin-bottom:.25rem;color:#666879;">Assign</label>
+          <select class="inline-assign-select">
+            ${buildAssignedAgentOptions(prospect.assigned_to)}
+          </select>
         </div>
 
         <div class="prospect-toggle-icon">
@@ -717,9 +997,19 @@ function renderProspects() {
 
     const summary = wrapper.querySelector(".prospect-summary");
     const saveBtn = wrapper.querySelector(".save-prospect-btn");
+    const inlineAssign = wrapper.querySelector(".inline-assign-select");
 
     summary.addEventListener("click", () => {
       wrapper.classList.toggle("open");
+    });
+
+    inlineAssign.addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+
+    inlineAssign.addEventListener("change", async (e) => {
+      const newAgentId = e.target.value || null;
+      await assignProspectDirectly(prospect.id, newAgentId);
     });
 
     saveBtn.addEventListener("click", async () => {
@@ -729,7 +1019,69 @@ function renderProspects() {
     container.appendChild(wrapper);
   });
 
-  document.getElementById("workspace-total-prospects").textContent = String(prospectsCache.length);
+  renderPagination();
+  document.getElementById("workspace-total-prospects").textContent = String(allProspectsCache.length);
+}
+
+function renderPagination() {
+  let pagination = document.getElementById("event-prospects-pagination");
+  const list = document.getElementById("event-prospects-list");
+  if (!list) return;
+
+  if (!pagination) {
+    pagination = document.createElement("div");
+    pagination.id = "event-prospects-pagination";
+    pagination.style.display = "flex";
+    pagination.style.justifyContent = "center";
+    pagination.style.alignItems = "center";
+    pagination.style.gap = "0.75rem";
+    pagination.style.marginTop = "1rem";
+    list.insertAdjacentElement("afterend", pagination);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(prospectsCache.length / PAGE_SIZE));
+
+  pagination.innerHTML = `
+    <button type="button" class="ghost-btn" id="page-prev-btn" ${currentPage <= 1 ? "disabled" : ""}>Previous</button>
+    <span style="font-weight:700;color:#353468;">Page ${currentPage} of ${totalPages}</span>
+    <button type="button" class="ghost-btn" id="page-next-btn" ${currentPage >= totalPages ? "disabled" : ""}>Next</button>
+  `;
+
+  document.getElementById("page-prev-btn")?.addEventListener("click", () => {
+    if (currentPage > 1) {
+      currentPage -= 1;
+      renderProspects();
+    }
+  });
+
+  document.getElementById("page-next-btn")?.addEventListener("click", () => {
+    if (currentPage < totalPages) {
+      currentPage += 1;
+      renderProspects();
+    }
+  });
+}
+
+async function assignProspectDirectly(prospectId, assignedTo) {
+  try {
+    const { error } = await sb.rpc("assign_event_prospect", {
+      p_prospect_id: prospectId,
+      p_assigned_to: assignedTo,
+      p_assigned_by: me.id
+    });
+
+    if (error) {
+      console.error("assignProspectDirectly error:", error);
+      setWorkspaceMessage("Could not update assignment.", true);
+      return;
+    }
+
+    setWorkspaceMessage("Assignment updated.", false);
+    await loadEventWorkspace();
+  } catch (err) {
+    console.error("assignProspectDirectly failed:", err);
+    setWorkspaceMessage("Could not update assignment.", true);
+  }
 }
 
 async function saveProspectChanges(prospectId, wrapper) {
@@ -744,6 +1096,10 @@ async function saveProspectChanges(prospectId, wrapper) {
       value = value.trim() === "" ? null : parseInt(value, 10);
     } else {
       value = value.trim();
+
+      if (key === "phone") value = formatPhone(value);
+      if (key === "email") value = normalizeEmail(value);
+
       if (["email", "notes", "assigned_to"].includes(key) && value === "") {
         value = null;
       }
@@ -803,10 +1159,50 @@ async function randomizeAllocations() {
   }
 }
 
-async function agreeAllocation() {
+async function handleAgreementButtonClick() {
   if (!currentEventId || !me?.id) return;
 
+  const myRow = eventAgentsCache.find((ea) => ea.agent_id === me.id);
+  const requiredAgents = eventAgentsCache.filter((ea) => ea.is_active && !ea.allocation_opt_out);
+  const everyoneAgreed = requiredAgents.length > 0 && requiredAgents.every((ea) => ea.allocation_agreed);
+
   try {
+    if (myRow?.allocation_opt_out) {
+      const { error } = await sb.rpc("set_event_agent_opt_out", {
+        p_event_id: currentEventId,
+        p_agent_id: me.id,
+        p_opt_out: false
+      });
+
+      if (error) {
+        console.error("rejoin error:", error);
+        setWorkspaceMessage("Could not rejoin review.", true);
+        return;
+      }
+
+      setWorkspaceMessage("You rejoined the allocation review.", false);
+      await loadEventWorkspace();
+      return;
+    }
+
+    if (myRow?.allocation_agreed && !everyoneAgreed) {
+      const { error } = await sb.rpc("set_event_agent_opt_out", {
+        p_event_id: currentEventId,
+        p_agent_id: me.id,
+        p_opt_out: true
+      });
+
+      if (error) {
+        console.error("opt out error:", error);
+        setWorkspaceMessage("Could not opt out.", true);
+        return;
+      }
+
+      setWorkspaceMessage("You opted out of the remaining agreement review.", false);
+      await loadEventWorkspace();
+      return;
+    }
+
     const { error } = await sb.rpc("set_event_agent_agreement", {
       p_event_id: currentEventId,
       p_agent_id: me.id,
@@ -814,48 +1210,28 @@ async function agreeAllocation() {
     });
 
     if (error) {
-      console.error("agreeAllocation error:", error);
+      console.error("agree error:", error);
       setWorkspaceMessage("Could not record your agreement.", true);
       return;
     }
 
     setWorkspaceMessage("Your agreement has been recorded.", false);
     await loadEventWorkspace();
+    await autoFinalizeIfReady();
   } catch (err) {
-    console.error("agreeAllocation failed:", err);
-    setWorkspaceMessage("Could not record your agreement.", true);
+    console.error("handleAgreementButtonClick failed:", err);
+    setWorkspaceMessage("Could not update agreement status.", true);
   }
 }
 
-async function optOutAllocation() {
+async function autoFinalizeIfReady() {
   if (!currentEventId || !me?.id) return;
 
-  try {
-    const { error } = await sb.rpc("set_event_agent_opt_out", {
-      p_event_id: currentEventId,
-      p_agent_id: me.id,
-      p_opt_out: true
-    });
+  const requiredAgents = eventAgentsCache.filter((ea) => ea.is_active && !ea.allocation_opt_out);
+  const everyoneAgreed = requiredAgents.length > 0 && requiredAgents.every((ea) => ea.allocation_agreed);
+  const allAssigned = allProspectsCache.every((p) => !!p.assigned_to);
 
-    if (error) {
-      console.error("optOutAllocation error:", error);
-      setWorkspaceMessage("Could not update your opt-out status.", true);
-      return;
-    }
-
-    setWorkspaceMessage("You have opted out of the allocation agreement requirement.", false);
-    await loadEventWorkspace();
-  } catch (err) {
-    console.error("optOutAllocation failed:", err);
-    setWorkspaceMessage("Could not update your opt-out status.", true);
-  }
-}
-
-async function finalizeEvent() {
-  if (!currentEventId || !me?.id) return;
-
-  const confirmed = window.confirm("Finalize this event and create Contacts + Leads from all allocated prospects?");
-  if (!confirmed) return;
+  if (!everyoneAgreed || !allAssigned) return;
 
   try {
     const { data, error } = await sb.rpc("finalize_event_allocations", {
@@ -865,8 +1241,8 @@ async function finalizeEvent() {
     });
 
     if (error) {
-      console.error("finalizeEvent error:", error);
-      setWorkspaceMessage(error.message || "Could not finalize the event.", true);
+      console.error("autoFinalizeIfReady error:", error);
+      setWorkspaceMessage(error.message || "Could not auto-finalize the event.", true);
       return;
     }
 
@@ -879,8 +1255,8 @@ async function finalizeEvent() {
     await loadAgentEvents();
     await loadEventWorkspace();
   } catch (err) {
-    console.error("finalizeEvent failed:", err);
-    setWorkspaceMessage("Could not finalize the event.", true);
+    console.error("autoFinalizeIfReady failed:", err);
+    setWorkspaceMessage("Could not auto-finalize the event.", true);
   }
 }
 
@@ -889,6 +1265,7 @@ function filterProspects(e) {
 
   if (!term) {
     prospectsCache = [...allProspectsCache];
+    currentPage = 1;
     renderProspects();
     return;
   }
@@ -909,6 +1286,7 @@ function filterProspects(e) {
     return haystack.includes(term);
   });
 
+  currentPage = 1;
   renderProspects();
 }
 
@@ -937,50 +1315,55 @@ function updateCounters() {
     container.appendChild(div);
   });
 
-  if (!eventAgentsCache.length && Object.keys(counts).length) {
-    Object.entries(counts).forEach(([agentId, count]) => {
-      const div = document.createElement("div");
-      div.className = "counter-pill";
-      div.innerHTML = `
-        <span class="counter-pill-name">${escapeHtml(getAgentName(agentId) || agentId)}</span>
-        <span class="counter-pill-count">${count}</span>
-      `;
-      container.appendChild(div);
-    });
-  }
-
   document.getElementById("workspace-total-prospects").textContent = String(allProspectsCache.length);
 }
 
 function updateAgreementStatus() {
   const el = document.getElementById("allocation-agreement-status");
-  if (!el) return;
+  const agreeBtn = document.getElementById("agree-allocation-btn");
+  if (!el || !agreeBtn) return;
 
   const activeRequiredAgents = eventAgentsCache.filter((ea) => ea.is_active && !ea.allocation_opt_out);
   const agreedCount = activeRequiredAgents.filter((ea) => ea.allocation_agreed).length;
+  const myRow = eventAgentsCache.find((ea) => ea.agent_id === me?.id);
+  const allAssigned = allProspectsCache.every((p) => !!p.assigned_to);
+  const everyoneAgreed = activeRequiredAgents.length > 0 && activeRequiredAgents.every((ea) => ea.allocation_agreed);
 
   if (!activeRequiredAgents.length) {
     el.textContent = "No required agent approvals are pending.";
-    return;
+  } else {
+    const names = activeRequiredAgents
+      .map((ea) => `${getAgentName(ea.agent_id)}: ${ea.allocation_agreed ? "Agreed" : "Pending"}`)
+      .join(" • ");
+
+    el.textContent = `${agreedCount}/${activeRequiredAgents.length} required agents agreed. ${names}${allAssigned ? "" : " • Some leads are still unassigned."}`;
   }
 
-  const names = activeRequiredAgents
-    .map((ea) => `${getAgentName(ea.agent_id)}: ${ea.allocation_agreed ? "Agreed" : "Pending"}`)
-    .join(" • ");
+  if (myRow?.allocation_opt_out) {
+    agreeBtn.textContent = "Rejoin Review";
+  } else if (myRow?.allocation_agreed && !everyoneAgreed) {
+    agreeBtn.textContent = "Opt Out";
+  } else if (everyoneAgreed) {
+    agreeBtn.textContent = "All Agents Agreed";
+  } else {
+    agreeBtn.textContent = "Agree to Split";
+  }
 
-  el.textContent = `${agreedCount}/${activeRequiredAgents.length} required agents agreed. ${names}`;
+  agreeBtn.disabled = everyoneAgreed && allAssigned;
 }
 
 function buildAssignedAgentOptions(selectedId) {
   const options = ['<option value="">Unassigned</option>'];
 
-  eventAgentsCache.forEach((ea) => {
-    const agentId = ea.agent_id;
-    const selected = selectedId === agentId ? "selected" : "";
-    options.push(
-      `<option value="${escapeAttr(agentId)}" ${selected}>${escapeHtml(getAgentName(agentId) || agentId)}</option>`
-    );
-  });
+  eventAgentsCache
+    .filter((ea) => ea.agent_id !== BLOCKED_AGENT_ID)
+    .forEach((ea) => {
+      const agentId = ea.agent_id;
+      const selected = selectedId === agentId ? "selected" : "";
+      options.push(
+        `<option value="${escapeAttr(agentId)}" ${selected}>${escapeHtml(getAgentName(agentId) || agentId)}</option>`
+      );
+    });
 
   return options.join("");
 }
