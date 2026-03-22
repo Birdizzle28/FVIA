@@ -1,41 +1,13 @@
-html,
-body {
-  margin: 0;
-  padding: 0;
-}
-
 *,
 *::before,
 *::after {
   box-sizing: border-box;
 }
 
-.event-card,
-.event-form-grid,
-.form-row,
-.summary-card,
-.prospect-detail-block,
-.choices,
-.choices__inner {
-  min-width: 0;
-}
-
-.form-row input,
-.form-row select,
-.form-row textarea,
-.summary-card input,
-.prospect-detail-block input,
-.prospect-detail-block select,
-.prospect-detail-block textarea {
-  max-width: 100%;
-}
-
-.choices {
-  width: 100%;
-}
-
-.choices__inner {
-  width: 100%;
+html,
+body {
+  margin: 0;
+  padding: 0;
 }
 
 body.event-referrals-page {
@@ -44,6 +16,7 @@ body.event-referrals-page {
     linear-gradient(180deg, #f7f7fb 0%, #f1f2f8 100%);
   color: #222;
   min-height: 100vh;
+  position: relative;
 }
 
 .event-main {
@@ -56,6 +29,7 @@ body.event-referrals-page {
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  min-width: 0;
 }
 
 .event-page-head {
@@ -122,6 +96,7 @@ body.event-referrals-page {
 
 .mode-panel {
   display: block;
+  min-width: 0;
 }
 
 .event-card {
@@ -130,6 +105,8 @@ body.event-referrals-page {
   border-radius: 24px;
   padding: 1.25rem;
   box-shadow: 0 18px 36px rgba(0, 0, 0, 0.08);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .card-head {
@@ -158,12 +135,14 @@ body.event-referrals-page {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 1rem;
+  min-width: 0;
 }
 
 .form-row {
   display: flex;
   flex-direction: column;
   gap: 0.45rem;
+  min-width: 0;
 }
 
 .form-row-full {
@@ -171,7 +150,8 @@ body.event-referrals-page {
 }
 
 .form-row label,
-.summary-card label {
+.summary-card label,
+.prospect-detail-block label {
   font-size: 0.95rem;
   font-weight: 700;
   color: #353468;
@@ -185,8 +165,13 @@ body.event-referrals-page {
 .form-row input,
 .form-row select,
 .form-row textarea,
-.summary-card input {
+.summary-card input,
+.prospect-detail-block input,
+.prospect-detail-block select,
+.prospect-detail-block textarea {
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   border: 1px solid rgba(53, 52, 104, 0.14);
   background: #fff;
   color: #222;
@@ -198,7 +183,8 @@ body.event-referrals-page {
   transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
-.form-row textarea {
+.form-row textarea,
+.prospect-detail-block textarea {
   min-height: 110px;
   resize: vertical;
 }
@@ -206,7 +192,10 @@ body.event-referrals-page {
 .form-row input:focus,
 .form-row select:focus,
 .form-row textarea:focus,
-.summary-card input:focus {
+.summary-card input:focus,
+.prospect-detail-block input:focus,
+.prospect-detail-block select:focus,
+.prospect-detail-block textarea:focus {
   border-color: #ed9ea5;
   box-shadow: 0 0 0 4px rgba(237, 158, 165, 0.16);
 }
@@ -223,23 +212,6 @@ body.event-referrals-page {
   line-height: 1.6;
   color: #3e3e49;
   font-size: 0.95rem;
-}
-
-.checkbox-line {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.8rem;
-  margin-top: 1rem;
-  color: #353468;
-  font-weight: 700;
-  cursor: pointer;
-}
-
-.checkbox-line input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  min-width: 18px;
-  margin-top: 2px;
 }
 
 .primary-btn,
@@ -280,23 +252,19 @@ body.event-referrals-page {
   border: 1px solid rgba(53, 52, 104, 0.12);
 }
 
-.success-btn {
-  background: #1f8f55;
-  color: #fff;
-  box-shadow: 0 12px 22px rgba(31, 143, 85, 0.2);
-}
-
-.danger-ghost {
-  color: #a12727;
-  background: #fff3f3;
-  border-color: rgba(161, 39, 39, 0.14);
-}
-
 .primary-btn:hover,
 .secondary-btn:hover,
 .ghost-btn:hover,
 .choice-card:hover {
   transform: translateY(-1px);
+}
+
+.primary-btn:disabled,
+.secondary-btn:disabled,
+.ghost-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .choice-grid {
@@ -340,6 +308,7 @@ body.event-referrals-page {
 .workspace-toolbar {
   display: flex;
   justify-content: space-between;
+  align-items: flex-start;
   gap: 1rem;
   flex-wrap: wrap;
   margin-bottom: 1rem;
@@ -350,13 +319,15 @@ body.event-referrals-page {
   display: flex;
   gap: 0.75rem;
   flex-wrap: wrap;
+  align-items: center;
 }
 
 .workspace-summary-grid {
   display: grid;
-  grid-template-columns: 1.8fr 1fr 0.8fr;
+  grid-template-columns: 1fr 1fr;
   gap: 1rem;
-  margin-bottom: 1rem;
+  margin-top: 1.25rem;
+  margin-bottom: 0;
 }
 
 .summary-card,
@@ -365,6 +336,7 @@ body.event-referrals-page {
   background: #fafafe;
   border: 1px solid rgba(53, 52, 104, 0.08);
   border-radius: 20px;
+  min-width: 0;
 }
 
 .summary-card {
@@ -382,11 +354,13 @@ body.event-referrals-page {
   font-size: 1.02rem;
   color: #2d2d39;
   line-height: 1.45;
+  word-break: break-word;
 }
 
 .allocation-counter-card {
   padding: 1rem;
-  margin-bottom: 1rem;
+  margin-top: 1rem;
+  margin-bottom: 0;
 }
 
 .counter-card-head {
@@ -408,11 +382,14 @@ body.event-referrals-page {
   border-radius: 16px;
   background: #fff;
   border: 1px solid rgba(53, 52, 104, 0.08);
+  min-width: 0;
 }
 
 .counter-pill-name {
   font-weight: 700;
   color: #353468;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .counter-pill-count {
@@ -423,6 +400,7 @@ body.event-referrals-page {
   min-width: 38px;
   text-align: center;
   font-weight: 700;
+  flex-shrink: 0;
 }
 
 .form-message {
@@ -443,6 +421,7 @@ body.event-referrals-page {
   display: flex;
   flex-direction: column;
   gap: 1rem;
+  min-width: 0;
 }
 
 .empty-state {
@@ -460,12 +439,13 @@ body.event-referrals-page {
 
 .prospect-summary {
   display: grid;
-  grid-template-columns: minmax(0, 2fr) minmax(160px, 1fr) minmax(160px, 1fr) auto;
+  grid-template-columns: minmax(0, 2fr) minmax(150px, 0.9fr) minmax(190px, 1fr) auto;
   gap: 0.9rem;
   align-items: center;
-  padding: 1rem 1rem;
+  padding: 1rem;
   cursor: pointer;
   background: linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(246, 247, 252, 0.95));
+  min-width: 0;
 }
 
 .prospect-summary:hover {
@@ -476,18 +456,21 @@ body.event-referrals-page {
   display: flex;
   flex-direction: column;
   gap: 0.25rem;
+  min-width: 0;
 }
 
 .prospect-name {
   font-size: 1.06rem;
   font-weight: 700;
   color: #353468;
+  overflow-wrap: anywhere;
 }
 
 .prospect-subline {
   color: #666879;
   font-size: 0.94rem;
   line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .prospect-chip {
@@ -495,12 +478,14 @@ body.event-referrals-page {
   align-items: center;
   justify-content: center;
   width: fit-content;
+  max-width: 100%;
   padding: 0.38rem 0.7rem;
   border-radius: 999px;
   font-size: 0.84rem;
   font-weight: 700;
   background: rgba(237, 158, 165, 0.18);
   color: #7b2f39;
+  text-align: center;
 }
 
 .prospect-assignee,
@@ -508,12 +493,32 @@ body.event-referrals-page {
   font-size: 0.94rem;
   color: #353468;
   font-weight: 700;
+  min-width: 0;
+}
+
+.prospect-assignee select.inline-assign-select {
+  width: 100%;
+  max-width: 100%;
+  border: 1px solid rgba(53, 52, 104, 0.14);
+  border-radius: 12px;
+  padding: 0.65rem 0.8rem;
+  font-family: inherit;
+  font-size: 0.92rem;
+  background: #fff;
+  color: #222;
+  outline: none;
+}
+
+.prospect-assignee select.inline-assign-select:focus {
+  border-color: #ed9ea5;
+  box-shadow: 0 0 0 4px rgba(237, 158, 165, 0.16);
 }
 
 .prospect-toggle-icon {
   color: #353468;
   font-size: 1.1rem;
   transition: transform 0.2s ease;
+  justify-self: end;
 }
 
 .prospect-item.open .prospect-toggle-icon {
@@ -524,6 +529,7 @@ body.event-referrals-page {
   display: none;
   padding: 0 1rem 1rem;
   border-top: 1px solid rgba(53, 52, 104, 0.08);
+  min-width: 0;
 }
 
 .prospect-item.open .prospect-details {
@@ -535,47 +541,18 @@ body.event-referrals-page {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.9rem;
   margin-top: 1rem;
+  min-width: 0;
 }
 
 .prospect-detail-block {
   display: flex;
   flex-direction: column;
   gap: 0.4rem;
+  min-width: 0;
 }
 
 .prospect-detail-block.full {
   grid-column: 1 / -1;
-}
-
-.prospect-detail-block label {
-  font-size: 0.92rem;
-  font-weight: 700;
-  color: #353468;
-}
-
-.prospect-detail-block input,
-.prospect-detail-block select,
-.prospect-detail-block textarea {
-  width: 100%;
-  border: 1px solid rgba(53, 52, 104, 0.14);
-  border-radius: 14px;
-  padding: 0.85rem 0.95rem;
-  font-family: inherit;
-  font-size: 0.98rem;
-  background: #fff;
-  outline: none;
-}
-
-.prospect-detail-block textarea {
-  min-height: 100px;
-  resize: vertical;
-}
-
-.prospect-detail-block input:focus,
-.prospect-detail-block select:focus,
-.prospect-detail-block textarea:focus {
-  border-color: #ed9ea5;
-  box-shadow: 0 0 0 4px rgba(237, 158, 165, 0.16);
 }
 
 .prospect-detail-actions {
@@ -612,10 +589,14 @@ body.event-referrals-page {
 }
 
 .choices {
+  width: 100%;
   margin-bottom: 0;
+  min-width: 0;
 }
 
 .choices__inner {
+  width: 100%;
+  min-width: 0;
   border-radius: 16px !important;
   border: 1px solid rgba(53, 52, 104, 0.14) !important;
   min-height: 54px !important;
@@ -625,6 +606,11 @@ body.event-referrals-page {
 
 .choices__input {
   background: transparent !important;
+}
+
+.choices__list--multiple .choices__item {
+  background: #353468 !important;
+  border: 1px solid #353468 !important;
 }
 
 .choices__list--dropdown,
@@ -642,10 +628,93 @@ body.event-referrals-page {
   background: #fff;
 }
 
+#workspace-agent-adder .choices__inner {
+  min-height: 50px !important;
+}
+
+#workspace-bottom-agree-wrap {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+#workspace-bottom-agree-wrap .primary-btn,
+#workspace-bottom-agree-wrap .secondary-btn,
+#workspace-bottom-agree-wrap .ghost-btn {
+  width: auto;
+  min-width: 220px;
+}
+
+#event-prospects-pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+#event-prospects-pagination .ghost-btn {
+  min-width: 110px;
+}
+
+#mobile-menu {
+  display: none;
+  position: absolute;
+  top: 80px;
+  right: 16px;
+  width: min(280px, calc(100vw - 32px));
+  background: #ffffff;
+  border: 1px solid rgba(53, 52, 104, 0.12);
+  border-radius: 18px;
+  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.14);
+  padding: 0.75rem;
+  z-index: 9999;
+}
+
+#mobile-menu a,
+#mobile-menu button.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  text-decoration: none;
+  background: transparent;
+  border: none;
+  color: #353468;
+  padding: 0.85rem 0.9rem;
+  border-radius: 12px;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-align: left;
+}
+
+#mobile-menu a:hover,
+#mobile-menu button.menu-item:hover {
+  background: rgba(53, 52, 104, 0.06);
+}
+
+#mobile-menu p,
+#mobile-menu span {
+  margin: 0;
+}
+
+#toolkit-submenu {
+  padding-left: 0.5rem;
+}
+
 .site-footer {
   text-align: center;
   padding: 1rem 0 2rem;
   color: #666879;
+}
+
+@media (max-width: 1200px) {
+  .prospect-summary {
+    grid-template-columns: minmax(0, 1.7fr) minmax(130px, 0.9fr) minmax(180px, 1fr) auto;
+  }
 }
 
 @media (max-width: 1100px) {
@@ -656,6 +725,10 @@ body.event-referrals-page {
   .prospect-summary {
     grid-template-columns: 1fr;
     align-items: flex-start;
+  }
+
+  .prospect-toggle-icon {
+    justify-self: start;
   }
 }
 
@@ -699,6 +772,13 @@ body.event-referrals-page {
   .event-card {
     padding: 1rem;
   }
+
+  #workspace-bottom-agree-wrap .primary-btn,
+  #workspace-bottom-agree-wrap .secondary-btn,
+  #workspace-bottom-agree-wrap .ghost-btn {
+    width: 100%;
+    min-width: 0;
+  }
 }
 
 @media (max-width: 560px) {
@@ -726,56 +806,13 @@ body.event-referrals-page {
     width: 100%;
   }
 
-  .checkbox-line {
-    align-items: flex-start;
+  .allocation-counter-list {
+    grid-template-columns: 1fr;
   }
-}
-#mobile-menu {
-  display: none;
-  position: absolute;
-  top: 80px;
-  right: 16px;
-  width: min(280px, calc(100vw - 32px));
-  background: #ffffff;
-  border: 1px solid rgba(53, 52, 104, 0.12);
-  border-radius: 18px;
-  box-shadow: 0 18px 36px rgba(0, 0, 0, 0.14);
-  padding: 0.75rem;
-  z-index: 9999;
-}
 
-#mobile-menu.hidden {
-  display: none !important;
-}
-
-#mobile-menu a,
-#mobile-menu button.menu-item {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  width: 100%;
-  text-decoration: none;
-  background: transparent;
-  border: none;
-  color: #353468;
-  padding: 0.85rem 0.9rem;
-  border-radius: 12px;
-  font: inherit;
-  font-weight: 700;
-  cursor: pointer;
-  text-align: left;
-}
-
-#mobile-menu a:hover,
-#mobile-menu button.menu-item:hover {
-  background: rgba(53, 52, 104, 0.06);
-}
-
-#mobile-menu p,
-#mobile-menu span {
-  margin: 0;
-}
-
-#toolkit-submenu {
-  padding-left: 0.5rem;
+  #mobile-menu {
+    top: 72px;
+    right: 10px;
+    width: calc(100vw - 20px);
+  }
 }
