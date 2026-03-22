@@ -30,6 +30,14 @@ body {
   max-width: 100%;
 }
 
+.choices {
+  width: 100%;
+}
+
+.choices__inner {
+  width: 100%;
+}
+
 body.event-referrals-page {
   background:
     radial-gradient(circle at top left, rgba(237, 158, 165, 0.12), transparent 28%),
