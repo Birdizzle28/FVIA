@@ -673,6 +673,14 @@ body.event-referrals-page {
   z-index: 9999;
 }
 
+#mobile-menu.open {
+  display: block;
+}
+
+#mobile-menu.hidden {
+  display: none !important;
+}
+
 #mobile-menu a,
 #mobile-menu button.menu-item {
   display: flex;
