@@ -672,6 +672,7 @@ body.event-referrals-page {
 #mobile-menu {
   position: fixed;
   top: 72px;
+  max-width: 300px;
   right: 0;
   width: min(300px, calc(100vw - 20px));
   background: #ed9ea5;
