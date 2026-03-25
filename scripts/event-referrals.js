@@ -112,7 +112,7 @@ function setPublicMode() {
   if (nav) nav.classList.add("hidden");
   if (menu) {
     menu.classList.add("hidden");
-    menu.style.display = "none";
+    menu.classList.remove("open");
   }
   if (switchWrap) switchWrap.style.display = "none";
   if (hero) hero.style.display = "none";
@@ -135,7 +135,7 @@ function enableAgentMode() {
   if (nav) nav.classList.remove("hidden");
   if (menu) {
     menu.classList.add("hidden");
-    menu.style.display = "none";
+    menu.classList.remove("open");
   }
   if (switchWrap) switchWrap.style.display = "flex";
   if (hero) hero.style.display = "block";
@@ -289,41 +289,32 @@ function wireMobileMenu() {
   const toolkitToggle = document.getElementById("toolkit-toggle");
   const toolkitSubmenu = document.getElementById("toolkit-submenu");
 
-  if (toggle && menu) {
-    toggle.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+  if (!toggle || !menu) return;
 
-      const isHidden = menu.classList.contains("hidden");
-      if (isHidden) {
-        menu.classList.remove("hidden");
-        menu.style.display = "block";
-      } else {
-        menu.classList.add("hidden");
-        menu.style.display = "none";
-      }
-    });
+  toggle.addEventListener("click", (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    menu.classList.toggle("open");
+  });
 
-    document.addEventListener("click", (e) => {
-      if (!menu.contains(e.target) && !toggle.contains(e.target)) {
-        menu.classList.add("hidden");
-        menu.style.display = "none";
-      }
-    });
-  }
+  document.addEventListener("click", (e) => {
+    if (!menu.contains(e.target) && !toggle.contains(e.target)) {
+      menu.classList.remove("open");
+    }
+  });
 
   if (toolkitToggle && toolkitSubmenu) {
     toolkitToggle.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
 
-      const isHidden = toolkitSubmenu.hasAttribute("hidden");
-      if (isHidden) {
-        toolkitSubmenu.removeAttribute("hidden");
-        toolkitToggle.setAttribute("aria-expanded", "true");
-      } else {
+      const expanded = toolkitToggle.getAttribute("aria-expanded") === "true";
+      toolkitToggle.setAttribute("aria-expanded", expanded ? "false" : "true");
+
+      if (expanded) {
         toolkitSubmenu.setAttribute("hidden", "");
-        toolkitToggle.setAttribute("aria-expanded", "false");
+      } else {
+        toolkitSubmenu.removeAttribute("hidden");
       }
     });
   }
@@ -399,24 +390,39 @@ function normalizeEmail(value = "") {
 
 async function loadTodaysEvents() {
   try {
-    const { data, error } = await sb.from("events_open_today").select("*");
-
     const select = document.getElementById("prospect-event-id");
     if (!select) return;
+
+    const now = new Date();
+    const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+
+    const { data, error } = await sb
+      .from("events")
+      .select("id, event_name, city, state, event_date, event_time, status")
+      .eq("event_date", localDate)
+      .in("status", ["open", "draft"])
+      .order("event_time", { ascending: true });
 
     select.innerHTML = '<option value="">Select today’s event</option>';
 
     if (error) {
-      console.error("Error loading today's events:", error);
+      console.error("Error loading today’s events:", error);
       return;
     }
 
-    (data || []).forEach((e) => {
+    (data || []).forEach((event) => {
       const opt = document.createElement("option");
-      opt.value = e.id;
-      opt.textContent = buildEventLabel(e);
+      opt.value = event.id;
+      opt.textContent = buildEventLabel(event);
       select.appendChild(opt);
     });
+
+    if (!data || !data.length) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "No events scheduled for today";
+      select.appendChild(opt);
+    }
   } catch (err) {
     console.error("loadTodaysEvents failed:", err);
   }
