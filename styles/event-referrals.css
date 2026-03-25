@@ -672,7 +672,7 @@ body.event-referrals-page {
 #mobile-menu {
   position: fixed;
   display: inline;
-  top: 0;
+  top: 72px;
   right: 0;
   max-width: 300px;
   background: #ed9ea5;
@@ -877,11 +877,5 @@ body.event-referrals-page {
 
   .allocation-counter-list {
     grid-template-columns: 1fr;
-  }
-
-  #mobile-menu {
-    top: 72px;
-    right: 10px;
-    width: calc(100vw - 20px);
   }
 }
