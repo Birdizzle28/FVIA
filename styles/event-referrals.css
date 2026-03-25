@@ -671,15 +671,14 @@ body.event-referrals-page {
 
 #mobile-menu {
   position: fixed;
-  display: inline;
   top: 72px;
   right: 0;
-  max-width: 300px;
+  width: min(300px, calc(100vw - 20px));
   background: #ed9ea5;
   transform: translateX(100%);
   transition: transform 0.3s ease;
   z-index: 999;
-  max-height: 100vh;
+  max-height: calc(100vh - 72px);
   overflow-y: auto;
   box-sizing: content-box !important;
 }
@@ -768,10 +767,6 @@ body.event-referrals-page {
 #mobile-menu .menu-item span {
   display: inline;
   box-sizing: content-box !important;
-}
-
-#toolkit-submenu {
-  padding-left: 0.5rem;
 }
 
 .site-footer {
