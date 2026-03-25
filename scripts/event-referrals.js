@@ -302,9 +302,9 @@ function wireMobileMenu() {
       e.preventDefault();
       e.stopPropagation();
 
-      const isExpanded = toolkitToggle.getAttribute("aria-expanded") === "true";
-      toolkitToggle.setAttribute("aria-expanded", isExpanded ? "false" : "true");
-      toolkitSubmenu.classList.toggle("open", !isExpanded);
+      const expanded = toolkitToggle.getAttribute("aria-expanded") === "true";
+      toolkitToggle.setAttribute("aria-expanded", expanded ? "false" : "true");
+      toolkitSubmenu.classList.toggle("open", !expanded);
     });
   }
 }
