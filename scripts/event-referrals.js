@@ -110,10 +110,7 @@ function setPublicMode() {
 
   if (loginLink) loginLink.style.display = "block";
   if (nav) nav.classList.add("hidden");
-  if (menu) {
-    menu.classList.add("hidden");
-    menu.classList.remove("open");
-  }
+  if (menu) menu.classList.remove("open");
   if (switchWrap) switchWrap.style.display = "none";
   if (hero) hero.style.display = "none";
 
@@ -133,10 +130,7 @@ function enableAgentMode() {
 
   if (loginLink) loginLink.style.display = "none";
   if (nav) nav.classList.remove("hidden");
-  if (menu) {
-    menu.classList.add("hidden");
-    menu.classList.remove("open");
-  }
+  if (menu) menu.classList.remove("open");
   if (switchWrap) switchWrap.style.display = "flex";
   if (hero) hero.style.display = "block";
 }
@@ -289,33 +283,28 @@ function wireMobileMenu() {
   const toolkitToggle = document.getElementById("toolkit-toggle");
   const toolkitSubmenu = document.getElementById("toolkit-submenu");
 
-  if (!toggle || !menu) return;
+  if (toggle && menu) {
+    toggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      menu.classList.toggle("open");
+    });
 
-  toggle.addEventListener("click", (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    menu.classList.toggle("open");
-  });
-
-  document.addEventListener("click", (e) => {
-    if (!menu.contains(e.target) && !toggle.contains(e.target)) {
-      menu.classList.remove("open");
-    }
-  });
+    document.addEventListener("click", (e) => {
+      if (!menu.contains(e.target) && !toggle.contains(e.target)) {
+        menu.classList.remove("open");
+      }
+    });
+  }
 
   if (toolkitToggle && toolkitSubmenu) {
     toolkitToggle.addEventListener("click", (e) => {
       e.preventDefault();
       e.stopPropagation();
 
-      const expanded = toolkitToggle.getAttribute("aria-expanded") === "true";
-      toolkitToggle.setAttribute("aria-expanded", expanded ? "false" : "true");
-
-      if (expanded) {
-        toolkitSubmenu.setAttribute("hidden", "");
-      } else {
-        toolkitSubmenu.removeAttribute("hidden");
-      }
+      const isExpanded = toolkitToggle.getAttribute("aria-expanded") === "true";
+      toolkitToggle.setAttribute("aria-expanded", isExpanded ? "false" : "true");
+      toolkitSubmenu.classList.toggle("open", !isExpanded);
     });
   }
 }
