@@ -661,7 +661,7 @@ body.event-referrals-page {
 
 #mobile-menu {
   display: none;
-  position: absolute;
+  position: fixed;
   top: 80px;
   right: 16px;
   width: min(280px, calc(100vw - 32px));
@@ -673,12 +673,12 @@ body.event-referrals-page {
   z-index: 9999;
 }
 
-#mobile-menu.open {
-  display: block;
+#mobile-menu.hidden {
+  display: none;
 }
 
-#mobile-menu.hidden {
-  display: none !important;
+#mobile-menu.open {
+  display: block !important;
 }
 
 #mobile-menu a,
