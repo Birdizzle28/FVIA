@@ -168,7 +168,6 @@ function initUI() {
   document.getElementById("event-prospect-search")?.addEventListener("input", filterProspects);
 
   bindInputFormatting();
-  wireMobileMenu();
   initPickers();
 }
 
@@ -275,38 +274,6 @@ function showAgentScreen(screen) {
 
   const target = document.getElementById(map[screen]);
   if (target) target.style.display = "block";
-}
-
-function wireMobileMenu() {
-  const toggle = document.getElementById("menu-toggle");
-  const menu = document.getElementById("mobile-menu");
-  const toolkitToggle = document.getElementById("toolkit-toggle");
-  const toolkitSubmenu = document.getElementById("toolkit-submenu");
-
-  if (toggle && menu) {
-    toggle.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      menu.classList.toggle("open");
-    });
-
-    document.addEventListener("click", (e) => {
-      if (!menu.contains(e.target) && !toggle.contains(e.target)) {
-        menu.classList.remove("open");
-      }
-    });
-  }
-
-  if (toolkitToggle && toolkitSubmenu) {
-    toolkitToggle.addEventListener("click", (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-
-      const expanded = toolkitToggle.getAttribute("aria-expanded") === "true";
-      toolkitToggle.setAttribute("aria-expanded", expanded ? "false" : "true");
-      toolkitSubmenu.classList.toggle("open", !expanded);
-    });
-  }
 }
 
 function initPickers() {
