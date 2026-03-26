@@ -8,38 +8,56 @@ function getBaseUrl() {
   ).replace(/\/$/, "");
 }
 
+function formatLocalDate(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
 export async function handler() {
   try {
     const baseUrl = getBaseUrl();
 
-    // yesterday’s date (NIPR reports are usually lagged)
-    const d = new Date();
-    d.setDate(d.getDate() - 1);
+    const today = new Date();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
 
-    const reportDate = d.toISOString().split("T")[0];
+    const reportDates = [
+      formatLocalDate(today),
+      formatLocalDate(yesterday)
+    ];
 
-    const res = await fetch(
-      `${baseUrl}/.netlify/functions/nipr-alerts-process-report`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          env: "prod",
-          reportDate,
-          runSync: true,
-          runParse: true,
-        }),
-      }
-    );
+    const results = [];
 
-    const text = await res.text();
+    for (const reportDate of reportDates) {
+      const res = await fetch(
+        `${baseUrl}/.netlify/functions/nipr-alerts-process-report`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            env: "prod",
+            reportDate,
+            runSync: true,
+            runParse: true
+          }),
+        }
+      );
+
+      const text = await res.text();
+      results.push({
+        reportDate,
+        status: res.status,
+        response: text
+      });
+    }
 
     return {
       statusCode: 200,
       body: JSON.stringify({
         success: true,
-        reportDate,
-        response: text,
+        tried: results
       }),
     };
   } catch (err) {
