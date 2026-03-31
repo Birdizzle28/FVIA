@@ -203,11 +203,17 @@ function pickMyWeeklyAdvanceAmount(previewJson) {
 function pickMyMonthlyPaythruAmount(previewJson) {
   if (!previewJson) return 0;
 
+  const threshold = Number(previewJson?.threshold || 100);
+  const grossTowardThreshold = Number(previewJson?.gross_accrued_toward_threshold_preview || 0);
+
+  // If the preview says we're below threshold, this is NOT a payable month.
+  if (grossTowardThreshold < threshold) {
+    return 0;
+  }
+
   const v =
     previewJson?.net_payout_preview ??
     previewJson?.gross_monthly_trail_preview ??
-    previewJson?.gross_accrued_toward_threshold_preview ??
-    previewJson?.total_new_paythru_gross_preview ??
     0;
 
   return Number(v) || 0;
