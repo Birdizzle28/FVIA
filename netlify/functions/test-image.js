@@ -51,13 +51,13 @@ function buildOverlaySvg({ width, height }) {
   const listSvg = rows
     .map((r, i) => {
       const y = listStartY + i * rowH;
-
+  
       return `
         <g>
           <rect x="${leftX}" y="${y - 40}" rx="14" ry="14" width="${width - leftX * 2}" height="58" fill="${colorWhite}" opacity="0.15" />
-          <text x="${leftX + 22}" y="${y}" font-size="26" font-weight="800" fill="${colorGold}" font-family="Arial, sans-serif">${i + 1}.</text>
-          <text x="${leftX + 70}" y="${y}" font-size="26" font-weight="700" fill="${colorDark}" font-family="Arial, sans-serif">${safeText(r.full_name)}</text>
-          <text x="${width - leftX - 22}" y="${y}" font-size="26" font-weight="900" fill="${colorTitle}" text-anchor="end" font-family="Arial, sans-serif">${safeText(money(r.ap))}</text>
+          <text class="bellota" x="${leftX + 22}" y="${y}" font-size="26" font-weight="800" fill="${colorGold}">${i + 1}.</text>
+          <text class="bellota" x="${leftX + 70}" y="${y}" font-size="26" font-weight="700" fill="${colorDark}">${safeText(r.full_name)}</text>
+          <text class="bellota" x="${width - leftX - 22}" y="${y}" font-size="26" font-weight="900" fill="${colorTitle}" text-anchor="end">${safeText(money(r.ap))}</text>
         </g>
       `;
     })
@@ -69,13 +69,14 @@ function buildOverlaySvg({ width, height }) {
       <style>
         @font-face {
           font-family: 'Bellota';
-          src: url("data:font/ttf;base64,${BELLOTA_BASE64}") format("truetype");
+          src: url(data:font/ttf;base64,${BELLOTA_BASE64}) format("truetype");
           font-weight: 700;
           font-style: normal;
         }
     
         .bellota {
           font-family: 'Bellota';
+          font-style: normal;
         }
       </style>
     </defs>
