@@ -68,15 +68,14 @@ function buildOverlaySvg({ width, height }) {
     <defs>
       <style>
         @font-face {
-          font-family: 'Bellota';
+          font-family: 'Bellota Text';
           src: url(data:font/ttf;base64,${BELLOTA_BASE64}) format("truetype");
           font-weight: 700;
           font-style: normal;
         }
-    
+        
         .bellota {
-          font-family: 'Bellota';
-          font-style: normal;
+          font-family: 'Bellota Text';
         }
       </style>
     </defs>
