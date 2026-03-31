@@ -293,10 +293,10 @@
                 <p class="comm-subtext" id="balances-chargebacks-count">0 open items</p>
               </article>
 
-              <article class="comm-card" id="card-other-balance">
-                <h2>Other Debt Balance</h2>
-                <p class="comm-amount" id="summary-other-balance">$0.00</p>
-                <p class="comm-subtext" id="summary-other-note">Open other debts</p>
+              <article class="comm-card">
+                <h3>Other Debt</h3>
+                <p class="comm-amount" id="balances-other-amount">$0.00</p>
+                <p class="comm-subtext" id="balances-other-count">0 open items</p>
               </article>
               
               <article class="comm-card">
@@ -343,6 +343,29 @@
                       <th>Date</th>
                       <th>Carrier</th>
                       <th>Policyholder</th>
+                      <th>Amount</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <!-- Filled via commissions.js -->
+                  </tbody>
+                </table>
+              </div>
+            </section>
+
+            <section class="comm-table-section">
+              <header class="comm-table-header">
+                <h3>Other Debts</h3>
+              </header>
+              <div class="comm-table-scroll">
+                <table id="other-debts-table">
+                  <thead>
+                    <tr>
+                      <th class="col-agent">Agent</th>
+                      <th>Date</th>
+                      <th>Type</th>
+                      <th>Description</th>
                       <th>Amount</th>
                       <th>Status</th>
                     </tr>
@@ -476,6 +499,7 @@
                       <th>AP (Period)</th>
                       <th>Leads Balance</th>
                       <th>Chargebacks</th>
+                      <th>Other Debt</th>
                       <th>Overrides to You</th>
                     </tr>
                   </thead>
