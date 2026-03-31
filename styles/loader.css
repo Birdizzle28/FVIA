@@ -1,0 +1,29 @@
+main {
+  position: relative;
+}
+
+.main-loader {
+  position: absolute;
+  inset: 0;
+  z-index: 999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.92);
+  opacity: 1;
+  visibility: visible;
+  transition: opacity 0.45s ease, visibility 0.45s ease;
+}
+
+.main-loader.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.main-loader video {
+  width: min(220px, 50vw);
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
