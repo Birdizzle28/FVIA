@@ -2291,6 +2291,30 @@ function wireAdjustmentSubmit() {
         }
       }
 
+      if (normType === 'debit' && category === 'other') {
+        const { error: odErr } = await sb.from('agent_other_debts').insert([{
+          agent_id,
+          amount: rawAmount,
+          status: 'open',
+          debt_type: 'other',
+          description: description || null,
+          effective_date,
+          commission_ledger_id: ledgerRow.id,
+          created_by: userId || null,
+          metadata: {
+            effective_date,
+            commission_ledger_id: ledgerRow.id,
+            created_from: 'admin_commissions_adjustment_modal'
+          }
+        }]);
+
+        if (odErr) {
+          console.error('Error inserting agent_other_debts', odErr);
+          if (errorEl) errorEl.textContent = 'Saved to ledger, but other debt record failed: ' + odErr.message;
+          return;
+        }
+      }
+
       closeModal(document.getElementById('adjustment-modal'));
       document.getElementById('adjustment-form')?.reset();
       syncAdjustmentCategoryUI();
