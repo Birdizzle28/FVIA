@@ -4,10 +4,9 @@ import sharp from "sharp";
 
 const BELLOTA_BASE64 = fs
   .readFileSync(
-    path.join(process.cwd(), "assets", "fonts", "encoded-20260331060637.txt"),
-    "utf8"
+    path.join(process.cwd(), "assets", "fonts", "BellotaText-Bold.ttf")
   )
-  .replace(/\s+/g, "");
+  .toString("base64");
 
 function money(n) {
   return Number(n).toLocaleString("en-US", {
@@ -47,11 +46,11 @@ function buildOverlaySvg({ width, height }) {
   const colorWhite = "#ffffff";
   const colorGold = "#f1d58b";
   const colorDark = "#1e1a3d";
-  
+
   const listSvg = rows
     .map((r, i) => {
       const y = listStartY + i * rowH;
-  
+
       return `
         <g>
           <rect x="${leftX}" y="${y - 40}" rx="14" ry="14" width="${width - leftX * 2}" height="58" fill="${colorWhite}" opacity="0.15" />
@@ -68,32 +67,33 @@ function buildOverlaySvg({ width, height }) {
     <defs>
       <style>
         @font-face {
-          font-family: 'Bellota Text';
-          src: url(data:font/ttf;base64,${BELLOTA_BASE64}) format("truetype");
+          font-family: 'BellotaTextBold';
+          src: url(data:font/ttf;base64,${BELLOTA_BASE64}) format('truetype');
           font-weight: 700;
           font-style: normal;
         }
-        
+
         .bellota {
-          font-family: 'Bellota Text';
+          font-family: 'BellotaTextBold';
+          font-weight: 700;
+          font-style: normal;
         }
       </style>
     </defs>
-    <text class="bellota" x="${width / 2}" y="${headerY}" font-size="44" font-weight="900" fill="${colorTitle}" text-anchor="middle">
+
+    <text class="bellota" x="${width / 2}" y="${headerY}" font-size="44" fill="${colorTitle}" text-anchor="middle">
       Top Producers Tonight
     </text>
 
-    <text class="bellota" x="${width / 2}" y="${headerY + 34}" font-size="20" font-weight="700" fill="${colorSub}" text-anchor="middle">
+    <text class="bellota" x="${width / 2}" y="${headerY + 34}" font-size="20" fill="${colorSub}" text-anchor="middle">
       TEST MODE
     </text>
 
-    <!-- MTD -->
-    <text class="bellota" x="${width / 2}" y="${mtdY}" font-size="22" font-weight="800" fill="${colorDark}" text-anchor="middle">
+    <text class="bellota" x="${width / 2}" y="${mtdY}" font-size="22" fill="${colorDark}" text-anchor="middle">
       Month-to-date AP: ${money(mtdAp)}
     </text>
 
-    <!-- Daily -->
-    <text class="bellota" x="${width / 2}" y="${dailyY}" font-size="22" font-weight="800" fill="${colorDark}" text-anchor="middle">
+    <text class="bellota" x="${width / 2}" y="${dailyY}" font-size="22" fill="${colorDark}" text-anchor="middle">
       Total AP Today: ${money(dailyAp)}
     </text>
 
