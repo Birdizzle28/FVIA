@@ -1075,7 +1075,7 @@ export async function handler(event) {
 
     const { data: debtRow, error: debtErr } = await supabase
       .from('agent_total_debt')
-      .select('agent_id, lead_debt_total, chargeback_total, total_debt')
+      .select('agent_id, lead_debt_total, chargeback_total, other_debt_total, total_debt')
       .eq('agent_id', targetAgentId)
       .maybeSingle();
 
@@ -1096,10 +1096,12 @@ export async function handler(event) {
     const totalDebt = Number(debtRow?.total_debt || 0);
     const cbOutstanding = Number(debtRow?.chargeback_total || 0);
     const leadOutstanding = Number(debtRow?.lead_debt_total || 0);
+    const otherOutstanding = Number(debtRow?.other_debt_total || 0);
     const isActive = targetAgentRow?.is_active !== false;
 
     let leadRepay = 0;
     let chargebackRepay = 0;
+    let otherRepay = 0;
     let net = grossTowardThreshold;
 
     if (grossTowardThreshold > 0 && totalDebt > 0) {
@@ -1117,8 +1119,12 @@ export async function handler(event) {
         leadRepay = Math.min(remaining, leadOutstanding);
         remaining -= leadRepay;
       }
+      if (otherOutstanding > 0 && remaining > 0) {
+        otherRepay = Math.min(remaining, otherOutstanding);
+        remaining -= otherRepay;
+      }
 
-      net = round2(grossTowardThreshold - (chargebackRepay + leadRepay));
+      net = round2(grossTowardThreshold - (chargebackRepay + leadRepay + otherRepay));
     }
 
     return {
@@ -1139,6 +1145,7 @@ export async function handler(event) {
         net_payout_preview: net,
         lead_repayment_preview: round2(leadRepay),
         chargeback_repayment_preview: round2(chargebackRepay),
+        other_repayment_preview: round2(otherRepay),
         filtered_out_unpaid_count: filteredOutUnpaidCount,
         details_preview: {
           simulated_new_rows: simulatedRows
