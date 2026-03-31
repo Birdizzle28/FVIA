@@ -144,9 +144,20 @@ export default async function handler() {
       auth: { persistSession: false },
     });
 
+    // delete expired announcements first
+    const nowIso = DateTime.now().toUTC().toISO();
+    const { error: delErr } = await sb
+      .from("announcements")
+      .delete()
+      .lt("expires_at", nowIso);
+
+    if (delErr) {
+      console.error("Expired announcement delete error:", delErr);
+    }
+
     // Gate: only run at 10:00 PM Chicago time (allow first 10 minutes window)
     const nowChi = DateTime.now().setZone(TZ);
-    const isTargetHour = nowChi.hour === 22;          // 10 PM
+    const isTargetHour = nowChi.hour === 22;
     const inWindow = nowChi.minute >= 0 && nowChi.minute < 10;
 
     if (!isTargetHour || !inWindow) {
@@ -300,13 +311,16 @@ export default async function handler() {
       lines.join("\n");
 
     // Insert announcement
+    const publishAt = DateTime.now().toUTC();
+    const expiresAt = publishAt.plus({ hours: 23 });
+    
     const payload = {
       title,
       body,
       created_by: null,
       audience: { scope: "all" },
-      publish_at: DateTime.now().toUTC().toISO(), // publish now
-      expires_at: null,
+      publish_at: publishAt.toISO(),
+      expires_at: expiresAt.toISO(),
       is_active: true,
       image_url,
       link_url: null,
