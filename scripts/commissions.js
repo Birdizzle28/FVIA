@@ -182,66 +182,112 @@ async function postPreviewJson(url) {
   return json;
 }
 
-function pickMyPayoutAmount(previewJson) {
-  const list =
-    previewJson?.agent_payouts_preview ||
-    previewJson?.agent_payouts ||
-    null;
+function pickMyWeeklyAdvanceAmount(previewJson) {
+  const list = previewJson?.agent_payouts || null;
 
-  if (!Array.isArray(list) || !me?.id) {
-    console.log('No preview list or no me.id', { list, meId: me?.id });
-    return 0;
-  }
+  if (!Array.isArray(list) || !me?.id) return 0;
 
   const mine = list.find(x => x?.agent_id === me.id);
-  console.log('Preview rows:', list);
-  console.log('Logged-in agent:', me.id);
-  console.log('Matched payout row:', mine);
-
   if (!mine) return 0;
 
   const v =
     mine.net_payout ??
     mine.net_amount ??
     mine.gross_payout ??
-    mine.gross_monthly_trail ??
     mine.gross_amount ??
     0;
 
   return Number(v) || 0;
 }
 
+function pickMyMonthlyPaythruAmount(previewJson) {
+  if (!previewJson) return 0;
+
+  const v =
+    previewJson?.net_payout_preview ??
+    previewJson?.gross_monthly_trail_preview ??
+    previewJson?.gross_accrued_toward_threshold_preview ??
+    previewJson?.total_new_paythru_gross_preview ??
+    0;
+
+  return Number(v) || 0;
+}
+
 async function loadNextPayoutsFromPreviews() {
-  // Weekly Advance
-  const nextFriISO = getNextFridayISO();
-  const weekly = await postPreviewJson(`/.netlify/functions/previewWeeklyAdvance?pay_date=${encodeURIComponent(nextFriISO)}`);
-  if (weekly) {
-    const amt = pickMyPayoutAmount(weekly);
-    setText('summary-next-advance-amount', formatMoney(amt));
-    setText('summary-next-advance-date', `(${getNextFridayLabel()})`);
-    setText('next-advance-amount', formatMoney(amt));
-    setText('next-advance-date', `Pays on: ${getNextFridayLabel()}`);
+  // ---------- WEEKLY: next non-zero advance ----------
+  let weekly = null;
+  let weeklyAmt = 0;
+  let weeklyISO = getNextFridayISO();
+
+  for (let i = 0; i < 12; i++) {
+    const testISO = addDaysISO(getNextFridayISO(), i * 7);
+    const test = await postPreviewJson(`/.netlify/functions/previewWeeklyAdvance?pay_date=${encodeURIComponent(testISO)}`);
+    const amt = pickMyWeeklyAdvanceAmount(test);
+
+    if (test && amt > 0) {
+      weekly = test;
+      weeklyAmt = amt;
+      weeklyISO = testISO;
+      break;
+    }
+
+    if (i === 0) {
+      weekly = test;
+      weeklyAmt = amt;
+      weeklyISO = testISO;
+    }
   }
 
-  // Monthly Pay-Thru
-  const nextMonthlyISO = getNextMonthlyPayThruISO();
-  const monthly = await postPreviewJson(`/.netlify/functions/previewMonthlyPayThru?pay_date=${encodeURIComponent(nextMonthlyISO)}`);
-  
-  if (monthly) {
-    // ✅ This is your per-policy TOTAL pay-thru (lifetime) numbers for the Policies table
-    paythruPreviewByPolicy = monthly?.paythru_by_policy_preview || {};
-  
-    // ✅ This is the actual NEXT paythru payout amount (threshold + debt logic already applied)
-    const amt = pickMyPayoutAmount(monthly);
-  
-    const label = isoToLocalYMD(nextMonthlyISO).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
-  
-    setText('summary-next-paythru-amount', formatMoney(amt));
-    setText('summary-next-paythru-date', `(${label})`);
-  
-    setText('next-paythru-amount', formatMoney(amt));
-    setText('next-paythru-date', `Pays on: ${label}`);
+  const weeklyLabel = isoToLocalYMD(weeklyISO).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric'
+  });
+
+  setText('summary-next-advance-amount', formatMoney(weeklyAmt));
+  setText('summary-next-advance-date', `(${weeklyLabel})`);
+  setText('next-advance-amount', formatMoney(weeklyAmt));
+  setText('next-advance-date', `Pays on: ${weeklyLabel}`);
+
+  // ---------- MONTHLY: next non-zero pay-thru ----------
+  let monthly = null;
+  let monthlyAmt = 0;
+  let monthlyISO = getNextMonthlyPayThruISO();
+
+  for (let i = 0; i < 12; i++) {
+    const firstBase = isoToLocalYMD(getNextMonthlyPayThruISO());
+    const testDate = new Date(firstBase.getFullYear(), firstBase.getMonth() + i, 5);
+    const testISO = toISODate(testDate);
+
+    const test = await postPreviewJson(`/.netlify/functions/previewMonthlyPayThru?pay_date=${encodeURIComponent(testISO)}`);
+    const amt = pickMyMonthlyPaythruAmount(test);
+
+    if (i === 0 && test) {
+      paythruPreviewByPolicy = test?.paythru_by_policy_preview || {};
+    }
+
+    if (test && amt > 0) {
+      monthly = test;
+      monthlyAmt = amt;
+      monthlyISO = testISO;
+      break;
+    }
+
+    if (i === 0) {
+      monthly = test;
+      monthlyAmt = amt;
+      monthlyISO = testISO;
+    }
   }
+
+  const monthlyLabel = isoToLocalYMD(monthlyISO).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric'
+  });
+
+  setText('summary-next-paythru-amount', formatMoney(monthlyAmt));
+  setText('summary-next-paythru-date', `(${monthlyLabel})`);
+  setText('next-paythru-amount', formatMoney(monthlyAmt));
+  setText('next-paythru-date', `Pays on: ${monthlyLabel}`);
 
   return { weekly, monthly };
 }
