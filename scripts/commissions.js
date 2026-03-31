@@ -5,8 +5,11 @@ let myProfile = null; // row from agents table
 // We'll keep these in sync with Supabase so all UI uses the same numbers
 let leadBalance = 0;
 let chargebackBalance = 0;
+let otherDebtBalance = 0;
+
 let summaryLeadBalance = 0;
 let summaryChargebackBalance = 0;
+let summaryOtherDebtBalance = 0;
 let accessToken = null;
 let paythruPreviewByPolicy = {}; // { [policy_id]: monthly_amount }
 // ---- Policies filters state ----
@@ -389,18 +392,23 @@ async function loadAgentUpcomingPayouts() {
    =============================== */
 
 function updateBalancesUI({ updateSummary = true, updateBalancesTab = true } = {}) {
-  const summaryTotal = summaryLeadBalance + summaryChargebackBalance;
-  const tabTotal = leadBalance + chargebackBalance;
+  const summaryTotal =
+    summaryLeadBalance + summaryChargebackBalance + summaryOtherDebtBalance;
+
+  const tabTotal =
+    leadBalance + chargebackBalance + otherDebtBalance;
 
   if (updateSummary) {
     setText('summary-leads-balance', formatMoney(summaryLeadBalance));
     setText('summary-chargeback-balance', formatMoney(summaryChargebackBalance));
+    setText('summary-other-balance', formatMoney(summaryOtherDebtBalance));
     setText('summary-total-balance', formatMoney(summaryTotal));
   }
 
   if (updateBalancesTab) {
     setText('balances-leads-amount', formatMoney(leadBalance));
     setText('balances-chargebacks-amount', formatMoney(chargebackBalance));
+    setText('balances-other-amount', formatMoney(otherDebtBalance));
     setText('balances-total-amount', formatMoney(tabTotal));
   }
 }
@@ -647,7 +655,7 @@ async function loadOpenBalances(agentIds) {
   for (const ids of batches) {
     const { data, error } = await supabase
       .from('agent_open_balances')
-      .select('agent_id, open_lead_debt, open_chargebacks')
+      .select('agent_id, open_lead_debt, open_chargebacks, open_other_debts')
       .in('agent_id', ids);
 
     if (error) {
@@ -659,6 +667,7 @@ async function loadOpenBalances(agentIds) {
       map[r.agent_id] = {
         leads: Number(r.open_lead_debt || 0),
         chargebacks: Number(r.open_chargebacks || 0),
+        other: Number(r.open_other_debts || 0),
       };
     });
   }
@@ -750,6 +759,7 @@ async function loadAndRenderTeamOverridesPanel() {
         <td>${formatMoney(ap)}</td>
         <td>${formatMoney(bal.leads)}</td>
         <td>${formatMoney(bal.chargebacks)}</td>
+        <td>${formatMoney(bal.other || 0)}</td>
         <td>${formatMoney(ovToYou)}</td>
       </tr>
     `;
@@ -927,6 +937,88 @@ async function loadAndRenderChargebacks(scope = 'me', teamIds = []) {
   }
 }
 
+async function loadAndRenderOtherDebts(scope = 'me', teamIds = []) {
+  if (!me) return;
+
+  const tbody = document.querySelector('#other-debts-table tbody');
+  if (!tbody) return;
+
+  try {
+    let q = supabase
+      .from('agent_other_debts')
+      .select('id, created_at, debt_type, description, amount, status, agent_id');
+
+    if (scope === 'team') {
+      if (!teamIds.length) {
+        tbody.innerHTML = `<tr><td colspan="6">No downline agents found.</td></tr>`;
+        otherDebtBalance = 0;
+        setText('balances-other-count', '0 open items');
+        updateBalancesUI({ updateSummary: false, updateBalancesTab: true });
+        return;
+      }
+      q = q.in('agent_id', teamIds);
+    } else {
+      q = q.eq('agent_id', me.id);
+    }
+
+    const { data, error } = await q.order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('Error loading agent_other_debts:', error);
+      tbody.innerHTML = `<tr><td colspan="${scope === 'team' ? 6 : 5}">Failed to load other debts.</td></tr>`;
+      return;
+    }
+
+    const nameMap = scope === 'team' ? await getAgentNameMap(teamIds) : {};
+
+    if (!data || data.length === 0) {
+      const colCount = (scope === 'team') ? 6 : 5;
+      tbody.innerHTML = `<tr><td colspan="${colCount}">No other debts found.</td></tr>`;
+    } else {
+      tbody.innerHTML = data.map(row => {
+        const date = row.created_at ? new Date(row.created_at).toLocaleDateString() : '—';
+        const type = row.debt_type || 'Other';
+        const description = row.description || '—';
+        const amount = Number(row.amount || 0);
+        const status = formatStatus(row.status);
+        const who =
+          scope === 'team'
+            ? (nameMap[row.agent_id] || '—')
+            : '';
+
+        return `
+          <tr>
+            <td class="col-agent">${escapeHtml(who)}</td>
+            <td>${date}</td>
+            <td>${escapeHtml(type)}</td>
+            <td>${escapeHtml(description)}</td>
+            <td>${formatMoney(amount)}</td>
+            <td>${escapeHtml(status)}</td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    setTableAgentColumnVisible('other-debts-table', scope === 'team');
+
+    let openCount = 0;
+    let openTotal = 0;
+    (data || []).forEach(row => {
+      const status = (row.status || '').toLowerCase();
+      if (status === 'open' || status === 'in_repayment') {
+        openCount += 1;
+        openTotal += Number(row.amount || 0);
+      }
+    });
+
+    otherDebtBalance = openTotal;
+    setText('balances-other-count', `${openCount} open item${openCount === 1 ? '' : 's'}`);
+    updateBalancesUI({ updateSummary: false, updateBalancesTab: true });
+  } catch (err) {
+    console.error('Unexpected error in loadAndRenderOtherDebts:', err);
+  }
+}
+
 function initBalanceScopeToggle() {
   const radios = document.querySelectorAll('input[name="balance-scope"]');
 
@@ -941,15 +1033,18 @@ function initBalanceScopeToggle() {
     // Reset numbers before reload to avoid mixed UI while loading
     leadBalance = 0;
     chargebackBalance = 0;
+    otherDebtBalance = 0;
     updateBalancesUI({ updateSummary: false, updateBalancesTab: true });
 
     // Load tables
     await loadAndRenderLeadDebts(scope, teamIds);
     await loadAndRenderChargebacks(scope, teamIds);
+    await loadAndRenderOtherDebts(scope, teamIds);
 
     // ✅ Keep summary balances synced to whatever we just loaded
     summaryLeadBalance = leadBalance;
     summaryChargebackBalance = chargebackBalance;
+    summaryOtherDebtBalance = otherDebtBalance;
     updateBalancesUI({ updateSummary: true, updateBalancesTab: false });
   };
 
@@ -1485,10 +1580,12 @@ async function loadAndRenderPayouts() {
 function renderPlaceholderSummary() {
   summaryLeadBalance = 320;
   summaryChargebackBalance = 180;
+  summaryOtherDebtBalance = 95;
 
   // Optional: make the Balances tab show the same placeholders initially
   leadBalance = summaryLeadBalance;
   chargebackBalance = summaryChargebackBalance;
+  otherDebtBalance = summaryOtherDebtBalance;
 
   updateBalancesUI({ updateSummary: true, updateBalancesTab: true });
 
