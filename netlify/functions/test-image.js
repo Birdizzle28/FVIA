@@ -1,12 +1,7 @@
+// netlify/functions/test-image.js
 import fs from "fs";
 import path from "path";
-import sharp from "sharp";
-
-const BELLOTA_BASE64 = fs
-  .readFileSync(
-    path.join(process.cwd(), "assets", "fonts", "BellotaText-Bold.ttf")
-  )
-  .toString("base64");
+import PDFDocument from "pdfkit";
 
 function money(n) {
   return Number(n).toLocaleString("en-US", {
@@ -16,125 +11,170 @@ function money(n) {
   });
 }
 
-function safeText(s) {
-  return String(s ?? "").replace(/[<>&]/g, (m) => ({
-    "<": "&lt;",
-    ">": "&gt;",
-    "&": "&amp;",
-  }[m]));
-}
-
-function buildOverlaySvg({ width, height }) {
-  const rows = [
-    { full_name: "Chancellor Johnson", ap: 4200 },
-    { full_name: "John Smith", ap: 3100 },
-    { full_name: "Jane Doe", ap: 2800 },
-  ];
-
-  const mtdAp = 15200;
-  const dailyAp = 10100;
-
-  const leftX = 90;
-  const headerY = 150;
-  const mtdY = 200;
-  const dailyY = 248;
-  const listStartY = 330;
-  const rowH = 70;
-
-  const colorTitle = "#2a245c";
-  const colorSub = "#6b5e8a";
-  const colorWhite = "#ffffff";
-  const colorGold = "#f1d58b";
-  const colorDark = "#1e1a3d";
-
-  const listSvg = rows
-    .map((r, i) => {
-      const y = listStartY + i * rowH;
-
-      return `
-        <g>
-          <rect x="${leftX}" y="${y - 40}" rx="14" ry="14" width="${width - leftX * 2}" height="58" fill="${colorWhite}" opacity="0.15" />
-          <text class="bellota" x="${leftX + 22}" y="${y}" font-size="26" font-weight="800" fill="${colorGold}">${i + 1}.</text>
-          <text class="bellota" x="${leftX + 70}" y="${y}" font-size="26" font-weight="700" fill="${colorDark}">${safeText(r.full_name)}</text>
-          <text class="bellota" x="${width - leftX - 22}" y="${y}" font-size="26" font-weight="900" fill="${colorTitle}" text-anchor="end">${safeText(money(r.ap))}</text>
-        </g>
-      `;
-    })
-    .join("");
-
-  return `
-  <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <style>
-        @font-face {
-          font-family: 'BellotaTextBold';
-          src: url(data:font/ttf;base64,${BELLOTA_BASE64}) format('truetype');
-          font-weight: 700;
-          font-style: normal;
-        }
-
-        .bellota {
-          font-family: 'BellotaTextBold';
-          font-weight: 700;
-          font-style: normal;
-        }
-      </style>
-    </defs>
-
-    <text class="bellota" x="${width / 2}" y="${headerY}" font-size="44" fill="${colorTitle}" text-anchor="middle">
-      Top Producers Tonight
-    </text>
-
-    <text class="bellota" x="${width / 2}" y="${headerY + 34}" font-size="20" fill="${colorSub}" text-anchor="middle">
-      TEST MODE
-    </text>
-
-    <text class="bellota" x="${width / 2}" y="${mtdY}" font-size="22" fill="${colorDark}" text-anchor="middle">
-      Month-to-date AP: ${money(mtdAp)}
-    </text>
-
-    <text class="bellota" x="${width / 2}" y="${dailyY}" font-size="22" fill="${colorDark}" text-anchor="middle">
-      Total AP Today: ${money(dailyAp)}
-    </text>
-
-    ${listSvg}
-  </svg>`;
-}
-
-export default async function handler() {
+export async function handler() {
   try {
-    const templatePath = path.join(
+    const fontPath = path.join(
+      process.cwd(),
+      "assets",
+      "fonts",
+      "BellotaText-Bold.ttf"
+    );
+
+    const bgPath = path.join(
       process.cwd(),
       "assets",
       "announcements",
       "top-producers-template.jpg"
     );
 
-    if (!fs.existsSync(templatePath)) {
-      return new Response("Template not found", { status: 500 });
+    if (!fs.existsSync(fontPath)) {
+      return {
+        statusCode: 500,
+        body: `Missing font file: ${fontPath}`,
+      };
     }
 
-    const base = sharp(templatePath);
-    const meta = await base.metadata();
-
-    const width = meta.width || 1080;
-    const height = meta.height || 1350;
-
-    const svg = buildOverlaySvg({ width, height });
-
-    const buffer = await base
-      .composite([{ input: Buffer.from(svg), top: 0, left: 0 }])
-      .jpeg({ quality: 90 })
-      .toBuffer();
-
-    return new Response(buffer, {
-      status: 200,
-      headers: {
-        "Content-Type": "image/jpeg",
+    const doc = new PDFDocument({
+      size: [1080, 1350],
+      margin: 0,
+      info: {
+        Title: "Top Producers Test",
+        Author: "Family Values Group",
       },
     });
+
+    const chunks = [];
+    doc.on("data", (c) => chunks.push(c));
+
+    doc.registerFont("BellotaBold", fontPath);
+
+    // Background image
+    if (fs.existsSync(bgPath)) {
+      doc.image(bgPath, 0, 0, { width: 1080, height: 1350 });
+    } else {
+      doc.rect(0, 0, 1080, 1350).fill("#f7f3ff");
+    }
+
+    // Title
+    doc
+      .font("BellotaBold")
+      .fontSize(44)
+      .fillColor("#2a245c")
+      .text("Top Producers Tonight", 0, 120, {
+        width: 1080,
+        align: "center",
+      });
+
+    doc
+      .font("BellotaBold")
+      .fontSize(20)
+      .fillColor("#6b5e8a")
+      .text("TEST MODE", 0, 170, {
+        width: 1080,
+        align: "center",
+      });
+
+    // MTD pill
+    doc
+      .save()
+      .roundedRect(280, 205, 520, 56, 18)
+      .fillOpacity(0.18)
+      .fill("#ffffff")
+      .restore();
+
+    doc
+      .font("BellotaBold")
+      .fontSize(22)
+      .fillColor("#ffffff")
+      .text(`Month-to-date AP: ${money(15200)}`, 0, 221, {
+        width: 1080,
+        align: "center",
+      });
+
+    // Daily pill
+    doc
+      .save()
+      .roundedRect(280, 268, 520, 56, 18)
+      .fillOpacity(0.14)
+      .fill("#ffffff")
+      .restore();
+
+    doc
+      .font("BellotaBold")
+      .fontSize(22)
+      .fillColor("#ffffff")
+      .text(`Total AP Today: ${money(10100)}`, 0, 284, {
+        width: 1080,
+        align: "center",
+      });
+
+    const rows = [
+      { full_name: "Chancellor Johnson", ap: 4200 },
+      { full_name: "John Smith", ap: 3100 },
+      { full_name: "Jane Doe", ap: 2800 },
+    ];
+
+    const leftX = 90;
+    const listStartY = 380;
+    const rowH = 70;
+
+    rows.forEach((r, i) => {
+      const y = listStartY + i * rowH;
+
+      doc
+        .save()
+        .roundedRect(leftX, y - 24, 1080 - leftX * 2, 58, 14)
+        .fillOpacity(i % 2 === 0 ? 0.16 : 0.10)
+        .fill("#ffffff")
+        .restore();
+
+      doc
+        .font("BellotaBold")
+        .fontSize(26)
+        .fillColor("#f1d58b")
+        .text(`${i + 1}.`, leftX + 22, y - 2, {
+          width: 50,
+        });
+
+      doc
+        .font("BellotaBold")
+        .fontSize(26)
+        .fillColor("#1e1a3d")
+        .text(r.full_name, leftX + 70, y - 2, {
+          width: 600,
+        });
+
+      doc
+        .font("BellotaBold")
+        .fontSize(26)
+        .fillColor("#2a245c")
+        .text(money(r.ap), 0, y - 2, {
+          width: 1080 - leftX - 22,
+          align: "right",
+        });
+    });
+
+    doc.end();
+
+    const pdfBuffer = await new Promise((resolve) => {
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+    });
+
+    return {
+      statusCode: 200,
+      headers: {
+        "Content-Type": "application/pdf",
+        "Content-Disposition": 'inline; filename="top-producers-test.pdf"',
+        "Cache-Control": "no-store",
+      },
+      body: pdfBuffer.toString("base64"),
+      isBase64Encoded: true,
+    };
   } catch (e) {
-    console.error(e);
-    return new Response(e.message, { status: 500 });
+    console.error("test-image error:", e);
+    return {
+      statusCode: 500,
+      body: e?.message || "Unknown error",
+    };
   }
 }
