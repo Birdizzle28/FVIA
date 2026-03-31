@@ -72,25 +72,21 @@ function buildOverlaySvg({ width, height }) {
         }
       </style>
     </defs>
-    <text class="bellota" x="${width / 2}" y="${headerY}" font-size="44" font-weight="900" fill="${colorTitle}" text-anchor="middle"
-          font-family="Arial, sans-serif">
+    <text class="bellota" x="${width / 2}" y="${headerY}" font-size="44" font-weight="900" fill="${colorTitle}" text-anchor="middle">
       Top Producers Tonight
     </text>
 
-    <text class="bellota" x="${width / 2}" y="${headerY + 34}" font-size="20" font-weight="700" fill="${colorSub}" text-anchor="middle"
-          font-family="Arial, sans-serif">
+    <text class="bellota" x="${width / 2}" y="${headerY + 34}" font-size="20" font-weight="700" fill="${colorSub}" text-anchor="middle">
       TEST MODE
     </text>
 
     <!-- MTD -->
-    <text class="bellota" x="${width / 2}" y="${mtdY}" font-size="22" font-weight="800" fill="${colorDark}" text-anchor="middle"
-          font-family="Arial, sans-serif">
+    <text class="bellota" x="${width / 2}" y="${mtdY}" font-size="22" font-weight="800" fill="${colorDark}" text-anchor="middle">
       Month-to-date AP: ${money(mtdAp)}
     </text>
 
     <!-- Daily -->
-    <text class="bellota" x="${width / 2}" y="${dailyY}" font-size="22" font-weight="800" fill="${colorDark}" text-anchor="middle"
-          font-family="Arial, sans-serif">
+    <text class="bellota" x="${width / 2}" y="${dailyY}" font-size="22" font-weight="800" fill="${colorDark}" text-anchor="middle">
       Total AP Today: ${money(dailyAp)}
     </text>
 
