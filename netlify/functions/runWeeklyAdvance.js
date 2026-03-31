@@ -994,7 +994,7 @@ export async function handler(event) {
     // Load debt
     const { data: debtRows, error: debtErr } = await supabase
       .from('agent_total_debt')
-      .select('agent_id, lead_debt_total, chargeback_total, total_debt')
+      .select('agent_id, lead_debt_total, chargeback_total, other_debt_total, total_debt')
       .in('agent_id', agentIds);
 
     if (debtErr) {
@@ -1043,7 +1043,7 @@ export async function handler(event) {
       const gross = Number(t.gross.toFixed(2));
       totalGross += gross;
 
-      const debtInfo = debtMap.get(agent_id) || { lead: 0, chargeback: 0, total: 0 };
+      const debtInfo = debtMap.get(agent_id) || { lead: 0, chargeback: 0, other: 0, total: 0 };
       const totalDebt = debtInfo.total;
       const isActive  = activeMap.has(agent_id) ? activeMap.get(agent_id) : true;
 
@@ -1092,7 +1092,7 @@ export async function handler(event) {
         chargeback_repayment: Number(chargebackRepay.toFixed(2)),
         other_repayment: Number(otherRepay.toFixed(2)),
       });
-
+    }
     totalGross  = Number(totalGross.toFixed(2));
     totalDebits = Number(totalDebits.toFixed(2));
     const totalNet = Number((totalGross - totalDebits).toFixed(2));
