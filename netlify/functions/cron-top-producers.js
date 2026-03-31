@@ -1,6 +1,6 @@
 import fs from "fs";
 import path from "path";
-import sharp from "sharp";
+import PDFDocument from "pdfkit";
 import { DateTime } from "luxon";
 import { createClient } from "@supabase/supabase-js";
 
@@ -22,110 +22,6 @@ function money(n) {
 
 function isoDate(dt) {
   return dt.toFormat("yyyy-LL-dd");
-}
-
-function safeText(s) {
-  return String(s ?? "").replace(/[<>&]/g, (m) => ({
-    "<": "&lt;",
-    ">": "&gt;",
-    "&": "&amp;",
-  }[m]));
-}
-
-// Build a “stylized” SVG overlay (Sharp composites SVG nicely)
-function buildOverlaySvg({ width, height, dateLabel, mtdAp, dailyAp, rows }) {
-  const leftX = 90;
-
-  const headerY = 150;
-  const mtdY = 200;
-  const dailyY = 248;
-
-  const listStartY = 330;
-  const rowH = 70;
-
-  const title = "Top Producers Tonight";
-  const sub = dateLabel;
-
-  const colorTitle = "#2a245c";
-  const colorSub = "#6b5e8a";
-  const colorWhite = "#ffffff";
-  const colorGold = "#f1d58b";
-  const colorDark = "#1e1a3d";
-
-  const maxNameLen = 22;
-
-  const listSvg = rows
-    .map((r, i) => {
-      const y = listStartY + i * rowH;
-
-      const rank = i + 1;
-      const name = (r.full_name || "Unknown").slice(0, maxNameLen);
-      const ap = money(r.ap);
-
-      const barOpacity = i % 2 === 0 ? 0.16 : 0.10;
-
-      return `
-        <g>
-          <rect x="${leftX}" y="${y - 40}" rx="14" ry="14" width="${width - leftX * 2}" height="58" fill="${colorWhite}" opacity="${barOpacity}" />
-          <text x="${leftX + 22}" y="${y}" font-size="26" font-weight="800" fill="${colorGold}" font-family="Bellota Text, Arial, sans-serif">${rank}.</text>
-          <text x="${leftX + 70}" y="${y}" font-size="26" font-weight="700" fill="${colorDark}" font-family="Bellota Text, Arial, sans-serif">${safeText(name)}</text>
-          <text x="${width - leftX - 22}" y="${y}" font-size="26" font-weight="900" fill="${colorTitle}" text-anchor="end" font-family="Bellota Text, Arial, sans-serif">${safeText(ap)}</text>
-        </g>
-      `;
-    })
-    .join("");
-
-  const emptySvg = `
-    <g>
-      <rect x="${leftX}" y="${listStartY - 40}" rx="16" ry="16" width="${width - leftX * 2}" height="110" fill="${colorWhite}" opacity="0.14" />
-      <text x="${width / 2}" y="${listStartY + 20}" font-size="26" font-weight="800" fill="${colorTitle}" text-anchor="middle" font-family="Bellota Text, Arial, sans-serif">
-        No submitted policies today.
-      </text>
-      <text x="${width / 2}" y="${listStartY + 55}" font-size="18" font-weight="600" fill="${colorSub}" text-anchor="middle" font-family="Bellota Text, Arial, sans-serif">
-        (We’ll post the moment we have AP.)
-      </text>
-    </g>
-  `;
-
-  return `
-  <svg width="${width}" height="${height}" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
-        <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.25"/>
-      </filter>
-    </defs>
-
-    <text x="${width / 2}" y="${headerY}" font-size="44" font-weight="900" fill="${colorTitle}" text-anchor="middle"
-          font-family="Arial, sans-serif" filter="url(#shadow)">${safeText(title)}</text>
-
-    <text x="${width / 2}" y="${headerY + 34}" font-size="20" font-weight="700" fill="${colorSub}" text-anchor="middle"
-          font-family="Arial, sans-serif">${safeText(sub)}</text>
-
-    <!-- MTD AP pill -->
-    <g filter="url(#shadow)">
-      <rect x="${width / 2 - 260}" y="${mtdY - 34}" rx="18" ry="18" width="520" height="56" fill="#ffffff" opacity="0.18"/>
-      <text x="${width / 2}" y="${mtdY}" font-size="22" font-weight="800" fill="${colorWhite}" text-anchor="middle"
-            font-family="Arial, sans-serif">
-        Month-to-date AP: ${safeText(money(mtdAp))}
-      </text>
-    </g>
-
-    <!-- Daily AP pill -->
-    <g filter="url(#shadow)">
-      <rect x="${width / 2 - 260}" y="${dailyY - 34}" rx="18" ry="18" width="520" height="56" fill="#ffffff" opacity="0.14"/>
-      <text x="${width / 2}" y="${dailyY}" font-size="22" font-weight="800" fill="${colorWhite}" text-anchor="middle"
-            font-family="Arial, sans-serif">
-        Total AP Today: ${safeText(money(dailyAp))}
-      </text>
-    </g>
-
-    ${rows.length ? listSvg : emptySvg}
-
-    <text x="${width / 2}" y="${height - 60}" font-size="16" font-weight="600" fill="${colorSub}" text-anchor="middle"
-          font-family="Arial, sans-serif">
-      Based on submitted policies (UTC day)
-    </text>
-  </svg>`;
 }
 
 async function fetchJson(url, body) {
@@ -289,33 +185,184 @@ export default async function handler() {
       return new Response(`Missing template at ${templatePath}`, { status: 500 });
     }
 
-    const base = sharp(templatePath);
-    const meta = await base.metadata();
-    const width = meta.width || 1080;
-    const height = meta.height || 1350;
+    const fontPath = path.join(process.cwd(), "assets", "fonts", "BellotaText-Bold.ttf");
+    if (!fs.existsSync(fontPath)) {
+      return new Response(`Missing font at ${fontPath}`, { status: 500 });
+    }
+
+    const doc = new PDFDocument({
+      size: [1080, 1350],
+      margin: 0,
+      info: {
+        Title: title,
+        Author: "Family Values Group",
+      },
+    });
+
+    const chunks = [];
+    doc.on("data", (c) => chunks.push(c));
+    doc.registerFont("BellotaBold", fontPath);
+
+    doc.image(templatePath, 0, 0, { width: 1080, height: 1350 });
 
     const dateLabel = nowChi.toFormat("cccc, LLL d • h:mm a 'CT'");
 
-    const svg = buildOverlaySvg({
-      width,
-      height,
-      dateLabel,
-      mtdAp,
-      dailyAp,
-      rows,
+    const headerY = 240;
+    const subY = 295;
+    const mtdBoxY = 345;
+    const dailyBoxY = 420;
+    const listStartY = 555;
+
+    const colorTitle = "#2a245c";
+    const colorSub = "#6b5e8a";
+    const colorGold = "#f1d58b";
+    const colorDarkPurple = "#3d3a78";
+    const colorDarkPurple2 = "#353468";
+    const colorWhite = "#ffffff";
+
+    doc
+      .font("BellotaBold")
+      .fontSize(44)
+      .fillColor(colorTitle)
+      .text("Top Producers Tonight", 0, headerY, {
+        width: 1080,
+        align: "center",
+      });
+
+    doc
+      .font("BellotaBold")
+      .fontSize(20)
+      .fillColor(colorSub)
+      .text(dateLabel, 0, subY, {
+        width: 1080,
+        align: "center",
+      });
+
+    // MTD AP pill
+    doc
+      .save()
+      .roundedRect(260, mtdBoxY, 560, 64, 20)
+      .fillOpacity(0.92)
+      .fill(colorDarkPurple)
+      .restore();
+
+    doc
+      .font("BellotaBold")
+      .fontSize(22)
+      .fillColor(colorWhite)
+      .text(`Month-to-date AP: ${money(mtdAp)}`, 0, mtdBoxY + 19, {
+        width: 1080,
+        align: "center",
+      });
+
+    // Daily AP pill
+    doc
+      .save()
+      .roundedRect(260, dailyBoxY, 560, 64, 20)
+      .fillOpacity(0.92)
+      .fill(colorDarkPurple2)
+      .restore();
+
+    doc
+      .font("BellotaBold")
+      .fontSize(22)
+      .fillColor(colorWhite)
+      .text(`Total AP Today: ${money(dailyAp)}`, 0, dailyBoxY + 19, {
+        width: 1080,
+        align: "center",
+      });
+
+    const leftX = 90;
+    const rowH = 72;
+    const maxNameLen = 22;
+
+    if (rows.length) {
+      rows.forEach((r, i) => {
+        const y = listStartY + i * rowH;
+        const name = (r.full_name || "Unknown").slice(0, maxNameLen);
+
+        doc
+          .save()
+          .roundedRect(leftX, y - 22, 1080 - leftX * 2, 56, 16)
+          .fillOpacity(i % 2 === 0 ? 0.92 : 0.86)
+          .fill(i % 2 === 0 ? colorDarkPurple : colorDarkPurple2)
+          .restore();
+
+        doc
+          .font("BellotaBold")
+          .fontSize(24)
+          .fillColor(colorGold)
+          .text(`${i + 1}.`, leftX + 22, y + 2, {
+            width: 50,
+          });
+
+        doc
+          .font("BellotaBold")
+          .fontSize(24)
+          .fillColor(colorWhite)
+          .text(name, leftX + 80, y + 2, {
+            width: 600,
+          });
+
+        doc
+          .font("BellotaBold")
+          .fontSize(24)
+          .fillColor(colorWhite)
+          .text(money(r.ap), 0, y + 2, {
+            width: 1080 - leftX - 22,
+            align: "right",
+          });
+      });
+    } else {
+      doc
+        .save()
+        .roundedRect(leftX, listStartY - 22, 1080 - leftX * 2, 110, 16)
+        .fillOpacity(0.92)
+        .fill(colorDarkPurple)
+        .restore();
+
+      doc
+        .font("BellotaBold")
+        .fontSize(26)
+        .fillColor(colorWhite)
+        .text("No submitted policies today.", 0, listStartY + 10, {
+          width: 1080,
+          align: "center",
+        });
+
+      doc
+        .font("BellotaBold")
+        .fontSize(18)
+        .fillColor("#d7d3ef")
+        .text("(We’ll post the moment we have AP.)", 0, listStartY + 48, {
+          width: 1080,
+          align: "center",
+        });
+    }
+
+    doc
+      .font("BellotaBold")
+      .fontSize(16)
+      .fillColor(colorSub)
+      .text("Based on submitted policies (UTC day)", 0, 1290, {
+        width: 1080,
+        align: "center",
+      });
+
+    doc.end();
+
+    const pdfBuffer = await new Promise((resolve) => {
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
     });
 
-    const outBuffer = await base
-      .composite([{ input: Buffer.from(svg), top: 0, left: 0 }])
-      .jpeg({ quality: 92 })
-      .toBuffer();
+    const outBuffer = pdfBuffer;
 
-    const fileName = `top-producers/${dayKey}.jpg`;
+    const fileName = `top-producers/${dayKey}.pdf`;
 
     const { error: upErr } = await sb.storage
       .from("announcements")
       .upload(fileName, outBuffer, {
-        contentType: "image/jpeg",
+        contentType: "application/pdf",
         upsert: true,
         cacheControl: "3600",
       });
