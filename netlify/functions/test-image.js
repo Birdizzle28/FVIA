@@ -58,7 +58,10 @@ export async function handler() {
     const subY = 295;
     const mtdBoxY = 345;
     const dailyBoxY = 420;
-    const listStartY = 560;
+    const listStartY = 555;
+
+    const darkPurple = "#3d3a78";
+    const darkPurple2 = "#353468";
 
     doc
       .font("BellotaBold")
@@ -81,8 +84,8 @@ export async function handler() {
     doc
       .save()
       .roundedRect(260, mtdBoxY, 560, 64, 20)
-      .fillOpacity(0.35)
-      .fill("#f3ecff")
+      .fillOpacity(0.92)
+      .fill(darkPurple)
       .restore();
 
     doc
@@ -97,8 +100,8 @@ export async function handler() {
     doc
       .save()
       .roundedRect(260, dailyBoxY, 560, 64, 20)
-      .fillOpacity(0.30)
-      .fill("#f3ecff")
+      .fillOpacity(0.92)
+      .fill(darkPurple2)
       .restore();
 
     doc
@@ -117,39 +120,39 @@ export async function handler() {
     ];
 
     const leftX = 90;
-    const rowH = 120;
+    const rowH = 72; // about half the previous spacing
 
     rows.forEach((r, i) => {
       const y = listStartY + i * rowH;
 
       doc
         .save()
-        .roundedRect(leftX, y - 28, 1080 - leftX * 2, 74, 18)
-        .fillOpacity(i % 2 === 0 ? 0.28 : 0.22)
-        .fill("#f3ecff")
+        .roundedRect(leftX, y - 22, 1080 - leftX * 2, 56, 16)
+        .fillOpacity(i % 2 === 0 ? 0.92 : 0.86)
+        .fill(i % 2 === 0 ? darkPurple : darkPurple2)
         .restore();
 
       doc
         .font("BellotaBold")
-        .fontSize(26)
+        .fontSize(24)
         .fillColor("#f1d58b")
-        .text(`${i + 1}.`, leftX + 22, y - 1, {
+        .text(`${i + 1}.`, leftX + 22, y + 2, {
           width: 50,
         });
 
       doc
         .font("BellotaBold")
-        .fontSize(26)
-        .fillColor("#1e1a3d")
-        .text(r.full_name, leftX + 80, y - 1, {
+        .fontSize(24)
+        .fillColor("#ffffff")
+        .text(r.full_name, leftX + 80, y + 2, {
           width: 600,
         });
 
       doc
         .font("BellotaBold")
-        .fontSize(26)
-        .fillColor("#2a245c")
-        .text(money(r.ap), 0, y - 1, {
+        .fontSize(24)
+        .fillColor("#ffffff")
+        .text(money(r.ap), 0, y + 2, {
           width: 1080 - leftX - 22,
           align: "right",
         });
