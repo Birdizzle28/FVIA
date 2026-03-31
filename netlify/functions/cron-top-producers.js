@@ -144,6 +144,20 @@ export default async function handler() {
       auth: { persistSession: false },
     });
 
+    const testAgentId = "1153ef63-bfb1-4d94-ad21-9c4031e5fd77";
+
+    const { data: testAgent, error: testErr } = await sb
+      .from("agents")
+      .select("id, full_name, first_name, last_name")
+      .eq("id", testAgentId)
+      .maybeSingle();
+    
+    console.log("TEST AGENT LOOKUP:", {
+      testAgentId,
+      testAgent,
+      testErr,
+    });
+
     // delete expired announcements first
     const nowIso = DateTime.now().toUTC().toISO();
     const { error: delErr } = await sb
