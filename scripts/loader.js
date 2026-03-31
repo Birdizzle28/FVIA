@@ -16,13 +16,33 @@
   const video = loader.querySelector("#main-loader-video");
 
   function hideLoader() {
+    if (!loader || loader.classList.contains("is-hidden")) return;
     loader.classList.add("is-hidden");
     setTimeout(() => {
       loader.remove();
     }, 500);
   }
 
-  window.addEventListener("load", () => {
+  function waitForBodyClassRemoval(className) {
+    if (!document.body.classList.contains(className)) {
+      maybeFinish();
+      return;
+    }
+
+    const observer = new MutationObserver(() => {
+      if (!document.body.classList.contains(className)) {
+        observer.disconnect();
+        maybeFinish();
+      }
+    });
+
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["class"]
+    });
+  }
+
+  function maybeFinish() {
     if (!video) {
       hideLoader();
       return;
@@ -37,5 +57,16 @@
     } else {
       hideLoader();
     }
+  }
+
+  // If page uses a preload class, wait for THAT instead of window.load
+  if (document.body.classList.contains("commissions-preload")) {
+    waitForBodyClassRemoval("commissions-preload");
+    return;
+  }
+
+  // fallback for normal pages
+  window.addEventListener("load", () => {
+    maybeFinish();
   });
 })();
