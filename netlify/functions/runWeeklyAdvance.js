@@ -303,7 +303,7 @@ function findNearestEligibleUplineFromAgent(startAgentId, item, itemState, sched
 /**
  * Record actual repayment events into DB
  */
-async function applyRepayments(agent_id, chargebackRepay, leadRepay, payout_batch_id) {
+async function applyRepayments(agent_id, chargebackRepay, leadRepay, otherRepay, payout_batch_id) {
   if (chargebackRepay > 0) {
     let remaining = chargebackRepay;
 
@@ -389,6 +389,51 @@ async function applyRepayments(agent_id, chargebackRepay, leadRepay, payout_batc
               amount: outstanding - pay
             })
             .eq('id', ld.id);
+        }
+      }
+    }
+  }
+
+  if (otherRepay > 0) {
+    let remaining = otherRepay;
+
+    const { data: odRows, error: odErr } = await supabase
+      .from('agent_other_debts')
+      .select('id, amount, status')
+      .eq('agent_id', agent_id)
+      .in('status', ['open', 'in_repayment'])
+      .order('created_at', { ascending: true });
+
+    if (!odErr) {
+      for (const od of odRows || []) {
+        if (remaining <= 0) break;
+
+        const outstanding = Number(od.amount);
+        if (outstanding <= 0) continue;
+
+        const pay = Math.min(outstanding, remaining);
+        remaining -= pay;
+
+        await supabase.from('agent_other_debt_payments').insert({
+          agent_other_debt_id: od.id,
+          agent_id,
+          amount: pay,
+          payout_batch_id
+        });
+
+        if (pay === outstanding) {
+          await supabase
+            .from('agent_other_debts')
+            .update({ status: 'paid', amount: 0 })
+            .eq('id', od.id);
+        } else {
+          await supabase
+            .from('agent_other_debts')
+            .update({
+              status: 'in_repayment',
+              amount: outstanding - pay
+            })
+            .eq('id', od.id);
         }
       }
     }
@@ -965,6 +1010,7 @@ export async function handler(event) {
       debtMap.set(r.agent_id, {
         lead: Number(r.lead_debt_total || 0),
         chargeback: Number(r.chargeback_total || 0),
+        other: Number(r.other_debt_total || 0),
         total: Number(r.total_debt || 0),
       });
     });
@@ -1003,32 +1049,39 @@ export async function handler(event) {
 
       let leadRepay = 0;
       let chargebackRepay = 0;
+      let otherRepay = 0;
       let net = gross;
-
+      
       if (gross > 0 && totalDebt > 0) {
         const rate     = getRepaymentRate(totalDebt, isActive);
         const maxRepay = Number((gross * rate).toFixed(2));
         const toRepay  = Math.min(maxRepay, totalDebt);
-
+      
         let remaining = toRepay;
-
+      
         const cbOutstanding = debtInfo.chargeback;
         if (cbOutstanding > 0 && remaining > 0) {
           chargebackRepay = Math.min(remaining, cbOutstanding);
           remaining -= chargebackRepay;
         }
-
+      
         const leadOutstanding = debtInfo.lead;
         if (leadOutstanding > 0 && remaining > 0) {
           leadRepay = Math.min(remaining, leadOutstanding);
           remaining -= leadRepay;
         }
-
-        const actualRepay = chargebackRepay + leadRepay;
+      
+        const otherOutstanding = debtInfo.other || 0;
+        if (otherOutstanding > 0 && remaining > 0) {
+          otherRepay = Math.min(remaining, otherOutstanding);
+          remaining -= otherRepay;
+        }
+      
+        const actualRepay = chargebackRepay + leadRepay + otherRepay;
         net = Number((gross - actualRepay).toFixed(2));
         totalDebits += actualRepay;
       }
-
+      
       payoutSummary.push({
         agent_id,
         advance_gross: Number(t.advance.toFixed(2)),
@@ -1037,8 +1090,8 @@ export async function handler(event) {
         net_payout: net,
         lead_repayment: Number(leadRepay.toFixed(2)),
         chargeback_repayment: Number(chargebackRepay.toFixed(2)),
+        other_repayment: Number(otherRepay.toFixed(2)),
       });
-    }
 
     totalGross  = Number(totalGross.toFixed(2));
     totalDebits = Number(totalDebits.toFixed(2));
@@ -1093,8 +1146,10 @@ export async function handler(event) {
     for (const ps of payoutSummary) {
       const cbRepay = ps.chargeback_repayment || 0;
       const ldRepay = ps.lead_repayment || 0;
-      if (cbRepay > 0 || ldRepay > 0) {
-        await applyRepayments(ps.agent_id, cbRepay, ldRepay, batch.id);
+      const odRepay = ps.other_repayment || 0;
+    
+      if (cbRepay > 0 || ldRepay > 0 || odRepay > 0) {
+        await applyRepayments(ps.agent_id, cbRepay, ldRepay, odRepay, batch.id);
       }
     }
 
