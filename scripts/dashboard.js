@@ -1177,9 +1177,8 @@ document.addEventListener('DOMContentLoaded', () => {
       // Scope filter
       if (scope === 'mine') {
         if (userId) {
-          q = q.or(`assigned_to.eq.${userId},submitted_by.eq.${userId}`);
+          q = q.eq('assigned_to', userId);
         } else {
-          // not logged in -> no "mine"
           return [];
         }
       }
@@ -1204,9 +1203,7 @@ document.addEventListener('DOMContentLoaded', () => {
   
         // Filter leads to ONLY downline agents (NOT including self)
         // Any lead assigned_to them OR submitted_by them
-        q = q.or(
-          `assigned_to.in.(${downlineIds.join(',')}),submitted_by.in.(${downlineIds.join(',')})`
-        );
+        q = q.in('assigned_to', downlineIds);
       }
   
       // NOTE: This 200 cap can make counts wrong if you have lots of leads.
@@ -1355,65 +1352,90 @@ document.addEventListener('DOMContentLoaded', () => {
 
   /* ---------- COMMISSION SNAPSHOT ---------- */
   async function loadCommissionSnapshot(){
-    let issuedMonth = 0, ytdAP = 0, pending = 0, chargebacksCount = 0;
-    let rows = [];
-    try{
+    let issuedMonth = 0, ytdAP = 0, pending = 0, chargebacksCount = 0, rows = [];
+  
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const userId = session?.user?.id || null;
+      if (!userId) return;
+  
       const now = new Date();
       const startMonthISO = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
       const startYearISO  = new Date(now.getFullYear(), 0, 1).toISOString();
-
-      const res = await supabase.from('policies')
-        .select('status, carrier_name, premium_annual, issued_at, contact:contacts(first_name,last_name)')
-        .not('issued_at','is', null)
+  
+      const res = await supabase
+        .from('policies')
+        .select(`
+          id,
+          agent_id,
+          status,
+          carrier_name,
+          premium_annual,
+          issued_at,
+          contact:contacts(first_name,last_name)
+        `)
+        .eq('agent_id', userId)
+        .not('issued_at', 'is', null)
         .gte('issued_at', startYearISO)
         .order('issued_at', { ascending:false })
         .limit(200);
-
+  
       if (!res.error && res.data) {
         const data = res.data;
-        ytdAP = data.reduce((s,r)=> s + (Number(r.premium_annual)||0), 0);
+  
+        ytdAP = data.reduce((s, r) => s + (Number(r.premium_annual) || 0), 0);
+  
         issuedMonth = data
           .filter(r => r.issued_at && new Date(r.issued_at) >= new Date(startMonthISO))
-          .reduce((s,r)=> s + (Number(r.premium_annual)||0), 0);
-
-        rows = data.slice(0,6).map(r=>({
+          .reduce((s, r) => s + (Number(r.premium_annual) || 0), 0);
+  
+        rows = data.slice(0, 6).map(r => ({
           carrier: r.carrier_name || '—',
           client: `${r.contact?.first_name || ''} ${r.contact?.last_name || ''}`.trim() || '—',
-          status: (r.status || '').replace('_',' '),
-          ap: Number(r.premium_annual)||0,
+          status: (r.status || '').replace('_', ' '),
+          ap: Number(r.premium_annual) || 0,
           date: r.issued_at ? new Date(r.issued_at).toLocaleDateString() : '—'
         }));
       } else if (res.error) {
         console.warn('Policies query failed:', res.error);
       }
-
-      const pend = await supabase.from('policies').select('id', { count:'exact', head:true }).eq('status','pending');
+  
+      const pend = await supabase
+        .from('policies')
+        .select('id', { count:'exact', head:true })
+        .eq('agent_id', userId)
+        .eq('status', 'pending');
+  
       pending = pend.count || 0;
-
+  
       try {
-        const cbQ = await supabase.from('policy_status_history')
-          .select('event_type', { count:'exact', head:true })
-          .gte('event_at', new Date(Date.now() - 30*864e5).toISOString())
-          .eq('event_type','chargeback');
+        const cbQ = await supabase
+          .from('policy_chargebacks')
+          .select('id', { count:'exact', head:true })
+          .eq('agent_id', userId)
+          .gte('created_at', new Date(Date.now() - 30 * 864e5).toISOString());
+  
         chargebacksCount = cbQ.count || 0;
-      } catch {}
-    }catch(err){
+      } catch (err) {
+        console.warn('Chargebacks query failed:', err);
+      }
+    } catch (err) {
       console.warn('Commission snapshot error:', err);
     }
-
-    const $ = (id)=>document.getElementById(id);
+  
+    const $ = (id) => document.getElementById(id);
     $('comm-issued-month') && ($('comm-issued-month').textContent = `$${Math.round(issuedMonth).toLocaleString()}`);
     $('comm-ytd-ap')      && ($('comm-ytd-ap').textContent      = `$${Math.round(ytdAP).toLocaleString()}`);
     $('comm-pending')     && ($('comm-pending').textContent     = String(pending));
     $('comm-chargebacks') && ($('comm-chargebacks').textContent = `${chargebacksCount} events`);
-
+  
     const tbody = document.getElementById('comm-recent-policies');
     if (tbody) {
-      tbody.innerHTML = rows.map(r=>`
+      tbody.innerHTML = rows.map(r => `
         <tr>
           <td>${r.carrier}</td>
           <td>${r.client}</td>
-          <td>${r.status||'—'}</td>
+          <td>${r.status || '—'}</td>
           <td>$${Math.round(r.ap).toLocaleString()}</td>
           <td>${r.date}</td>
         </tr>
