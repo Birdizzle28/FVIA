@@ -183,37 +183,32 @@ async function postPreviewJson(url) {
 }
 
 function pickMyPayoutAmount(previewJson) {
-  // Weekly uses agent_payouts, Monthly uses agent_payouts_preview
   const list =
     previewJson?.agent_payouts_preview ||
     previewJson?.agent_payouts ||
     null;
 
-  if (Array.isArray(list) && me?.id) {
-    const mine = list.find(x => x?.agent_id === me.id);
-    if (mine) {
-      // Prefer net payout if present
-      const v =
-        mine.net_payout ??
-        mine.net_amount ??
-        mine.gross_payout ??
-        mine.gross_monthly_trail ??
-        mine.gross_amount ??
-        0;
-
-      return Number(v) || 0;
-    }
+  if (!Array.isArray(list) || !me?.id) {
+    console.log('No preview list or no me.id', { list, meId: me?.id });
+    return 0;
   }
 
-  // Fallback totals (monthly vs weekly keys)
-  const fallback =
-    previewJson?.total_net_preview ??
-    previewJson?.total_net ??
-    previewJson?.total_gross_preview ??
-    previewJson?.total_gross ??
+  const mine = list.find(x => x?.agent_id === me.id);
+  console.log('Preview rows:', list);
+  console.log('Logged-in agent:', me.id);
+  console.log('Matched payout row:', mine);
+
+  if (!mine) return 0;
+
+  const v =
+    mine.net_payout ??
+    mine.net_amount ??
+    mine.gross_payout ??
+    mine.gross_monthly_trail ??
+    mine.gross_amount ??
     0;
 
-  return Number(fallback) || 0;
+  return Number(v) || 0;
 }
 
 async function loadNextPayoutsFromPreviews() {
