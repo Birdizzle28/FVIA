@@ -871,7 +871,7 @@ export async function handler(event) {
     // Load each agent's current debt (lead + chargeback)
     const { data: debtRows, error: debtErr } = await supabase
       .from('agent_total_debt')
-      .select('agent_id, lead_debt_total, chargeback_total, total_debt')
+      .select('agent_id, lead_debt_total, chargeback_total, other_debt_total, total_debt')
       .in('agent_id', agentIds);
 
     if (debtErr) {
@@ -887,6 +887,7 @@ export async function handler(event) {
       debtMap.set(r.agent_id, {
         lead: Number(r.lead_debt_total || 0),
         chargeback: Number(r.chargeback_total || 0),
+        other: Number(r.other_debt_total || 0),
         total: Number(r.total_debt || 0),
       });
     });
@@ -919,36 +920,42 @@ export async function handler(event) {
       const gross = Number(t.gross.toFixed(2));
       totalGross += gross;
 
-      const debtInfo = debtMap.get(agent_id) || { lead: 0, chargeback: 0, total: 0 };
+      const debtInfo = debtMap.get(agent_id) || { lead: 0, chargeback: 0, other: 0, total: 0 };
       const totalDebt = debtInfo.total;
       const isActive = activeMap.has(agent_id) ? activeMap.get(agent_id) : true;
-
+      
       let leadRepay = 0;
       let chargebackRepay = 0;
+      let otherDebtRepay = 0;
       let net = gross;
-
+      
       if (gross > 0 && totalDebt > 0) {
         const rate = getRepaymentRate(totalDebt, isActive);
         const maxRepay = Number((gross * rate).toFixed(2));
         const toRepay = Math.min(maxRepay, totalDebt);
-
+      
         let remaining = toRepay;
-
+      
         if (debtInfo.chargeback > 0 && remaining > 0) {
           chargebackRepay = Math.min(remaining, debtInfo.chargeback);
           remaining -= chargebackRepay;
         }
-
+      
         if (debtInfo.lead > 0 && remaining > 0) {
           leadRepay = Math.min(remaining, debtInfo.lead);
           remaining -= leadRepay;
         }
-
-        const actualRepay = chargebackRepay + leadRepay;
+      
+        if (debtInfo.other > 0 && remaining > 0) {
+          otherDebtRepay = Math.min(remaining, debtInfo.other);
+          remaining -= otherDebtRepay;
+        }
+      
+        const actualRepay = chargebackRepay + leadRepay + otherDebtRepay;
         net = Number((gross - actualRepay).toFixed(2));
         totalDebits += actualRepay;
       }
-
+      
       payoutSummary.push({
         agent_id,
         advance_gross: Number(t.advance.toFixed(2)),
@@ -957,6 +964,7 @@ export async function handler(event) {
         net_payout: net,
         lead_repayment: Number(leadRepay.toFixed(2)),
         chargeback_repayment: Number(chargebackRepay.toFixed(2)),
+        other_repayment: Number(otherDebtRepay.toFixed(2)),
       });
     }
 
