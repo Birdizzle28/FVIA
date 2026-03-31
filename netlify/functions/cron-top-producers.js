@@ -13,7 +13,11 @@ const MAX_TOP = 10;
 
 function money(n) {
   const v = Number(n || 0);
-  return v.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
+  return v.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  });
 }
 
 function isoDate(dt) {
@@ -21,25 +25,27 @@ function isoDate(dt) {
 }
 
 function safeText(s) {
-  return String(s ?? "").replace(/[<>&]/g, (m) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[m]));
+  return String(s ?? "").replace(/[<>&]/g, (m) => ({
+    "<": "&lt;",
+    ">": "&gt;",
+    "&": "&amp;",
+  }[m]));
 }
 
 // Build a “stylized” SVG overlay (Sharp composites SVG nicely)
-function buildOverlaySvg({ width, height, dateLabel, mtdAp, rows }) {
-  // layout tuning
+function buildOverlaySvg({ width, height, dateLabel, mtdAp, dailyAp, rows }) {
   const leftX = 90;
-  const topY = 220;
 
   const headerY = 150;
   const mtdY = 200;
+  const dailyY = 248;
 
-  const listStartY = 280;
+  const listStartY = 330;
   const rowH = 70;
 
   const title = "Top Producers Tonight";
   const sub = dateLabel;
 
-  // Colors (picked to match your palette vibe)
   const colorTitle = "#2a245c";
   const colorSub = "#6b5e8a";
   const colorWhite = "#ffffff";
@@ -56,7 +62,6 @@ function buildOverlaySvg({ width, height, dateLabel, mtdAp, rows }) {
       const name = (r.full_name || "Unknown").slice(0, maxNameLen);
       const ap = money(r.ap);
 
-      // alternating subtle background bars for readability
       const barOpacity = i % 2 === 0 ? 0.16 : 0.10;
 
       return `
@@ -70,12 +75,11 @@ function buildOverlaySvg({ width, height, dateLabel, mtdAp, rows }) {
     })
     .join("");
 
-  // If no rows, display a friendly message
   const emptySvg = `
     <g>
       <rect x="${leftX}" y="${listStartY - 40}" rx="16" ry="16" width="${width - leftX * 2}" height="110" fill="${colorWhite}" opacity="0.14" />
       <text x="${width / 2}" y="${listStartY + 20}" font-size="26" font-weight="800" fill="${colorTitle}" text-anchor="middle" font-family="Bellota Text, Arial, sans-serif">
-        No issued policies today.
+        No submitted policies today.
       </text>
       <text x="${width / 2}" y="${listStartY + 55}" font-size="18" font-weight="600" fill="${colorSub}" text-anchor="middle" font-family="Bellota Text, Arial, sans-serif">
         (We’ll post the moment we have AP.)
@@ -91,7 +95,6 @@ function buildOverlaySvg({ width, height, dateLabel, mtdAp, rows }) {
       </filter>
     </defs>
 
-    <!-- Title -->
     <text x="${width / 2}" y="${headerY}" font-size="44" font-weight="900" fill="${colorTitle}" text-anchor="middle"
           font-family="Bellota Text, Arial, sans-serif" filter="url(#shadow)">${safeText(title)}</text>
 
@@ -107,13 +110,20 @@ function buildOverlaySvg({ width, height, dateLabel, mtdAp, rows }) {
       </text>
     </g>
 
-    <!-- List -->
+    <!-- Daily AP pill -->
+    <g filter="url(#shadow)">
+      <rect x="${width / 2 - 260}" y="${dailyY - 34}" rx="18" ry="18" width="520" height="56" fill="#ffffff" opacity="0.14"/>
+      <text x="${width / 2}" y="${dailyY}" font-size="22" font-weight="800" fill="${colorWhite}" text-anchor="middle"
+            font-family="Bellota Text, Arial, sans-serif">
+        Total AP Today: ${safeText(money(dailyAp))}
+      </text>
+    </g>
+
     ${rows.length ? listSvg : emptySvg}
 
-    <!-- Footer note -->
     <text x="${width / 2}" y="${height - 60}" font-size="16" font-weight="600" fill="${colorSub}" text-anchor="middle"
           font-family="Bellota Text, Arial, sans-serif">
-      Based on issued policies (CST/CDT day)
+      Based on submitted policies (UTC day)
     </text>
   </svg>`;
 }
@@ -126,7 +136,9 @@ async function fetchJson(url, body) {
   });
   const txt = await res.text();
   let json = null;
-  try { json = JSON.parse(txt); } catch {}
+  try {
+    json = JSON.parse(txt);
+  } catch {}
   return { ok: res.ok, status: res.status, text: txt, json };
 }
 
@@ -144,26 +156,12 @@ export default async function handler() {
       auth: { persistSession: false },
     });
 
-    const testAgentId = "1153ef63-bfb1-4d94-ad21-9c4031e5fd77";
-
-    const { data: testAgent, error: testErr } = await sb
-      .from("agents")
-      .select("id, full_name, first_name, last_name")
-      .eq("id", testAgentId)
-      .maybeSingle();
-    
-    console.log("TEST AGENT LOOKUP:", {
-      testAgentId,
-      testAgent,
-      testErr,
-    });
-
     // delete expired announcements first
     const nowIso = DateTime.now().toUTC().toISO();
     const { error: delErr } = await sb
       .from("announcements")
       .delete()
-      .lt("expires_at", nowIso);
+      .lte("expires_at", nowIso);
 
     if (delErr) {
       console.error("Expired announcement delete error:", delErr);
@@ -178,7 +176,7 @@ export default async function handler() {
       return new Response("Not in 10:00 PM Chicago window.", { status: 200 });
     }
 
-    const dayKey = isoDate(nowChi); // yyyy-mm-dd
+    const dayKey = isoDate(nowChi);
     const title = `Top Producers — ${dayKey}`;
 
     // Dedup: if already posted for this day, exit
@@ -190,25 +188,21 @@ export default async function handler() {
 
     if (exErr) {
       console.error("Dedup check error:", exErr);
-      // keep going (worst case: duplicate)
     } else if (existing && existing.length) {
       return new Response("Already posted today.", { status: 200 });
     }
 
-    // Compute CST/CDT day boundaries
-    const startOfDay = nowChi.startOf("day");
-    const endOfDay = nowChi.endOf("day");
+    // UTC day boundaries for submitted_at leaderboard
+    const nowUtcDt = DateTime.now().toUTC();
+    const startUtc = nowUtcDt.startOf("day").toISO();
+    const endUtc = nowUtcDt.endOf("day").toISO();
 
-    const startUtc = startOfDay.toUTC().toISO();
-    const endUtc = endOfDay.toUTC().toISO();
-
-    // Month-to-date window
+    // Month-to-date window still based on Chicago month
     const startMonth = nowChi.startOf("month").startOf("day");
     const startMonthUtc = startMonth.toUTC().toISO();
     const nowUtc = nowChi.toUTC().toISO();
 
-    // Pull policies for TODAY (issued_at in CST/CDT day)
-    // We keep statuses that mean “issued happened”
+    // Pull policies for TODAY (submitted_at in UTC day)
     const { data: todayPolicies, error: polErr } = await sb
       .from("policies")
       .select("id, agent_id, submitted_at, premium_annual, premium_modal, status")
@@ -230,18 +224,23 @@ export default async function handler() {
 
     // Aggregate today by agent
     const apByAgent = new Map();
+    let dailyAp = 0;
+
     for (const p of todayPolicies || []) {
       const agentId = p.agent_id;
       if (!agentId) continue;
 
-      const ap = Number(p.premium_annual ?? (p.premium_modal != null ? Number(p.premium_modal) * 12 : 0)) || 0;
+      const ap = Number(
+        p.premium_annual ??
+        (p.premium_modal != null ? Number(p.premium_modal) * 12 : 0)
+      ) || 0;
+
       if (ap <= 0) continue;
 
+      dailyAp += ap;
       apByAgent.set(agentId, (apByAgent.get(agentId) || 0) + ap);
     }
 
-    // If we have no agents with AP today, we still post (you wanted “only what we have”)
-    // Fetch agent names for involved agents (top 10 only after sorting)
     const ranked = Array.from(apByAgent.entries())
       .map(([agent_id, ap]) => ({ agent_id, ap }))
       .sort((a, b) => b.ap - a.ap)
@@ -260,7 +259,10 @@ export default async function handler() {
 
       agentsById = new Map(
         (agents || []).map(a => {
-          const name = a.full_name || `${a.first_name || ""} ${a.last_name || ""}`.trim() || "Unknown";
+          const name =
+            a.full_name ||
+            `${a.first_name || ""} ${a.last_name || ""}`.trim() ||
+            "Unknown";
           return [a.id, name];
         })
       );
@@ -274,11 +276,14 @@ export default async function handler() {
     // MTD AP sum
     let mtdAp = 0;
     for (const p of mtdPolicies || []) {
-      const ap = Number(p.premium_annual ?? (p.premium_modal != null ? Number(p.premium_modal) * 12 : 0)) || 0;
+      const ap = Number(
+        p.premium_annual ??
+        (p.premium_modal != null ? Number(p.premium_modal) * 12 : 0)
+      ) || 0;
+
       if (ap > 0) mtdAp += ap;
     }
 
-    // Generate image on your template
     const templatePath = path.join(process.cwd(), "assets", "announcements", "top-producers-template.jpg");
     if (!fs.existsSync(templatePath)) {
       return new Response(`Missing template at ${templatePath}`, { status: 500 });
@@ -291,14 +296,20 @@ export default async function handler() {
 
     const dateLabel = nowChi.toFormat("cccc, LLL d • h:mm a 'CT'");
 
-    const svg = buildOverlaySvg({ width, height, dateLabel, mtdAp, rows });
+    const svg = buildOverlaySvg({
+      width,
+      height,
+      dateLabel,
+      mtdAp,
+      dailyAp,
+      rows,
+    });
 
     const outBuffer = await base
       .composite([{ input: Buffer.from(svg), top: 0, left: 0 }])
       .jpeg({ quality: 92 })
       .toBuffer();
 
-    // Upload image to Supabase Storage (announcements bucket)
     const fileName = `top-producers/${dayKey}.jpg`;
 
     const { error: upErr } = await sb.storage
@@ -314,20 +325,19 @@ export default async function handler() {
     const { data: pub } = sb.storage.from("announcements").getPublicUrl(fileName);
     const image_url = pub?.publicUrl || null;
 
-    // Build announcement body text (push + fallback)
     const lines = rows.length
       ? rows.map((r, i) => `${i + 1}. ${r.full_name} — ${money(r.ap)}`)
-      : ["No issued policies today."];
+      : ["No submitted policies today."];
 
     const body =
-      `Month-to-date AP: ${money(mtdAp)}\n\n` +
+      `Month-to-date AP: ${money(mtdAp)}\n` +
+      `Total AP Today: ${money(dailyAp)}\n\n` +
       `Top Producers (${dayKey}):\n` +
       lines.join("\n");
 
-    // Insert announcement
     const publishAt = DateTime.now().toUTC();
     const expiresAt = publishAt.plus({ hours: 23 });
-    
+
     const payload = {
       title,
       body,
@@ -350,10 +360,12 @@ export default async function handler() {
 
     if (insErr) throw insErr;
 
-    // Trigger push notif (uses your existing function)
     if (SITE_URL) {
       const pushUrl = `${SITE_URL}/.netlify/functions/send-push`;
-      const pushRes = await fetchJson(pushUrl, { type: "announcement", announcement_id: created.id });
+      const pushRes = await fetchJson(pushUrl, {
+        type: "announcement",
+        announcement_id: created.id,
+      });
       if (!pushRes.ok) {
         console.warn("Push failed (non-fatal):", pushRes.status, pushRes.text);
       }
