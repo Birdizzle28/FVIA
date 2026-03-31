@@ -96,16 +96,16 @@ function buildOverlaySvg({ width, height, dateLabel, mtdAp, dailyAp, rows }) {
     </defs>
 
     <text x="${width / 2}" y="${headerY}" font-size="44" font-weight="900" fill="${colorTitle}" text-anchor="middle"
-          font-family="Bellota Text, Arial, sans-serif" filter="url(#shadow)">${safeText(title)}</text>
+          font-family="Arial, sans-serif" filter="url(#shadow)">${safeText(title)}</text>
 
     <text x="${width / 2}" y="${headerY + 34}" font-size="20" font-weight="700" fill="${colorSub}" text-anchor="middle"
-          font-family="Bellota Text, Arial, sans-serif">${safeText(sub)}</text>
+          font-family="Arial, sans-serif">${safeText(sub)}</text>
 
     <!-- MTD AP pill -->
     <g filter="url(#shadow)">
       <rect x="${width / 2 - 260}" y="${mtdY - 34}" rx="18" ry="18" width="520" height="56" fill="#ffffff" opacity="0.18"/>
       <text x="${width / 2}" y="${mtdY}" font-size="22" font-weight="800" fill="${colorWhite}" text-anchor="middle"
-            font-family="Bellota Text, Arial, sans-serif">
+            font-family="Arial, sans-serif">
         Month-to-date AP: ${safeText(money(mtdAp))}
       </text>
     </g>
@@ -114,7 +114,7 @@ function buildOverlaySvg({ width, height, dateLabel, mtdAp, dailyAp, rows }) {
     <g filter="url(#shadow)">
       <rect x="${width / 2 - 260}" y="${dailyY - 34}" rx="18" ry="18" width="520" height="56" fill="#ffffff" opacity="0.14"/>
       <text x="${width / 2}" y="${dailyY}" font-size="22" font-weight="800" fill="${colorWhite}" text-anchor="middle"
-            font-family="Bellota Text, Arial, sans-serif">
+            font-family="Arial, sans-serif">
         Total AP Today: ${safeText(money(dailyAp))}
       </text>
     </g>
@@ -122,7 +122,7 @@ function buildOverlaySvg({ width, height, dateLabel, mtdAp, dailyAp, rows }) {
     ${rows.length ? listSvg : emptySvg}
 
     <text x="${width / 2}" y="${height - 60}" font-size="16" font-weight="600" fill="${colorSub}" text-anchor="middle"
-          font-family="Bellota Text, Arial, sans-serif">
+          font-family="Arial, sans-serif">
       Based on submitted policies (UTC day)
     </text>
   </svg>`;
