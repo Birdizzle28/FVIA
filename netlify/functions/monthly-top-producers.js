@@ -1,7 +1,9 @@
 // netlify/functions/monthly-top-producers.js
+import fs from "fs";
+import path from "path";
+import PDFDocument from "pdfkit";
 import { createClient } from "@supabase/supabase-js";
 import { DateTime } from "luxon";
-import sharp from "sharp";
 
 export default async (req) => {
   try {
@@ -20,6 +22,17 @@ export default async (req) => {
       auth: { persistSession: false },
     });
 
+    // delete expired announcements first
+    const nowIso = DateTime.now().toUTC().toISO();
+    const { error: delErr } = await sb
+      .from("announcements")
+      .delete()
+      .lte("expires_at", nowIso);
+
+    if (delErr) {
+      console.error("Expired announcement delete error:", delErr);
+    }
+
     // --- Time window: previous month in America/Chicago ---
     const ZONE = "America/Chicago";
     const nowChi = DateTime.now().setZone(ZONE);
@@ -32,8 +45,6 @@ export default async (req) => {
     const endUtcISO = endPrev.toUTC().toISO();
 
     // --- Pull policies issued in previous month ---
-    // Only policies with issued_at set, and premium_annual present, and agent_id present.
-    // If you want only "issued/in_force" etc, add .in('status', [...])
     const { data: policies, error: polErr } = await sb
       .from("policies")
       .select("agent_id, premium_annual, issued_at")
@@ -46,7 +57,7 @@ export default async (req) => {
     if (polErr) throw polErr;
 
     // --- Aggregate AP by agent ---
-    const apByAgent = new Map(); // agent_id -> number
+    const apByAgent = new Map();
     let totalMonthAp = 0;
 
     for (const p of policies || []) {
@@ -58,7 +69,6 @@ export default async (req) => {
       apByAgent.set(agentId, (apByAgent.get(agentId) || 0) + ap);
     }
 
-    // If nobody produced, we still publish an announcement (optional).
     const entries = Array.from(apByAgent.entries())
       .map(([agent_id, ap]) => ({ agent_id, ap }))
       .sort((a, b) => b.ap - a.ap)
@@ -82,11 +92,10 @@ export default async (req) => {
       }
     }
 
-    const monthLabel = startPrev.toFormat("LLLL yyyy"); // "March 2026"
+    const monthLabel = startPrev.toFormat("LLLL yyyy");
     const title = `🏆 Top Producers — ${monthLabel}`;
     const totalText = formatMoney0(totalMonthAp);
 
-    // Build leaderboard lines
     const lines = entries.length
       ? entries.map((x, i) => {
           const nm = nameById.get(x.agent_id) || "Unknown Agent";
@@ -94,45 +103,143 @@ export default async (req) => {
         })
       : ["No issued policies last month."];
 
-    // --- Generate image on top of background ---
-    // Background from your site repo (static file)
-    const bgUrl = `${SITE_URL}/Pics/monthly-leaderboard-bg.jpg`;
+    // --- Generate image using PDFKit instead of SVG/Sharp ---
+    const bgPath = path.join(process.cwd(), "Pics", "monthly-leaderboard-bg.jpg");
+    const fontPath = path.join(process.cwd(), "assets", "fonts", "BellotaText-Bold.ttf");
 
-    const bgRes = await fetch(bgUrl);
-    if (!bgRes.ok) {
-      const t = await bgRes.text().catch(() => "");
-      return json(500, { error: `Failed to fetch background image: ${bgUrl}`, detail: t.slice(0, 300) });
+    if (!fs.existsSync(bgPath)) {
+      return json(500, { error: `Missing background image: ${bgPath}` });
     }
-    const bgBuffer = Buffer.from(await bgRes.arrayBuffer());
 
-    // We’ll use the background’s dimensions automatically
-    const bgMeta = await sharp(bgBuffer).metadata();
-    const W = bgMeta.width || 1080;
-    const H = bgMeta.height || 1080;
+    if (!fs.existsSync(fontPath)) {
+      return json(500, { error: `Missing font file: ${fontPath}` });
+    }
 
-    const svg = buildMonthlySvg({
-      width: W,
-      height: H,
-      monthLabel,
-      totalText,
-      lines,
+    const doc = new PDFDocument({
+      size: [1080, 1080],
+      margin: 0,
+      info: {
+        Title: title,
+        Author: "Family Values Group",
+      },
     });
 
-    const finalPng = await sharp(bgBuffer)
-      .composite([{ input: Buffer.from(svg), top: 0, left: 0 }])
-      .png({ compressionLevel: 9 })
-      .toBuffer();
+    const chunks = [];
+    doc.on("data", (c) => chunks.push(c));
+    doc.registerFont("BellotaBold", fontPath);
 
-    // --- Upload image to Supabase Storage ---
-    // Bucket: announcements (same bucket you used for manual announcements)
-    // Path: monthly/YYYY-MM.png
-    const monthKey = startPrev.toFormat("yyyy-LL");
-    const storagePath = `monthly/${monthKey}.png`;
+    doc.image(bgPath, 0, 0, { width: 1080, height: 1080 });
+
+    const W = 1080;
+    const H = 1080;
+
+    const panelX = 76;
+    const panelY = 238;
+    const panelW = 928;
+    const panelH = 670;
+    const pad = 54;
+
+    const titleY = panelY + 72;
+    const totalY = panelY + 132;
+    const dividerY = panelY + 186;
+    const listStartY = panelY + 252;
+    const rowH = 52;
+
+    const darkPurple = "#3d3a78";
+    const darkPurple2 = "#353468";
+    const white = "#ffffff";
+    const pink = "#ffd7e6";
+    const muted = "#e8e1ff";
+
+    // readability panel
+    doc
+      .save()
+      .roundedRect(panelX, panelY, panelW, panelH, 32)
+      .fillOpacity(0.78)
+      .fill("#1b1938")
+      .restore();
+
+    doc
+      .save()
+      .roundedRect(panelX, panelY, panelW, panelH, 32)
+      .lineWidth(2)
+      .strokeOpacity(0.18)
+      .stroke("#ffffff")
+      .restore();
+
+    // header
+    doc
+      .font("BellotaBold")
+      .fontSize(54)
+      .fillColor(white)
+      .text(`Top 10 Producers — ${monthLabel}`, panelX + pad, titleY, {
+        width: panelW - pad * 2,
+        align: "left",
+      });
+
+    doc
+      .font("BellotaBold")
+      .fontSize(38)
+      .fillColor(pink)
+      .text(`Family Values Group Monthly AP: ${totalText}`, panelX + pad, totalY, {
+        width: panelW - pad * 2,
+        align: "left",
+      });
+
+    doc
+      .save()
+      .rect(panelX + pad, dividerY, panelW - pad * 2, 2)
+      .fillOpacity(0.18)
+      .fill("#ffffff")
+      .restore();
+
+    // list
+    if (lines.length) {
+      lines.forEach((line, idx) => {
+        const y = listStartY + idx * rowH;
+
+        doc
+          .save()
+          .roundedRect(panelX + pad - 18, y - 30, panelW - pad * 2 + 36, 42, 14)
+          .fillOpacity(idx % 2 === 0 ? 0.92 : 0.86)
+          .fill(idx % 2 === 0 ? darkPurple : darkPurple2)
+          .restore();
+
+        doc
+          .font("BellotaBold")
+          .fontSize(32)
+          .fillColor(white)
+          .text(line, panelX + pad, y - 10, {
+            width: panelW - pad * 2,
+            align: "left",
+            lineBreak: false,
+          });
+      });
+    }
+
+    // footer note
+    doc
+      .font("BellotaBold")
+      .fontSize(26)
+      .fillColor(muted)
+      .text("Based on policies with issued dates in America/Chicago time.", panelX + pad, panelY + panelH - 56, {
+        width: panelW - pad * 2,
+        align: "left",
+        lineBreak: false,
+      });
+
+    doc.end();
+
+    const pdfBuffer = await new Promise((resolve) => {
+      doc.on("end", () => resolve(Buffer.concat(chunks)));
+    });
+
+    const storagePath = `monthly/${startPrev.toFormat("yyyy-LL")}.pdf`;
 
     const { error: upErr } = await sb.storage
       .from("announcements")
-      .upload(storagePath, finalPng, {
-        contentType: "image/png",
+      .upload(storagePath, pdfBuffer, {
+        contentType: "application/pdf",
         upsert: true,
         cacheControl: "3600",
       });
@@ -148,13 +255,16 @@ export default async (req) => {
       `**Monthly AP (Team):** ${totalText}\n\n` +
       lines.join("\n");
 
+    const publishAt = DateTime.now().toUTC();
+    const expiresAt = publishAt.plus({ days: 27 });
+
     const payload = {
       title,
       body,
       created_by: null,
       audience: { scope: "all" },
-      publish_at: null, // publish now
-      expires_at: null,
+      publish_at: publishAt.toISO(),
+      expires_at: expiresAt.toISO(),
       is_active: true,
       image_url,
       link_url: null,
@@ -170,8 +280,7 @@ export default async (req) => {
 
     if (insErr) throw insErr;
 
-    // --- Trigger push notification (your existing function) ---
-    // Non-fatal if it fails
+    // --- Trigger push notification ---
     try {
       await fetch(`${SITE_URL}/.netlify/functions/send-push`, {
         method: "POST",
@@ -204,103 +313,4 @@ function json(statusCode, obj) {
 function formatMoney0(n) {
   const v = Number(n || 0);
   return v.toLocaleString("en-US", { style: "currency", currency: "USD", maximumFractionDigits: 0 });
-}
-
-function escapeXml(s) {
-  return String(s ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&apos;");
-}
-
-function buildMonthlySvg({ width, height, monthLabel, totalText, lines }) {
-  // Placement tuned for your background: big empty space in center.
-  const pad = Math.round(width * 0.07);
-  const panelW = Math.round(width * 0.86);
-  const panelH = Math.round(height * 0.62);
-  const panelX = Math.round((width - panelW) / 2);
-  const panelY = Math.round(height * 0.22);
-
-  const titleY = panelY + Math.round(panelH * 0.16);
-  const totalY = panelY + Math.round(panelH * 0.26);
-  const listStartY = panelY + Math.round(panelH * 0.36);
-  const lineGap = Math.round(panelH * 0.055);
-
-  const titleSize = Math.round(width * 0.055);
-  const totalSize = Math.round(width * 0.042);
-  const lineSize = Math.round(width * 0.036);
-
-  const safeLines = (lines || []).slice(0, 10);
-
-  const listText = safeLines
-    .map((t, idx) => {
-      const y = listStartY + idx * lineGap;
-      return `<text x="${panelX + pad}" y="${y}" class="line">${escapeXml(t)}</text>`;
-    })
-    .join("");
-
-  return `
-<svg width="${width}" height="${height}" viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg">
-  <defs>
-    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="4" stdDeviation="6" flood-color="#000" flood-opacity="0.45"/>
-    </filter>
-
-    <linearGradient id="panelGrad" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="rgba(20,20,28,0.70)"/>
-      <stop offset="100%" stop-color="rgba(20,20,28,0.52)"/>
-    </linearGradient>
-
-    <style>
-      .title {
-        font-family: "Bellota Text", "Trebuchet MS", Arial, sans-serif;
-        font-size: ${titleSize}px;
-        font-weight: 700;
-        fill: #ffffff;
-        letter-spacing: 0.5px;
-      }
-      .sub {
-        font-family: "Bellota Text", "Trebuchet MS", Arial, sans-serif;
-        font-size: ${totalSize}px;
-        font-weight: 700;
-        fill: #ffd7e6;
-      }
-      .line {
-        font-family: "Bellota Text", "Trebuchet MS", Arial, sans-serif;
-        font-size: ${lineSize}px;
-        font-weight: 700;
-        fill: #ffffff;
-      }
-      .muted {
-        font-family: "Bellota Text", "Trebuchet MS", Arial, sans-serif;
-        font-size: ${Math.round(lineSize * 0.9)}px;
-        font-weight: 600;
-        fill: rgba(255,255,255,0.85);
-      }
-    </style>
-  </defs>
-
-  <!-- Readability panel -->
-  <g filter="url(#shadow)">
-    <rect x="${panelX}" y="${panelY}" width="${panelW}" height="${panelH}" rx="${Math.round(width * 0.03)}" fill="url(#panelGrad)" stroke="rgba(255,255,255,0.18)" stroke-width="2"/>
-  </g>
-
-  <!-- Header -->
-  <text x="${panelX + pad}" y="${titleY}" class="title">Top 10 Producers — ${escapeXml(monthLabel)}</text>
-  <text x="${panelX + pad}" y="${totalY}" class="sub">Family Values Group Monthly AP: ${escapeXml(totalText)}</text>
-
-  <!-- Divider -->
-  <rect x="${panelX + pad}" y="${panelY + Math.round(panelH * 0.30)}" width="${panelW - pad * 2}" height="2" fill="rgba(255,255,255,0.18)"/>
-
-  <!-- List -->
-  ${listText}
-
-  <!-- Footer note -->
-  <text x="${panelX + pad}" y="${panelY + panelH - Math.round(panelH * 0.06)}" class="muted">
-    Based on policies with issued dates in America/Chicago time.
-  </text>
-</svg>
-`.trim();
 }
