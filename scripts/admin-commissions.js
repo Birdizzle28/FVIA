@@ -2169,8 +2169,13 @@ function wireAdjustmentSubmit() {
       const effective_date = document.getElementById('adjustment-date')?.value || '';
       const description = document.getElementById('adjustment-description')?.value?.trim() || '';
 
-      const policy_id = (category === 'chargeback') ? (document.getElementById('adjustment-policy')?.value || null) : null;
-      const lead_id = (category === 'lead_debt') ? (document.getElementById('adjustment-lead')?.value || null) : null;
+      const policy_id = (category === 'chargeback')
+        ? (document.getElementById('adjustment-policy')?.value || null)
+        : null;
+
+      const lead_id = (category === 'lead_debt')
+        ? (document.getElementById('adjustment-lead')?.value || null)
+        : null;
 
       if (!agent_id || !type || !category || !effective_date || !Number.isFinite(rawAmount) || rawAmount <= 0) {
         if (errorEl) errorEl.textContent = 'Please fill in all required fields.';
@@ -2178,11 +2183,145 @@ function wireAdjustmentSubmit() {
       }
 
       const normType = String(type).toLowerCase();
-      const signedAmount = normType === 'debit' ? -Math.abs(rawAmount) : Math.abs(rawAmount);
+      const isDebtDebit =
+        normType === 'debit' &&
+        ['lead_debt', 'chargeback', 'other'].includes(category);
+
+      // =========================
+      // DEBT PATHS
+      // =========================
+      if (isDebtDebit) {
+        if (category === 'lead_debt') {
+          if (!lead_id) {
+            if (errorEl) errorEl.textContent = 'Please choose a lead for this lead debt.';
+            return;
+          }
+
+          const { error: ldErr } = await sb
+            .from('lead_debts')
+            .insert([{
+              agent_id,
+              lead_id,
+              description: description || null,
+              source: 'manual_adjustment',
+              amount: rawAmount,
+              status: 'open',
+              metadata: {
+                effective_date,
+                created_by: userId || null,
+                created_from: 'admin_commissions_adjustment_modal'
+              }
+            }]);
+
+          if (ldErr) {
+            console.error('Error inserting lead_debts', ldErr);
+            if (errorEl) errorEl.textContent = 'Could not save lead debt: ' + ldErr.message;
+            return;
+          }
+        }
+
+        if (category === 'chargeback') {
+          if (!policy_id) {
+            if (errorEl) errorEl.textContent = 'Please choose a policy for this chargeback.';
+            return;
+          }
+
+          const { data: pol, error: polErr } = await sb
+            .from('policies')
+            .select(`
+              id,
+              carrier_name,
+              contact:contacts (
+                first_name,
+                last_name
+              )
+            `)
+            .eq('id', policy_id)
+            .single();
+
+          if (polErr) {
+            console.error('Error loading policy for chargeback:', polErr);
+            if (errorEl) errorEl.textContent = 'Could not load policy details: ' + polErr.message;
+            return;
+          }
+
+          const carrier_name = pol?.carrier_name || null;
+          const policyholder_name = pol?.contact
+            ? [pol.contact.first_name, pol.contact.last_name].filter(Boolean).join(' ').trim() || null
+            : null;
+
+          const { error: cbErr } = await sb
+            .from('policy_chargebacks')
+            .insert([{
+              agent_id,
+              policy_id,
+              carrier_name,
+              policyholder_name,
+              amount: rawAmount,
+              status: 'open',
+              reason: description || null,
+              metadata: {
+                effective_date,
+                created_by: userId || null,
+                created_from: 'admin_commissions_adjustment_modal'
+              }
+            }]);
+
+          if (cbErr) {
+            console.error('Error inserting policy_chargebacks', cbErr);
+            if (errorEl) errorEl.textContent = 'Could not save chargeback: ' + cbErr.message;
+            return;
+          }
+        }
+
+        if (category === 'other') {
+          const { error: odErr } = await sb
+            .from('agent_other_debts')
+            .insert([{
+              agent_id,
+              amount: rawAmount,
+              status: 'open',
+              debt_type: 'other',
+              description: description || null,
+              effective_date,
+              created_by: userId || null,
+              metadata: {
+                effective_date,
+                created_by: userId || null,
+                created_from: 'admin_commissions_adjustment_modal'
+              }
+            }]);
+
+          if (odErr) {
+            console.error('Error inserting agent_other_debts', odErr);
+            if (errorEl) errorEl.textContent = 'Could not save other debt: ' + odErr.message;
+            return;
+          }
+        }
+
+        closeModal(document.getElementById('adjustment-modal'));
+        document.getElementById('adjustment-form')?.reset();
+        syncAdjustmentCategoryUI();
+
+        // No ledger refresh needed for debt-only insert,
+        // but keeping this is harmless if you want the list refreshed.
+        await loadAdjustmentsIntoList();
+        return;
+      }
+
+      // =========================
+      // LEDGER PATHS
+      // =========================
+      const signedAmount = normType === 'debit'
+        ? -Math.abs(rawAmount)
+        : Math.abs(rawAmount);
 
       let entry_type;
-      if (normType === 'debit') entry_type = (category === 'chargeback') ? 'chargeback' : 'lead_charge';
-      else entry_type = 'override';
+      if (normType === 'debit') {
+        entry_type = (category === 'chargeback') ? 'chargeback' : 'lead_charge';
+      } else {
+        entry_type = 'override';
+      }
 
       const payload = {
         agent_id,
@@ -2201,118 +2340,14 @@ function wireAdjustmentSubmit() {
         }
       };
 
-      const { data: ledgerRow, error: ledgerErr } = await sb
+      const { error: ledgerErr } = await sb
         .from('commission_ledger')
-        .insert([payload])
-        .select()
-        .single();
+        .insert([payload]);
 
       if (ledgerErr) {
         console.error('Error inserting ledger adjustment', ledgerErr);
         if (errorEl) errorEl.textContent = 'Error saving debit/credit: ' + ledgerErr.message;
         return;
-      }
-
-      if (normType === 'debit' && category === 'lead_debt') {
-        if (!lead_id) {
-          if (errorEl) errorEl.textContent = 'Please choose a lead for this lead debt.';
-          return;
-        }
-
-        const { error: ldErr } = await sb.from('lead_debts').insert([{
-          agent_id,
-          lead_id,
-          description: description || null,
-          source: 'manual_adjustment',
-          amount: rawAmount,
-          status: 'open',
-          metadata: {
-            effective_date,
-            commission_ledger_id: ledgerRow.id,
-            lead_id
-          }
-        }]);
-
-        if (ldErr) {
-          console.error('Error inserting lead_debts', ldErr);
-          if (errorEl) errorEl.textContent = 'Saved to ledger, but lead debt record failed: ' + ldErr.message;
-          return;
-        }
-      }
-
-      if (normType === 'debit' && category === 'chargeback') {
-        if (!policy_id) {
-          if (errorEl) errorEl.textContent = 'Please choose a policy for this chargeback.';
-          return;
-        }
-
-        const { data: pol, error: polErr } = await sb
-          .from('policies')
-          .select(`
-            id,
-            carrier_name,
-            contact:contacts (
-              first_name,
-              last_name
-            )
-          `)
-          .eq('id', policy_id)
-          .single();
-
-        if (polErr) {
-          console.error('Error loading policy for chargeback:', polErr);
-          if (errorEl) errorEl.textContent = 'Could not load policy details: ' + polErr.message;
-          return;
-        }
-
-        const carrier_name = pol?.carrier_name || null;
-        const policyholder_name = pol?.contact
-          ? [pol.contact.first_name, pol.contact.last_name].filter(Boolean).join(' ').trim() || null
-          : null;
-
-        const { error: cbErr } = await sb.from('policy_chargebacks').insert([{
-          agent_id,
-          policy_id,
-          carrier_name,
-          policyholder_name,
-          amount: rawAmount,
-          status: 'open',
-          reason: description || null,
-          metadata: {
-            effective_date,
-            commission_ledger_id: ledgerRow.id
-          }
-        }]);
-
-        if (cbErr) {
-          console.error('Error inserting policy_chargebacks', cbErr);
-          if (errorEl) errorEl.textContent = 'Saved to ledger, but chargeback record failed: ' + cbErr.message;
-          return;
-        }
-      }
-
-      if (normType === 'debit' && category === 'other') {
-        const { error: odErr } = await sb.from('agent_other_debts').insert([{
-          agent_id,
-          amount: rawAmount,
-          status: 'open',
-          debt_type: 'other',
-          description: description || null,
-          effective_date,
-          commission_ledger_id: ledgerRow.id,
-          created_by: userId || null,
-          metadata: {
-            effective_date,
-            commission_ledger_id: ledgerRow.id,
-            created_from: 'admin_commissions_adjustment_modal'
-          }
-        }]);
-
-        if (odErr) {
-          console.error('Error inserting agent_other_debts', odErr);
-          if (errorEl) errorEl.textContent = 'Saved to ledger, but other debt record failed: ' + odErr.message;
-          return;
-        }
       }
 
       closeModal(document.getElementById('adjustment-modal'));
