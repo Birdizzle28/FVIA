@@ -48,19 +48,23 @@ export async function handler() {
 
     doc.registerFont("BellotaBold", fontPath);
 
-    // Background image
     if (fs.existsSync(bgPath)) {
       doc.image(bgPath, 0, 0, { width: 1080, height: 1350 });
     } else {
       doc.rect(0, 0, 1080, 1350).fill("#f7f3ff");
     }
 
-    // Title
+    const headerY = 240;
+    const subY = 295;
+    const mtdBoxY = 345;
+    const dailyBoxY = 420;
+    const listStartY = 560;
+
     doc
       .font("BellotaBold")
       .fontSize(44)
       .fillColor("#2a245c")
-      .text("Top Producers Tonight", 0, 120, {
+      .text("Top Producers Tonight", 0, headerY, {
         width: 1080,
         align: "center",
       });
@@ -69,41 +73,39 @@ export async function handler() {
       .font("BellotaBold")
       .fontSize(20)
       .fillColor("#6b5e8a")
-      .text("TEST MODE", 0, 170, {
+      .text("TEST MODE", 0, subY, {
         width: 1080,
         align: "center",
       });
 
-    // MTD pill
     doc
       .save()
-      .roundedRect(280, 205, 520, 56, 18)
-      .fillOpacity(0.18)
-      .fill("#ffffff")
+      .roundedRect(260, mtdBoxY, 560, 64, 20)
+      .fillOpacity(0.35)
+      .fill("#f3ecff")
       .restore();
 
     doc
       .font("BellotaBold")
       .fontSize(22)
       .fillColor("#ffffff")
-      .text(`Month-to-date AP: ${money(15200)}`, 0, 221, {
+      .text(`Month-to-date AP: ${money(15200)}`, 0, mtdBoxY + 19, {
         width: 1080,
         align: "center",
       });
 
-    // Daily pill
     doc
       .save()
-      .roundedRect(280, 268, 520, 56, 18)
-      .fillOpacity(0.14)
-      .fill("#ffffff")
+      .roundedRect(260, dailyBoxY, 560, 64, 20)
+      .fillOpacity(0.30)
+      .fill("#f3ecff")
       .restore();
 
     doc
       .font("BellotaBold")
       .fontSize(22)
       .fillColor("#ffffff")
-      .text(`Total AP Today: ${money(10100)}`, 0, 284, {
+      .text(`Total AP Today: ${money(10100)}`, 0, dailyBoxY + 19, {
         width: 1080,
         align: "center",
       });
@@ -115,24 +117,23 @@ export async function handler() {
     ];
 
     const leftX = 90;
-    const listStartY = 380;
-    const rowH = 70;
+    const rowH = 120;
 
     rows.forEach((r, i) => {
       const y = listStartY + i * rowH;
 
       doc
         .save()
-        .roundedRect(leftX, y - 24, 1080 - leftX * 2, 58, 14)
-        .fillOpacity(i % 2 === 0 ? 0.16 : 0.10)
-        .fill("#ffffff")
+        .roundedRect(leftX, y - 28, 1080 - leftX * 2, 74, 18)
+        .fillOpacity(i % 2 === 0 ? 0.28 : 0.22)
+        .fill("#f3ecff")
         .restore();
 
       doc
         .font("BellotaBold")
         .fontSize(26)
         .fillColor("#f1d58b")
-        .text(`${i + 1}.`, leftX + 22, y - 2, {
+        .text(`${i + 1}.`, leftX + 22, y - 1, {
           width: 50,
         });
 
@@ -140,7 +141,7 @@ export async function handler() {
         .font("BellotaBold")
         .fontSize(26)
         .fillColor("#1e1a3d")
-        .text(r.full_name, leftX + 70, y - 2, {
+        .text(r.full_name, leftX + 80, y - 1, {
           width: 600,
         });
 
@@ -148,7 +149,7 @@ export async function handler() {
         .font("BellotaBold")
         .fontSize(26)
         .fillColor("#2a245c")
-        .text(money(r.ap), 0, y - 2, {
+        .text(money(r.ap), 0, y - 1, {
           width: 1080 - leftX - 22,
           align: "right",
         });
