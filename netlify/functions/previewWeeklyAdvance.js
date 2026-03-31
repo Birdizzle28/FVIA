@@ -522,7 +522,6 @@ export async function handler(event) {
         .from('commission_ledger')
         .select('id, policy_id, policy_attachment_id, agent_id, amount, entry_type, is_settled')
         .in('entry_type', ['advance', 'override'])
-        .or('is_settled.is.null,is_settled.eq.false')
         .in('policy_id', eligiblePolicyIds)
         .is('policy_attachment_id', null);
 
@@ -544,7 +543,6 @@ export async function handler(event) {
         .from('commission_ledger')
         .select('id, policy_id, policy_attachment_id, agent_id, amount, entry_type, is_settled')
         .in('entry_type', ['advance', 'override'])
-        .or('is_settled.is.null,is_settled.eq.false')
         .in('policy_attachment_id', eligibleAttachmentIds);
 
       if (error) {
