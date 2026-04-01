@@ -118,27 +118,61 @@ function parseYouTubeId(url) {
       return u.pathname.split('/embed/')[1];
     }
   } catch (_) {
-    // not a full URL, maybe already an ID
     if (/^[\w-]{8,}$/.test(url)) return url;
   }
   return null;
 }
 
+// --------- Auth guard ----------
+async function requireTrainingAuth() {
+  try {
+    const { data, error } = await supabase.auth.getSession();
+
+    if (error) {
+      console.error('Session check error:', error);
+    }
+
+    const session = data?.session || null;
+
+    if (!session) {
+      const intendedUrl =
+        window.location.pathname.split('/').pop() +
+        window.location.search +
+        window.location.hash;
+
+      sessionStorage.setItem('postLoginRedirect', intendedUrl);
+      window.location.replace('login.html');
+      return null;
+    }
+
+    return session;
+  } catch (err) {
+    console.error('Unexpected auth check error:', err);
+
+    const intendedUrl =
+      window.location.pathname.split('/').pop() +
+      window.location.search +
+      window.location.hash;
+
+    sessionStorage.setItem('postLoginRedirect', intendedUrl);
+    window.location.replace('login.html');
+    return null;
+  }
+}
+
 // --------- Global-ish state for this page ----------
-let progressStore;          // TrainingProgress instance
+let progressStore;
 let currentUserId = 'anon';
 
 let materialsById = new Map();
 let totalVideos = 0;
-let totalSessionsAttended = 0;  // placeholder (can wire to enrollments later)
+let totalSessionsAttended = 0;
 
-// sessions paging
 let allSessions = [];
 let filteredSessions = [];
 let sessionsPage = 1;
 const SESSIONS_PER_PAGE = 6;
 
-// YouTube player state
 let ytPlayer = null;
 let currentMaterialId = null;
 let currentVideoId = null;
@@ -163,7 +197,7 @@ function initTabs() {
   });
 }
 
-// --------- Upcoming Sessions (lightweight, safe even if table missing) ----------
+// --------- Upcoming Sessions ----------
 async function loadSessionsFromDb() {
   const list = document.getElementById('sessions-list');
   const pagerLabel = document.getElementById('sessions-page');
@@ -178,7 +212,6 @@ async function loadSessionsFromDb() {
   nextBtn.disabled = true;
 
   try {
-    // Try to load from a "training_sessions" table if it exists.
     const { data, error } = await supabase
       .from('training_sessions')
       .select('*')
@@ -289,7 +322,7 @@ function renderSessionsPage() {
   nextBtn.disabled = sessionsPage >= totalPages;
 }
 
-// --------- Video Library (training_materials) ----------
+// --------- Video Library ----------
 async function loadVideoLibrary() {
   const grid = document.getElementById('video-grid');
   if (!grid) return;
@@ -306,7 +339,6 @@ async function loadVideoLibrary() {
     .order('created_at', { ascending: false });
 
   if (category) {
-    // tags is text[]; contains() will match rows that include the category
     query = query.contains('tags', [category]);
   }
   if (search) {
@@ -365,7 +397,6 @@ async function loadVideoLibrary() {
 
   grid.innerHTML = cardsHtml;
 
-  // Wire click handlers
   grid.querySelectorAll('.video-card .play-btn').forEach(btn => {
     btn.addEventListener('click', e => {
       const card = e.target.closest('.video-card');
@@ -385,7 +416,7 @@ function ensureYTReady(videoId) {
     return;
   }
   let tries = 0;
-  const maxTries = 40; // ~10 seconds
+  const maxTries = 40;
   const timer = setInterval(() => {
     if (window.YT && window.YT.Player) {
       clearInterval(timer);
@@ -470,7 +501,6 @@ function openVideoOverlay(materialId) {
 
   ensureYTReady(videoId);
 
-  // Mark complete button
   if (markBtn) {
     markBtn.onclick = () => {
       progressStore.markComplete(materialId, material.title);
@@ -587,19 +617,14 @@ function updateProgressUI() {
 
 // --------- Wire everything up on DOMContentLoaded ----------
 document.addEventListener('DOMContentLoaded', async () => {
-  // Get user id for per-user progress
-  try {
-    const { data } = await supabase.auth.getUser();
-    if (data?.user?.id) currentUserId = data.user.id;
-  } catch (_) {
-    currentUserId = 'anon';
-  }
+  const session = await requireTrainingAuth();
+  if (!session) return;
+
+  currentUserId = session.user.id;
   progressStore = new TrainingProgress(currentUserId);
 
-  // Tabs
   initTabs();
 
-  // Sessions filter widgets
   if (window.flatpickr) {
     flatpickr('#session-date-range', {
       mode: 'range',
@@ -626,6 +651,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       renderSessionsPage();
     }
   });
+
   document.getElementById('sessions-next')?.addEventListener('click', () => {
     const totalPages = Math.ceil(filteredSessions.length / SESSIONS_PER_PAGE) || 1;
     if (sessionsPage < totalPages) {
@@ -634,7 +660,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Video filter buttons
   document.getElementById('apply-video-filters')?.addEventListener('click', loadVideoLibrary);
   document.getElementById('reset-video-filters')?.addEventListener('click', () => {
     const cat = document.getElementById('video-category');
@@ -644,7 +669,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     loadVideoLibrary();
   });
 
-  // Overlay close (click X, backdrop, or ESC)
   document.querySelectorAll('#video-overlay [data-close], #video-overlay .overlay-backdrop')
     .forEach(el => el.addEventListener('click', closeVideoOverlay));
 
@@ -655,13 +679,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  // Initial loads
   loadSessionsFromDb();
   await loadVideoLibrary();
   updateVideoStatusLabels();
   updateProgressUI();
 });
-
-// Note: You already load the YouTube IFrame API in training.html.
-// We don't need to define onYouTubeIframeAPIReady here; we just wait for YT to exist
-// and then build the player when a video is opened.
