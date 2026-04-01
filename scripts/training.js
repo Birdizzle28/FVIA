@@ -620,6 +620,8 @@ document.addEventListener('DOMContentLoaded', async () => {
   const session = await requireTrainingAuth();
   if (!session) return;
 
+  document.documentElement.style.visibility = 'visible';
+
   currentUserId = session.user.id;
   progressStore = new TrainingProgress(currentUserId);
 
