@@ -93,12 +93,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       message.textContent = 'Login successful! Redirecting...';
       message.style.color = 'green';
-
+      
+      await supabaseClient.auth.getSession();
+      
       const redirectTo = consumeRedirectTarget();
-
+      
       setTimeout(() => {
         window.location.replace(redirectTo);
-      }, 500);
+      }, 300);
+      
     } catch (err) {
       console.error('Unexpected login error:', err);
       message.textContent = 'Unexpected error during login.';
