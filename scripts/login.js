@@ -1,5 +1,5 @@
 // scripts/login.js (non-module, uses global window.supabase / supabaseClient)
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   if (!supabase) {
     console.error('Supabase client missing on this page');
     return;
@@ -19,6 +19,44 @@ document.addEventListener('DOMContentLoaded', () => {
   if (!form || !emailInput || !passwordInput || !message) {
     console.error('Login page elements not found.');
     return;
+  }
+
+  function getRedirectTarget() {
+    const saved = sessionStorage.getItem('postLoginRedirect');
+
+    if (!saved) return 'dashboard.html';
+
+    const isSafeRelativePath =
+      saved.startsWith('/') ||
+      saved.startsWith('./') ||
+      /^[a-zA-Z0-9/_-]+(\.html)?([?#].*)?$/.test(saved);
+
+    return isSafeRelativePath ? saved : 'profile.html';
+  }
+
+  function consumeRedirectTarget() {
+    const target = getRedirectTarget();
+    sessionStorage.removeItem('postLoginRedirect');
+    return target;
+  }
+
+  // ---------- ALREADY SIGNED IN? REDIRECT AWAY FROM LOGIN ----------
+  try {
+    if (!supabaseClient) {
+      console.error('Supabase client missing on this page');
+      return;
+    }
+
+    const { data, error } = await supabaseClient.auth.getSession();
+
+    if (error) {
+      console.error('Error checking session:', error);
+    } else if (data?.session) {
+      window.location.replace(consumeRedirectTarget());
+      return;
+    }
+  } catch (err) {
+    console.error('Unexpected session check error:', err);
   }
 
   // ---------- LOGIN ----------
@@ -56,8 +94,10 @@ document.addEventListener('DOMContentLoaded', () => {
       message.textContent = 'Login successful! Redirecting...';
       message.style.color = 'green';
 
+      const redirectTo = consumeRedirectTarget();
+
       setTimeout(() => {
-        window.location.href = 'profile.html';
+        window.location.replace(redirectTo);
       }, 500);
     } catch (err) {
       console.error('Unexpected login error:', err);
@@ -71,7 +111,6 @@ document.addEventListener('DOMContentLoaded', () => {
     e.preventDefault();
     if (!forgotPanel) return;
 
-    // Prefill reset email with login email if present
     if (forgotEmail && emailInput?.value && !forgotEmail.value) {
       forgotEmail.value = emailInput.value.trim();
     }
