@@ -31,7 +31,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       saved.startsWith('./') ||
       /^[a-zA-Z0-9/_-]+(\.html)?([?#].*)?$/.test(saved);
 
-    return isSafeRelativePath ? saved : 'profile.html';
+    return isSafeRelativePath ? saved : 'dashboard.html';
   }
 
   function consumeRedirectTarget() {
