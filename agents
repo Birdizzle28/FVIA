@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+    <link rel="manifest" href="/site.webmanifest">
+    <link rel="manifest" href="/manifest.json">
+
+    <title>Agents | Family Values Group</title>
+
+    <link rel="stylesheet" href="/styles/loader.css" />
+    <link rel="stylesheet" href="styles/agentstyle.css" />
+    <link rel="stylesheet" href="styles/admin.css" />
+    <link rel="stylesheet" href="styles/agents.css" />
+    <link href="https://fonts.googleapis.com/css?family=Bellota+Text" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
+
+    <style>
+      html { visibility: hidden; }
+    </style>
+
+    <noscript>
+      <meta http-equiv="refresh" content="0; url=dashboard.html">
+    </noscript>
+  </head>
+
+  <body id="dashboardbody">
+    <header class="index-grid-header">
+      <div id="logofvcontainer">
+        <div id="logodiv">
+          <a href="../index.html"><img id="headerlogo" src="../Pics/img17.png" alt="FVIA Logo" /></a>
+        </div>
+        <div id="fvdiv">
+          <p><strong>Family Values Group</strong></p>
+        </div>
+      </div>
+      <div id="navcontainer">
+        <nav class="header-flex-container">
+          <a id="notifications-tab" href="notifications.html"><i class="fa-solid fa-bell"></i></a>
+          <a id="profile-tab" href="profile.html"><i class="fa-solid fa-user"></i></a>
+          <div id="menu-toggle">
+            <i class="fa-solid fa-bars"></i>
+          </div>
+        </nav>
+      </div>
+    </header>
+
+    <div id="mobile-menu">
+      <a href="dashboard.html"><i class="fa-solid fa-gauge"></i><p>Dashboard</p></a>
+
+      <button id="toolkit-toggle" class="menu-item" aria-expanded="false" aria-controls="toolkit-submenu">
+        <i class="fa-solid fa-toolbox"></i><span>Toolkit</span>
+        <i class="fa-solid fa-chevron-down caret" aria-hidden="true"></i>
+      </button>
+
+      <div id="toolkit-submenu" class="submenu" hidden>
+        <a href="leads.html"><i class="fa-solid fa-address-book"></i><span>Leads</span></a>
+        <a href="maps.html"><i class="fa-solid fa-route"></i><span>Routing</span></a>
+        <a href="scheduling.html"><i class="fa-solid fa-calendar-check"></i><span>Scheduling</span></a>
+        <a href="calculator.html"><i class="fa-solid fa-calculator"></i><span>Calculator</span></a>
+        <a href="marketing.html"><i class="fa-solid fa-handshake"></i><span>Marketing</span></a>
+      </div>
+
+      <a href="commissions.html"><i class="fa-solid fa-dollar-sign"></i><p>Commissions</p></a>
+      <a href="training.html"><i class="fa-solid fa-chalkboard-teacher"></i><p>Training</p></a>
+      <a href="recruiting.html"><i class="fa-solid fa-user-plus"></i><p>Recruiting</p></a>
+      <a href="messages.html"><i class="fa-solid fa-envelope"></i><p>Messages</p></a>
+      <a href="admin-all-leads.html"><i class="fa-solid fa-user-shield"></i><p>Admin</p></a>
+      <a href="agent-carriers.html"><i class="fa-solid fa-building-circle-check"></i><p>Agent Carriers</p></a>
+      <a href="agents.html"><i class="fa-solid fa-users"></i><p>Agents</p></a>
+    </div>
+
+    <main class="auth-container">
+      <section class="agents-page-shell">
+        <div class="page-top">
+          <div>
+            <p class="eyebrow">Admin Tools</p>
+            <h1>Agents</h1>
+            <p class="page-subtext">
+              Manage your active agents and recruits from one place. Update records, review hierarchy, and keep your roster clean.
+            </p>
+          </div>
+
+          <div class="page-top-actions">
+            <a class="back-btn" href="admin-all-leads.html">
+              <i class="fa-solid fa-arrow-left"></i>
+              Back to Admin
+            </a>
+          </div>
+        </div>
+
+        <div class="tab-switcher">
+          <button type="button" class="tab-btn active" data-tab="agents-tab">
+            <i class="fa-solid fa-user-tie"></i>
+            Agents Table
+          </button>
+          <button type="button" class="tab-btn" data-tab="recruits-tab">
+            <i class="fa-solid fa-user-plus"></i>
+            Recruits Table
+          </button>
+        </div>
+
+        <!-- AGENTS TAB -->
+        <section id="agents-tab" class="tab-panel active">
+          <div class="agents-layout">
+            <section class="agents-card">
+              <div class="card-header">
+                <h2 id="agent-form-title">Add / Edit Agent</h2>
+                <p id="agent-form-subtitle">
+                  Create a new row in <code>agents</code> or update an existing one.
+                </p>
+              </div>
+
+              <form id="agents-form" class="agents-form">
+                <input type="hidden" id="editing-agent-id" />
+
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="agent-email">Email</label>
+                    <input type="email" id="agent-email" placeholder="agent@email.com" required />
+                  </div>
+
+                  <div class="field">
+                    <label for="agent-agent-id">Agent ID</label>
+                    <input type="text" id="agent-agent-id" placeholder="Agent ID / NPN / internal ID" required />
+                  </div>
+
+                  <div class="field">
+                    <label for="agent-first-name">First Name</label>
+                    <input type="text" id="agent-first-name" placeholder="First name" />
+                  </div>
+
+                  <div class="field">
+                    <label for="agent-last-name">Last Name</label>
+                    <input type="text" id="agent-last-name" placeholder="Last name" />
+                  </div>
+
+                  <div class="field field-full">
+                    <label for="agent-full-name">Full Name</label>
+                    <input type="text" id="agent-full-name" placeholder="Full name" required />
+                  </div>
+
+                  <div class="field">
+                    <label for="agent-phone">Phone</label>
+                    <input type="text" id="agent-phone" placeholder="Optional" />
+                  </div>
+
+                  <div class="field">
+                    <label for="agent-level">Level</label>
+                    <select id="agent-level">
+                      <option value="">No level</option>
+                      <option value="agent">Agent</option>
+                      <option value="mit">MIT</option>
+                      <option value="manager">Manager</option>
+                      <option value="mga">MGA</option>
+                      <option value="area_manager">Area Manager</option>
+                    </select>
+                  </div>
+
+                  <div class="field">
+                    <label for="agent-recruiter-id">Recruiter</label>
+                    <select id="agent-recruiter-id">
+                      <option value="">No recruiter</option>
+                    </select>
+                  </div>
+
+                  <div class="field">
+                    <label for="agent-agent-slug">Agent Slug</label>
+                    <input type="text" id="agent-agent-slug" placeholder="Optional public slug" />
+                  </div>
+
+                  <div class="field checkbox-field">
+                    <label class="checkbox-wrap">
+                      <input type="checkbox" id="agent-is-active" checked />
+                      <span>Is Active</span>
+                    </label>
+                  </div>
+
+                  <div class="field checkbox-field">
+                    <label class="checkbox-wrap">
+                      <input type="checkbox" id="agent-is-admin" />
+                      <span>Is Admin</span>
+                    </label>
+                  </div>
+
+                  <div class="field checkbox-field">
+                    <label class="checkbox-wrap">
+                      <input type="checkbox" id="agent-is-available" />
+                      <span>Is Available</span>
+                    </label>
+                  </div>
+
+                  <div class="field checkbox-field">
+                    <label class="checkbox-wrap">
+                      <input type="checkbox" id="agent-receiving-leads" checked />
+                      <span>Receiving Leads</span>
+                    </label>
+                  </div>
+
+                  <div class="field checkbox-field">
+                    <label class="checkbox-wrap">
+                      <input type="checkbox" id="agent-show-on-about" />
+                      <span>Show On About Page</span>
+                    </label>
+                  </div>
+
+                  <div class="field checkbox-field">
+                    <label class="checkbox-wrap">
+                      <input type="checkbox" id="agent-page-enabled" />
+                      <span>Agent Page Enabled</span>
+                    </label>
+                  </div>
+
+                  <div class="field field-full">
+                    <label for="agent-companies">Companies</label>
+                    <select id="agent-companies" multiple size="6">
+                      <option value="Aetna">Aetna</option>
+                      <option value="Aflac">Aflac</option>
+                      <option value="American Modern">American Modern</option>
+                      <option value="CICA">CICA</option>
+                      <option value="Mutual of Omaha">Mutual of Omaha</option>
+                      <option value="Progressive">Progressive</option>
+                      <option value="Transamerica">Transamerica</option>
+                      <option value="Prudent Pet">Prudent Pet</option>
+                    </select>
+                    <small>Use Ctrl / Cmd to select multiple.</small>
+                  </div>
+
+                  <div class="field field-full">
+                    <label for="agent-product-types">Product Types</label>
+                    <select id="agent-product-types" multiple size="8">
+                      <option value="Life">Life</option>
+                      <option value="Health">Health</option>
+                      <option value="Property">Property</option>
+                      <option value="Casualty">Casualty</option>
+                      <option value="P&C">P&C</option>
+                      <option value="Medicare">Medicare</option>
+                      <option value="Annuity">Annuity</option>
+                      <option value="Legal">Legal</option>
+                      <option value="Realty">Realty</option>
+                      <option value="Commercial">Commercial</option>
+                      <option value="Pet">Pet</option>
+                    </select>
+                  </div>
+
+                  <div class="field field-full">
+                    <label for="agent-timezone">Timezone</label>
+                    <input type="text" id="agent-timezone" placeholder="ex: America/Chicago" />
+                  </div>
+
+                  <div class="field field-full">
+                    <label for="agent-profile-picture-url">Profile Picture URL</label>
+                    <input type="text" id="agent-profile-picture-url" placeholder="Optional" />
+                  </div>
+
+                  <div class="field field-full">
+                    <label for="agent-bio">Bio</label>
+                    <textarea id="agent-bio" rows="5" placeholder="Short bio..."></textarea>
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn" id="save-agent-btn">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Save Agent
+                  </button>
+
+                  <button type="button" id="reset-agent-form-btn" class="secondary-btn">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    Reset
+                  </button>
+
+                  <button type="button" id="cancel-agent-edit-btn" class="cancel-edit-btn hidden">
+                    <i class="fa-solid fa-xmark"></i>
+                    Cancel Edit
+                  </button>
+                </div>
+
+                <p id="agents-form-message" class="form-message"></p>
+              </form>
+            </section>
+
+            <section class="agents-card">
+              <div class="card-header">
+                <h2>Existing Agents</h2>
+                <p>Search, review, edit, activate, deactivate, or delete agent rows.</p>
+              </div>
+
+              <div class="table-toolbar">
+                <div class="field search-field">
+                  <label for="agents-search-input">Search</label>
+                  <input
+                    type="text"
+                    id="agents-search-input"
+                    placeholder="Search by name, email, level, phone, agent ID..."
+                  />
+                </div>
+
+                <div class="field">
+                  <label for="agents-status-filter">Status</label>
+                  <select id="agents-status-filter">
+                    <option value="">All</option>
+                    <option value="active">Active Only</option>
+                    <option value="inactive">Inactive Only</option>
+                    <option value="admin">Admins Only</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table id="agents-table">
+                  <thead>
+                    <tr>
+                      <th>Full Name</th>
+                      <th>Email</th>
+                      <th>Agent ID</th>
+                      <th>Level</th>
+                      <th>Recruiter</th>
+                      <th>Phone</th>
+                      <th>Active</th>
+                      <th>Admin</th>
+                      <th>Available</th>
+                      <th>Leads</th>
+                      <th>Products</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="agents-tbody">
+                    <tr>
+                      <td colspan="12" class="empty-row">Loading...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+
+        <!-- RECRUITS TAB -->
+        <section id="recruits-tab" class="tab-panel">
+          <div class="agents-layout">
+            <section class="agents-card">
+              <div class="card-header">
+                <h2 id="recruit-form-title">Add / Edit Recruit</h2>
+                <p id="recruit-form-subtitle">
+                  Create a new row in <code>recruits</code> or update an existing one.
+                </p>
+              </div>
+
+              <form id="recruits-form" class="agents-form">
+                <input type="hidden" id="editing-recruit-id" />
+
+                <div class="form-grid">
+                  <div class="field">
+                    <label for="recruit-first-name">First Name</label>
+                    <input type="text" id="recruit-first-name" placeholder="First name" />
+                  </div>
+
+                  <div class="field">
+                    <label for="recruit-last-name">Last Name</label>
+                    <input type="text" id="recruit-last-name" placeholder="Last name" />
+                  </div>
+
+                  <div class="field">
+                    <label for="recruit-stage">Stage</label>
+                    <select id="recruit-stage" required>
+                      <option value="applied">Applied</option>
+                      <option value="contacted">Contacted</option>
+                      <option value="interviewing">Interviewing</option>
+                      <option value="pre_approved">Pre-Approved</option>
+                      <option value="onboarding">Onboarding</option>
+                      <option value="active">Active</option>
+                      <option value="inactive">Inactive</option>
+                      <option value="declined">Declined</option>
+                    </select>
+                  </div>
+
+                  <div class="field">
+                    <label for="recruit-recruiter-id">Recruiter</label>
+                    <select id="recruit-recruiter-id" required>
+                      <option value="">Select recruiter</option>
+                    </select>
+                  </div>
+
+                  <div class="field field-full">
+                    <label for="recruit-notes">Notes</label>
+                    <textarea id="recruit-notes" rows="7" placeholder="Internal recruit notes..."></textarea>
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <button type="submit" class="primary-btn" id="save-recruit-btn">
+                    <i class="fa-solid fa-floppy-disk"></i>
+                    Save Recruit
+                  </button>
+
+                  <button type="button" id="reset-recruit-form-btn" class="secondary-btn">
+                    <i class="fa-solid fa-rotate-left"></i>
+                    Reset
+                  </button>
+
+                  <button type="button" id="cancel-recruit-edit-btn" class="cancel-edit-btn hidden">
+                    <i class="fa-solid fa-xmark"></i>
+                    Cancel Edit
+                  </button>
+                </div>
+
+                <p id="recruits-form-message" class="form-message"></p>
+              </form>
+            </section>
+
+            <section class="agents-card">
+              <div class="card-header">
+                <h2>Existing Recruits</h2>
+                <p>Search, review, edit, move stages, or delete recruit rows.</p>
+              </div>
+
+              <div class="table-toolbar">
+                <div class="field search-field">
+                  <label for="recruits-search-input">Search</label>
+                  <input
+                    type="text"
+                    id="recruits-search-input"
+                    placeholder="Search by recruit name, recruiter, stage, notes..."
+                  />
+                </div>
+
+                <div class="field">
+                  <label for="recruits-stage-filter">Stage</label>
+                  <select id="recruits-stage-filter">
+                    <option value="">All Stages</option>
+                    <option value="applied">Applied</option>
+                    <option value="contacted">Contacted</option>
+                    <option value="interviewing">Interviewing</option>
+                    <option value="pre_approved">Pre-Approved</option>
+                    <option value="onboarding">Onboarding</option>
+                    <option value="active">Active</option>
+                    <option value="inactive">Inactive</option>
+                    <option value="declined">Declined</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table id="recruits-table">
+                  <thead>
+                    <tr>
+                      <th>Created</th>
+                      <th>Updated</th>
+                      <th>First Name</th>
+                      <th>Last Name</th>
+                      <th>Stage</th>
+                      <th>Recruiter</th>
+                      <th>Notes</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="recruits-tbody">
+                    <tr>
+                      <td colspan="8" class="empty-row">Loading...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </section>
+          </div>
+        </section>
+      </section>
+    </main>
+
+    <footer class="index-grid-footer">
+      <img id="footerlogo" src="Pics/img17.png">
+      <hr class="footerhr">
+      <div id="footercontact">
+        <a class="contactcontainer" href="mailto:info@familyvaluesgroup.com">
+          <span class="fa fa-envelope"></span>
+          <span class="contactcontcontacts">info@familyvaluesgroup.com</span>
+        </a>
+        <p> | </p>
+        <a class="contactcontainer" href="tel:+16292437980">
+          <span class="fa fa-phone"></span>
+          <span class="contactcontcontacts">+1-629-243-7980</span>
+        </a>
+      </div>
+      <hr class="footerhr">
+      <div id="footersocial">
+        <a class="fab fa-facebook-f" href="https://www.facebook.com/familyvaluesgroup"></a>
+        <a class="fab fa-linkedin-in" href="https://www.linkedin.com/in/demisi-johnson-026227391?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app"></a>
+        <a class="fab fa-instagram" href="https://www.instagram.com/family.values.group?igsh=OHl3dGdnd3RwMTV0&utm_source=qr"></a>
+        <a class="fab fa-youtube" href="https://youtube.com/@familyvaluesgroup?si=mauqWp5nxyczgCJd"></a>
+        <a class="fab fa-google" href="https://g.page/r/CXUiEg9T9xHSEAE/review"></a>
+      </div>
+      <div id="footerlinks">
+        <a href="faqs.html">FAQs</a>
+        <a href="terms.html">Terms</a>
+        <a href="accessibility.html">Accessibility</a>
+        <a href="privacy.html">Privacy</a>
+      </div>
+      <p><em>© 2025 Family Values Group. All Rights Reserved.</em></p>
+    </footer>
+
+    <script src="/scripts/loader.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+    <script src="scripts/supabase-client.js"></script>
+    <script src="scripts/general.js"></script>
+    <script src="scripts/agents.js"></script>
+
+    <script>
+      (async () => {
+        const supabase = window.supabaseClient;
+        if (!supabase) {
+          console.warn("Supabase client missing on agents.html");
+          return;
+        }
+
+        const { data: { session } = {} } = await supabase.auth.getSession();
+        if (!session) {
+          location.replace('login.html');
+          return;
+        }
+
+        const { data: profile } = await supabase
+          .from('agents')
+          .select('is_admin')
+          .eq('id', session.user.id)
+          .maybeSingle();
+
+        if (profile?.is_admin === true) {
+          document.documentElement.style.visibility = 'visible';
+        } else {
+          location.replace('dashboard.html');
+        }
+      })();
+    </script>
+  </body>
+</html>
