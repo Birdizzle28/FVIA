@@ -139,16 +139,21 @@ function parseYouTubeId(url) {
   return null;
 }
 
+// --------- Supabase helper ----------
+function getSupabase() {
+  return window.supabaseClient || window.supabase || null;
+}
+
 // --------- Auth guard ----------
-async function requireTrainingAuth() {
+async function requireTrainingAuth(supabase) {
   try {
-    if (!sb) {
+    if (!supabase) {
       console.error('Supabase client missing on training page');
       window.location.replace('login.html');
       return null;
     }
 
-    const { data, error } = await sb.auth.getSession();
+    const { data, error } = await supabase.auth.getSession();
 
     if (error) {
       console.error('Session check error:', error);
@@ -222,7 +227,7 @@ function initTabs() {
 }
 
 // --------- Upcoming Sessions ----------
-async function loadSessionsFromDb() {
+async function loadSessionsFromDb(supabase) {
   const list = document.getElementById('sessions-list');
   const pagerLabel = document.getElementById('sessions-page');
   const prevBtn = document.getElementById('sessions-prev');
@@ -231,12 +236,12 @@ async function loadSessionsFromDb() {
   if (!list) return;
 
   list.innerHTML = '<p class="muted">Loading sessions…</p>';
-  pagerLabel.textContent = 'Page 1';
-  prevBtn.disabled = true;
-  nextBtn.disabled = true;
+  if (pagerLabel) pagerLabel.textContent = 'Page 1';
+  if (prevBtn) prevBtn.disabled = true;
+  if (nextBtn) nextBtn.disabled = true;
 
   try {
-    const { data, error } = await sb
+    const { data, error } = await supabase
       .from('training_sessions')
       .select('*')
       .order('start_at', { ascending: true });
@@ -305,9 +310,9 @@ function renderSessionsPage() {
 
   if (!filteredSessions.length) {
     list.innerHTML = '<p class="muted">No sessions match these filters.</p>';
-    pagerLabel.textContent = 'Page 1';
-    prevBtn.disabled = true;
-    nextBtn.disabled = true;
+    if (pagerLabel) pagerLabel.textContent = 'Page 1';
+    if (prevBtn) prevBtn.disabled = true;
+    if (nextBtn) nextBtn.disabled = true;
     return;
   }
 
@@ -348,13 +353,13 @@ function renderSessionsPage() {
     `;
   }).join('');
 
-  pagerLabel.textContent = `Page ${sessionsPage} of ${totalPages}`;
-  prevBtn.disabled = sessionsPage <= 1;
-  nextBtn.disabled = sessionsPage >= totalPages;
+  if (pagerLabel) pagerLabel.textContent = `Page ${sessionsPage} of ${totalPages}`;
+  if (prevBtn) prevBtn.disabled = sessionsPage <= 1;
+  if (nextBtn) nextBtn.disabled = sessionsPage >= totalPages;
 }
 
 // --------- Video Library ----------
-async function loadVideoLibrary() {
+async function loadVideoLibrary(supabase) {
   const grid = document.getElementById('video-grid');
   if (!grid) return;
 
@@ -363,7 +368,7 @@ async function loadVideoLibrary() {
   const category = document.getElementById('video-category')?.value || '';
   const search = (document.getElementById('video-search')?.value || '').trim();
 
-  let query = sb
+  let query = supabase
     .from('training_materials')
     .select('*')
     .eq('is_published', true)
@@ -382,6 +387,7 @@ async function loadVideoLibrary() {
 
   if (!data || !data.length) {
     grid.innerHTML = '<p class="muted">No training videos found.</p>';
+    materialsById = new Map();
     totalVideos = 0;
     updateProgressUI();
     return;
@@ -636,7 +642,7 @@ function updateProgressUI() {
     return;
   }
 
-  tbody.innerHTML = rowsData.map(([id, v]) => {
+  tbody.innerHTML = rowsData.map(([, v]) => {
     const date = v.updatedAt ? fmtDate(v.updatedAt) : '';
     const status = v.completed ? 'Completed' : `In progress (${Math.round(v.pct || 0)}%)`;
 
@@ -653,7 +659,15 @@ function updateProgressUI() {
 
 // --------- Boot ----------
 document.addEventListener('DOMContentLoaded', async () => {
-  const session = await requireTrainingAuth();
+  const supabase = getSupabase();
+
+  if (!supabase) {
+    console.error('Supabase client missing on this page');
+    window.location.replace('login.html');
+    return;
+  }
+
+  const session = await requireTrainingAuth(supabase);
   if (!session) return;
 
   document.documentElement.style.visibility = 'visible';
@@ -701,16 +715,18 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  document.getElementById('apply-video-filters')?.addEventListener('click', loadVideoLibrary);
+  document.getElementById('apply-video-filters')?.addEventListener('click', async () => {
+    await loadVideoLibrary(supabase);
+  });
 
-  document.getElementById('reset-video-filters')?.addEventListener('click', () => {
+  document.getElementById('reset-video-filters')?.addEventListener('click', async () => {
     const cat = document.getElementById('video-category');
     const search = document.getElementById('video-search');
 
     if (cat) cat.value = '';
     if (search) search.value = '';
 
-    loadVideoLibrary();
+    await loadVideoLibrary(supabase);
   });
 
   document.querySelectorAll('#video-overlay [data-close], #video-overlay .overlay-backdrop')
@@ -723,8 +739,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
   });
 
-  loadSessionsFromDb();
-  await loadVideoLibrary();
+  await loadSessionsFromDb(supabase);
+  await loadVideoLibrary(supabase);
   updateVideoStatusLabels();
   updateProgressUI();
 });
