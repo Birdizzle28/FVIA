@@ -145,10 +145,19 @@ function getSupabase() {
 }
 
 // --------- Auth guard ----------
-async function requireTrainingAuth(supabase) {
+async function requireTrainingAuth() {
   try {
+    const supabase = window.supabaseClient || window.supabase || null;
+
     if (!supabase) {
       console.error('Supabase client missing on training page');
+
+      const intendedUrl =
+        window.location.pathname.split('/').pop() +
+        window.location.search +
+        window.location.hash;
+
+      sessionStorage.setItem('postLoginRedirect', intendedUrl);
       window.location.replace('login.html');
       return null;
     }
