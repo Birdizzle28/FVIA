@@ -1,6 +1,9 @@
 // scripts/login.js
+
 document.addEventListener('DOMContentLoaded', async () => {
-  if (!sb) {
+  const supabase = window.supabaseClient || window.supabase || null;
+
+  if (!supabase) {
     console.error('Supabase client missing on this page');
     return;
   }
@@ -42,7 +45,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ---------- ALREADY SIGNED IN? REDIRECT AWAY FROM LOGIN ----------
   try {
-    const { data, error } = await sb.auth.getSession();
+    const { data, error } = await supabase.auth.getSession();
 
     if (error) {
       console.error('Error checking session:', error);
@@ -58,12 +61,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    if (!sb) {
-      message.textContent = 'Login error: Supabase not available.';
-      message.style.color = 'red';
-      return;
-    }
-
     message.textContent = 'Logging in...';
     message.style.color = '';
 
@@ -71,7 +68,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const password = passwordInput.value;
 
     try {
-      const { data, error } = await sb.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password
       });
@@ -92,7 +89,7 @@ document.addEventListener('DOMContentLoaded', async () => {
       message.textContent = 'Login successful! Redirecting...';
       message.style.color = 'green';
 
-      await sb.auth.getSession();
+      await supabase.auth.getSession();
 
       const redirectTo = consumeRedirectTarget();
 
@@ -127,14 +124,6 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   sendResetBtn?.addEventListener('click', async () => {
-    if (!sb) {
-      if (forgotMsg) {
-        forgotMsg.textContent = 'Reset error: Supabase not available.';
-        forgotMsg.style.color = 'red';
-      }
-      return;
-    }
-
     const email = (forgotEmail?.value || emailInput?.value || '').trim();
 
     if (!email) {
@@ -153,7 +142,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const redirectTo = `${window.location.origin}/reset-password.html`;
 
-      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
+      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
 
       if (error) {
         console.error('Reset email error:', error);
