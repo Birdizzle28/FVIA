@@ -1,6 +1,6 @@
 // agents.js
 
-const supabase = window.supabaseClient;
+const sb = window.supabaseClient;
 
 /* ---------------- TAB SWITCHING ---------------- */
 document.querySelectorAll(".tab-btn").forEach(btn => {
@@ -30,7 +30,7 @@ const setMultiSelectValues = (el, values = []) => {
 const agentsTbody = document.getElementById("agents-tbody");
 
 async function loadAgents() {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from("agents")
     .select("*")
     .order("created_at", { ascending: false });
@@ -68,7 +68,12 @@ async function loadAgents() {
 }
 
 async function populateRecruiterDropdowns() {
-  const { data } = await supabase.from("agents").select("id, full_name");
+  const { data, error } = await sb.from("agents").select("id, full_name");
+
+  if (error) {
+    console.error(error);
+    return;
+  }
 
   const recruiterSelects = [
     document.getElementById("agent-recruiter-id"),
@@ -76,8 +81,15 @@ async function populateRecruiterDropdowns() {
   ];
 
   recruiterSelects.forEach(select => {
-    select.innerHTML = `<option value="">Select recruiter</option>` +
-      data.map(a => `<option value="${a.id}">${a.full_name}</option>`).join("");
+    if (!select) return;
+
+    const placeholder = select.id === "agent-recruiter-id"
+      ? `<option value="">No recruiter</option>`
+      : `<option value="">Select recruiter</option>`;
+
+    select.innerHTML = placeholder + data.map(a => `
+      <option value="${a.id}">${a.full_name || a.id}</option>
+    `).join("");
   });
 }
 
@@ -88,15 +100,15 @@ document.getElementById("agents-form").addEventListener("submit", async (e) => {
   const id = document.getElementById("editing-agent-id").value;
 
   const payload = {
-    email: document.getElementById("agent-email").value,
-    agent_id: document.getElementById("agent-agent-id").value,
-    first_name: document.getElementById("agent-first-name").value,
-    last_name: document.getElementById("agent-last-name").value,
-    full_name: document.getElementById("agent-full-name").value,
-    phone: document.getElementById("agent-phone").value,
+    email: document.getElementById("agent-email").value.trim(),
+    agent_id: document.getElementById("agent-agent-id").value.trim(),
+    first_name: document.getElementById("agent-first-name").value.trim() || null,
+    last_name: document.getElementById("agent-last-name").value.trim() || null,
+    full_name: document.getElementById("agent-full-name").value.trim(),
+    phone: document.getElementById("agent-phone").value.trim() || null,
     level: document.getElementById("agent-level").value || null,
     recruiter_id: document.getElementById("agent-recruiter-id").value || null,
-    agent_slug: document.getElementById("agent-agent-slug").value || null,
+    agent_slug: document.getElementById("agent-agent-slug").value.trim() || null,
     is_active: document.getElementById("agent-is-active").checked,
     is_admin: document.getElementById("agent-is-admin").checked,
     is_available: document.getElementById("agent-is-available").checked,
@@ -105,16 +117,16 @@ document.getElementById("agents-form").addEventListener("submit", async (e) => {
     agent_page_enabled: document.getElementById("agent-page-enabled").checked,
     companies: getMultiSelectValues(document.getElementById("agent-companies")),
     product_types: getMultiSelectValues(document.getElementById("agent-product-types")),
-    timezone: document.getElementById("agent-timezone").value || null,
-    profile_picture_url: document.getElementById("agent-profile-picture-url").value || null,
-    bio: document.getElementById("agent-bio").value || null
+    timezone: document.getElementById("agent-timezone").value.trim() || null,
+    profile_picture_url: document.getElementById("agent-profile-picture-url").value.trim() || null,
+    bio: document.getElementById("agent-bio").value.trim() || null
   };
 
   let res;
   if (id) {
-    res = await supabase.from("agents").update(payload).eq("id", id);
+    res = await sb.from("agents").update(payload).eq("id", id);
   } else {
-    res = await supabase.from("agents").insert(payload);
+    res = await sb.from("agents").insert(payload);
   }
 
   if (res.error) {
@@ -124,12 +136,18 @@ document.getElementById("agents-form").addEventListener("submit", async (e) => {
   }
 
   resetAgentForm();
-  loadAgents();
+  await loadAgents();
+  await populateRecruiterDropdowns();
 });
 
 /* -------- EDIT -------- */
 window.editAgent = async (id) => {
-  const { data } = await supabase.from("agents").select("*").eq("id", id).single();
+  const { data, error } = await sb.from("agents").select("*").eq("id", id).single();
+
+  if (error) {
+    console.error(error);
+    return;
+  }
 
   document.getElementById("editing-agent-id").value = data.id;
   document.getElementById("agent-email").value = data.email || "";
@@ -142,12 +160,12 @@ window.editAgent = async (id) => {
   document.getElementById("agent-recruiter-id").value = data.recruiter_id || "";
   document.getElementById("agent-agent-slug").value = data.agent_slug || "";
 
-  document.getElementById("agent-is-active").checked = data.is_active;
-  document.getElementById("agent-is-admin").checked = data.is_admin;
-  document.getElementById("agent-is-available").checked = data.is_available;
-  document.getElementById("agent-receiving-leads").checked = data.receiving_leads;
-  document.getElementById("agent-show-on-about").checked = data.show_on_about;
-  document.getElementById("agent-page-enabled").checked = data.agent_page_enabled;
+  document.getElementById("agent-is-active").checked = !!data.is_active;
+  document.getElementById("agent-is-admin").checked = !!data.is_admin;
+  document.getElementById("agent-is-available").checked = !!data.is_available;
+  document.getElementById("agent-receiving-leads").checked = !!data.receiving_leads;
+  document.getElementById("agent-show-on-about").checked = !!data.show_on_about;
+  document.getElementById("agent-page-enabled").checked = !!data.agent_page_enabled;
 
   setMultiSelectValues(document.getElementById("agent-companies"), data.companies || []);
   setMultiSelectValues(document.getElementById("agent-product-types"), data.product_types || []);
@@ -163,8 +181,16 @@ window.editAgent = async (id) => {
 window.deleteAgent = async (id) => {
   if (!confirm("Delete this agent?")) return;
 
-  await supabase.from("agents").delete().eq("id", id);
-  loadAgents();
+  const { error } = await sb.from("agents").delete().eq("id", id);
+
+  if (error) {
+    console.error(error);
+    alert("Error deleting agent");
+    return;
+  }
+
+  await loadAgents();
+  await populateRecruiterDropdowns();
 };
 
 /* -------- RESET -------- */
@@ -184,13 +210,14 @@ document.getElementById("cancel-agent-edit-btn").onclick = resetAgentForm;
 const recruitsTbody = document.getElementById("recruits-tbody");
 
 async function loadRecruits() {
-  const { data, error } = await supabase
+  const { data, error } = await sb
     .from("recruits")
     .select("*")
     .order("created_at", { ascending: false });
 
   if (error) {
     recruitsTbody.innerHTML = `<tr><td colspan="8">Error loading recruits</td></tr>`;
+    console.error(error);
     return;
   }
 
@@ -201,12 +228,12 @@ async function loadRecruits() {
 
   recruitsTbody.innerHTML = data.map(r => `
     <tr>
-      <td>${new Date(r.created_at).toLocaleDateString()}</td>
-      <td>${new Date(r.stage_updated_at).toLocaleDateString()}</td>
+      <td>${r.created_at ? new Date(r.created_at).toLocaleDateString() : ""}</td>
+      <td>${r.stage_updated_at ? new Date(r.stage_updated_at).toLocaleDateString() : ""}</td>
       <td>${r.first_name || ""}</td>
       <td>${r.last_name || ""}</td>
-      <td>${r.stage}</td>
-      <td>${r.recruiter_id}</td>
+      <td>${r.stage || ""}</td>
+      <td>${r.recruiter_id || ""}</td>
       <td class="notes-cell">${r.notes || ""}</td>
       <td class="table-actions">
         <button class="row-btn" onclick="editRecruit('${r.id}')">Edit</button>
@@ -223,19 +250,19 @@ document.getElementById("recruits-form").addEventListener("submit", async (e) =>
   const id = document.getElementById("editing-recruit-id").value;
 
   const payload = {
-    first_name: document.getElementById("recruit-first-name").value,
-    last_name: document.getElementById("recruit-last-name").value,
+    first_name: document.getElementById("recruit-first-name").value.trim() || null,
+    last_name: document.getElementById("recruit-last-name").value.trim() || null,
     stage: document.getElementById("recruit-stage").value,
     recruiter_id: document.getElementById("recruit-recruiter-id").value,
-    notes: document.getElementById("recruit-notes").value,
+    notes: document.getElementById("recruit-notes").value.trim() || null,
     stage_updated_at: new Date().toISOString()
   };
 
   let res;
   if (id) {
-    res = await supabase.from("recruits").update(payload).eq("id", id);
+    res = await sb.from("recruits").update(payload).eq("id", id);
   } else {
-    res = await supabase.from("recruits").insert(payload);
+    res = await sb.from("recruits").insert(payload);
   }
 
   if (res.error) {
@@ -245,18 +272,23 @@ document.getElementById("recruits-form").addEventListener("submit", async (e) =>
   }
 
   resetRecruitForm();
-  loadRecruits();
+  await loadRecruits();
 });
 
 /* -------- EDIT -------- */
 window.editRecruit = async (id) => {
-  const { data } = await supabase.from("recruits").select("*").eq("id", id).single();
+  const { data, error } = await sb.from("recruits").select("*").eq("id", id).single();
+
+  if (error) {
+    console.error(error);
+    return;
+  }
 
   document.getElementById("editing-recruit-id").value = data.id;
   document.getElementById("recruit-first-name").value = data.first_name || "";
   document.getElementById("recruit-last-name").value = data.last_name || "";
-  document.getElementById("recruit-stage").value = data.stage;
-  document.getElementById("recruit-recruiter-id").value = data.recruiter_id;
+  document.getElementById("recruit-stage").value = data.stage || "applied";
+  document.getElementById("recruit-recruiter-id").value = data.recruiter_id || "";
   document.getElementById("recruit-notes").value = data.notes || "";
 
   document.getElementById("cancel-recruit-edit-btn").classList.remove("hidden");
@@ -266,8 +298,15 @@ window.editRecruit = async (id) => {
 window.deleteRecruit = async (id) => {
   if (!confirm("Delete this recruit?")) return;
 
-  await supabase.from("recruits").delete().eq("id", id);
-  loadRecruits();
+  const { error } = await sb.from("recruits").delete().eq("id", id);
+
+  if (error) {
+    console.error(error);
+    alert("Error deleting recruit");
+    return;
+  }
+
+  await loadRecruits();
 };
 
 /* -------- RESET -------- */
@@ -280,8 +319,63 @@ function resetRecruitForm() {
 document.getElementById("reset-recruit-form-btn").onclick = resetRecruitForm;
 document.getElementById("cancel-recruit-edit-btn").onclick = resetRecruitForm;
 
+/* ---------------- SIMPLE FILTERS ---------------- */
+document.getElementById("agents-search-input").addEventListener("input", filterAgentsTable);
+document.getElementById("agents-status-filter").addEventListener("change", filterAgentsTable);
+
+function filterAgentsTable() {
+  const search = document.getElementById("agents-search-input").value.toLowerCase().trim();
+  const status = document.getElementById("agents-status-filter").value;
+  const rows = Array.from(document.querySelectorAll("#agents-tbody tr"));
+
+  rows.forEach(row => {
+    const text = row.innerText.toLowerCase();
+    const activeBadge = row.children[6]?.innerText.trim().toLowerCase();
+    const adminBadge = row.children[7]?.innerText.trim().toLowerCase();
+
+    let visible = text.includes(search);
+
+    if (status === "active") {
+      visible = visible && activeBadge === "yes";
+    } else if (status === "inactive") {
+      visible = visible && activeBadge === "no";
+    } else if (status === "admin") {
+      visible = visible && adminBadge === "yes";
+    }
+
+    row.style.display = visible ? "" : "none";
+  });
+}
+
+document.getElementById("recruits-search-input").addEventListener("input", filterRecruitsTable);
+document.getElementById("recruits-stage-filter").addEventListener("change", filterRecruitsTable);
+
+function filterRecruitsTable() {
+  const search = document.getElementById("recruits-search-input").value.toLowerCase().trim();
+  const stage = document.getElementById("recruits-stage-filter").value;
+  const rows = Array.from(document.querySelectorAll("#recruits-tbody tr"));
+
+  rows.forEach(row => {
+    const text = row.innerText.toLowerCase();
+    const rowStage = row.children[4]?.innerText.trim().toLowerCase();
+
+    let visible = text.includes(search);
+
+    if (stage) {
+      visible = visible && rowStage === stage.toLowerCase();
+    }
+
+    row.style.display = visible ? "" : "none";
+  });
+}
+
 /* ---------------- INIT ---------------- */
 (async () => {
+  if (!sb) {
+    console.error("Supabase client missing in agents.js");
+    return;
+  }
+
   await populateRecruiterDropdowns();
   await loadAgents();
   await loadRecruits();
