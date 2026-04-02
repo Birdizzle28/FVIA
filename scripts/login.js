@@ -1,6 +1,6 @@
-// scripts/login.js (non-module, uses global window.supabase / supabaseClient)
+// scripts/login.js
 document.addEventListener('DOMContentLoaded', async () => {
-  if (!supabase) {
+  if (!sb) {
     console.error('Supabase client missing on this page');
     return;
   }
@@ -42,12 +42,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   // ---------- ALREADY SIGNED IN? REDIRECT AWAY FROM LOGIN ----------
   try {
-    if (!supabaseClient) {
-      console.error('Supabase client missing on this page');
-      return;
-    }
-
-    const { data, error } = await supabaseClient.auth.getSession();
+    const { data, error } = await sb.auth.getSession();
 
     if (error) {
       console.error('Error checking session:', error);
@@ -63,7 +58,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
 
-    if (!supabaseClient) {
+    if (!sb) {
       message.textContent = 'Login error: Supabase not available.';
       message.style.color = 'red';
       return;
@@ -76,7 +71,10 @@ document.addEventListener('DOMContentLoaded', async () => {
     const password = passwordInput.value;
 
     try {
-      const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+      const { data, error } = await sb.auth.signInWithPassword({
+        email,
+        password
+      });
 
       if (error) {
         console.error('Login error:', error);
@@ -93,15 +91,14 @@ document.addEventListener('DOMContentLoaded', async () => {
 
       message.textContent = 'Login successful! Redirecting...';
       message.style.color = 'green';
-      
-      await supabaseClient.auth.getSession();
-      
+
+      await sb.auth.getSession();
+
       const redirectTo = consumeRedirectTarget();
-      
+
       setTimeout(() => {
         window.location.replace(redirectTo);
       }, 300);
-      
     } catch (err) {
       console.error('Unexpected login error:', err);
       message.textContent = 'Unexpected error during login.';
@@ -118,9 +115,10 @@ document.addEventListener('DOMContentLoaded', async () => {
       forgotEmail.value = emailInput.value.trim();
     }
 
-    forgotPanel.style.display = (forgotPanel.style.display === 'none' || !forgotPanel.style.display)
-      ? 'block'
-      : 'none';
+    forgotPanel.style.display =
+      (forgotPanel.style.display === 'none' || !forgotPanel.style.display)
+        ? 'block'
+        : 'none';
 
     if (forgotMsg) {
       forgotMsg.textContent = '';
@@ -129,7 +127,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   });
 
   sendResetBtn?.addEventListener('click', async () => {
-    if (!supabaseClient) {
+    if (!sb) {
       if (forgotMsg) {
         forgotMsg.textContent = 'Reset error: Supabase not available.';
         forgotMsg.style.color = 'red';
@@ -138,6 +136,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     }
 
     const email = (forgotEmail?.value || emailInput?.value || '').trim();
+
     if (!email) {
       if (forgotMsg) {
         forgotMsg.textContent = 'Please enter your email.';
@@ -154,7 +153,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     try {
       const redirectTo = `${window.location.origin}/reset-password.html`;
 
-      const { error } = await supabaseClient.auth.resetPasswordForEmail(email, { redirectTo });
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
 
       if (error) {
         console.error('Reset email error:', error);
