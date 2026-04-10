@@ -614,6 +614,29 @@ export async function handler(event) {
       return { statusCode: 500, body: JSON.stringify({ error: 'Failed to load paythru counts', details: priorErr }) };
     }
 
+    const { data: advanceRows, error: advanceErr } = await supabase
+      .from('commission_ledger')
+      .select('policy_id, policy_attachment_id, agent_id, amount, entry_type')
+      .eq('entry_type', 'advance');
+
+    if (advanceErr) {
+      console.error('[runMonthlyPayThru] Error loading advance rows:', advanceErr);
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: 'Failed to load advance rows',
+          details: advanceErr
+        })
+      };
+    }
+
+    const advancePaidMap = new Map();
+    for (const row of (advanceRows || [])) {
+      const itemKey = row.policy_attachment_id || 'policy';
+      const key = `${row.policy_id}:${itemKey}:${row.agent_id}`;
+      advancePaidMap.set(key, (advancePaidMap.get(key) || 0) + Number(row.amount || 0));
+    }
+    
     const payThruCountMap = new Map();
     (payThruPrior || []).forEach(row => {
       const m = row.meta || {};
@@ -1056,7 +1079,19 @@ export async function handler(event) {
             ? Math.max(1, 12 - monthsAdvanced)
             : cycleMonths;
 
-          const monthlyRaw = cycleCommission / divisorMonths;
+          let payableCycleCommission = cycleCommission;
+
+          // For cycle 1, subtract ACTUAL advance already created in the ledger
+          // instead of assuming the full theoretical advance was paid.
+          if (!isTermWorld && cycleIndex === 1) {
+            const itemKeyForAdvance = commissionItem.policy_attachment_id || 'policy';
+            const advanceKey = `${policy.id}:${itemKeyForAdvance}:${node.agent.id}`;
+            const actualAdvancePaid = Number(advancePaidMap.get(advanceKey) || 0);
+
+            payableCycleCommission = Math.max(0, cycleCommission - actualAdvancePaid);
+          }
+
+          const monthlyRaw = payableCycleCommission / divisorMonths;
           const monthly = Math.round(monthlyRaw * 100) / 100;
           if (monthly <= 0) continue;
 
@@ -1092,6 +1127,8 @@ export async function handler(event) {
               term_length_months: writingTermLenMonths,
               term_premium_used: termPremium,
               rate_portion: effectiveRate,
+              cycle_commission_full: cycleCommission,
+              payable_cycle_commission: payableCycleCommission,
               as_earned: policyAsEarned,
               advance_rate_applied: globalAdvanceRate,
               months_advanced: monthsAdvanced,
