@@ -606,7 +606,6 @@ export async function handler(event) {
     const { data: policies, error: polErr } = await supabase
       .from('policies')
       .select('id, agent_id, carrier_name, product_line, policy_type, premium_annual, premium_modal, issued_at, as_earned, status, contact_id')
-      .eq('agent_id', targetAgentId)
       .in('status', ELIGIBLE_POLICY_STATUSES)
       .not('issued_at', 'is', null)
       .lte('issued_at', cutoffIso);
@@ -766,6 +765,28 @@ export async function handler(event) {
     if (priorErr) {
       return { statusCode: 500, body: JSON.stringify({ error: 'Failed to load paythru counts', details: priorErr }) };
     }
+
+    const { data: advanceRows, error: advanceErr } = await supabase
+      .from('commission_ledger')
+      .select('policy_id, policy_attachment_id, agent_id, amount, entry_type')
+      .eq('entry_type', 'advance');
+
+    if (advanceErr) {
+      return {
+        statusCode: 500,
+        body: JSON.stringify({
+          error: 'Failed to load advance rows',
+          details: advanceErr
+        })
+      };
+    }
+
+    const advancePaidMap = new Map();
+    (advanceRows || []).forEach(row => {
+      const itemKey = row.policy_attachment_id || 'policy';
+      const key = `${row.policy_id}:${itemKey}:${row.agent_id}`;
+      advancePaidMap.set(key, (advancePaidMap.get(key) || 0) + Number(row.amount || 0));
+    });
 
     const payThruCountMap = new Map();
     (payThruPrior || []).forEach(row => {
@@ -940,7 +961,17 @@ export async function handler(event) {
             ? Math.max(1, 12 - monthsAdvanced)
             : cycleMonths;
 
-          const monthly = round2(cycleCommission / divisorMonths);
+          let payableCycleCommission = cycleCommission;
+
+          if (!isTermWorld && cycleIndex === 1) {
+            const itemKeyForAdvance = commissionItem.policy_attachment_id || 'policy';
+            const advanceKey = `${policy.id}:${itemKeyForAdvance}:${node.agent.id}`;
+            const actualAdvancePaid = Number(advancePaidMap.get(advanceKey) || 0);
+
+            payableCycleCommission = Math.max(0, cycleCommission - actualAdvancePaid);
+          }
+
+          const monthly = round2(payableCycleCommission / divisorMonths);
           if (monthly <= 0) continue;
 
           payThruCountMap.set(key, priorCount + 1);
@@ -967,6 +998,11 @@ export async function handler(event) {
               term_length_months: writingTermLenMonths,
               term_premium_used: termPremium,
               rate_portion: effectiveRate,
+              cycle_commission_full: cycleCommission,
+              payable_cycle_commission: payableCycleCommission,
+              actual_advance_paid: (!isTermWorld && cycleIndex === 1)
+                ? Number(advancePaidMap.get(`${policy.id}:${commissionItem.policy_attachment_id || 'policy'}:${node.agent.id}`) || 0)
+                : 0,
               as_earned: policyAsEarned,
               advance_rate_applied: globalAdvanceRate,
               months_advanced: monthsAdvanced,
