@@ -122,16 +122,21 @@ export async function handler(event) {
 
     // 4) Build payout plan: one transfer per agent with a positive amount
     const payoutPlan = payouts.map(p => {
-      const agent  = agentMap.get(p.agent_id) || {};
-      const amount = Number(p.net_amount || p.gross_amount || 0);
-
+      const agent = agentMap.get(p.agent_id) || {};
+    
+      const rawNet = p.net_amount;
+      const rawGross = p.gross_amount;
+      const amount = Number(rawNet ?? rawGross ?? 0);
+    
       return {
         agent_id: p.agent_id,
         agent_name: agent.full_name || 'Unknown agent',
         stripe_account_id: agent.stripe_account_id || null,
+        gross_amount: Number(rawGross ?? 0),
+        net_amount: Number(rawNet ?? 0),
         amount,
       };
-    }).filter(p => p.amount > 0);
+    }).filter(p => Number.isFinite(p.amount) && p.amount > 0);
 
     if (!payoutPlan.length) {
       return {
